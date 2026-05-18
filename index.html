@@ -3414,6 +3414,66 @@ const PROMPTS=[
   {id:'r80',name:'Glossary Builder (GM Modal)',tier:'S',section:'gm',cat:'Reference',statesMatched:null,archetypes:null,minDepth:null,desc:'Generate an alphabetized glossary of world-specific terms, names, institutions, and places. Scope selectable (all / political / cultural / religious). Suitable for sourcebook appendix.',vars:['[STATE]'],tpl:'Nation state: [STATE]\n\nCompile a world glossary. Extract all proper nouns from the world state above and define each in 1–2 sentences. Organise into sections:\n- People (rulers, characters, NPCs)\n- Factions & institutions\n- Places (cities, regions, landmarks)\n- Events (chronicle entries)\n- Concepts (unique cultural or political terms)\n\nAlphabetize within each section. Flag any undefined entities with [UNDEFINED].'},
   {id:'r81',name:'Naming Generator (GM Modal)',tier:'S',section:'gm',cat:'Reference',statesMatched:null,archetypes:null,minDepth:null,desc:'Extract the linguistic patterns from the realm and generate lists of names for people (men/women/non-binary), places, titles, or orders/guilds. World-aware: names match era and culture.',vars:['[STATE]'],tpl:'Nation state: [STATE]\n\nAnalyze the naming conventions visible in this world (existing names, era, culture, government style). Then generate:\n- 10 ruler / noble names\n- 10 common people names (mix of genders)\n- 5 place names (settlements, landmarks)\n- 5 institutional / organizational names\n- 5 faction or order names\n\nNames must feel consistent with the existing world. Note the linguistic pattern you extracted.'},
 ];
+// ─── UNIFIED PROMPT-FILL MECHANISM ───
+// Centralized template-variable substitution + campaign context injection.
+// Phase 3 features (Solo Mode oracle, Encounter Builder, Plot Seeds) call this
+// instead of constructing prompts ad-hoc, so context-awareness is consistent.
+const PromptFill={
+  _buildContext(n){
+    if(typeof Copilot!=='undefined'&&typeof Copilot.buildContext==='function'){
+      return Copilot.buildContext(n);
+    }
+    // Fallback summary when Copilot module isn't ready yet
+    const stats=Object.entries(n.stats||{}).map(([k,v])=>`${k}:${v?.value??v}`).join(', ');
+    const factions=(n.factions||[]).map(f=>f.name).join(', ');
+    const chronicleRecent=(n.chronicle||[]).slice(-5).map(e=>`[Year ${e.year}] ${e.name}`).join('; ');
+    return [
+      `Realm: ${n.name} | Era: ${n.era} | Government: ${n.government}`,
+      stats?`Stats: ${stats}`:'',
+      factions?`Factions: ${factions}`:'',
+      chronicleRecent?`Recent chronicle: ${chronicleRecent}`:'',
+    ].filter(Boolean).join('\n');
+  },
+  _stateLine(n){
+    const stab=(typeof Compute!=='undefined'&&Compute.stability)?Compute.stability(n):'—';
+    return `${n.name} | ${n.era||'—'} | ${n.government||'—'} | Stability: ${stab}`;
+  },
+  _fillVars(tpl,n,extraVars){
+    const chronicle=n.chronicle||[];
+    const factions=n.factions||[];
+    const chars=n.characters||[];
+    const map={
+      '[STATE]':this._stateLine(n),
+      '[ERA]':n.era||'',
+      '[GOVERNMENT]':n.government||'',
+      '[FACTIONS]':factions.map(f=>`${f.name} (${f.type||'—'}, ${f.position||'—'}): ${f.description||''}`).join('\n'),
+      '[CHRONICLE_FULL]':chronicle.map(e=>`[Year ${e.year}] ${e.name}: ${e.description||''}`).join('\n'),
+      '[CHRONICLE_LAST_5]':chronicle.slice(-5).map(e=>`[Year ${e.year}] ${e.name}: ${e.description||''}`).join('\n'),
+      '[CHARACTERS]':chars.map(c=>`${c.name} (${c.role||''}): ${c.description||''}`).join('\n'),
+      '{CAMPAIGN_CONTEXT}':this._buildContext(n),
+      ...(extraVars||{}),
+    };
+    let out=tpl;
+    for(const [k,v] of Object.entries(map)){
+      out=out.split(k).join(v??'');
+    }
+    return out;
+  },
+  build(templateId,extraVars={},nation=null){
+    const n=nation||(typeof State!=='undefined'?State.get():null);
+    if(!n)throw new Error('No active realm for prompt fill.');
+    const prompt=PROMPTS.find(p=>p.id===templateId);
+    if(!prompt)throw new Error(`Prompt template "${templateId}" not found.`);
+    const filledUser=this._fillVars(prompt.tpl,n,extraVars);
+    const context=this._buildContext(n);
+    const safety=(typeof SAFETY_PREAMBLE!=='undefined')?SAFETY_PREAMBLE:'';
+    return {
+      system:`${safety}\n\n# Campaign Context\n${context}`.trim(),
+      user:filledUser,
+      meta:{templateId,promptName:prompt.name,tier:prompt.tier},
+    };
+  },
+};
 // ─── Utilities ───
 const _escDiv=document.createElement('div');
 const Utils={
