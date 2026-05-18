@@ -1,11 +1,21 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
 
-  "model": "claude-sonnet-4-6",
-  "effortLevel": "high",
+  "model": "opusplan",
+  "effortLevel": "xhigh",
+  "alwaysThinkingEnabled": true,
+  "disableAgentView": false,
+  "autoScrollEnabled": true,
+  "showTurnDuration": true,
+  "autoMemoryEnabled": true,
+
+  "env": {
+    "CLAUDE_CODE_SUBAGENT_MODEL": "sonnet"
+  },
 
   "permissions": {
     "allow": [
+      "Agent(*)",
       "Bash(git status)",
       "Bash(git diff *)",
       "Bash(git log *)",
@@ -57,8 +67,37 @@
     "defaultMode": "acceptEdits"
   },
 
-  "showTurnDuration": true,
-  "autoScrollEnabled": true,
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash",
+            "args": [
+              "-c",
+              "echo '' && echo '══════════════════════════════════════' && echo '  Hunter Studio — Claude Code Active' && echo '  Model: opusplan  |  Effort: xhigh' && echo '══════════════════════════════════════' && echo ''"
+            ],
+            "async": true
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash",
+            "args": ["-c", "echo '[subagent] Task complete'"],
+            "async": true
+          }
+        ]
+      }
+    ]
+  },
 
   "attribution": {
     "commit": "Co-authored with Claude Code"
