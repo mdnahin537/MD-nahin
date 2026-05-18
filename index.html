@@ -755,6 +755,120 @@ body.theme-ember .modal.modal--sm{width:480px}
 body.theme-ember .modal.modal--md{width:640px}
 body.theme-ember .modal.modal--lg{width:800px}
 
+/* ── FRONT DOOR MODAL ─────────────────────────────────────────────────────── */
+.modal--front-door{width:min(640px,calc(100vw - 32px));top:10%;padding:var(--space-10) var(--space-8)}
+.fd-header{display:flex;flex-direction:column;align-items:center;gap:var(--space-2);margin-bottom:var(--space-8);border-bottom:none;padding-bottom:0}
+.fd-wordmark{display:flex;align-items:center;gap:var(--space-3)}
+.fd-wordmark__name{font-size:2rem;font-weight:900;letter-spacing:0.1em;margin:0;line-height:1}
+.fd-wordmark__diamond{font-size:1rem;line-height:1;position:relative;top:2px}
+.fd-subtitle{margin:0;font-size:var(--text-body-sm);font-style:italic}
+.fd-body{display:flex;flex-direction:column;gap:var(--space-5)}
+.fd-textarea{min-height:96px;resize:none;line-height:1.6}
+.fd-style-group{display:flex;flex-wrap:wrap;gap:var(--space-2);margin:0}
+.fd-generate-btn{width:100%;justify-content:center;padding-top:var(--space-3);padding-bottom:var(--space-3)}
+.fd-divider{display:flex;align-items:center;gap:var(--space-3);margin:var(--space-1) 0}
+.fd-divider__rule{flex:1;border:none;border-top:0.5px solid var(--color-border-hairline);margin:0}
+.fd-divider__label{font-size:var(--text-label-sm);color:var(--color-text-faint);white-space:nowrap}
+.fd-secondary-actions{display:flex;gap:var(--space-3);justify-content:center}
+.fd-secondary-actions .btn{flex:1;justify-content:center}
+.fd-recent{border-top:0.5px solid var(--color-border-hairline);padding-top:var(--space-4)}
+.fd-recent__heading{font-size:var(--text-label);color:var(--color-text-faint);margin:0 0 var(--space-3);text-transform:uppercase;letter-spacing:0.12em}
+.fd-recent__list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--space-1)}
+.fd-recent__item{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-2) var(--space-3);border-radius:var(--radius-sm);cursor:pointer;transition:background var(--duration-instant)}
+.fd-recent__item:hover{background:var(--color-surface)}
+.fd-recent__item-bullet{color:var(--color-text-faint);font-size:var(--text-label-sm);flex-shrink:0;line-height:1}
+.fd-recent__item-title{flex:1;font-size:var(--text-body-sm);color:var(--color-text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fd-recent__item-time{font-size:var(--text-label-sm);color:var(--color-text-faint);flex-shrink:0;white-space:nowrap}
+.fd-recent__item-delete{background:none;border:none;color:var(--color-text-faint);font-size:.875rem;line-height:1;cursor:pointer;padding:2px 4px;border-radius:var(--radius-sm);flex-shrink:0;transition:color var(--duration-instant);display:flex;align-items:center;justify-content:center}
+.fd-recent__item-delete:hover{color:var(--color-crisis)}
+.fd-recent__empty{font-size:var(--text-label-sm);color:var(--color-text-faint);margin:0;font-style:italic}
+.modal--front-door :focus-visible{outline:2px solid var(--color-gold);outline-offset:2px}
+body.theme-ember .modal--front-door{background:var(--color-parchment);border:1px solid rgba(255,185,100,0.18);box-shadow:0 0 0 1px rgba(255,185,100,0.06),0 16px 64px rgba(0,0,0,.60),0 0 80px rgba(255,185,100,0.04)}
+body.theme-ember .fd-wordmark__name{font-family:'Cinzel Decorative',serif;font-weight:900;color:var(--ember-color);filter:drop-shadow(0 0 12px rgba(255,185,100,0.45));letter-spacing:0.12em}
+body.theme-ember .fd-wordmark__diamond{color:var(--ember-color);opacity:.60}
+body.theme-ember .fd-subtitle{font-family:var(--font-display);font-style:italic;color:var(--color-text-muted)}
+body.theme-ember .fd-generate-btn{border-color:rgba(255,185,100,0.60);letter-spacing:0.20em;font-size:11px;padding-top:13px;padding-bottom:13px}
+body.theme-ember .fd-generate-btn:hover:not(:disabled){background:rgba(255,185,100,0.10);border-color:var(--ember-color);box-shadow:0 0 20px rgba(255,185,100,0.18)}
+body.theme-ember .fd-recent__heading{font-family:'Cinzel',serif;letter-spacing:0.24em;font-size:9px}
+body.theme-ember .fd-recent__item:hover{background:rgba(255,185,100,0.04)}
+body.theme-ember .modal--front-door :focus-visible{outline-color:var(--ember-color);box-shadow:0 0 0 4px rgba(255,185,100,0.12)}
+@keyframes fd-input-shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-4px)}40%,80%{transform:translateX(4px)}}
+.fd-input-shake{animation:fd-input-shake .35s ease}
+
+/* ── SAMPLE MODE BANNER + PICKER ──────────────────────────────────────────── */
+#sample-mode-banner{width:100%;display:flex;align-items:center;gap:12px;padding:7px 20px;background:#120f00;border-bottom:1px solid rgba(255,185,100,0.28);font-size:var(--text-label-sm);color:var(--color-ink);flex-shrink:0}
+.sample-mode-banner__icon{color:var(--ember-color)}
+.sample-mode-banner__text strong{color:var(--ember-color)}
+.sample-mode-banner__note{color:var(--color-text-faint)}
+.sample-mode-banner__exit{margin-left:auto;background:transparent;border:1px solid rgba(255,185,100,0.30);border-radius:4px;padding:3px 11px;color:var(--ember-color);cursor:pointer;font-size:var(--text-label-sm);transition:border-color .12s,background .12s;white-space:nowrap}
+.sample-mode-banner__exit:hover{background:rgba(255,185,100,0.08);border-color:var(--ember-color)}
+.sample-picker__grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px}
+.sample-picker__card{display:flex;flex-direction:column;gap:10px;padding:20px;border:1px solid var(--color-border-hairline);border-radius:8px;background:var(--color-surface);transition:border-color .15s}
+body.theme-ember .sample-picker__card:hover{border-color:rgba(255,185,100,0.30)}
+.sample-picker__card-header{display:flex;flex-direction:column;gap:4px}
+.sample-picker__tag{display:inline-block;font-size:9px;font-family:'Cinzel',serif;letter-spacing:0.14em;text-transform:uppercase;color:var(--ember-color);border:1px solid rgba(255,185,100,0.28);border-radius:3px;padding:2px 7px;align-self:flex-start;margin-bottom:4px}
+.sample-picker__card-title{font-family:'Cinzel',serif;font-size:var(--text-heading);margin:0;color:var(--color-ink)}
+.sample-picker__card-sub{font-size:var(--text-label-sm);color:var(--color-text-muted);margin:0}
+.sample-picker__card-pitch{font-size:var(--text-body-sm);color:var(--color-text-muted);line-height:1.5;flex:1;margin:0}
+.sample-picker__cta{margin-top:auto;width:100%;justify-content:center}
+
+/* ── MOBILE GATE ──────────────────────────────────────────────────────────── */
+.mobile-gate{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:var(--space-8);background:var(--color-bg,#120c07);background-image:radial-gradient(ellipse 80% 60% at 50% 35%,rgba(255,185,100,0.055) 0%,transparent 65%);text-align:center;animation:mobile-gate-enter var(--duration-slow,400ms) var(--ease-out,cubic-bezier(0.16,1,0.3,1)) both}
+@keyframes mobile-gate-enter{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.mobile-gate__ornament{font-family:var(--font-display,'Cinzel Decorative',Georgia,serif);font-size:var(--text-display-lg,2.5rem);letter-spacing:0.04em;color:var(--ember-color,#ffb964);margin-bottom:var(--space-6);line-height:1;text-shadow:0 0 32px rgba(255,185,100,0.35)}
+.mobile-gate__wordmark{font-family:var(--font-display,'Cinzel Decorative',Georgia,serif);font-size:1.75rem;letter-spacing:0.06em;color:var(--color-ink,#f4ecd8);margin-bottom:var(--space-2);line-height:1.1}
+.mobile-gate__tagline{font-size:var(--text-label-sm,.75rem);letter-spacing:0.14em;text-transform:uppercase;color:var(--ember-color,#ffb964);margin-bottom:var(--space-10);opacity:.7}
+.mobile-gate__card{max-width:340px;width:100%;border:0.5px solid var(--color-border-default,rgba(160,142,124,0.30));border-radius:var(--radius-md,4px);padding:var(--space-8);background:var(--color-surface,rgba(255,185,100,0.04));margin-bottom:var(--space-8);position:relative}
+body.theme-ember .mobile-gate__card::before,body.theme-ember .mobile-gate__card::after{content:'';position:absolute;width:10px;height:10px;border-color:rgba(255,185,100,0.35);border-style:solid;pointer-events:none}
+body.theme-ember .mobile-gate__card::before{top:6px;left:6px;border-width:1px 0 0 1px}
+body.theme-ember .mobile-gate__card::after{bottom:6px;right:6px;border-width:0 1px 1px 0}
+.mobile-gate__headline{font-family:var(--font-display,'Cinzel Decorative',Georgia,serif);font-size:1.125rem;color:var(--color-ink,#f4ecd8);margin:0 0 var(--space-3);letter-spacing:0.03em}
+.mobile-gate__body{font-size:var(--text-body-sm,.9375rem);line-height:1.65;color:var(--color-text-muted,#c0b898);margin:0 0 var(--space-6)}
+.mobile-gate__body strong{color:var(--color-ink,#f4ecd8);font-weight:600}
+.mobile-gate__cta{width:100%;display:flex;justify-content:center}
+.mobile-gate__cta .btn{width:100%;justify-content:center;padding:var(--space-3) var(--space-6);font-size:var(--text-body-sm,.9375rem)}
+.mobile-gate__footnote{font-size:var(--text-label-sm,.75rem);letter-spacing:0.10em;color:var(--color-text-faint,#7a7058)}
+body.mobile-gate-open{overflow:hidden}
+
+/* ── TRANSPARENCY LOG ─────────────────────────────────────────────────────── */
+.tlog{position:fixed;bottom:var(--space-4);left:var(--space-4);z-index:100}
+.tlog__pill{display:inline-flex;align-items:center;gap:var(--space-2);padding:5px var(--space-3);border-radius:999px;border:0.5px solid var(--color-border-default,rgba(160,142,124,0.30));background:var(--color-bg,#120c07);color:var(--color-text-muted,#c0b898);font-size:var(--text-label-sm,.75rem);letter-spacing:0.08em;cursor:pointer;transition:border-color var(--duration-instant,80ms),color var(--duration-instant,80ms),box-shadow var(--duration-quick,160ms);user-select:none}
+.tlog__pill:hover{border-color:var(--ember-color,#ffb964);color:var(--ember-color,#ffb964);box-shadow:0 0 10px rgba(255,185,100,0.12)}
+.tlog__pill-mark{color:var(--ember-color,#ffb964);font-size:9px}
+.tlog__panel{display:none;flex-direction:column;width:320px;max-height:300px;border:0.5px solid var(--color-border-default,rgba(160,142,124,0.30));border-radius:var(--radius-md,4px);background:var(--color-bg,#120c07);box-shadow:0 8px 32px rgba(13,27,42,0.18);overflow:hidden;animation:tlog-slide-up var(--duration-default,240ms) var(--ease-out,cubic-bezier(0.16,1,0.3,1)) both;margin-bottom:var(--space-2)}
+@keyframes tlog-slide-up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.tlog.is-open .tlog__panel{display:flex}
+.tlog.is-open .tlog__pill{display:none}
+.tlog__panel-header{display:flex;align-items:center;justify-content:space-between;padding:var(--space-3) var(--space-4);border-bottom:0.5px solid var(--color-border-hairline,#1A2235);flex-shrink:0}
+.tlog__panel-title{font-size:var(--text-label-sm,.75rem);letter-spacing:0.12em;text-transform:uppercase;color:var(--ember-color,#ffb964)}
+.tlog__panel-close{background:none;border:none;cursor:pointer;color:var(--color-text-faint,#7a7058);font-size:14px;line-height:1;padding:0;transition:color var(--duration-instant,80ms)}
+.tlog__panel-close:hover{color:var(--color-ink,#f4ecd8)}
+.tlog__entries{flex:1;overflow-y:auto;padding:var(--space-2) 0;max-height:200px;scrollbar-width:thin;scrollbar-color:rgba(255,185,100,0.18) transparent}
+.tlog__entries::-webkit-scrollbar{width:3px}
+.tlog__entries::-webkit-scrollbar-track{background:transparent}
+.tlog__entries::-webkit-scrollbar-thumb{background:rgba(255,185,100,0.18);border-radius:2px}
+.tlog__entry{display:grid;grid-template-columns:36px 1fr auto;align-items:start;gap:var(--space-2);padding:var(--space-2) var(--space-4);border-bottom:0.5px solid var(--color-border-hairline,#1A2235);transition:background var(--duration-instant,80ms)}
+.tlog__entry:last-child{border-bottom:none}
+.tlog__entry:hover{background:var(--color-surface,rgba(255,185,100,0.04))}
+.tlog__entry-time{font-size:var(--text-label-sm,.75rem);color:var(--color-text-faint,#7a7058);padding-top:1px;letter-spacing:0.04em}
+.tlog__entry-label{font-size:var(--text-label-sm,.75rem);color:var(--color-ink,#f4ecd8);line-height:1.4}
+.tlog__entry-model{font-size:9px;letter-spacing:0.08em;color:var(--color-text-faint,#7a7058);text-transform:uppercase;margin-top:2px}
+.tlog__entry-cost{font-size:var(--text-label-sm,.75rem);color:var(--ember-color,#ffb964);text-align:right;padding-top:1px;white-space:nowrap}
+.tlog__entry-tokens{font-size:9px;color:var(--color-text-faint,#7a7058);text-align:right;margin-top:2px;white-space:nowrap}
+.tlog__empty{padding:var(--space-6) var(--space-4);text-align:center;color:var(--color-text-faint,#7a7058);font-size:var(--text-label-sm,.75rem);letter-spacing:0.08em}
+.tlog__footer{display:flex;align-items:center;justify-content:space-between;padding:var(--space-2) var(--space-4);border-top:0.5px solid var(--color-border-hairline,#1A2235);flex-shrink:0;background:var(--color-bg,#120c07)}
+.tlog__footer-totals{font-size:var(--text-label-sm,.75rem);color:var(--color-text-muted,#c0b898);letter-spacing:0.06em}
+.tlog__clear{background:none;border:none;cursor:pointer;font-size:var(--text-label-sm,.75rem);letter-spacing:0.10em;text-transform:uppercase;color:var(--color-text-faint,#7a7058);padding:0;transition:color var(--duration-instant,80ms)}
+.tlog__clear:hover{color:var(--color-crisis,#ffb4ab)}
+
+/* ── EMPTY STATES ─────────────────────────────────────────────────────────── */
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:var(--space-12) var(--space-8);text-align:center;animation:empty-state-enter var(--duration-slow,400ms) var(--ease-out,cubic-bezier(0.16,1,0.3,1)) both}
+@keyframes empty-state-enter{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.empty-state__icon{font-size:2rem;line-height:1;margin-bottom:var(--space-4);opacity:.6}
+.empty-state__headline{font-family:var(--font-display,'Cinzel Decorative',Georgia,serif);font-size:1.125rem;letter-spacing:0.04em;color:var(--color-ink,#f4ecd8);margin:0 0 var(--space-2)}
+.empty-state__sub{font-size:var(--text-body-sm,.9375rem);line-height:1.6;color:var(--color-text-muted,#c0b898);margin:0 0 var(--space-6);max-width:260px}
+.empty-state__cta{display:flex;justify-content:center}
+
 /* ── MODAL HEADER ────────────────────────────────────────────────────── */
 body.theme-ember .modal__header{
   border-bottom:1px solid rgba(255,185,100,0.14);
@@ -1801,25 +1915,6 @@ SECTION 7: MOTION & STATE STYLES
 }
 .force-reduced-motion *,.force-reduced-motion *::before,.force-reduced-motion *::after{
   animation-duration:0ms!important;transition-duration:0ms!important}
-
-/* ── MODE PICKER ─────────────────────────────────────────────────────────── */
-.mode-picker{position:fixed;inset:0;background:var(--color-bg);z-index:9999;display:none;align-items:center;justify-content:center;padding:48px 24px;overflow-y:auto}
-.mode-picker.is-open{display:flex}
-.mode-picker__inner{max-width:1100px;width:100%}
-.mode-picker__title{font-family:'Cinzel',serif;font-size:var(--text-display-lg);text-align:center;margin:0 0 8px;color:var(--color-ink)}
-.mode-picker__subtitle{text-align:center;color:var(--color-text-muted);margin:0 0 48px;font-size:var(--text-body)}
-.mode-picker__cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px}
-.mode-card{display:flex;flex-direction:column;gap:12px;padding:32px;border:1px solid var(--color-border-hairline);border-radius:12px;background:var(--color-surface);cursor:pointer;text-align:left;transition:transform .15s ease,border-color .15s ease}
-.mode-card:hover{transform:translateY(-2px);border-color:var(--ember-color)}
-.mode-card:focus-visible{outline:2px solid var(--ember-color);outline-offset:2px}
-.mode-card__icon{font-size:32px;line-height:1}
-.mode-card__title{font-family:'Cinzel',serif;margin:0;font-size:var(--text-display-sm);color:var(--color-ink)}
-.mode-card__sub{color:var(--ember-color);font-style:italic;margin:0;font-size:var(--text-body-sm)}
-.mode-card__desc{color:var(--color-text-muted);font-size:var(--text-body-sm);margin:0;line-height:1.5}
-.mode-card__time{margin-top:auto;font-size:var(--text-label-sm);color:var(--color-text-faint);padding-top:12px;border-top:1px solid var(--color-border-hairline)}
-.mode-picker__footer{text-align:center;margin-top:32px}
-.mode-picker__skip{background:transparent;border:none;color:var(--color-text-faint);cursor:pointer;text-decoration:underline;font-size:var(--text-label-sm)}
-.mode-picker__skip:hover{color:var(--color-text-muted)}
 
 /* ── TONIGHT MODE ────────────────────────────────────────────────────────── */
 .tonight-mode{position:fixed;inset:0;background:var(--color-bg);z-index:8000;overflow-y:auto;display:none}
@@ -3474,6 +3569,151 @@ const PromptFill={
     };
   },
 };
+
+// ─── TRANSPARENCY LOG ────────────────────────────────────────────────────────
+const TransparencyLog={
+  _entries:[],
+  _MAX:50,
+  _RATES:{
+    'anthropic/claude-haiku-latest':[0.25,1.25],
+    'anthropic/claude-sonnet-latest':[3.00,15.00],
+    'anthropic/claude-opus-latest':[15.0,75.00],
+    'openai/gpt-4o-mini':[0.15,0.60],
+    'openai/gpt-4o':[2.50,10.00],
+    'google/gemini-2.5-flash':[0.30,2.50],
+    'google/gemini-2.5-pro':[1.25,10.00],
+  },
+  _pendingLabel:null,
+  push(entry){
+    const{label='AI call',model='unknown',inputTokens=0,outputTokens=0}=entry;
+    const now=new Date();
+    const hh=String(now.getHours()).padStart(2,'0');
+    const mm=String(now.getMinutes()).padStart(2,'0');
+    const cost=this._calcCost(model,inputTokens,outputTokens);
+    this._entries.unshift({time:`${hh}:${mm}`,label,model,inputTokens,outputTokens,cost});
+    if(this._entries.length>this._MAX)this._entries.length=this._MAX;
+    this.render();
+  },
+  _calcCost(model,inTok,outTok){
+    const rates=this._RATES[model];
+    if(!rates)return 0;
+    return(inTok/1_000_000)*rates[0]+(outTok/1_000_000)*rates[1];
+  },
+  _fmtUSD(n){
+    if(n===0)return'$0.000';
+    if(n<0.001)return`$${n.toFixed(5)}`;
+    if(n<0.01)return`$${n.toFixed(4)}`;
+    if(n<1)return`$${n.toFixed(3)}`;
+    return`$${n.toFixed(2)}`;
+  },
+  _fmtModel(model){const slug=model.split('/').pop()||model;return slug.length>18?slug.slice(0,17)+'…':slug;},
+  render(){
+    const entriesEl=document.getElementById('tlog-entries');
+    const pillLabel=document.getElementById('tlog-pill-label');
+    const footerEl=document.getElementById('tlog-footer-totals');
+    if(!entriesEl)return;
+    const count=this._entries.length;
+    const totalCost=this._entries.reduce((s,e)=>s+e.cost,0);
+    const totalIn=this._entries.reduce((s,e)=>s+e.inputTokens,0);
+    const totalOut=this._entries.reduce((s,e)=>s+e.outputTokens,0);
+    if(pillLabel)pillLabel.textContent=count===0?'No AI calls yet':`${count} AI call${count!==1?'s':''} · ${this._fmtUSD(totalCost)}`;
+    if(footerEl)footerEl.textContent=count===0?'— calls · $0.000':`${count} call${count!==1?'s':''} · ${totalIn+totalOut} tok · ${this._fmtUSD(totalCost)}`;
+    if(count===0){entriesEl.innerHTML='<div class="tlog__empty">No AI calls this session.</div>';return;}
+    entriesEl.innerHTML=this._entries.map(e=>`<div class="tlog__entry"><span class="tlog__entry-time">${e.time}</span><div><div class="tlog__entry-label">${e.label}</div><div class="tlog__entry-model">${this._fmtModel(e.model)}</div></div><div><div class="tlog__entry-cost">${this._fmtUSD(e.cost)}</div><div class="tlog__entry-tokens">${e.inputTokens}↑ ${e.outputTokens}↓</div></div></div>`).join('');
+  },
+  open(){
+    const tlog=document.getElementById('transparency-log');
+    const pill=document.getElementById('tlog-pill-btn');
+    if(!tlog)return;
+    tlog.classList.add('is-open');tlog.classList.remove('is-collapsed');
+    if(pill)pill.setAttribute('aria-expanded','true');
+    const el=document.getElementById('tlog-entries');if(el)el.scrollTop=0;
+  },
+  close(){
+    const tlog=document.getElementById('transparency-log');
+    const pill=document.getElementById('tlog-pill-btn');
+    if(!tlog)return;
+    tlog.classList.remove('is-open');tlog.classList.add('is-collapsed');
+    if(pill)pill.setAttribute('aria-expanded','false');
+  },
+  bind(){
+    document.getElementById('tlog-pill-btn')?.addEventListener('click',()=>this.open());
+    document.getElementById('tlog-close-btn')?.addEventListener('click',()=>this.close());
+    document.getElementById('tlog-clear-btn')?.addEventListener('click',()=>{this._entries=[];this.render();this.close();});
+    this.render();
+  },
+};
+
+// ─── EMPTY STATES ────────────────────────────────────────────────────────────
+const EmptyStates={
+  _defs:{
+    chronicle:{icon:'📜',headline:'No entries yet',sub:'Every great realm begins with a single event. Record yours and watch history take shape.',cta:'Add first event',action:'chronicle'},
+    factions:{icon:'⚔️',headline:'No factions yet',sub:'Power is never a vacuum — name the forces competing for influence in your realm.',cta:'Add a faction',action:'factions'},
+    characters:{icon:'👤',headline:'No characters yet',sub:'Realms come alive through the people who move within them. Create your first NPC.',cta:'Add a character',action:'characters'},
+    hooks:{icon:'🪝',headline:'No hooks yet',sub:'Plot hooks are the threads that pull players forward. Generate a handful and keep momentum.',cta:'Generate hooks with Copilot',action:'hooks'},
+    secrets:{icon:'🔐',headline:'No secrets yet',sub:'Hidden truths make the world feel deep. Add a secret your players will eventually uncover.',cta:'Add a secret',action:'secrets'},
+    locations:{icon:'📍',headline:'No locations yet',sub:'Ground your story in place. Map the first location your players will step into.',cta:'Add a location',action:'locations'},
+  },
+  _actions:{
+    chronicle(){const btn=document.getElementById('wms-inscribe-btn')||document.getElementById('inscribe-btn');if(btn){btn.scrollIntoView({behavior:'smooth',block:'center'});btn.focus();btn.click();}else if(typeof Modals!=='undefined')Modals.open('inscribe');},
+    factions(){if(typeof Interact!=='undefined'&&typeof Interact.expandDomain==='function')Interact.expandDomain('political');else if(typeof SHSPanels!=='undefined')SHSPanels.closeAll();else if(typeof showToast!=='undefined')showToast('Open the War Room to manage factions.');},
+    characters(){if(typeof Modals!=='undefined'&&typeof Modals.openNewCharacter==='function')Modals.openNewCharacter();else{const btn=document.getElementById('add-character-btn');if(btn)btn.click();}},
+    hooks(){if(typeof Copilot!=='undefined'&&typeof Copilot.generateHooks==='function')Copilot.generateHooks();else if(typeof SHSPanels!=='undefined'){SHSPanels.openPanel('hooks');if(typeof showToast!=='undefined')showToast('Open Copilot to generate hooks automatically.');}else if(typeof showToast!=='undefined')showToast('Open Copilot to generate hooks.');},
+    secrets(){if(typeof SHSPanels!=='undefined'){SHSPanels.openPanel('secrets');setTimeout(()=>{const btn=document.getElementById('new-secret-btn');if(btn)btn.click();},120);}else{const btn=document.getElementById('new-secret-btn');if(btn)btn.click();}},
+    locations(){if(typeof SHSPanels!=='undefined'){SHSPanels.openPanel('locations');setTimeout(()=>{const btn=document.getElementById('locations-add-btn');if(btn)btn.click();},120);}else{const btn=document.getElementById('locations-add-btn');if(btn)btn.click();}},
+  },
+  render(section,containerEl,ctaHandler){
+    if(!containerEl)return;
+    const def=this._defs[section];if(!def)return;
+    const wrapper=document.createElement('div');wrapper.className='empty-state';
+    const iconEl=document.createElement('div');iconEl.className='empty-state__icon';iconEl.setAttribute('aria-hidden','true');iconEl.textContent=def.icon;wrapper.appendChild(iconEl);
+    const headlineEl=document.createElement('div');headlineEl.className='empty-state__headline';headlineEl.textContent=def.headline;wrapper.appendChild(headlineEl);
+    const subEl=document.createElement('p');subEl.className='empty-state__sub';subEl.textContent=def.sub;wrapper.appendChild(subEl);
+    const ctaWrap=document.createElement('div');ctaWrap.className='empty-state__cta';
+    const btn=document.createElement('button');btn.className='btn btn--secondary';btn.textContent=def.cta;btn.setAttribute('aria-label',def.cta);
+    btn.addEventListener('click',()=>{if(typeof ctaHandler==='function')ctaHandler();else{const action=this._actions[def.action];if(action)action.call(this._actions);}});
+    ctaWrap.appendChild(btn);wrapper.appendChild(ctaWrap);
+    containerEl.innerHTML='';containerEl.appendChild(wrapper);
+  },
+};
+
+// ─── MOBILE GATE ──────────────────────────────────────────────────────────────
+const MobileGate={
+  _overlayId:'mobile-gate-overlay',
+  check(){
+    if(localStorage.getItem('rw_mobile_dismissed')==='1')return;
+    if(window.innerWidth<768)this.show();
+  },
+  show(){
+    if(document.getElementById(this._overlayId))return;
+    const overlay=document.createElement('div');
+    overlay.id=this._overlayId;overlay.className='mobile-gate';
+    overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');
+    overlay.setAttribute('aria-label','RealmWright is optimised for desktop');
+    overlay.innerHTML=`<div class="mobile-gate__ornament" aria-hidden="true">◆</div><div class="mobile-gate__wordmark">RealmWright</div><div class="mobile-gate__tagline">World-building command centre</div><div class="mobile-gate__card ember-ornate"><h2 class="mobile-gate__headline">Built for larger screens</h2><p class="mobile-gate__body">RealmWright's strategic layout — war room, chronicle timeline, and faction grid — needs <strong>768 px or wider</strong> to render correctly. On a phone, panels will overlap and interactions will break.</p><div class="mobile-gate__cta"><button class="btn btn--secondary" id="mobile-gate-continue-btn" aria-label="Continue on this device anyway">Continue anyway</button></div></div><p class="mobile-gate__footnote">Rotate to landscape · use a tablet · or open on desktop</p>`;
+    document.body.appendChild(overlay);
+    document.body.classList.add('mobile-gate-open');
+    document.getElementById('mobile-gate-continue-btn')?.addEventListener('click',()=>this.hide(true));
+  },
+  hide(persist=false){
+    const overlay=document.getElementById(this._overlayId);
+    if(overlay)overlay.remove();
+    document.body.classList.remove('mobile-gate-open');
+    if(persist)localStorage.setItem('rw_mobile_dismissed','1');
+  },
+  bind(){
+    let _raf=null;
+    window.addEventListener('resize',()=>{
+      if(_raf)cancelAnimationFrame(_raf);
+      _raf=requestAnimationFrame(()=>{
+        const overlay=document.getElementById(this._overlayId);
+        if(overlay&&window.innerWidth>=768)this.hide(false);
+        else if(!overlay&&window.innerWidth<768)this.check();
+      });
+    });
+  },
+};
+
 // ─── Utilities ───
 const _escDiv=document.createElement('div');
 const Utils={
@@ -3833,6 +4073,7 @@ const State={
     });
   },400),
   async persistNow(){
+    if(this.data.meta?._sampleMode)return;
     const json=JSON.stringify(this.data);
     try{await IDB.set(STORAGE_KEY,json);}catch(e){}
     try{localStorage.setItem(STORAGE_KEY,json);}catch(e){}
@@ -6681,6 +6922,7 @@ Keep responses concise and grounded. If you don't know, say so. If the user asks
       return null;
     };
     const data=await this._apiFetch(messages,extras,signal);
+    if(typeof TransparencyLog!=='undefined'&&data?.usage){TransparencyLog.push({label:TransparencyLog._pendingLabel||'AI call',model:data.model||'unknown',inputTokens:data.usage.prompt_tokens||0,outputTokens:data.usage.completion_tokens||0});TransparencyLog._pendingLabel=null;}
     const raw=data?.choices?.[0]?.message?.content||'';
     let parsed=tryParse(raw);
     if(parsed&&typeof parsed==='object')return parsed;
@@ -6692,6 +6934,7 @@ Keep responses concise and grounded. If you don't know, say so. If the user asks
       return m;
     });
     const data2=await this._apiFetch(retryMessages,extras,signal);
+    if(typeof TransparencyLog!=='undefined'&&data2?.usage){TransparencyLog.push({label:(TransparencyLog._pendingLabel||'AI call')+' (retry)',model:data2.model||'unknown',inputTokens:data2.usage.prompt_tokens||0,outputTokens:data2.usage.completion_tokens||0});TransparencyLog._pendingLabel=null;}
     const raw2=data2?.choices?.[0]?.message?.content||'';
     parsed=tryParse(raw2);
     if(parsed&&typeof parsed==='object')return parsed;
@@ -7117,50 +7360,311 @@ Return ONLY the paragraph as plain text. No preamble, no formatting.`;
     }catch(e){return{names:[]};}
   },
 };
-// ─── MODE PICKER ─────────────────────────────────────────────────────────────
-const ModePicker={
+// ─── SAMPLE REALM DATA ───────────────────────────────────────────────────────
+const SAMPLE_REALM_HEIST={name:'Solis Prime',era:'Near-Future',government:'Corporate Sovereignty',archetype:'technocratic',leader:'Director-Emerita Iolanthe Marr',rulingClass:'Board of Synthesists',currentYear:2188,population:4200000,territory:9800,capital:'The Spire District',template:'city-state',stats:{legitimacy:44,corruption:7,opposition:6,food_production:70,trade:82,raw_materials:38,manpower:55,knowledge:79,cohesion:32,urbanization:94},factions:[{name:'The Shadowclaw Clan',type:'Opposition',position:'gaining',primaryInterest:'Control of the Lower Markets redistribution network',description:"A tightly-knit smuggling fraternity that moves contraband, unregistered persons, and grey-market bioware through Solis Prime's sub-tier conduits. Loyalty is enforced through shared risk, not hierarchy.",leaderName:'Dust (operational alias)'},{name:'Spire Security Directorate',type:'Government',position:'holding',primaryInterest:'Enforcement of the Corporate Charter and protection of Board assets',description:"The Board's sanctioned enforcement arm. Funded by Synthesist levies. Prosecutions are routed through Directorate-aligned magistrates — including Magistrate Vell, whose standing orders are classified.",leaderName:'Commandant Pyrren Ash'}],chronicle:[{name:'The Lower Markets Charter',type:'Economic',weight:12,year:2179,visibility:'public',description:"The Board of Synthesists granted provisional trade licenses to seventeen Lower Market guilds — a concession wrested after the Three-Week Blockade of the Spire elevators. Cedric Vell's grandfather co-signed the original petition.",relatedStats:['trade','cohesion']},{name:'The Conduit Raids',type:'Military',weight:-9,year:2181,visibility:'public',description:'The Spire Security Directorate swept seventeen sub-tier conduit nodes, seizing unlicensed bioware and arresting forty-two persons. Shadowclaw Clan lost two veteran runners. Dust was wounded in the escape. Cedric Vell\'s stall was not raided — a fact that was noticed.',relatedStats:['opposition','cohesion']},{name:'The Marr Appointment',type:'Political',weight:14,year:2183,visibility:'public',description:"Iolanthe Marr was elevated to the Board of Synthesists as its youngest-ever seat-holder, overseeing the Logistics and Transit vertical. Her first act was reclassifying six Lower Market trade corridors as Board property — effectively voiding the 2179 charter concessions.",relatedStats:['legitimacy','trade']},{name:'The Vell Estrangement',type:'Social',weight:-6,year:2184,visibility:'public',description:"Magistrate Sera Vell issued standing enforcement orders against unlicensed market activity in the Lower Markets — orders that directly targeted her brother Cedric's fence operation. Cedric has not spoken to his sister since. The Directorate uses his silence as leverage.",relatedStats:['cohesion']},{name:'The Marr Heist of 2185',type:'Political',weight:-11,year:2185,visibility:'public',description:"A Shadowclaw Clan operation penetrated a Spire transit vault and extracted a crate of pre-charter corporate land titles — documents that would, if published, invalidate the Board's authority over three Lower Market districts. Dust coordinated the extraction. Cedric Vell moved the titles to a safehouse in Sub-Tier 7. The crate has not surfaced publicly.",relatedStats:['opposition','legitimacy']},{name:"The Magistrate's Sealed Warrants",type:'Political',weight:-8,year:2187,visibility:'private',description:"Magistrate Sera Vell filed seventeen sealed warrants targeting Shadowclaw distribution nodes — including two that bracket the Sub-Tier 7 safehouse where the Marr Heist titles are stored. Whether she knows the titles are there, or whether she is simply cleaning the grid, is unknown. The warrants execute on the third of next month.",relatedStats:['opposition','legitimacy']},{name:'The Listening Device Contract',type:'Political',weight:6,year:2188,visibility:'private',description:"An anonymous party (suspected: a rival Board faction) has contracted the Shadowclaw Clan to plant a deep-signal listening device inside Director-Emerita Marr's private office on Spire Level 41. Dust has accepted. The operation requires inside access — which only Cedric Vell's network of licensed market vendors can provide.",relatedStats:['trade','knowledge']}],characters:[{name:'Cedric Vell',role:'Fence, Lower Markets broker',status:'active',drive:'Protect the Sub-Tier 7 network his grandfather built',fear:"His sister finds the land titles before he can broker their safe release",plotSeeds:["Cedric holds the 2185 land titles. He wants them off his hands — but only to someone who won't burn the Lower Markets with them.","He knows about the sealed warrants. He won't say how."],chronicleLinks:[]},{name:'Magistrate Sera Vell',role:'Spire Security Directorate prosecutor',status:'active',drive:'Advance within the Directorate by delivering measurable enforcement results',fear:"That her estrangement from Cedric has made her complicit — that she signed warrants she did not fully read",plotSeeds:['Her standing orders are classified at Level 3. The party cannot legally read them.','She is not corrupt — but she is ambitious enough to have stopped asking certain questions.'],chronicleLinks:[]},{name:'Dust',role:'Shadowclaw Clan operative, party contact',status:'active',drive:'Execute the listening-device contract before the sealed warrants execute',fear:'Cedric gets burned by his sister before the operation is complete',plotSeeds:['Dust was wounded in the 2181 Conduit Raids. The scar runs along her left forearm. She does not explain it.','She has a source inside the Spire — unconfirmed, never named in front of the party.'],chronicleLinks:[]},{name:'Iolanthe Marr',role:'Board of Synthesists member, Logistics and Transit vertical',status:'active',drive:'Consolidate the reclassified trade corridors before a Board vote can reverse the Marr Appointment',fear:'The 2185 land titles surface — they would undo everything she built since 2183',plotSeeds:['She is aware her office may be surveilled. She varies her route. She does not vary her assistant.','She once had a relationship with Dust, before either of them were who they are now. Dust has never mentioned it.'],chronicleLinks:[]}],hooks:[{title:'The Sealed Warrants',description:"Magistrate Vell's seventeen sealed warrants execute in twenty-two days. Two of them bracket the Sub-Tier 7 safehouse. The Shadowclaw Clan does not know Cedric is in the blast radius. Does the party warn him — and if so, how do they explain how they know?",resolved:false,relatedFactions:[]},{title:"The Land Titles' Buyer",description:'Three parties want the 2185 land titles: the Shadowclaw Clan (to use them), Magistrate Vell (to destroy them), and an unknown fourth party who has offered Cedric more money than he has ever seen. The fourth party\'s identity is the question.',resolved:false,relatedFactions:[]},{title:"Dust's Spire Source",description:"Someone inside the Spire is feeding Dust operational intelligence. The quality of the information implies Level 2 clearance at minimum. If the source is burned — by the party's actions or by accident — the listening-device operation collapses.",resolved:false,relatedFactions:[]}],secrets:[{title:'The Warrants Were Written Blind',content:"Magistrate Vell signed the sealed warrants without reading the full targeting appendix. A Directorate aide inserted the Sub-Tier 7 coordinates after her signature. She does not know. Someone does.",visibility:'private',relatedFactions:[]},{title:'Marr Ordered the 2181 Raids',content:"The Conduit Raids of 2181 were not routine enforcement. Iolanthe Marr — then a Board junior analyst — provided the Directorate with the conduit maps. She traded the intelligence for her seat on the Logistics vertical. Two Shadowclaw runners died because of those maps. Dust knows one of them was her cousin.",visibility:'private',relatedFactions:[]}],sessions:[],locations:[{name:"Cedric's Stall, Sub-Tier 7",description:'A licensed secondhand goods stall in the Lower Markets. The back room connects to three conduit nodes. The 2185 land titles are sealed inside a polymer case beneath the third floorboard.',type:'Interior',status:'active'},{name:"Spire Level 41 — Marr's Office",description:"Director-Emerita Marr's private office. Accessed via credentialed lift only. The listening-device drop point is behind the ventilation panel on the north wall — accessible from the service corridor, which requires a licensed vendor pass to enter.",type:'Restricted',status:'active'}],_preBaked:{strongStart:"The service corridor on Level 41 smells of recycled air and corporate patience. Dust pressed the vendor pass into your hand three minutes ago — Cedric's network, good for one trip up the Spire's maintenance spine. The listening device is a flat disc, nine grams, held against your palm. Behind the north wall panel is a ventilation cavity forty centimetres deep; the disc clips to the second strut from the left. You have eleven minutes before the shift rotation brings a Directorate sweep team through Sub-Tier 6 and someone starts asking why Cedric's vendor pass is showing activity two hundred floors above the Lower Markets. The panel screws are already loose. Someone came this way before.",hooks:["The sealed warrants execute in twenty-two days — and two of them bracket Cedric's Sub-Tier 7 safehouse where the 2185 land titles are hidden. If the Directorate finds those titles, everything Dust's operation was built on burns overnight.","An unknown fourth party has offered Cedric more money than he has seen in his life for the 2185 land titles. Cedric says he doesn't know who they are. Dust says Cedric is lying. Both might be right.","Magistrate Sera Vell is Cedric's estranged sister. She signed the sealed warrants without reading the targeting appendix. Whether that makes her a victim or a weapon depends entirely on who tells her first — and what they say."],secrets:["The 2181 Conduit Raids were not routine enforcement. Iolanthe Marr provided the conduit maps to the Directorate in exchange for her seat on the Logistics vertical. Two Shadowclaw runners died. Dust's cousin was one of them. Dust does not know the source. Yet.","The sealed warrants were altered after Magistrate Vell signed them. A Directorate aide inserted the Sub-Tier 7 coordinates into the targeting appendix post-signature. Someone inside the Directorate is playing both sides.","Cedric's vendor pass shows four prior uses on Level 40 and 41 — none of them his. His pass has been borrowed. He has not reported the discrepancy because doing so would require explaining his network to the Directorate.","Iolanthe Marr knows her office may be under surveillance. She varies her route to work. She does not vary her assistant — and her assistant has been accepting off-cycle payments from an anonymous transfer account for eleven months.","The 2185 land titles, if authenticated, would void the Board's authority over three Lower Market districts and retroactively invalidate the Marr Appointment itself. The Board's legal division has a draft counter-argument ready. It was written in 2183 — two years before the Heist."]},fronts:[],bestiary:[],relations:[],copilotConversation:[],glossary:null,notes:'',oracleLog:[],metadata:{soloMode:false}};
+
+const SAMPLE_REALM_SOLO={name:'Aetherholm',era:'Industrial',government:'Constitutional Monarchy',archetype:'merchant-republic',leader:'King Osbert IV (nominal)',rulingClass:'Commercial and professional classes',currentYear:1891,population:840000,territory:12000,capital:'Aetherholm City',template:'city-state',stats:{legitimacy:62,corruption:6,opposition:4,food_production:55,trade:71,raw_materials:60,manpower:58,knowledge:66,cohesion:44,urbanization:68},factions:[{name:'The Veiled Court',type:'Opposition',position:'gaining',primaryInterest:"Infiltration and manipulation of Aetherholm's elite social layer",description:"A secret cult woven into the city's professional and merchant classes. Members are identified by a white-wax seal left in private correspondence. Their doctrine is deliberately obscure; their methods are social, not violent — so far. At least three Constabulary inspectors are believed to be members.",leaderName:'Unknown (the "Voice Above the Veil")'},{name:'The Constabulary',type:'Government',position:'holding',primaryInterest:'Maintenance of public order and defence of Constabulary institutional authority',description:"Aetherholm's official law-keeping body. Competent in most respects; quietly compromised in others. Inspector Calder heads the investigative division and is personally honest — but his chain of command is not, and he knows it.",leaderName:'Chief Commissioner Holt'}],chronicle:[{name:'The Death of Elena Reye',type:'Social',weight:-16,year:1888,visibility:'public',description:'Elena Reye, wife of private investigator Marik Reye, was found dead in the Brass Lantern district. The official verdict: accidental drowning in the Aether Canal. Marik resigned from the Constabulary three days after the inquest closed. Inspector Calder signed the inquest report. He has never explained why he did not contest the verdict.',relatedStats:['cohesion']},{name:'The White-Wax Letters',type:'Political',weight:-8,year:1889,visibility:'private',description:"Three separate Constabulary investigations into disappearances in the Lamp Quarter were closed within a week of each other — each file stamped with an authorisation code that has since been reassigned and cannot be traced. The closures were accompanied by private correspondence bearing white-wax seals. Marik found one of these letters in Elena's personal papers a year after her death.",relatedStats:['legitimacy','corruption']},{name:'Session 1 — The Brass Lantern',type:'Political',weight:5,year:1891,visibility:'public',description:"Marik Reye accepted a commission from a Lamp Quarter merchant to locate a missing ledger. His investigation led him to the Brass Lantern tavern, where the barkeep — a man named Orlan — became evasive when questioned about the merchant's associates. Marik also observed a woman in grey watching from the back corner. She left before he could approach. This is the third time he has seen her in public spaces.",relatedStats:['knowledge']},{name:"Session 2 — The Pale Woman's Message",type:'Social',weight:-7,year:1891,visibility:'public',description:"The woman in grey — now known to Marik as \"the Pale Woman\" — left a sealed envelope at his lodgings. Inside: a pressed flower and a single line in Elena's handwriting. The sentence reads: \"The canal was not an accident.\" The ink was Elena's. Marik has confirmed the handwriting. The letter is undated. Inspector Calder, shown a copy, said he had no comment.",relatedStats:['opposition','cohesion']},{name:'Session 3 — The Lamp Quarter Audit',type:'Economic',weight:4,year:1891,visibility:'public',description:"Marik traced the missing ledger to a Lamp Quarter counting-house with a recorded Constabulary visit in 1889 — one of the files closed with the white-wax authorisation code. The counting-house owner, a widow named Maret Lund, told Marik that Inspector Calder visited personally in 1889 and left without the ledger he came for. She said Calder looked afraid. She kept the ledger under her floor. It contains seven names. One of them is Elena's.",relatedStats:['knowledge','legitimacy']},{name:'The Constabulary Promotion',type:'Political',weight:6,year:1891,visibility:'public',description:"Chief Commissioner Holt announced the promotion of three inspectors to the investigative division — a routine administrative action that placed two Veiled Court suspects inside Marik's former unit. Inspector Calder was passed over. He sent Marik a short note: \"Watch the new men.\"",relatedStats:['legitimacy','corruption']}],characters:[{name:'Marik Reye',role:'Player character — private investigator',status:'active',drive:'Find out what really happened to Elena and name the person who ordered it',fear:'That someone he trusted — Calder, or someone closer — already knew and said nothing',plotSeeds:["Elena's name is in the Lamp Quarter ledger. Marik does not yet know in what context.","The Pale Woman has appeared three times. She is not following Marik — she is preceding him."],chronicleLinks:[]},{name:'Elena Reye',role:"Marik's deceased wife; the investigation's centre of gravity",status:'deceased',drive:'N/A — referenced in chronicles and outputs only',fear:'N/A',plotSeeds:["Elena's name appears in a ledger she should have had no connection to.","She left a message in her own handwriting — after she died."],chronicleLinks:[]},{name:'Inspector Calder',role:"Marik's former Constabulary partner",status:'active',drive:'Protect Marik from the political machinery that would use him the way it used Elena',fear:'That protecting Marik means admitting what he did and did not do in 1888',plotSeeds:["Calder signed the inquest report. He was afraid when he visited the counting-house in 1889. He was passed over for promotion this year. The timeline connects.","He sent Marik a warning. That warning may be a distraction."],chronicleLinks:[]},{name:'The Pale Woman',role:'Veiled Court operative — possibly a defector',status:'active',drive:'Unknown — but her actions are protective, not hostile',fear:'Being identified by the Veiled Court before she has finished whatever she started',plotSeeds:["She preceded Marik at the Brass Lantern. She left Elena's handwriting on his doorstep. She has been three steps ahead of him for two sessions.","She is not the same woman Constabulary records describe as a Veiled Court messenger. Either the records are wrong or she changed."],chronicleLinks:[]}],hooks:[{title:"Elena's Name in the Ledger",description:'Session 3 produced the Lamp Quarter ledger. Elena\'s name is inside. Marik has not yet read the entry next to her name. The widow Maret Lund is willing to let him return — but she has now received a white-wax letter herself.',resolved:false,relatedFactions:[]},{title:"Calder's Silence",description:"Calder signed the 1888 inquest report. He visited the counting-house in 1889 and left empty-handed and afraid. He sent a warning this year but no explanation. Each data point is consistent with complicity — or with someone trying to stay alive inside the machinery.",resolved:false,relatedFactions:[]}],secrets:[{title:'What the Pale Woman Carries',content:"The Pale Woman is not a Veiled Court messenger. She is a former member who was present the night Elena Reye died — not as a participant but as a witness who could not intervene without exposing herself. The pressed flower she sent Marik was from Elena's own coat pocket. The Pale Woman kept it for three years before deciding Marik was ready to hear the truth. She is terrified she has waited too long.",visibility:'private',relatedFactions:[]}],sessions:[{number:1,title:'The Brass Lantern',summary:'Marik accepted a missing-ledger commission. Followed it to the Brass Lantern. The barkeep Orlan was evasive. Observed the Pale Woman for the third time.',hooks:[]},{number:2,title:"The Pale Woman's Message",summary:"Found Elena's handwriting in a sealed envelope at his lodgings. \"The canal was not an accident.\" Showed Calder. Calder said nothing.",hooks:[]},{number:3,title:'The Lamp Quarter Audit',summary:"Found the ledger under Maret Lund's floor. Elena's name is inside. Calder visited the counting-house in 1889. He was afraid.",hooks:[]}],locations:[{name:'The Brass Lantern',description:'A mid-tier tavern in the Lamp Quarter. Barkeep Orlan has been working here for eleven years. He knows most of the neighbourhood regulars and is evasive about several of them. The Pale Woman has been observed here twice.',type:'Public',status:'active'},{name:"Maret Lund's Counting-House",description:"A small Lamp Quarter commercial bookkeeper. Maret kept the ledger under her floor for two years after Calder's visit. She has now received a white-wax letter. She is still willing to talk — for now.",type:'Interior',status:'active'}],_preBaked:{oracleResult:"Yes — but reluctantly. Orlan the barkeep knows about the Veiled Court's presence in the Brass Lantern's back room, and has known since 1889. He has said nothing because a white-wax letter arrived at his home three days after Elena Reye's inquest closed — addressed not to him but to his daughter. Marik has been in the Brass Lantern four times since Elena's death. On two of those visits, Orlan went to the back room after Marik left. He is not a member. He is afraid.",scenePivots:["A Constabulary patrol appears at the counting-house just as Marik arrives to read Elena's ledger entry — the two new inspectors Calder warned about, moving faster than they should know to move.","Inspector Calder is sitting in Marik's lodgings when he returns from the Lamp Quarter, holding the copy of Elena's letter. He says: \"I need to tell you what I saw in 1888 before someone tells you a version that suits them.\"","Maret Lund sends a message — not to Marik but to the address Elena used when she was alive. The message reads: \"Come before the letter-men do.\" Someone in Maret's circle knew Elena's address."]},fronts:[],bestiary:[],relations:[],copilotConversation:[],glossary:null,notes:'',oracleLog:[],metadata:{soloMode:true}};
+
+const SAMPLE_REALM_POLITICAL={name:'The Surassi Compact',era:'Industrial',government:'Republic',archetype:'merchant-republic',leader:'Chancellor Veyna Oss',rulingClass:'Merchant Houses and licensed guild masters',currentYear:1847,population:3100000,territory:88000,capital:'Compact City (Surras)',template:'kingdom',stats:{legitimacy:65,corruption:5,opposition:5,food_production:45,trade:70,raw_materials:66,manpower:60,knowledge:58,cohesion:48,urbanization:52},factions:[{name:'The Merchant Houses',type:'Government',position:'holding',primaryInterest:'Preservation of the licensed-trade monopoly system that funds their political authority',description:"Twelve licensed trading houses that collectively hold fifty-three seats in the Compact Assembly. Their authority rests on a post-founding bargain: the Houses fund the state's infrastructure and military capacity in exchange for exclusive licensing authority over long-distance trade. The bargain is two generations old and increasingly contested.",leaderName:'Chancellor Veyna Oss'},{name:'The Saltmoot Council',type:'Opposition',position:'gaining',primaryInterest:'Provincial assembly representation and reduced licensing fees for regional producers',description:"A coalition of provincial merchant assemblies and regional guild representatives who argue the Compact's founding charter entitles them to proportional Assembly seats. Currently holding nineteen seats — the most they have ever held. Speaker Tomas Rendle has been meeting openly with Bread Coalition delegates for six weeks.",leaderName:'Speaker Tomas Rendle'},{name:'The Bread Coalition',type:'Opposition',position:'gaining',primaryInterest:'Relief from the grain licensing system and direct state food distribution',description:"A populist movement that emerged from three consecutive harvest shortfalls. Formally unregistered (the Assembly has twice refused to grant them observer status), but commanding visible street presence in the industrial districts. Mother Talith has become a public figure too prominent to prosecute. She has declined three private meetings with the Chancellor.",leaderName:'Mother Talith'}],chronicle:[{name:'The Founding Bargain',type:'Political',weight:20,year:1801,visibility:'public',description:"The Surassi Compact was constituted by twelve trading houses who collectively pledged infrastructure funding in exchange for exclusive licensing authority. The charter explicitly reserved forty Assembly seats for House representatives and twenty for \"provincial assemblies to be designated.\" That designation was never completed. The Saltmoot Council has cited this gap in every session since 1839.",relatedStats:['legitimacy','trade']},{name:'The First Grain Licence Reform (Defeated)',type:'Political',weight:-7,year:1821,visibility:'public',description:"A reform bill reducing grain licensing fees for provincial producers was defeated in Assembly by a margin of thirty-one to twenty-two. The Merchant Houses bloc held. Three House representatives who had signalled support for reform were replaced before the next session. No formal explanation was given. Chancellor Oss's predecessor called it \"routine rotation.\"",relatedStats:['legitimacy','cohesion']},{name:'The Three Lean Harvests',type:'Natural',weight:-15,year:1843,visibility:'public',description:"Three consecutive years of reduced harvest — 1843, 1844, 1845 — reduced food production across the Compact's southern provinces by an estimated thirty percent. The Merchant Houses' grain reserve system kept the capital adequately supplied. Provincial bread prices tripled. The Bread Coalition formed in the winter of 1845. Mother Talith began speaking publicly in the spring of 1846.",relatedStats:['food_production','opposition','cohesion']},{name:'The Orryn Defection',type:'Political',weight:-12,year:1845,visibility:'public',description:"Master Guildsman Aldric Orryn, a junior representative of the Weavers' House, resigned his House seat and applied for Saltmoot Council observer status. He brought with him a set of internal House correspondence showing deliberate manipulation of the grain reserve release schedule — correspondence that, if authenticated, demonstrates that the Merchant Houses withheld reserve grain from the southern provinces during the first lean harvest to sustain price floors. Orryn has not yet published the correspondence. He says he is waiting for \"the right assembly session.\"",relatedStats:['legitimacy','corruption','opposition']},{name:'Chancellor Oss Assumes Office',type:'Political',weight:8,year:1846,visibility:'public',description:"Veyna Oss was elected Chancellor by the House bloc after her predecessor's resignation amid a procedural dispute over the provincial seating question. Oss secured her election by promising the two swing Houses a review of the licensing fee structure — a review she has not convened. She is regarded within the Houses as disciplined and reliably aligned. She is regarded outside the Houses as the most capable person currently holding back a constitutional crisis.",relatedStats:['legitimacy']},{name:'The Saltmoot Petition',type:'Political',weight:-9,year:1847,visibility:'public',description:"The Saltmoot Council formally petitioned the Assembly for a constitutional referendum on provincial seat allocation. The petition carries nineteen Assembly signatures — one short of the twenty required to force a floor debate. Speaker Rendle has been meeting with Master Guildsman Orryn and two Bread Coalition delegates to negotiate the twentieth signature. Chancellor Oss has not commented on these meetings. She has, however, quietly asked the Assembly clerk to review the procedural calendar for the next eight months.",relatedStats:['legitimacy','opposition']},{name:"Mother Talith's Public Declaration",type:'Social',weight:11,year:1847,visibility:'public',description:"Before a crowd estimated at four thousand in the Surras mill district, Mother Talith publicly named Chancellor Oss by name and called for a Bread Coalition petition to force an Assembly vote on direct grain distribution. She explicitly stated she was not calling for disorder — \"We are citizens of the Compact and we are petitioning our Assembly as the charter permits.\" The speech was printed in three provincial broadsheets. The Constabulary watched from the perimeter and made no arrests. Chancellor Oss received the report that evening and reportedly read it twice.",relatedStats:['opposition','cohesion','legitimacy']}],characters:[{name:'Chancellor Veyna Oss',role:'Head of the Merchant Houses bloc; Chancellor of the Compact Assembly',status:'active',drive:"Hold the Assembly coalition together long enough to manage the seating question on her terms, not the Saltmoot's",fear:"Orryn publishes the grain reserve correspondence before she can negotiate his silence — which would hand the Saltmoot the constitutional crisis she has spent a year preventing",plotSeeds:["Oss privately believes the Founding Bargain's provincial seating gap must eventually be resolved. She is not opposed to reform; she is opposed to being forced into it.","She has read Talith's speech twice. She has not told anyone why."],chronicleLinks:[]},{name:'Speaker Tomas Rendle',role:'Saltmoot Council leader; currently one vote short of forcing a floor debate',status:'active',drive:"Secure the twentieth Assembly signature before Oss manipulates the procedural calendar to delay the petition past its validity window",fear:"That the Bread Coalition's street presence becomes a liability — that the Assembly bloc will use Talith's name to delegitimise the Saltmoot's constitutional argument",plotSeeds:["Rendle is meeting with Orryn. He wants the grain correspondence — but only timed correctly. Too early and it becomes a scandal that burns the petition. Too late and Oss controls the narrative.","He is also meeting with two Bread Coalition delegates. He has not told the Saltmoot's full council about those meetings."],chronicleLinks:[]},{name:'Mother Talith',role:'Bread Coalition organiser; untouchable due to popular support',status:'active',drive:"Force a direct Assembly vote on grain distribution before a fourth lean harvest makes the Compact's legitimacy question unanswerable by any parliamentary means",fear:'That she becomes a symbol the Assembly can debate instead of a person they must answer',plotSeeds:["Talith has been offered a private meeting with Chancellor Oss three times. She has declined all three. She is waiting for something — possibly the twentieth signature.","She has read the Founding Bargain's charter in full. She knows about the undesignated provincial seats. She has not said so publicly yet."],chronicleLinks:[]},{name:'Master Guildsman Aldric Orryn',role:'Merchant House defector; holder of the grain reserve correspondence',status:'active',drive:'Publish the correspondence at maximum political effect — not just to damage the Houses but to force a structural reform that survives them',fear:'That he miscalculates the moment and the correspondence becomes a historical footnote instead of a constitutional lever',plotSeeds:["Orryn is meeting with Rendle. He is also meeting, quietly, with a Bread Coalition delegate Rendle does not know about.","The grain reserve correspondence is authentic. Orryn had it verified by an independent accountant in 1846. He paid for the verification himself."],chronicleLinks:[]}],hooks:[{title:'The Twentieth Signature',description:'Rendle needs one more Assembly signature to force a floor debate on the provincial seating petition. The candidates are known: three swing-House representatives who have signalled private sympathy but public silence. Oss knows who they are. She is managing them. The question is who gets to them first — and what they are offered.',resolved:false,relatedFactions:[]},{title:"Orryn's Timing Problem",description:"The grain reserve correspondence would, if published, authenticate Saltmoot and Bread Coalition grievances and potentially implicate two sitting House representatives in deliberate provincial harm. Orryn is waiting for \"the right assembly session.\" Rendle wants it before the petition expires. Talith wants it before a fourth harvest. Oss wants it never. The timing is a political weapon all four are holding simultaneously.",resolved:false,relatedFactions:[]},{title:"Talith's Undisclosed Charter Knowledge",description:"Mother Talith has read the Founding Bargain charter in full and knows about the undesignated provincial seats. She has not said so publicly — which means she is holding a legitimate constitutional argument in reserve. When she deploys it, the Bread Coalition's petition is no longer a populist demand but a charter-compliant legal claim. The Assembly has no procedural response to a charter-compliant petition.",resolved:false,relatedFactions:[]}],secrets:[],_preBaked:{copilotAnswer:"Chancellor Veyna Oss has three response options when the Bread Coalition petition arrives, and her choice between them will define the next two years of Compact politics.\n\nHer first option is procedural delay. Oss has already asked the Assembly clerk to review the procedural calendar — this is not accidental. A petition filed under Article 14 of the Founding Bargain has a thirty-day validity window. If she can move three scheduled Assembly sessions into recess on administrative grounds, the petition expires and Rendle must restart from nineteen signatures. This buys her approximately four months. It does not resolve the underlying pressure.\n\nHer second option is a controlled concession. Oss privately believes the provincial seating gap must eventually be resolved. She could offer Rendle a joint committee — not a floor vote, but a formal review process that takes the petition off the immediate calendar and gives her eighteen months to shape the outcome. Rendle would likely accept if the committee had genuine authority. The Bread Coalition would not accept a committee. Talith would call it a delay in polite language.\n\nHer third option is the most dangerous: she could approach Orryn directly and offer him a formal accounting inquiry into the grain reserve schedule in exchange for his correspondence. This neutralises the correspondence as a political weapon, gives Oss control of the audit findings, and splits Orryn from Rendle. The risk is that Orryn is meeting with a Bread Coalition delegate Rendle does not know about — which suggests Orryn's loyalty is more transactional than ideological, and may already be in play.\n\nThe fourth option — doing nothing — is functionally a choice to let Talith's public declaration build momentum unchecked. Given that Oss reportedly read Talith's speech twice and said nothing to her inner council, this possibility cannot be excluded. Sometimes the most disciplined politician in the room is the one who waits for everyone else to make their move first.",factionAnalysis:"The Merchant Houses will spend the next two months managing the twentieth signature — offering license fee reviews, committee seats, and private assurances to the three swing representatives Rendle is courting. Their structural advantage is time: the petition has a validity window and every month it does not reach the floor is a month the Houses hold. Their structural vulnerability is Orryn's correspondence, which they cannot suppress without proving the Saltmoot's central accusation.\n\nThe Saltmoot Council's next probable move is acquiring the twentieth signature through Orryn — either by publishing the correspondence at a moment that forces a swing representative to defect, or by offering Orryn a formal council role that gives him institutional protection. Rendle's undisclosed Bread Coalition meetings suggest he is building a broader coalition than his council knows about. If that coalition holds, the Saltmoot's constitutional argument gains popular legitimacy it currently lacks.\n\nThe Bread Coalition's next move is Talith's undisclosed charter knowledge. When she invokes the undesignated provincial seats in a public statement, the constitutional argument shifts from a political demand to a legal claim the Assembly cannot dismiss on procedural grounds. She is likely waiting for the petition to fail once — giving her the failure as evidence that parliamentary channels are deliberately obstructed — before invoking the charter. That sequence would be very difficult for Oss to contain."},sessions:[],locations:[],fronts:[],bestiary:[],relations:[],copilotConversation:[],glossary:null,notes:'',oracleLog:[],metadata:{soloMode:false}};
+
+// ─── SAMPLE MODE ──────────────────────────────────────────────────────────────
+const SampleMode={
+  _active:false,
+  _activeSampleId:null,
+  _userStateBackup:null,
+
+  openPicker(){
+    if(!document.getElementById('modal-sample-picker')){
+      const wrapper=document.createElement('div');
+      wrapper.innerHTML=SampleMode._renderPickerModalHtml();
+      document.body.appendChild(wrapper.firstElementChild);
+      SampleMode.bind();
+    }
+    Modals.open('sample-picker');
+  },
+
+  loadSample(sampleId){
+    const sampleMap={
+      heist:typeof SAMPLE_REALM_HEIST!=='undefined'?SAMPLE_REALM_HEIST:null,
+      solo:typeof SAMPLE_REALM_SOLO!=='undefined'?SAMPLE_REALM_SOLO:null,
+      political:typeof SAMPLE_REALM_POLITICAL!=='undefined'?SAMPLE_REALM_POLITICAL:null,
+    };
+    const seed=sampleMap[sampleId];
+    if(!seed){return;}
+    try{SampleMode._userStateBackup=JSON.parse(JSON.stringify(State.data));}catch(e){SampleMode._userStateBackup=null;}
+    const sampleNation=buildNationFromSeed(seed);
+    sampleNation._preBaked=seed._preBaked||{};
+    const freshState=createDefaultState();
+    freshState.nations=[sampleNation];
+    freshState.meta.activeNationId=sampleNation.id;
+    freshState.meta._sampleMode=true;
+    freshState.meta._sampleId=sampleId;
+    State.data=freshState;
+    SampleMode._active=true;
+    SampleMode._activeSampleId=sampleId;
+    Modals.closeAll();
+    Render.all();
+    SampleMode._showBanner(seed.name,sampleId);
+    const label={heist:'The Heist',solo:'The Wandering Investigator',political:'The Saltmoot Council'}[sampleId]||sampleId;
+    showToast(`Sample loaded: ${label}. Explore the chronicle, factions, and Copilot — no API key needed.`,[],7000);
+  },
+
+  closeSample(){
+    if(!SampleMode._active)return;
+    if(SampleMode._userStateBackup){State.data=SampleMode._userStateBackup;}else{State.data=createDefaultState();}
+    SampleMode._active=false;
+    SampleMode._activeSampleId=null;
+    SampleMode._userStateBackup=null;
+    SampleMode._hideBanner();
+    Render.all();
+    showToast('Sample closed. Your realm is restored.');
+  },
+
+  isActive(){return SampleMode._active;},
+
+  getPreBakedOutput(sampleId,kind){
+    const id=sampleId||SampleMode._activeSampleId;
+    if(!id)return null;
+    const liveNation=(State.data?.nations||[]).find(n=>n._preBaked&&State.data?.meta?._sampleId===id);
+    if(liveNation&&liveNation._preBaked&&liveNation._preBaked[kind]!==undefined)return liveNation._preBaked[kind];
+    const sampleMap={heist:typeof SAMPLE_REALM_HEIST!=='undefined'?SAMPLE_REALM_HEIST._preBaked:null,solo:typeof SAMPLE_REALM_SOLO!=='undefined'?SAMPLE_REALM_SOLO._preBaked:null,political:typeof SAMPLE_REALM_POLITICAL!=='undefined'?SAMPLE_REALM_POLITICAL._preBaked:null};
+    const bank=sampleMap[id];
+    if(!bank)return null;
+    return bank[kind]!==undefined?bank[kind]:null;
+  },
+
+  exitOnCloseGuard(){
+    if(!SampleMode._active)return;
+    if(SampleMode._userStateBackup){State.data=SampleMode._userStateBackup;}else{State.data=createDefaultState();}
+    SampleMode._active=false;
+    SampleMode._activeSampleId=null;
+    SampleMode._userStateBackup=null;
+    if(State.data.meta){delete State.data.meta._sampleMode;delete State.data.meta._sampleId;}
+  },
+
+  watermarkPdfHtml(){
+    if(!SampleMode._active)return'';
+    return'<div style="position:fixed;bottom:24px;right:24px;font-family:serif;font-size:11px;color:rgba(180,140,60,0.55);letter-spacing:0.08em;text-transform:uppercase;pointer-events:none;z-index:99999">Sample Mode — Purchase a license to remove</div>';
+  },
+
+  bind(){
+    const picker=document.getElementById('modal-sample-picker');
+    if(!picker)return;
+    picker.querySelectorAll('[data-sample-load]').forEach(btn=>{
+      btn.addEventListener('click',()=>SampleMode.loadSample(btn.dataset.sampleLoad));
+    });
+    const closeBtn=picker.querySelector('[data-close="sample-picker"]');
+    if(closeBtn)closeBtn.addEventListener('click',()=>Modals.closeAll());
+    document.addEventListener('click',e=>{
+      if(e.target&&e.target.id==='sample-mode-banner-exit')SampleMode.closeSample();
+    },{once:false});
+  },
+
+  _showBanner(realmName,sampleId){
+    SampleMode._hideBanner();
+    const labelMap={heist:'The Heist (DM demo)',solo:'The Wandering Investigator (Solo demo)',political:'The Saltmoot Council (Political demo)'};
+    const label=labelMap[sampleId]||sampleId;
+    const banner=document.createElement('div');
+    banner.id='sample-mode-banner';
+    banner.setAttribute('role','status');
+    banner.setAttribute('aria-live','polite');
+    banner.innerHTML=`<span class="sample-mode-banner__icon">&#9656;</span><span class="sample-mode-banner__text"><strong>Sample Mode</strong> &mdash; ${Utils.escHtml(realmName)} &middot; ${Utils.escHtml(label)} <span class="sample-mode-banner__note">(Purchase a license to remove)</span></span><button id="sample-mode-banner-exit" class="sample-mode-banner__exit" type="button" aria-label="Exit sample mode and restore your realm">Exit sample</button>`;
+    document.body.prepend(banner);
+    document.documentElement.style.setProperty('--sample-banner-height',banner.offsetHeight+'px');
+  },
+
+  _hideBanner(){
+    const existing=document.getElementById('sample-mode-banner');
+    if(existing)existing.remove();
+    document.documentElement.style.removeProperty('--sample-banner-height');
+  },
+
+  _renderPickerModalHtml(){
+    return`<div class="modal modal--md" id="modal-sample-picker" role="dialog" aria-modal="true" aria-labelledby="sample-picker-title"><div class="modal__header"><h2 class="modal__title" id="sample-picker-title">Try a sample realm</h2><button class="modal__close" data-close="sample-picker" aria-label="Close">&#215;</button></div><div class="modal__body"><p style="font-size:var(--text-body-sm);color:var(--color-text-muted);margin:0 0 20px">No API key needed. Each sample loads a fully-built realm and shows you what RealmWright's Copilot can produce when it knows your campaign.</p><div class="sample-picker__grid"><div class="sample-picker__card"><div class="sample-picker__card-header"><span class="sample-picker__tag">DM demo</span><h3 class="sample-picker__card-title">The Heist</h3><p class="sample-picker__card-sub">Solis Prime &middot; Near-Future Corporate</p></div><p class="sample-picker__card-pitch">A smuggling crew. A Board-member target. A magistrate who might be an ally or a trap. See how the Copilot tracks relationships across a seven-entry chronicle to answer your most tactically specific questions.</p><button class="btn btn--primary sample-picker__cta" type="button" data-sample-load="heist">Show me The Heist</button></div><div class="sample-picker__card"><div class="sample-picker__card-header"><span class="sample-picker__tag">Solo demo</span><h3 class="sample-picker__card-title">The Wandering Investigator</h3><p class="sample-picker__card-sub">Aetherholm &middot; Industrial Mystery</p></div><p class="sample-picker__card-pitch">A private investigator. His dead wife's name in a ledger. A woman who has appeared three times and is always one step ahead. See the Oracle and Scene Pivot tools working in a three-session solo campaign.</p><button class="btn btn--primary sample-picker__cta" type="button" data-sample-load="solo">Show me the Investigator</button></div><div class="sample-picker__card"><div class="sample-picker__card-header"><span class="sample-picker__tag">Worldbuilder demo</span><h3 class="sample-picker__card-title">The Saltmoot Council</h3><p class="sample-picker__card-sub">The Surassi Compact &middot; Industrial Political Intrigue</p></div><p class="sample-picker__card-pitch">Three factions at the edge of a constitutional crisis. A Chancellor who is buying time. A guildsman holding a document that could end her. See the Copilot produce faction forecasts and cultural analysis from a seven-entry chronicle.</p><button class="btn btn--primary sample-picker__cta" type="button" data-sample-load="political">Show me the Compact</button></div></div></div><div class="modal__footer" style="justify-content:flex-end"><button class="btn btn--secondary" type="button" data-close="sample-picker">Maybe later</button></div></div>`.trim();
+  },
+};
+
+// ─── FRONT DOOR MODULE ────────────────────────────────────────────────────────
+const FrontDoor={
+  _placeholders:['A heist gone wrong inside the Solis Data Vault…','My investigator returns to the cult\'s safehouse after Session 4…','The Saltmoot Council convenes to decide the war vote…'],
+  _placeholderIdx:0,
+  _placeholderTimer:null,
+  _bound:false,
+  _IDB_KEY:'rw_recent_generations',
+  _MAX_RECENT:5,
+
   open(){
-    const el=document.getElementById('mode-picker');
-    if(el)el.classList.add('is-open');
+    const el=document.getElementById('modal-front-door');
+    const bg=document.getElementById('modal-backdrop');
+    if(!el||!bg)return;
+    bg.classList.add('is-open');el.classList.add('is-open');
+    document.body.style.overflow='hidden';
+    requestAnimationFrame(()=>{bg.classList.add('is-visible');setTimeout(()=>el.classList.add('is-visible'),80);});
+    setTimeout(()=>{const ta=document.getElementById('fd-prompt');if(ta)ta.focus();},200);
+    this._startPlaceholderRotation();
+    this._loadRecent();
   },
+
   close(){
-    const el=document.getElementById('mode-picker');
-    if(el)el.classList.remove('is-open');
+    const el=document.getElementById('modal-front-door');
+    const bg=document.getElementById('modal-backdrop');
+    if(!el)return;
+    el.classList.remove('is-visible');
+    setTimeout(()=>{
+      el.classList.remove('is-open');
+      const anyOpen=document.querySelector('.modal.is-open');
+      if(!anyOpen){if(bg){bg.classList.remove('is-visible');bg.classList.remove('is-open');}document.body.style.overflow='';}
+    },240);
+    this._stopPlaceholderRotation();
   },
-  choose(mode){
-    State.pushUndo();
-    State.data.meta.preferredMode=mode;
-    State.data.meta.firstRunComplete=true;
-    State.data.meta.settings.onboardingComplete=true;
-    State.persist();
-    this.close();
-    if(mode==='tonight'){
-      Tonight.open();
-    }else if(mode==='campaign'){
-      State.setSetting('gmMode',true);
-      if(typeof GMMode!=='undefined')GMMode.apply();
-      Render.all();
+
+  bind(){
+    if(this._bound)return;
+    this._bound=true;
+    document.getElementById('fd-generate')?.addEventListener('click',()=>this._handleGenerate());
+    document.getElementById('fd-sample')?.addEventListener('click',()=>this._handleSample());
+    document.getElementById('fd-activate')?.addEventListener('click',()=>this._handleActivate());
+    document.getElementById('fd-style-group')?.addEventListener('click',e=>{
+      const pill=e.target.closest('.char-status-pill');if(!pill)return;
+      document.querySelectorAll('#fd-style-group .char-status-pill').forEach(p=>{p.classList.remove('is-selected');p.setAttribute('aria-pressed','false');});
+      pill.classList.add('is-selected');pill.setAttribute('aria-pressed','true');
+    });
+    document.addEventListener('keydown',e=>{
+      if(e.key==='Escape'){const el=document.getElementById('modal-front-door');if(el&&el.classList.contains('is-open'))this.close();}
+    });
+    const modal=document.getElementById('modal-front-door');
+    if(modal){
+      modal.addEventListener('keydown',e=>{
+        if(e.key!=='Tab'||!modal.classList.contains('is-open'))return;
+        const focusable=modal.querySelectorAll('button:not(:disabled),textarea:not(:disabled),input:not(:disabled),[tabindex]:not([tabindex="-1"])');
+        const first=focusable[0],last=focusable[focusable.length-1];
+        if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+        else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+      });
+    }
+    document.getElementById('fd-prompt')?.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();this._handleGenerate();}});
+    document.getElementById('fd-prompt')?.addEventListener('input',()=>this._clearPromptError());
+  },
+
+  async _handleGenerate(){
+    const ta=document.getElementById('fd-prompt');
+    const prompt=(ta?.value||'').trim();
+    if(prompt.length<8){this._showPromptError('Add a bit more detail — at least a sentence.');ta?.focus();return;}
+    this._clearPromptError();
+    const style=this._getSelectedStyle();
+    const prefixed=`[${style}] ${prompt}`;
+    if(typeof Copilot!=='undefined'&&Copilot.isConfigured()){
+      this.close();
+      if(typeof Tonight!=='undefined'){
+        Tonight.open();
+        const inp=document.getElementById('tonight-input');if(inp)inp.value=prefixed;
+        if(typeof Tonight.generate==='function')setTimeout(()=>Tonight.generate(),80);
+      }
+      await this._saveRecent({prompt,style});
     }else{
-      Render.all();
+      // [TODO-P4-DEMO] Replace with actual free-demo backend call.
+      showToast('Free demo coming in v1.0 launch. Try a sample below, or paste your OpenRouter key in Settings.',[{label:'Settings',handler:()=>{if(typeof Modals!=='undefined')Modals.open('settings');}}],6000);
     }
   },
-  skip(){
-    State.data.meta.firstRunComplete=true;
-    State.persist();
-    this.close();
-    Render.all();
+
+  _handleSample(){
+    if(typeof SampleMode!=='undefined'&&typeof SampleMode.openPicker==='function'){this.close();SampleMode.openPicker();}
+    else{showToast('Sample Mode is loading…');}
   },
-  bind(){
-    document.querySelectorAll('.mode-card').forEach(c=>{
-      c.addEventListener('click',()=>this.choose(c.dataset.mode));
+
+  _handleActivate(){
+    // [TODO-P4-LICENSE] Phase 4 wires real license validation here.
+    if(typeof Modals!=='undefined'){Modals.open('license-activate');}
+    else{showToast('License activation coming in v1.0 launch.');}
+  },
+
+  async _loadRecent(){
+    let entries=null;
+    try{entries=await IDB.get(this._IDB_KEY);}catch(e){entries=null;}
+    this._renderRecent(Array.isArray(entries)?entries:[]);
+  },
+
+  async _saveRecent(entry){
+    let entries=[];
+    try{const stored=await IDB.get(this._IDB_KEY);if(Array.isArray(stored))entries=stored;}catch(e){entries=[];}
+    const record={id:`rg-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,title:entry.prompt.slice(0,50).trimEnd(),prompt:entry.prompt,style:entry.style,timestamp:Date.now(),summary:''};
+    entries.unshift(record);
+    if(entries.length>this._MAX_RECENT)entries=entries.slice(0,this._MAX_RECENT);
+    try{await IDB.set(this._IDB_KEY,entries);}catch(e){}
+    this._renderRecent(entries);
+  },
+
+  _renderRecent(entries){
+    const list=document.getElementById('fd-recent-list');
+    const empty=document.getElementById('fd-recent-empty');
+    if(!list)return;
+    list.innerHTML='';
+    if(!entries||entries.length===0){if(empty)empty.style.display='';return;}
+    if(empty)empty.style.display='none';
+    entries.forEach(entry=>{
+      const li=document.createElement('li');
+      li.className='fd-recent__item';li.setAttribute('role','listitem');
+      li.innerHTML=`<span class="fd-recent__item-bullet" aria-hidden="true">•</span><span class="fd-recent__item-title">${Utils.escHtml(entry.title)}</span><span class="fd-recent__item-time">${this._relativeTime(entry.timestamp)}</span><button class="fd-recent__item-delete" data-id="${Utils.escHtml(entry.id)}" aria-label="Remove ${Utils.escHtml(entry.title)}">×</button>`;
+      li.addEventListener('click',e=>{if(e.target.closest('.fd-recent__item-delete'))return;this._reopenEntry(entry);});
+      li.querySelector('.fd-recent__item-delete')?.addEventListener('click',async e=>{e.stopPropagation();await this._deleteRecent(entry.id);});
+      list.appendChild(li);
     });
-    const skipBtn=document.getElementById('mode-picker-skip');
-    if(skipBtn)skipBtn.addEventListener('click',()=>this.skip());
-    const switchBtn=document.getElementById('switch-mode-btn');
-    if(switchBtn)switchBtn.addEventListener('click',()=>{
-      // Re-open picker as non-first-run (won't change firstRunComplete meaning)
-      this.open();
-    });
+  },
+
+  async _deleteRecent(id){
+    let entries=[];
+    try{const stored=await IDB.get(this._IDB_KEY);if(Array.isArray(stored))entries=stored;}catch(e){entries=[];}
+    entries=entries.filter(e=>e.id!==id);
+    try{await IDB.set(this._IDB_KEY,entries);}catch(e){}
+    this._renderRecent(entries);
+  },
+
+  _reopenEntry(entry){
+    const prefixed=`[${entry.style||'Group play'}] ${entry.prompt}`;
+    this.close();
+    if(typeof Tonight!=='undefined'){Tonight.open();const inp=document.getElementById('tonight-input');if(inp)inp.value=prefixed;}
+  },
+
+  _startPlaceholderRotation(){
+    this._stopPlaceholderRotation();
+    this._placeholderIdx=0;
+    this._placeholderTimer=setInterval(()=>{
+      this._placeholderIdx=(this._placeholderIdx+1)%this._placeholders.length;
+      const ta=document.getElementById('fd-prompt');
+      if(ta&&ta.value==='')ta.placeholder=this._placeholders[this._placeholderIdx];
+    },3000);
+  },
+
+  _stopPlaceholderRotation(){
+    if(this._placeholderTimer){clearInterval(this._placeholderTimer);this._placeholderTimer=null;}
+  },
+
+  _getSelectedStyle(){
+    const pill=document.querySelector('#fd-style-group .char-status-pill.is-selected');
+    if(!pill)return'Group play';
+    return{group:'Group play',solo:'Solo play',explore:'Exploring'}[pill.dataset.style]||'Group play';
+  },
+
+  _showPromptError(msg){
+    const el=document.getElementById('fd-prompt-err');if(!el)return;
+    el.textContent=msg;el.style.display='';
+    const ta=document.getElementById('fd-prompt');
+    if(ta){ta.classList.add('fd-input-shake');setTimeout(()=>ta.classList.remove('fd-input-shake'),400);}
+  },
+
+  _clearPromptError(){
+    const el=document.getElementById('fd-prompt-err');if(el){el.textContent='';el.style.display='none';}
+  },
+
+  _relativeTime(timestamp){
+    const diff=Date.now()-timestamp;
+    const mins=Math.floor(diff/60000);
+    if(mins<1)return'just now';
+    if(mins<60)return`${mins} minute${mins===1?'':'s'} ago`;
+    const hrs=Math.floor(mins/60);
+    if(hrs<24)return`${hrs} hour${hrs===1?'':'s'} ago`;
+    const days=Math.floor(hrs/24);
+    return`${days} day${days===1?'':'s'} ago`;
   },
 };
 
@@ -10946,9 +11450,12 @@ const NamingUI={
 async function bootstrap(){
   await State.load();
   bindEventListeners();
-  // Bind mode-picker and tonight module (DOM already exists)
-  if(typeof ModePicker!=='undefined')ModePicker.bind();
+  // Bind front door, sample mode, and tonight module (DOM already exists)
+  if(typeof SampleMode!=='undefined')SampleMode.bind();
+  if(typeof FrontDoor!=='undefined')FrontDoor.bind();
   if(typeof Tonight!=='undefined')Tonight.bind();
+  if(typeof TransparencyLog!=='undefined')TransparencyLog.bind();
+  if(typeof MobileGate!=='undefined'){MobileGate.bind();MobileGate.check();}
   if(typeof SHSPanels!=='undefined')SHSPanels.bind();
   if(typeof Fronts!=='undefined')Fronts.bind();
   if(typeof Handouts!=='undefined')Handouts.bind();
@@ -11029,7 +11536,7 @@ async function bootstrap(){
   if(typeof GMMode!=='undefined')GMMode.apply();
   // Mode Picker gates first run — show it before rendering dashboard
   if(!State.data.meta.firstRunComplete){
-    if(typeof ModePicker!=='undefined')ModePicker.open();
+    if(typeof FrontDoor!=='undefined')FrontDoor.open();
     // Still do a background render so the dashboard is ready behind the picker
     Render.all();
   }else{
@@ -11051,6 +11558,7 @@ async function bootstrap(){
 document.addEventListener('DOMContentLoaded',bootstrap);
 
 window.addEventListener('beforeunload',function(e){
+  if(typeof SampleMode!=='undefined')SampleMode.exitOnCloseGuard();
   const input=document.getElementById('copilot-input');
   const tonightInput=document.getElementById('tonight-input');
   const hasUnsavedCopilot=input&&input.value.trim().length>0;
@@ -11196,37 +11704,66 @@ window.__rwClearDevTheme=function(){localStorage.removeItem('rw_dev_theme');loca
     </div>
   </div>
 </div>
-<!-- ── MODE PICKER OVERLAY ───────────────────────────────────────────────── -->
-<div class="mode-picker" id="mode-picker" role="dialog" aria-modal="true" aria-label="Choose your mode">
-  <div class="mode-picker__inner">
-    <h1 class="mode-picker__title">What are you doing tonight?</h1>
-    <p class="mode-picker__subtitle">Pick your starting door. You can switch anytime.</p>
-    <div class="mode-picker__cards">
-      <button class="mode-card" data-mode="tonight" type="button">
-        <div class="mode-card__icon">🔥</div>
-        <h2 class="mode-card__title">Tonight</h2>
-        <p class="mode-card__sub">Game in 2 hours. No prep.</p>
-        <p class="mode-card__desc">Type one line about the situation. Get a printable session pack: strong start, ten secrets, three scenes, two NPCs, pressure points. Under 90 seconds.</p>
-        <span class="mode-card__time">~90 seconds to prep</span>
-      </button>
-      <button class="mode-card" data-mode="campaign" type="button">
-        <div class="mode-card__icon">📜</div>
-        <h2 class="mode-card__title">Campaign</h2>
-        <p class="mode-card__sub">Running an ongoing arc.</p>
-        <p class="mode-card__desc">Track sessions, evolve hooks, manage off-screen factions, generate handouts. Each session builds on the last. The world remembers.</p>
-        <span class="mode-card__time">Builds across sessions</span>
-      </button>
-      <button class="mode-card" data-mode="world" type="button">
-        <div class="mode-card__icon">🌍</div>
-        <h2 class="mode-card__title">World</h2>
-        <p class="mode-card__sub">Building a setting deeply.</p>
-        <p class="mode-card__desc">Full simulation: stats, pressures, factions, characters, geography. For long-form worldbuilding, prose, or publication-quality settings.</p>
-        <span class="mode-card__time">Full power, full depth</span>
-      </button>
+<!-- ── FRONT DOOR MODAL ──────────────────────────────────────────────────── -->
+<div class="modal modal--front-door" id="modal-front-door" role="dialog" aria-modal="true" aria-labelledby="fd-title" aria-describedby="fd-subtitle">
+  <div class="modal__header fd-header">
+    <div class="fd-wordmark">
+      <span class="fd-wordmark__diamond" aria-hidden="true">◆</span>
+      <h1 class="fd-wordmark__name" id="fd-title">RealmWright</h1>
+      <span class="fd-wordmark__diamond" aria-hidden="true">◆</span>
     </div>
-    <div class="mode-picker__footer">
-      <button class="mode-picker__skip" id="mode-picker-skip" type="button">Skip — go to dashboard</button>
+    <p class="fd-subtitle" id="fd-subtitle">The AI that remembers your campaign.</p>
+  </div>
+  <div class="modal__body fd-body">
+    <div class="form-field">
+      <label class="form-label" for="fd-prompt">Tonight's session is about…</label>
+      <textarea class="form-textarea fd-textarea" id="fd-prompt" rows="4" placeholder="A heist gone wrong inside the Solis Data Vault…" autocomplete="off" spellcheck="true"></textarea>
+      <p class="form-error" id="fd-prompt-err" role="alert" aria-live="polite" style="display:none"></p>
     </div>
+    <div class="form-field">
+      <label class="form-label" id="fd-style-label">I'm running…</label>
+      <div class="fd-style-group char-status-group" id="fd-style-group" role="group" aria-labelledby="fd-style-label">
+        <button type="button" class="char-status-pill is-selected" data-style="group" aria-pressed="true">Group play</button>
+        <button type="button" class="char-status-pill" data-style="solo" aria-pressed="false">Solo play</button>
+        <button type="button" class="char-status-pill" data-style="explore" aria-pressed="false">Just exploring</button>
+      </div>
+    </div>
+    <button type="button" class="btn btn--primary fd-generate-btn" id="fd-generate">Generate session</button>
+    <div class="fd-divider" role="separator" aria-hidden="true">
+      <hr class="fd-divider__rule">
+      <span class="fd-divider__label">or</span>
+      <hr class="fd-divider__rule">
+    </div>
+    <div class="fd-secondary-actions">
+      <button type="button" class="btn btn--secondary" id="fd-sample" aria-label="Try a pre-built sample session">Try a sample first</button>
+      <button type="button" class="btn btn--secondary" id="fd-activate" aria-label="Activate your RealmWright license">Activate license</button>
+    </div>
+    <div class="fd-recent" id="fd-recent" aria-label="Recent sessions">
+      <p class="fd-recent__heading">Recent</p>
+      <ul class="fd-recent__list" id="fd-recent-list" role="list"></ul>
+      <p class="fd-recent__empty" id="fd-recent-empty" style="display:none">No recent sessions yet.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ── LICENSE ACTIVATE STUB MODAL ─────────────────────────────────────────── -->
+<!-- [TODO-P4-LICENSE] Replace this stub with real activation flow in Phase 4. -->
+<div class="modal modal--sm" id="modal-license-activate" role="dialog" aria-modal="true" aria-labelledby="la-title">
+  <div class="modal__header">
+    <h2 class="modal__title" id="la-title">Activate License</h2>
+    <button class="modal__close" data-close="license-activate" aria-label="Close">×</button>
+  </div>
+  <div class="modal__body">
+    <div class="form-field">
+      <label class="form-label" for="la-key-input">License key</label>
+      <input class="form-input" id="la-key-input" type="text" placeholder="RWRT-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false">
+      <p class="form-error" id="la-key-err" role="alert" aria-live="polite" style="display:none"></p>
+    </div>
+    <p style="font-size:var(--text-label-sm);color:var(--color-text-muted);margin-top:var(--space-3)">License activation is coming in v1.0. Purchase at <a href="https://gumroad.com" target="_blank" rel="noopener" style="color:var(--ember-color)">gumroad.com</a>.</p>
+  </div>
+  <div class="modal__footer">
+    <button class="btn btn--secondary" data-close="license-activate">Cancel</button>
+    <button class="btn btn--primary" id="la-submit" disabled>Activate</button>
   </div>
 </div>
 
@@ -11304,6 +11841,27 @@ window.__rwClearDevTheme=function(){localStorage.removeItem('rw_dev_theme');loca
   <span class="material-symbols-outlined">auto_fix_high</span>
   Decipher Notes
 </button>
+
+<!-- ─── TRANSPARENCY LOG ─── -->
+<div id="transparency-log" class="tlog is-collapsed" aria-label="AI call transparency log">
+  <button class="tlog__pill" id="tlog-pill-btn" aria-expanded="false" aria-controls="tlog-panel" title="Show AI call log">
+    <span class="tlog__pill-mark" aria-hidden="true">◆</span>
+    <span id="tlog-pill-label">No AI calls yet</span>
+  </button>
+  <div class="tlog__panel" id="tlog-panel" role="region" aria-label="AI call history">
+    <div class="tlog__panel-header">
+      <span class="tlog__panel-title" aria-hidden="true">◆ AI Call Log</span>
+      <button class="tlog__panel-close" id="tlog-close-btn" aria-label="Collapse AI call log">×</button>
+    </div>
+    <div class="tlog__entries" id="tlog-entries" aria-live="polite" aria-atomic="false">
+      <div class="tlog__empty">No AI calls this session.</div>
+    </div>
+    <div class="tlog__footer">
+      <span class="tlog__footer-totals" id="tlog-footer-totals">— calls · $0.000</span>
+      <button class="tlog__clear" id="tlog-clear-btn" aria-label="Clear AI call log">Clear</button>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
