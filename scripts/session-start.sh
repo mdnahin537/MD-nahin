@@ -103,18 +103,19 @@ clone_once "$GSTACK_DIR" https://github.com/garrytan/gstack.git
 if [ -d "$GSTACK_DIR" ]; then
   [ -f "$GSTACK_DIR/setup" ] && bash "$GSTACK_DIR/setup" >/dev/null 2>&1 || true
   # Expose individual gStack skills as top-level so they trigger independently
+  # investigate excluded — conflicts with systematic-debugging (same iron law, same triggers)
   for skill in design-consultation design-html design-review design-shotgun \
                office-hours plan-ceo-review plan-eng-review \
-               investigate ship qa cso skillify; do
+               ship qa cso skillify; do
     install_skill "$skill" "$GSTACK_DIR/$skill"
   done
 fi
 
-# ── Remove noise skills (idempotent) ───────────────────────────────────────
+# ── Remove noise/conflict skills (runs AFTER installs — idempotent) ────────
 for skill in debug-buttercup using-superpowers using-git-worktrees writing-skills \
              property-based-testing finishing-a-development-branch \
              requesting-code-review receiving-code-review theme-factory \
-             skill-improver session-start-hook; do
+             skill-improver session-start-hook investigate; do
   [ -d "$SKILLS_DIR/$skill" ] && rm -rf "$SKILLS_DIR/$skill"
 done
 

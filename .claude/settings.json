@@ -155,8 +155,7 @@
           {
             "type": "command",
             "command": "bash",
-            "args": ["-c", "bash /home/user/MD-nahin/scripts/session-start.sh 2>/dev/null || true"],
-            "async": true
+            "args": ["-c", "bash /home/user/MD-nahin/scripts/session-start.sh 2>/dev/null || true"]
           }
         ]
       }
