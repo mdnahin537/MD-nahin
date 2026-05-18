@@ -134,7 +134,6 @@ MCP SERVERS (in scripts/setup-mcps.sh):
   chrome-devtools   → Browser console, network, error inspection
   filesystem        → Local files beyond project directory
   sequential-thinking → Multi-step reasoning chains
-  puppeteer         → Headless browser automation
   fetch             → Web page content retrieval
   brave-search      → Real-time web search (needs BRAVE_API_KEY)
   github            → GitHub API access (needs token; also a plugin)

@@ -32,10 +32,6 @@ claude mcp add filesystem -s user -- \
   npx -y @modelcontextprotocol/server-filesystem \
   "$HOME/Documents" "$HOME/Desktop" "$HOME/Downloads" "$HOME/Projects"
 
-info "Installing: puppeteer (headless browser automation)"
-claude mcp add puppeteer -s user -- \
-  npx -y @modelcontextprotocol/server-puppeteer
-
 info "Installing: fetch (web page content retrieval)"
 claude mcp add fetch -s user -- \
   npx -y @kazuph/mcp-fetch
