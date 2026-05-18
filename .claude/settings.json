@@ -1,21 +1,97 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
 
-  "model": "opusplan",
+  "model": "claude-sonnet-4-6",
   "effortLevel": "xhigh",
   "alwaysThinkingEnabled": true,
   "disableAgentView": false,
   "autoScrollEnabled": true,
-  "showTurnDuration": true,
   "autoMemoryEnabled": true,
+  "showTurnDuration": true,
 
   "env": {
-    "CLAUDE_CODE_SUBAGENT_MODEL": "sonnet"
+    "CLAUDE_CODE_SUBAGENT_MODEL": "claude-haiku-4-5-20251001",
+    "NODE_PATH": "/opt/node22/bin"
+  },
+
+  "mcpServers": {
+
+    "sequential-thinking": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"],
+      "timeout": 30000
+    },
+
+    "fetch": {
+      "command": "npx",
+      "args": ["-y", "@kazuph/mcp-fetch"],
+      "timeout": 30000
+    },
+
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp@latest"],
+      "timeout": 30000
+    },
+
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest"],
+      "timeout": 60000
+    },
+
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/home/user",
+        "/tmp"
+      ],
+      "timeout": 30000
+    },
+
+    "brave-search": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+      "env": {
+        "BRAVE_API_KEY": "${BRAVE_API_KEY}"
+      },
+      "timeout": 30000
+    },
+
+    "firecrawl": {
+      "command": "npx",
+      "args": ["-y", "firecrawl-mcp"],
+      "env": {
+        "FIRECRAWL_API_KEY": "${FIRECRAWL_API_KEY}"
+      },
+      "timeout": 30000
+    },
+
+    "github-mcp": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
+      },
+      "timeout": 30000
+    }
+
   },
 
   "permissions": {
     "allow": [
       "Agent(*)",
+      "Skill(*)",
+      "mcp__sequential-thinking__*",
+      "mcp__fetch__*",
+      "mcp__context7__*",
+      "mcp__playwright__*",
+      "mcp__filesystem__*",
+      "mcp__brave-search__*",
+      "mcp__firecrawl__*",
+      "mcp__github-mcp__*",
       "Bash(git status)",
       "Bash(git diff *)",
       "Bash(git log *)",
@@ -25,6 +101,7 @@
       "Bash(git checkout *)",
       "Bash(git fetch *)",
       "Bash(git pull *)",
+      "Bash(git push *)",
       "Bash(ls *)",
       "Bash(find *)",
       "Bash(grep *)",
@@ -33,29 +110,32 @@
       "Bash(mkdir *)",
       "Bash(cp *)",
       "Bash(mv *)",
-      "Bash(npm run *)",
-      "Bash(npx *)",
-      "Bash(node *)",
-      "Bash(python *)",
-      "Bash(pip *)",
+      "Bash(touch *)",
+      "Bash(chmod *)",
       "Bash(which *)",
       "Bash(pwd)",
       "Bash(whoami)",
       "Bash(date)",
+      "Bash(node *)",
+      "Bash(npx *)",
+      "Bash(npm run *)",
+      "Bash(npm install *)",
+      "Bash(pip *)",
+      "Bash(python *)",
+      "Bash(python3 *)",
+      "Bash(bash scripts/*)",
+      "Bash(claude mcp list)",
+      "Bash(claude --version)",
       "Read(**)"
     ],
     "ask": [
-      "Bash(git push *)",
-      "Bash(git reset *)",
-      "Bash(git rebase *)",
-      "Bash(git merge *)",
       "Bash(rm *)",
       "Bash(sudo *)",
-      "Bash(chmod *)",
       "Bash(curl *)",
       "Bash(wget *)",
-      "Bash(npm install *)",
-      "Bash(pip install *)"
+      "Bash(git reset *)",
+      "Bash(git rebase *)",
+      "Bash(git merge *)"
     ],
     "deny": [
       "Read(.env)",
@@ -70,15 +150,12 @@
   "hooks": {
     "SessionStart": [
       {
-        "matcher": "startup|resume",
+        "matcher": "",
         "hooks": [
           {
             "type": "command",
             "command": "bash",
-            "args": [
-              "-c",
-              "echo '' && echo '══════════════════════════════════════' && echo '  Hunter Studio — Claude Code Active' && echo '  Model: opusplan  |  Effort: xhigh' && echo '══════════════════════════════════════' && echo ''"
-            ],
+            "args": ["-c", "bash /home/user/MD-nahin/scripts/session-start.sh 2>/dev/null || true"],
             "async": true
           }
         ]
