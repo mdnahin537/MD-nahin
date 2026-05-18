@@ -48,6 +48,10 @@ info "Installing: context7 (live library docs — kills stale hallucinations)"
 claude mcp add context7 -s user -- \
   npx -y @upstash/context7-mcp@latest
 
+info "Installing: chrome-devtools (browser console, network, errors)"
+claude mcp add chrome-devtools -s user -- \
+  npx -y chrome-devtools-mcp@latest
+
 # ─── TIER 2: Requires API keys ──────────────────────────────────────────────
 
 echo ""
@@ -89,6 +93,16 @@ else
   warn "  Scopes needed: repo, read:user, read:org"
 fi
 
+# ─── TIER 3: UI polish skills (ibelick/ui-skills npm package) ───────────────
+
+echo ""
+echo "─── UI design-engineering skills ──────────────"
+info "Installing ui-skills polish pipeline"
+
+npx ui-skills add baseline-ui
+npx ui-skills add fixing-accessibility
+npx ui-skills add fixing-motion-performance
+
 # ─── Verify ─────────────────────────────────────────────────────────────────
 
 echo ""
@@ -98,4 +112,8 @@ echo ""
 claude mcp list
 echo ""
 echo "═══════════════════════════════════════════════"
+echo ""
+echo "NEXT:"
+echo "  1. Install plugins:  bash scripts/setup-plugins.sh   (then paste into Claude)"
+echo "  2. Install gStack:   bash scripts/setup-gstack.sh"
 echo ""

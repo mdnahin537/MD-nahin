@@ -1,6 +1,6 @@
 # Hunter's Professional Claude Code Studio
 
-A fully configured, research-backed Claude Code environment. Every tool here is real and verified.
+A fully configured, research-verified Claude Code environment. Every tool here is real and sourced.
 
 ---
 
@@ -8,64 +8,102 @@ A fully configured, research-backed Claude Code environment. Every tool here is 
 
 | File | Purpose |
 |------|---------|
-| `CLAUDE.md` | Project memory — Claude reads this at session start |
+| `CLAUDE.md` | Master Operating System — Claude reads this at every session start |
 | `.claude/settings.json` | Permissions, model config, attribution |
-| `scripts/setup-mcps.sh` | One-shot MCP server installer |
+| `scripts/setup-mcps.sh` | Installs MCP servers + ui-skills polish pipeline |
+| `scripts/setup-plugins.sh` | Reference for `/plugin install` commands (paste inside Claude) |
+| `scripts/setup-gstack.sh` | Installs Garry Tan's gStack (23+ specialist commands) |
 
 ---
 
-## Quick Start
+## Three-Stage Install
 
-### 1. Clone and enter
-
-```bash
-git clone https://github.com/mdnahin537/MD-nahin.git
-cd MD-nahin
-```
-
-### 2. Install MCP servers (run once, from your terminal — not inside Claude)
+### Stage 1 — Terminal: MCP servers + ui-skills
 
 ```bash
-bash scripts/setup-mcps.sh
-```
-
-For API-key servers (Brave Search, Firecrawl, GitHub), set your keys first:
-
-```bash
+# Optional: export API keys first
 export BRAVE_API_KEY=your_key_here
 export FIRECRAWL_API_KEY=fc-your_key_here
 export GITHUB_PERSONAL_ACCESS_TOKEN=ghp_your_token_here
+
 bash scripts/setup-mcps.sh
 ```
 
-### 3. Launch Claude Code
+### Stage 2 — Terminal: gStack
 
 ```bash
-claude
+bash scripts/setup-gstack.sh
 ```
+
+Clones gStack to `~/.claude/skills/gstack` and runs its setup script.
+
+### Stage 3 — Inside Claude: official + community plugins
+
+Launch Claude Code, then paste the commands from `setup-plugins.sh`:
+
+```bash
+bash scripts/setup-plugins.sh        # prints the commands
+# OR on macOS:
+bash scripts/setup-plugins.sh | pbcopy
+```
+
+Then in your Claude session, paste each `/plugin install ...` line.
 
 ---
 
-## MCP Servers Included
+## What Gets Installed
 
-### No API Key Required
+### Official Anthropic plugins (`claude-plugins-official` marketplace)
 
-| Server | Package | What it does |
-|--------|---------|--------------|
-| `sequential-thinking` | `@modelcontextprotocol/server-sequential-thinking` | Structured multi-step reasoning chains |
-| `filesystem` | `@modelcontextprotocol/server-filesystem` | Read/write your local files |
-| `puppeteer` | `@modelcontextprotocol/server-puppeteer` | Headless browser automation |
-| `fetch` | `@kazuph/mcp-fetch` | Retrieve web page content |
-| `playwright` | `@playwright/mcp` | Live browser testing with a real Chrome window |
-| `context7` | `@upstash/context7-mcp` | Live library docs — eliminates stale API hallucinations |
+| Plugin | What it does |
+|--------|--------------|
+| `superpowers` | Structured build methodology, TDD-first |
+| `frontend-design` | Production UI — kills generic AI aesthetics |
+| `feature-dev` | 7-phase structured feature workflow |
+| `code-review` | Multi-agent PR review |
+| `security-guidance` | Auto-scans every file edit for vulnerabilities |
+| `ralph-loop` | Iterates autonomously until task complete |
+| `context7` | Live, version-accurate library docs |
+| `github` | PRs, issues, code search inside session |
+| `figma` | Two-way Code ↔ Canvas |
+| `vercel` | One-command deployment |
+| `supabase` | Database, auth, storage, edge functions |
+| `playwright` | Real browser testing |
+| `typescript-lsp` | Real-time TypeScript checking |
+| `pyright-lsp` | Real-time Python checking |
 
-### Requires API Key
+### Community plugins
 
-| Server | Get Key | What it does |
-|--------|---------|--------------|
-| `brave-search` | [brave.com/search/api](https://brave.com/search/api/) | Real-time web search (free tier available) |
-| `firecrawl` | [firecrawl.dev](https://www.firecrawl.dev/) | Web scraping & competitor analysis |
-| `github` | [github.com/settings/tokens](https://github.com/settings/tokens) | Repos, PRs, issues, CI — bidirectional |
+| Plugin | Source | What it does |
+|--------|--------|--------------|
+| `ui-ux-pro-max` | `nextlevelbuilder/ui-ux-pro-max-skill` | 67 UI styles, 161 palettes, complete design systems |
+| `claude-mem` | `thedotmack/claude-mem` | Persistent SQLite + Chroma memory across sessions |
+
+### gStack (Garry Tan / YC)
+
+23+ specialist slash commands acting as CEO, designer, eng manager, QA lead, security officer, release manager. Highlights: `/office-hours`, `/autoplan`, `/cso`, `/qa`, `/ship`, `/land-and-deploy`. See `CLAUDE.md` for the full command list.
+
+### MCP servers
+
+| Server | Tier |
+|--------|------|
+| `context7` — live library docs | Free |
+| `playwright` — real Chrome control | Free |
+| `chrome-devtools` — browser inspection | Free |
+| `filesystem` — local file access | Free |
+| `sequential-thinking` — reasoning chains | Free |
+| `puppeteer` — headless browser | Free |
+| `fetch` — web content retrieval | Free |
+| `brave-search` — real-time web search | API key |
+| `firecrawl` — web scraping | API key |
+| `github` — full GitHub control | API key (PAT) |
+
+### Design polish pipeline (`ibelick/ui-skills`)
+
+Run after generating any UI:
+- `baseline-ui` — spacing, typography, component states
+- `fixing-accessibility` — keyboard nav, labels, focus, semantics
+- `fixing-motion-performance` — reduced-motion, animation budgets
 
 ---
 
@@ -73,74 +111,34 @@ claude
 
 `.claude/settings.json` uses a three-tier permission model:
 
-**Allow** (no prompt) — safe read-only and standard dev commands:
-- All git read operations (`status`, `diff`, `log`, `branch`)
-- All `npm run *` scripts
-- All file reads
-- `find`, `grep`, `ls`, `cat`
-
-**Ask** (requires approval) — consequential operations:
-- `git push`, `git reset`, `git rebase`, `git merge`
-- `rm`, `sudo`, `chmod`
-- Package installs (`npm install`, `pip install`)
-- Network requests (`curl`, `wget`)
-
-**Deny** (always blocked):
-- Reading `.env` files
-- Reading secrets/credentials directories
-- Reading SSH keys
+**Allow** (no prompt) — git reads, npm scripts, file reads, find/grep/ls
+**Ask** (requires approval) — git push/reset/rebase, rm, sudo, package installs, curl
+**Deny** (always blocked) — `.env` files, secrets dirs, SSH keys
 
 ---
 
-## Project Memory (CLAUDE.md)
+## Model Defaults
 
-`CLAUDE.md` is automatically loaded by Claude Code at the start of every session.
-It contains:
-- Coding standards and conventions
-- Common commands for this project
-- Git workflow rules
-- Behaviour guidelines for Claude
+For serious work, start every session with:
 
-Edit it freely — it's yours. Keep it concise: under ~100 lines loads fastest.
-
----
-
-## What Is NOT Real (Common Misconceptions)
-
-Several "Claude Code setup guides" circulate online with fabricated features:
-
-| Claimed feature | Reality |
-|----------------|---------|
-| `/plugin install` | No plugin command exists in Claude Code |
-| `claude-plugins-official` marketplace | Does not exist |
-| `garrytan/gstack` | No such public repo from Garry Tan |
-| `npx ui-skills add` | `ui-skills` is not a real npm package |
-| `/plugin marketplace add` | Not a real command |
-
-Claude Code's actual extension points are: **MCP servers**, **hooks** in `settings.json`, and **CLAUDE.md** project memory.
-
----
-
-## Useful Claude Code Commands
-
-```bash
-claude                    # start interactive session
-claude mcp list           # see installed MCP servers
-claude mcp add <name>     # add an MCP server
-claude mcp remove <name>  # remove an MCP server
-claude doctor             # check installation health
-claude update             # update to latest version
-/init                     # generate CLAUDE.md from codebase (inside Claude)
-/config                   # open config menu (inside Claude)
-/help                     # list all slash commands (inside Claude)
+```
+/model opusplan      # Opus 4.7 plans, Sonnet 4.6 executes
+/effort xhigh        # default reasoning depth on Opus 4.7
 ```
 
+For maximum reasoning on a single turn, include the keyword `ultrathink` in your message. Anthropic explicitly recognizes this keyword and allocates a deeper reasoning budget for that turn.
+
 ---
 
-## Further Reading
+## Sources
 
-- [Claude Code Official Docs](https://code.claude.com/docs/en/setup)
-- [Settings Reference](https://code.claude.com/docs/en/settings)
-- [MCP Protocol](https://github.com/modelcontextprotocol/servers)
-- [Awesome MCP Servers](https://github.com/wong2/awesome-mcp-servers)
-- [Awesome Claude MCP](https://github.com/win4r/Awesome-Claude-MCP-Servers)
+Every component in this setup is verified against:
+- [Claude Code Plugin docs](https://code.claude.com/docs/en/plugins-reference)
+- [Discover plugins](https://code.claude.com/docs/en/discover-plugins)
+- [Model config](https://code.claude.com/docs/en/model-config) (opusplan, xhigh, ultrathink)
+- [claude.com/plugins](https://claude.com/plugins) (individual plugin pages)
+- [github.com/garrytan/gstack](https://github.com/garrytan/gstack) (98.7k stars)
+- [github.com/thedotmack/claude-mem](https://github.com/thedotmack/claude-mem) (76.4k stars)
+- [github.com/nextlevelbuilder/ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) (79.8k stars)
+- [github.com/ibelick/ui-skills](https://github.com/ibelick/ui-skills)
+- [MCP servers directory](https://github.com/modelcontextprotocol/servers)
