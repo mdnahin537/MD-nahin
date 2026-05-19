@@ -869,6 +869,59 @@ body.mobile-gate-open{overflow:hidden}
 .empty-state__sub{font-size:var(--text-body-sm,.9375rem);line-height:1.6;color:var(--color-text-muted,#c0b898);margin:0 0 var(--space-6);max-width:260px}
 .empty-state__cta{display:flex;justify-content:center}
 
+/* ─── SOLO MODE PANEL ──────────────────────────────────────────────────── */
+.solo-section{margin-bottom:var(--space-6);}
+.solo-section:last-child{margin-bottom:0;}
+.solo-section__heading{font-family:var(--font-display);font-size:var(--text-label);font-variant:small-caps;letter-spacing:.07em;text-transform:uppercase;color:var(--ember-color,var(--color-gold));margin-bottom:var(--space-3);padding-bottom:var(--space-2);border-bottom:1px solid var(--color-border-hairline);}
+.solo-chaos-row{display:flex;align-items:center;gap:var(--space-3);}
+.solo-chaos-slider{-webkit-appearance:none;appearance:none;flex:1;height:3px;background:var(--color-border-default);border-radius:var(--radius-pill);outline:none;cursor:pointer;}
+.solo-chaos-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:14px;height:14px;border-radius:50%;background:var(--ember-color,var(--color-gold));cursor:pointer;transition:box-shadow var(--duration-quick) var(--ease-out);}
+.solo-chaos-slider::-moz-range-thumb{width:14px;height:14px;border:none;border-radius:50%;background:var(--ember-color,var(--color-gold));cursor:pointer;}
+.solo-chaos-slider:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 3px var(--ember-glow-soft,rgba(255,185,100,0.18));}
+.solo-chaos-readout{font-family:var(--font-display);font-size:var(--text-h2);min-width:1.6ch;text-align:center;color:var(--ember-color,var(--color-gold));line-height:1;}
+body.theme-ember .solo-chaos-readout{text-shadow:0 0 12px var(--ember-glow,rgba(255,185,100,0.40));}
+.solo-form{display:flex;flex-direction:column;gap:var(--space-2);}
+.solo-form__row{display:flex;gap:var(--space-2);align-items:flex-end;}
+.solo-textarea{flex:1;background:var(--color-parchment-warm,var(--color-bg));border:1px solid var(--color-border-default);border-radius:var(--radius-sm);color:var(--color-text-primary);font-family:var(--font-body);font-size:var(--text-body-sm);padding:var(--space-2) var(--space-3);resize:vertical;line-height:1.5;min-height:52px;}
+.solo-textarea:focus{outline:none;border-color:var(--ember-color,var(--color-gold));}
+.solo-text-input{width:100%;background:var(--color-parchment-warm,var(--color-bg));border:1px solid var(--color-border-default);border-radius:var(--radius-sm);color:var(--color-text-primary);font-family:var(--font-body);font-size:var(--text-body-sm);padding:var(--space-2) var(--space-3);}
+.solo-text-input:focus{outline:none;border-color:var(--ember-color,var(--color-gold));}
+.solo-select{background:var(--color-parchment-warm,var(--color-bg));border:1px solid var(--color-border-default);border-radius:var(--radius-sm);color:var(--color-text-primary);font-family:var(--font-body);font-size:var(--text-body-sm);padding:var(--space-2) var(--space-3);cursor:pointer;}
+.solo-select:focus{outline:none;border-color:var(--ember-color,var(--color-gold));}
+.solo-roll-result{display:inline-flex;align-items:center;gap:var(--space-1);padding:3px 10px;border-radius:var(--radius-pill);font-family:var(--font-mono);font-size:var(--text-label-sm);font-weight:600;letter-spacing:.03em;white-space:nowrap;}
+.solo-roll-result--exceptional-yes{background:rgba(140,217,150,.18);color:var(--color-thriving,#8cd996);border:1px solid rgba(140,217,150,.30);}
+.solo-roll-result--yes{background:rgba(115,209,255,.12);color:var(--color-stable,#73d1ff);border:1px solid rgba(115,209,255,.22);}
+.solo-roll-result--no{background:rgba(255,180,171,.10);color:var(--color-crisis,#ffb4ab);border:1px solid rgba(255,180,171,.20);}
+.solo-roll-result--exceptional-no{background:rgba(147,0,10,.25);color:#ff8080;border:1px solid rgba(147,0,10,.40);}
+.solo-roll-result--random-event{background:rgba(255,185,100,.15);color:var(--ember-color,#ffb964);border:1px solid rgba(255,185,100,.30);}
+.solo-roll-narrative{font-size:var(--text-body-sm);line-height:1.65;color:var(--color-text-muted);margin-top:var(--space-3);padding-top:var(--space-3);border-top:1px solid var(--color-border-hairline);font-style:italic;}
+.solo-pivot-list{list-style:none;padding:0;margin:var(--space-3) 0 0;display:flex;flex-direction:column;gap:var(--space-2);}
+.solo-pivot-list li{font-size:var(--text-body-sm);line-height:1.55;color:var(--color-text-muted);padding-left:var(--space-3);border-left:2px solid var(--color-border-hairline);}
+.solo-pivot-list li:nth-child(1){border-left-color:var(--color-stable,#73d1ff);}
+.solo-pivot-list li:nth-child(2){border-left-color:var(--ember-color,#ffb964);}
+.solo-pivot-list li:nth-child(3){border-left-color:var(--color-crisis,#ffb4ab);}
+.solo-pivot-list__label{font-family:var(--font-mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;margin-right:var(--space-1);opacity:.75;}
+.solo-mood-suggestion{background:var(--color-surface,rgba(255,185,100,0.04));border:1px solid var(--color-border-hairline);border-radius:var(--radius-sm);padding:var(--space-3) var(--space-4);margin-top:var(--space-2);}
+.solo-mood-suggestion__mood{font-family:var(--font-display);font-size:var(--text-h3);color:var(--ember-color,var(--color-gold));margin-bottom:var(--space-2);}
+body.theme-ember .solo-mood-suggestion__mood{text-shadow:0 0 8px var(--ember-glow-soft,rgba(255,185,100,0.12));}
+.solo-mood-suggestion__reason{font-size:var(--text-body-sm);line-height:1.6;color:var(--color-text-muted);font-style:italic;}
+.solo-log{list-style:none;padding:0;margin:0;max-height:360px;overflow-y:auto;display:flex;flex-direction:column;gap:var(--space-2);scrollbar-width:thin;scrollbar-color:rgba(255,185,100,0.18) transparent;}
+.solo-log::-webkit-scrollbar{width:3px;}
+.solo-log::-webkit-scrollbar-track{background:transparent;}
+.solo-log::-webkit-scrollbar-thumb{background:rgba(255,185,100,0.18);border-radius:2px;}
+.solo-log__empty{font-size:var(--text-body-sm);color:var(--color-text-faint);font-style:italic;padding:var(--space-4) 0;text-align:center;line-height:1.6;}
+.solo-log-entry{padding:var(--space-3);border:1px solid var(--color-border-hairline);border-radius:var(--radius-sm);background:var(--color-surface,rgba(255,185,100,0.02));}
+.solo-log-entry__header{display:flex;align-items:center;gap:var(--space-2);margin-bottom:var(--space-2);}
+.solo-log-entry__question{font-size:var(--text-body-sm);color:var(--color-text-primary);margin-bottom:var(--space-1);line-height:1.5;}
+.solo-log-entry__body{font-size:var(--text-body-sm);line-height:1.5;}
+.solo-log-entry__type{font-family:var(--font-mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:var(--radius-pill);}
+.solo-log-entry__type--oracle{background:rgba(115,209,255,.10);color:var(--color-stable,#73d1ff);}
+.solo-log-entry__type--pivot{background:rgba(255,185,100,.10);color:var(--ember-color,#ffb964);}
+.solo-log-entry__type--mood{background:rgba(144,112,184,.12);color:#c0a0e0;}
+.solo-log-entry__expand{background:none;border:none;cursor:pointer;font-size:var(--text-label-sm);color:var(--color-text-faint);padding:0 var(--space-1);margin-left:auto;}
+.solo-log-entry__expand:hover{color:var(--color-text-muted);}
+.solo-log-entry__ts{margin-left:auto;}
+
 /* ── MODAL HEADER ────────────────────────────────────────────────────── */
 body.theme-ember .modal__header{
   border-bottom:1px solid rgba(255,185,100,0.14);
@@ -2285,6 +2338,9 @@ SECTION 8: DOM STRUCTURE
       <a class="wms-nav__item" data-route="web" href="#" aria-label="Relationship Web">
         <span class="material-symbols-outlined">share</span>Web
       </a>
+      <a class="wms-nav__item" data-route="solo" href="#" aria-label="Solo Mode">
+        <span class="material-symbols-outlined">casino</span>Solo
+      </a>
     </nav>
     <div class="wms-panels">
       <!-- LEFT PANEL: Stability hero + stat list + Inscribe -->
@@ -3088,6 +3144,14 @@ SECTION 8: DOM STRUCTURE
     </div>
   </div>
 </div>
+<!-- ─── SOLO MODE PANEL ─── -->
+<div class="sc-panel" id="panel-solo" role="dialog" aria-label="Solo Mode">
+  <div class="sc-panel__header">
+    <h2 class="sc-panel__title">Solo Mode</h2>
+    <button class="sc-panel__close" id="panel-solo-close" aria-label="Close Solo Mode">×</button>
+  </div>
+  <div class="sc-panel__body" id="solo-body"><!-- dynamically rendered by Solo.renderPanel() --></div>
+</div>
 <!-- ─── REALM SETTINGS PANEL ─── -->
 <div class="sc-panel" id="panel-realm-settings" role="dialog" aria-label="Realm Settings">
   <div class="sc-panel__header">
@@ -3323,7 +3387,7 @@ SECTION 8: DOM STRUCTURE
 SECTION 9: DATA & STATE
 ==============================================================================
 */
-const SCHEMA_VERSION='2.4.0';
+const SCHEMA_VERSION='2.4.1';
 const DEFAULT_SETTINGS={theme:'ember',respectMotionPref:true,showForecasts:false,showSecrets:false,onboardingComplete:false,copilotProvider:'openrouter',copilotModel:'anthropic/claude-sonnet-latest',copilotKey:null,ollamaUrl:'http://localhost:11434',ollamaModel:'llama3.1',copilotScope:'standard',copilotAutoApply:false,gmMode:false};
 const ERA_GAP={Ancient:100,Classical:75,Medieval:50,Renaissance:75,Industrial:25,Modern:15,'Near-Future':10,'Far-Future':5,'Post-Collapse':30};
 const ERA_NAMES={Political:'The Reform Years',Military:'The Long War',Economic:'The Trade Awakening',Cultural:'The Silent Century',Social:"The Generation's Turning",Diplomatic:'The Quiet Borders',Natural:'The Lean Years'};
@@ -3508,6 +3572,10 @@ const PROMPTS=[
   {id:'r79',name:'Decipher Notes',tier:'S',section:'gm',cat:'Utility',statesMatched:null,archetypes:null,minDepth:null,desc:'Paste raw session notes, transcripts, or brainstorms. Extracts structured world changes (characters, events, secrets, hooks) and presents them through CANON review before committing.',vars:[],tpl:'[Paste your raw session notes, transcripts, or brainstormed ideas below. Then send this to the AI. Ask it to extract structured world changes as a CANON block for RealmWright review.]\n\n---\n\n[YOUR NOTES HERE]'},
   {id:'r80',name:'Glossary Builder (GM Modal)',tier:'S',section:'gm',cat:'Reference',statesMatched:null,archetypes:null,minDepth:null,desc:'Generate an alphabetized glossary of world-specific terms, names, institutions, and places. Scope selectable (all / political / cultural / religious). Suitable for sourcebook appendix.',vars:['[STATE]'],tpl:'Nation state: [STATE]\n\nCompile a world glossary. Extract all proper nouns from the world state above and define each in 1–2 sentences. Organise into sections:\n- People (rulers, characters, NPCs)\n- Factions & institutions\n- Places (cities, regions, landmarks)\n- Events (chronicle entries)\n- Concepts (unique cultural or political terms)\n\nAlphabetize within each section. Flag any undefined entities with [UNDEFINED].'},
   {id:'r81',name:'Naming Generator (GM Modal)',tier:'S',section:'gm',cat:'Reference',statesMatched:null,archetypes:null,minDepth:null,desc:'Extract the linguistic patterns from the realm and generate lists of names for people (men/women/non-binary), places, titles, or orders/guilds. World-aware: names match era and culture.',vars:['[STATE]'],tpl:'Nation state: [STATE]\n\nAnalyze the naming conventions visible in this world (existing names, era, culture, government style). Then generate:\n- 10 ruler / noble names\n- 10 common people names (mix of genders)\n- 5 place names (settlements, landmarks)\n- 5 institutional / organizational names\n- 5 faction or order names\n\nNames must feel consistent with the existing world. Note the linguistic pattern you extracted.'},
+  // SOLO TIER — Oracle, Scene Pivot, Mood Shift
+  {id:'so1',name:'Solo Oracle Narrative',tier:'S',section:'solo',cat:'Political',statesMatched:null,archetypes:null,minDepth:null,desc:'Given a question, dice result, and Chaos Factor, the oracle justifies the outcome with world-grounded reasoning and returns a single narrative paragraph.',vars:['[STATE]','[QUESTION]','[ODDS]','[CHAOS_FACTOR]','[ROLL_RESULT]'],tpl:'You are the narrative oracle for a solo TTRPG session set in this world.\n\nWorld state: [STATE]\n\nCampaign context:\n{CAMPAIGN_CONTEXT}\n\nThe player has asked the oracle: "[QUESTION]"\nOdds declared: [ODDS]\nChaos Factor: [CHAOS_FACTOR]\nDice verdict: [ROLL_RESULT]\n\nYour task: write a single paragraph of 80–140 words that makes the dice verdict feel inevitable within this world. You must not contradict the verdict — if the result is Yes, something affirming happened; if No, something denied it; if ExceptionalYes, the affirmation carries an unexpected gift or complication in the player\'s favour; if ExceptionalNo, the denial is emphatic and costs something. Do not explain the oracle mechanics. Do not use the words "yes" or "no" directly. Speak in the voice of the world: specific names, places, and ongoing pressures visible in the chronicle. Invent only what the established world permits.\n\nReturn ONLY a single JSON object in this exact shape, with no other text, no markdown, no commentary:\n{"narrative":"<your paragraph here>"}'},
+  {id:'so2',name:'Scene Pivot Generator',tier:'S',section:'solo',cat:'Political',statesMatched:null,archetypes:null,minDepth:null,desc:'Given the last five chronicle entries, current scene, and Chaos Factor, generates three escalating scene pivots — calm, mid, and hard — ready to drop into play.',vars:['[STATE]','[CHRONICLE_LAST_5]','[CURRENT_SCENE]','[CHAOS_FACTOR]'],tpl:'You are the scene architect for a solo TTRPG session set in this world.\n\nWorld state: [STATE]\nRecent chronicle (last five entries):\n[CHRONICLE_LAST_5]\n\nCurrent scene: [CURRENT_SCENE]\nCurrent Chaos Factor: [CHAOS_FACTOR]\n\nGenerate exactly three scene pivots that could interrupt or redirect this scene. The pivots must escalate in chaos and consequence:\n\nPIVOT 1 — CALM: A complication that adds texture without escalating stakes. A new piece of information, a delayed threat made visible, a familiar face arriving at the wrong moment. It asks a question but does not force action.\n\nPIVOT 2 — MID: A complication that changes the terrain of the scene. An ally\'s position shifts, a door closes, something the player assumed safe is no longer safe. It demands a choice.\n\nPIVOT 3 — HARD: A complication that rewrites the scene\'s purpose. A confrontation, a revelation, an irreversible event. The scene the player expected to have is no longer available. Something must be resolved now.\n\nAll three pivots must be grounded in the established chronicle — names, factions, and ongoing pressures visible above. Do not invent events that contradict the record. Each pivot should feel like the world acting on its own logic, not a contrivance.\n\nReturn ONLY a single JSON object in this exact shape, with no other text, no markdown, no commentary:\n{"pivots":["<pivot 1 text, 40-70 words>","<pivot 2 text, 40-70 words>","<pivot 3 text, 40-70 words>"]}'},
+  {id:'so3',name:'Mood Shift Suggester',tier:'S',section:'solo',cat:'Cultural',statesMatched:null,archetypes:null,minDepth:null,desc:'Given the current scene and mood, suggests a tonal shift that is a cousin of the current mood — not a polar opposite — with a reason grounded in specific chronicle and character details.',vars:['[STATE]','[CURRENT_SCENE]','[CURRENT_MOOD]'],tpl:'You are the tonal advisor for a solo TTRPG session set in this world.\n\nWorld state: [STATE]\n\nCampaign context:\n{CAMPAIGN_CONTEXT}\n\nCurrent scene: [CURRENT_SCENE]\nCurrent mood: [CURRENT_MOOD]\n\nSuggest a tonal shift for the next scene. The shift must be a tonal cousin of the current mood — not its opposite. If the current mood is tense, the cousin might be cold and methodical, or hollow and procedural, or quietly desperate. If the current mood is hopeful, the cousin might be fragile, or wary, or determined-despite-doubt. Never swing from one extreme to its mirror — a mood shift is a step along the same emotional register, not a leap across it.\n\nYour reason must cite specific details from the campaign context above: a character\'s name, a chronicle entry, an unresolved hook, a faction\'s posture. Do not speak in abstractions. The player should be able to read the reason and immediately see the next scene differently.\n\nReturn ONLY a single JSON object in this exact shape, with no other text, no markdown, no commentary:\n{"suggested_mood":"<3-6 word mood phrase>","reason":"<2-4 sentence explanation citing specific world details>"}'},
 ];
 // ─── UNIFIED PROMPT-FILL MECHANISM ───
 // Centralized template-variable substitution + campaign context injection.
@@ -3567,6 +3635,404 @@ const PromptFill={
       user:filledUser,
       meta:{templateId,promptName:prompt.name,tier:prompt.tier},
     };
+  },
+};
+
+// ─── SOLO MODE MODULE ─────────────────────────────────────────────────────────
+// Implements the Mythic GME 2nd-edition oracle engine for solo play.
+// Fate Chart source: Mythic Game Master Emulator 2nd Edition by Tana Pigeon
+//   (Word Mill Games, 2022). The threshold table below reproduces the published
+//   d100 "Yes" ceiling values indexed by [oddsIdx][chaosFactor-1].
+//   oddsIdx 0=Impossible … 8=Certain; chaosFactor 1–9.
+const Solo={
+  _ODDS_LABELS:['Impossible','No Way','Unlikely','50/50','Somewhat Likely','Likely','Very Likely','Near Sure Thing','Certain'],
+  _ODDS_THRESHOLDS:[
+    [  1,  1,  2,  4,  5,  9, 10, 11, 12],
+    [  1,  3,  5, 10, 15, 20, 25, 30, 35],
+    [ 11, 17, 22, 25, 30, 35, 40, 45, 50],
+    [ 31, 37, 42, 45, 50, 55, 60, 65, 70],
+    [ 51, 57, 62, 65, 70, 75, 80, 82, 85],
+    [ 61, 67, 72, 75, 80, 85, 90, 93, 95],
+    [ 71, 77, 82, 85, 90, 93, 95, 96, 97],
+    [ 81, 85, 90, 93, 95, 97, 98, 99, 99],
+    [ 91, 93, 95, 97, 99, 99, 99,100,100],
+  ],
+
+  _rollD100(){return Math.floor(Math.random()*100)+1;},
+  _rollD10(){return Math.floor(Math.random()*10)+1;},
+
+  _rollFateChart(oddsIdx,chaos){
+    const idx=Math.max(0,Math.min(8,oddsIdx));
+    const cf=Math.max(1,Math.min(9,chaos));
+    const ceiling=this._ODDS_THRESHOLDS[idx][cf-1];
+    const roll=this._rollD100();
+    const isDoubles=(roll%11===0);
+    const randomEvent=isDoubles&&(roll<=(cf*10));
+    let result;
+    const exceptYesCeiling=Math.max(1,Math.floor(ceiling/5));
+    const exceptNoCeiling=100-Math.ceil((100-ceiling)/5);
+    if(roll<=exceptYesCeiling){result='ExceptionalYes';}
+    else if(roll<=ceiling){result='Yes';}
+    else if(roll>exceptNoCeiling){result='ExceptionalNo';}
+    else{result='No';}
+    return{result,roll,ceiling,randomEvent};
+  },
+
+  _rollSceneCheck(chaos){
+    const roll=this._rollD10();
+    let result;
+    if(roll>chaos){result='Proceed';}
+    else if(roll%2===0){result='Altered';}
+    else{result='Interrupt';}
+    return{result,roll};
+  },
+
+  _logEntry(entry){
+    const n=State.get();
+    if(!n)return;
+    if(!Array.isArray(n.oracleLog))n.oracleLog=[];
+    n.oracleLog.unshift({...entry,id:Utils.uuid(),timestamp:Utils.now()});
+    if(n.oracleLog.length>100)n.oracleLog.length=100;
+    State._touch(n.id);
+    State.persist();
+  },
+
+  setChaosFactor(v){
+    const n=State.get();
+    if(!n)return;
+    const clamped=Math.max(1,Math.min(9,parseInt(v,10)||5));
+    if(!n.metadata)n.metadata={};
+    n.metadata.chaosFactor=clamped;
+    State.pushUndo();
+    State._touch(n.id);
+    State.persist();
+    this.renderPanel();
+  },
+
+  async askOracle(question,oddsIdx){
+    const n=State.get();
+    if(!n)return;
+    const chaos=n.metadata?.chaosFactor??5;
+    const fateRoll=this._rollFateChart(oddsIdx,chaos);
+    const oddsLabel=this._ODDS_LABELS[Math.max(0,Math.min(8,oddsIdx))];
+    const entry={
+      type:'oracle',
+      question:String(question||'').slice(0,500),
+      odds:oddsLabel,
+      chaosFactor:chaos,
+      roll:fateRoll.roll,
+      ceiling:fateRoll.ceiling,
+      result:fateRoll.result,
+      randomEvent:fateRoll.randomEvent,
+      narrative:null,
+    };
+
+    if(SampleMode.isActive()){
+      const pre=SampleMode.getPreBakedOutput('solo','oracleResult');
+      if(pre){
+        entry.narrative=typeof pre==='string'?pre:pre.narrative||null;
+        this._logEntry(entry);
+        this.renderPanel();
+        return;
+      }
+    }
+
+    if(Copilot.isConfigured()){
+      this.renderPanel();
+      try{
+        const built=PromptFill.build('so1',{
+          '[QUESTION]':Utils.escHtml(entry.question),
+          '[ODDS]':oddsLabel,
+          '[CHAOS_FACTOR]':String(chaos),
+          '[ROLL_RESULT]':fateRoll.result,
+        },n);
+        TransparencyLog._pendingLabel='Solo Oracle';
+        const json=await Copilot._apiFetchJson(
+          [{role:'system',content:built.system},{role:'user',content:built.user}]
+        );
+        entry.narrative=typeof json?.narrative==='string'?json.narrative:null;
+      }catch(err){
+        showToast('Oracle narrative unavailable: '+(err.message||'API error'),[],4000);
+      }
+    }
+
+    this._logEntry(entry);
+    this.renderPanel();
+  },
+
+  async scenePivot(currentScene){
+    const n=State.get();
+    if(!n)return;
+    const chaos=n.metadata?.chaosFactor??5;
+    const entry={
+      type:'pivot',
+      scene:String(currentScene||'').slice(0,300),
+      chaosFactor:chaos,
+      pivots:null,
+    };
+
+    if(SampleMode.isActive()){
+      const pre=SampleMode.getPreBakedOutput('solo','scenePivots');
+      if(pre){
+        entry.pivots=Array.isArray(pre)?pre:null;
+        this._logEntry(entry);
+        this.renderPanel();
+        return;
+      }
+    }
+
+    if(!Copilot.isConfigured()){
+      showToast('Scene Pivot requires an API key. Configure one in Settings.',[],4000);
+      return;
+    }
+
+    this.renderPanel();
+    try{
+      const chronicle=(n.chronicle||[]).slice(-5).map(e=>`[Year ${e.year}] ${e.name}: ${e.description||''}`).join('\n');
+      const built=PromptFill.build('so2',{
+        '[CHRONICLE_LAST_5]':chronicle,
+        '[CURRENT_SCENE]':Utils.escHtml(entry.scene),
+        '[CHAOS_FACTOR]':String(chaos),
+      },n);
+      TransparencyLog._pendingLabel='Scene Pivot';
+      const json=await Copilot._apiFetchJson(
+        [{role:'system',content:built.system},{role:'user',content:built.user}]
+      );
+      entry.pivots=Array.isArray(json?.pivots)&&json.pivots.length===3?json.pivots:null;
+    }catch(err){
+      showToast('Scene Pivot failed: '+(err.message||'API error'),[],4000);
+    }
+
+    this._logEntry(entry);
+    this.renderPanel();
+  },
+
+  async moodShift(currentMood){
+    const n=State.get();
+    if(!n)return;
+    const entry={
+      type:'mood',
+      currentMood:String(currentMood||'').slice(0,200),
+      suggestedMood:null,
+      reason:null,
+    };
+
+    if(SampleMode.isActive()){
+      const pre=SampleMode.getPreBakedOutput('solo','moodShift');
+      if(pre&&typeof pre==='object'){
+        entry.suggestedMood=pre.suggested_mood||null;
+        entry.reason=pre.reason||null;
+        this._logEntry(entry);
+        this.renderPanel();
+        return;
+      }
+    }
+
+    if(!Copilot.isConfigured()){
+      showToast('Mood Shift requires an API key. Configure one in Settings.',[],4000);
+      return;
+    }
+
+    this.renderPanel();
+    try{
+      const sceneInput=document.getElementById('solo-scene-input')?.value?.trim()||'Current scene';
+      const built=PromptFill.build('so3',{
+        '[CURRENT_SCENE]':Utils.escHtml(sceneInput),
+        '[CURRENT_MOOD]':Utils.escHtml(entry.currentMood),
+      },n);
+      TransparencyLog._pendingLabel='Mood Shift';
+      const json=await Copilot._apiFetchJson(
+        [{role:'system',content:built.system},{role:'user',content:built.user}]
+      );
+      entry.suggestedMood=typeof json?.suggested_mood==='string'?json.suggested_mood:null;
+      entry.reason=typeof json?.reason==='string'?json.reason:null;
+    }catch(err){
+      showToast('Mood Shift failed: '+(err.message||'API error'),[],4000);
+    }
+
+    this._logEntry(entry);
+    this.renderPanel();
+  },
+
+  renderPanel(){
+    const ctr=document.getElementById('solo-body');
+    if(!ctr)return;
+    const n=State.get();
+    if(!n){ctr.innerHTML='<div class="sc-empty">No realm loaded.</div>';return;}
+    const E=Utils.escHtml;
+    const chaos=n.metadata?.chaosFactor??5;
+    const isSample=SampleMode.isActive();
+    const hasKey=Copilot.isConfigured();
+    const log=n.oracleLog||[];
+
+    let html=`<div class="solo-section">
+  <div class="solo-section__heading">Chaos Factor</div>
+  <div class="solo-chaos-row">
+    <input type="range" class="solo-chaos-slider" id="solo-chaos-slider"
+      min="1" max="9" step="1" value="${chaos}"
+      aria-label="Chaos Factor, current value ${chaos}" aria-valuemin="1" aria-valuemax="9" aria-valuenow="${chaos}">
+    <span class="solo-chaos-readout" id="solo-chaos-readout" aria-live="polite" aria-atomic="true">${chaos}</span>
+  </div>
+  <div style="font-size:var(--text-label-sm);color:var(--color-text-muted);margin-top:var(--space-2)">
+    1 = tightly controlled &nbsp;·&nbsp; 9 = spiralling chaos
+  </div>
+</div>`;
+
+    html+=`<div class="solo-section">
+  <div class="solo-section__heading">Fate Oracle</div>
+  <div class="solo-form" id="solo-oracle-form">
+    <div class="solo-form__row">
+      <textarea id="solo-question-input" class="solo-textarea"
+        rows="2" placeholder="What do you want to know? e.g. Does the barkeep recognise Marik?"
+        aria-label="Oracle question"></textarea>
+    </div>
+    <div class="solo-form__row" style="margin-top:var(--space-2)">
+      <select id="solo-odds-select" class="solo-select" aria-label="Oracle odds">`;
+    this._ODDS_LABELS.forEach((label,i)=>{
+      html+=`<option value="${i}"${i===3?' selected':''}>${E(label)}</option>`;
+    });
+    html+=`</select>
+      <button class="btn btn--primary" id="solo-ask-btn" aria-label="Roll the Fate Oracle" style="white-space:nowrap">Roll Oracle</button>
+    </div>
+  </div>
+</div>`;
+
+    html+=`<div class="solo-section">
+  <div class="solo-section__heading">Scene Check</div>
+  <button class="btn btn--secondary" id="solo-scene-check-btn" aria-label="Run Scene Check" style="margin-bottom:var(--space-2)">Run Scene Check</button>
+  <div id="solo-scene-check-result" aria-live="polite" aria-atomic="true"></div>
+</div>`;
+
+    html+=`<div class="solo-section">
+  <div class="solo-section__heading">Scene Pivot</div>
+  <div class="solo-form">
+    <textarea id="solo-scene-input" class="solo-textarea"
+      rows="2" placeholder="Describe the current scene in one sentence."
+      aria-label="Current scene description"></textarea>
+    <div style="display:flex;gap:var(--space-2);margin-top:var(--space-2);flex-wrap:wrap">
+      <button class="btn btn--secondary" id="solo-pivot-btn" aria-label="Generate Scene Pivots"${!hasKey&&!isSample?' disabled title="Requires API key"':''}>Generate Pivots${!hasKey&&!isSample?' (needs API key)':''}</button>
+      <button class="btn btn--secondary" id="solo-mood-btn" aria-label="Suggest Mood Shift"${!hasKey&&!isSample?' disabled title="Requires API key"':''}>Mood Shift${!hasKey&&!isSample?' (needs API key)':''}</button>
+    </div>
+    <div style="margin-top:var(--space-2)">
+      <input type="text" id="solo-mood-input" class="solo-text-input"
+        placeholder="Current mood (e.g. tense, wary, hopeful)"
+        aria-label="Current mood for Mood Shift">
+    </div>
+  </div>
+</div>`;
+
+    html+=`<div class="solo-section">
+  <div class="solo-section__heading">Oracle Log <span style="font-family:var(--font-mono);font-size:var(--text-label-sm);font-weight:400;opacity:0.6">(${log.length}/100)</span></div>`;
+    if(!log.length){
+      html+=`<div class="solo-log__empty">The chronicle is silent. Ask the oracle — it will speak when the dice fall.</div>`;
+    }else{
+      html+=`<ol class="solo-log" reversed>`;
+      log.forEach((entry,idx)=>{
+        html+=Solo._renderLogEntry(entry,idx,E);
+      });
+      html+=`</ol>`;
+    }
+    html+=`</div>`;
+
+    ctr.innerHTML=html;
+
+    const slider=ctr.querySelector('#solo-chaos-slider');
+    const readout=ctr.querySelector('#solo-chaos-readout');
+    if(slider&&readout){
+      slider.addEventListener('input',()=>{
+        readout.textContent=slider.value;
+        slider.setAttribute('aria-valuenow',slider.value);
+      });
+      slider.addEventListener('change',()=>Solo.setChaosFactor(slider.value));
+    }
+
+    ctr.querySelector('#solo-ask-btn')?.addEventListener('click',()=>{
+      const q=(document.getElementById('solo-question-input')?.value||'').trim();
+      const odds=parseInt(document.getElementById('solo-odds-select')?.value||'3',10);
+      if(!q){showToast('State a question before rolling the oracle.',[],3000);return;}
+      Solo.askOracle(q,odds);
+    });
+
+    ctr.querySelector('#solo-scene-check-btn')?.addEventListener('click',()=>{
+      const n2=State.get();if(!n2)return;
+      const chaos2=n2.metadata?.chaosFactor??5;
+      const check=Solo._rollSceneCheck(chaos2);
+      const resultEl=document.getElementById('solo-scene-check-result');
+      if(resultEl){
+        const labelMap={Proceed:'The scene proceeds as expected.',Altered:'The scene is altered — something unexpected changes the premise.',Interrupt:'Random Event — the scene is interrupted by an unrelated complication.'};
+        const modClass={Proceed:'--yes',Altered:'--no',Interrupt:'--exceptional-no'}[check.result]||'--yes';
+        resultEl.innerHTML=`<div class="solo-roll-result solo-roll-result${modClass}" role="status">
+          <strong>${E(check.result)}</strong> &nbsp; <span style="font-family:var(--font-mono);font-size:var(--text-label-sm)">d10: ${check.roll} vs CF ${chaos2}</span>
+        </div><div style="font-size:var(--text-body-sm);color:var(--color-text-muted);margin-top:var(--space-2)">${E(labelMap[check.result])}</div>`;
+      }
+    });
+
+    ctr.querySelector('#solo-pivot-btn')?.addEventListener('click',()=>{
+      const scene=(document.getElementById('solo-scene-input')?.value||'').trim();
+      if(!scene){showToast('Describe the current scene first.',[],3000);return;}
+      Solo.scenePivot(scene);
+    });
+
+    ctr.querySelector('#solo-mood-btn')?.addEventListener('click',()=>{
+      const mood=(document.getElementById('solo-mood-input')?.value||'').trim();
+      if(!mood){showToast('Enter the current mood first.',[],3000);return;}
+      Solo.moodShift(mood);
+    });
+
+    ctr.querySelectorAll('[data-expand-log]').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        const id=btn.dataset.expandLog;
+        const body=document.getElementById(`solo-log-body-${id}`);
+        if(!body)return;
+        const expanded=body.style.display!=='none';
+        body.style.display=expanded?'none':'block';
+        btn.textContent=expanded?'Show':'Hide';
+        btn.setAttribute('aria-expanded',String(!expanded));
+      });
+    });
+  },
+
+  _renderLogEntry(entry,idx,E){
+    const ts=entry.timestamp?new Date(entry.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'';
+    let inner='';
+    if(entry.type==='oracle'){
+      const rClass={ExceptionalYes:'exceptional-yes',Yes:'yes',No:'no',ExceptionalNo:'exceptional-no'}[entry.result]||'no';
+      const rLabel={ExceptionalYes:'Exceptional Yes',Yes:'Yes',No:'No',ExceptionalNo:'Exceptional No'}[entry.result]||entry.result;
+      inner=`<div class="solo-log-entry__question">${E(entry.question||'')}</div>
+<div style="display:flex;align-items:center;gap:var(--space-2);margin-top:var(--space-1);flex-wrap:wrap">
+  <span class="solo-roll-result solo-roll-result--${rClass}" role="status">${E(rLabel)}</span>
+  ${entry.randomEvent?'<span class="solo-roll-result solo-roll-result--random-event" role="status">Random Event</span>':''}
+  <span style="font-family:var(--font-mono);font-size:var(--text-label-sm);color:var(--color-text-muted)">d100: ${entry.roll} vs ${entry.ceiling} &nbsp;·&nbsp; ${E(entry.odds||'')} &nbsp;·&nbsp; CF ${entry.chaosFactor}</span>
+</div>
+${entry.narrative?`<div class="solo-roll-narrative" id="solo-log-body-${E(entry.id)}">${E(entry.narrative)}</div>`:''}`;
+    }else if(entry.type==='pivot'){
+      const pivots=entry.pivots||[];
+      const pivotLabels=['Calm','Mid','Hard'];
+      inner=`<div class="solo-log-entry__question">${E(entry.scene||'')}</div>
+${pivots.length?`<ol class="solo-pivot-list">${pivots.map((p,pi)=>`<li><span class="solo-pivot-list__label">${pivotLabels[pi]||''}:</span> ${E(p)}</li>`).join('')}</ol>`:'<div style="font-size:var(--text-body-sm);color:var(--color-text-muted)">No pivots available.</div>'}`;
+    }else if(entry.type==='mood'){
+      inner=`<div class="solo-mood-suggestion">
+  <div class="solo-mood-suggestion__mood">${E(entry.suggestedMood||'—')}</div>
+  <div class="solo-mood-suggestion__reason">${E(entry.reason||entry.currentMood||'')}</div>
+</div>`;
+    }
+
+    const typeLabel={oracle:'Oracle',pivot:'Pivot',mood:'Mood'}[entry.type]||entry.type;
+    return `<li class="solo-log-entry">
+  <div class="solo-log-entry__header">
+    <span class="solo-log-entry__type solo-log-entry__type--${E(entry.type||'oracle')}">${E(typeLabel)}</span>
+    <span class="solo-log-entry__ts" style="font-family:var(--font-mono);font-size:var(--text-label-sm);color:var(--color-text-faint)">${ts}</span>
+  </div>
+  <div class="solo-log-entry__body">${inner}</div>
+</li>`;
+  },
+
+  bind(){
+    const closeBtn=document.getElementById('panel-solo-close');
+    if(closeBtn&&!closeBtn._soloBound){
+      closeBtn.addEventListener('click',()=>SHSPanels.closeAll());
+      closeBtn._soloBound=true;
+    }
   },
 };
 
@@ -3941,6 +4407,16 @@ function migrateIfNeeded(d){
       if(!Array.isArray(n.oracleLog))n.oracleLog=[];
     });
     d.schemaVersion='2.4.0';
+  }
+  // v2.4.0 → v2.4.1: initialize chaosFactor on nation metadata
+  if(d.schemaVersion==='2.4.0'){
+    (d.nations||[]).forEach(n=>{
+      if(!n.metadata)n.metadata={};
+      if(n.metadata.chaosFactor===undefined||n.metadata.chaosFactor===null){
+        n.metadata.chaosFactor=5;
+      }
+    });
+    d.schemaVersion='2.4.1';
   }
   return d;
 }
@@ -7100,7 +7576,7 @@ Include 0-3 founding chronicle events that match the description. Include 1-3 fa
     const tone=opts.tone||'neutral';
     let fromDesc=opts.fromName||'a character'; // B10: raw string
     let toDesc=opts.toName||'another character'; // B10: raw string
-    if(opts.fromCharId){const c=n.characters?.find(x=>x.id===opts.fromCharId);if(c)fromDesc=c.name+' ('+((c.role||'')+', drives: '+(c.drive||'')+', fears: '+(c.fear||''))+')');}  // B9: drive/fear (singular); B10: no escHtml
+    if(opts.fromCharId){const c=n.characters?.find(x=>x.id===opts.fromCharId);if(c)fromDesc=c.name+' ('+(c.role||'')+', drives: '+(c.drive||'')+', fears: '+(c.fear||'')+')';}
     if(opts.toCharId){const c=n.characters?.find(x=>x.id===opts.toCharId);if(c)toDesc=c.name+' ('+(c.role||'')+')';}
     // A1 fix: sys MUST be declared outside the if(opts.toCharId) block. Prior code had the const
     // fused onto the same line as the closing brace of the if block, making it unreachable when
@@ -7363,7 +7839,7 @@ Return ONLY the paragraph as plain text. No preamble, no formatting.`;
 // ─── SAMPLE REALM DATA ───────────────────────────────────────────────────────
 const SAMPLE_REALM_HEIST={name:'Solis Prime',era:'Near-Future',government:'Corporate Sovereignty',archetype:'technocratic',leader:'Director-Emerita Iolanthe Marr',rulingClass:'Board of Synthesists',currentYear:2188,population:4200000,territory:9800,capital:'The Spire District',template:'city-state',stats:{legitimacy:44,corruption:7,opposition:6,food_production:70,trade:82,raw_materials:38,manpower:55,knowledge:79,cohesion:32,urbanization:94},factions:[{name:'The Shadowclaw Clan',type:'Opposition',position:'gaining',primaryInterest:'Control of the Lower Markets redistribution network',description:"A tightly-knit smuggling fraternity that moves contraband, unregistered persons, and grey-market bioware through Solis Prime's sub-tier conduits. Loyalty is enforced through shared risk, not hierarchy.",leaderName:'Dust (operational alias)'},{name:'Spire Security Directorate',type:'Government',position:'holding',primaryInterest:'Enforcement of the Corporate Charter and protection of Board assets',description:"The Board's sanctioned enforcement arm. Funded by Synthesist levies. Prosecutions are routed through Directorate-aligned magistrates — including Magistrate Vell, whose standing orders are classified.",leaderName:'Commandant Pyrren Ash'}],chronicle:[{name:'The Lower Markets Charter',type:'Economic',weight:12,year:2179,visibility:'public',description:"The Board of Synthesists granted provisional trade licenses to seventeen Lower Market guilds — a concession wrested after the Three-Week Blockade of the Spire elevators. Cedric Vell's grandfather co-signed the original petition.",relatedStats:['trade','cohesion']},{name:'The Conduit Raids',type:'Military',weight:-9,year:2181,visibility:'public',description:'The Spire Security Directorate swept seventeen sub-tier conduit nodes, seizing unlicensed bioware and arresting forty-two persons. Shadowclaw Clan lost two veteran runners. Dust was wounded in the escape. Cedric Vell\'s stall was not raided — a fact that was noticed.',relatedStats:['opposition','cohesion']},{name:'The Marr Appointment',type:'Political',weight:14,year:2183,visibility:'public',description:"Iolanthe Marr was elevated to the Board of Synthesists as its youngest-ever seat-holder, overseeing the Logistics and Transit vertical. Her first act was reclassifying six Lower Market trade corridors as Board property — effectively voiding the 2179 charter concessions.",relatedStats:['legitimacy','trade']},{name:'The Vell Estrangement',type:'Social',weight:-6,year:2184,visibility:'public',description:"Magistrate Sera Vell issued standing enforcement orders against unlicensed market activity in the Lower Markets — orders that directly targeted her brother Cedric's fence operation. Cedric has not spoken to his sister since. The Directorate uses his silence as leverage.",relatedStats:['cohesion']},{name:'The Marr Heist of 2185',type:'Political',weight:-11,year:2185,visibility:'public',description:"A Shadowclaw Clan operation penetrated a Spire transit vault and extracted a crate of pre-charter corporate land titles — documents that would, if published, invalidate the Board's authority over three Lower Market districts. Dust coordinated the extraction. Cedric Vell moved the titles to a safehouse in Sub-Tier 7. The crate has not surfaced publicly.",relatedStats:['opposition','legitimacy']},{name:"The Magistrate's Sealed Warrants",type:'Political',weight:-8,year:2187,visibility:'private',description:"Magistrate Sera Vell filed seventeen sealed warrants targeting Shadowclaw distribution nodes — including two that bracket the Sub-Tier 7 safehouse where the Marr Heist titles are stored. Whether she knows the titles are there, or whether she is simply cleaning the grid, is unknown. The warrants execute on the third of next month.",relatedStats:['opposition','legitimacy']},{name:'The Listening Device Contract',type:'Political',weight:6,year:2188,visibility:'private',description:"An anonymous party (suspected: a rival Board faction) has contracted the Shadowclaw Clan to plant a deep-signal listening device inside Director-Emerita Marr's private office on Spire Level 41. Dust has accepted. The operation requires inside access — which only Cedric Vell's network of licensed market vendors can provide.",relatedStats:['trade','knowledge']}],characters:[{name:'Cedric Vell',role:'Fence, Lower Markets broker',status:'active',drive:'Protect the Sub-Tier 7 network his grandfather built',fear:"His sister finds the land titles before he can broker their safe release",plotSeeds:["Cedric holds the 2185 land titles. He wants them off his hands — but only to someone who won't burn the Lower Markets with them.","He knows about the sealed warrants. He won't say how."],chronicleLinks:[]},{name:'Magistrate Sera Vell',role:'Spire Security Directorate prosecutor',status:'active',drive:'Advance within the Directorate by delivering measurable enforcement results',fear:"That her estrangement from Cedric has made her complicit — that she signed warrants she did not fully read",plotSeeds:['Her standing orders are classified at Level 3. The party cannot legally read them.','She is not corrupt — but she is ambitious enough to have stopped asking certain questions.'],chronicleLinks:[]},{name:'Dust',role:'Shadowclaw Clan operative, party contact',status:'active',drive:'Execute the listening-device contract before the sealed warrants execute',fear:'Cedric gets burned by his sister before the operation is complete',plotSeeds:['Dust was wounded in the 2181 Conduit Raids. The scar runs along her left forearm. She does not explain it.','She has a source inside the Spire — unconfirmed, never named in front of the party.'],chronicleLinks:[]},{name:'Iolanthe Marr',role:'Board of Synthesists member, Logistics and Transit vertical',status:'active',drive:'Consolidate the reclassified trade corridors before a Board vote can reverse the Marr Appointment',fear:'The 2185 land titles surface — they would undo everything she built since 2183',plotSeeds:['She is aware her office may be surveilled. She varies her route. She does not vary her assistant.','She once had a relationship with Dust, before either of them were who they are now. Dust has never mentioned it.'],chronicleLinks:[]}],hooks:[{title:'The Sealed Warrants',description:"Magistrate Vell's seventeen sealed warrants execute in twenty-two days. Two of them bracket the Sub-Tier 7 safehouse. The Shadowclaw Clan does not know Cedric is in the blast radius. Does the party warn him — and if so, how do they explain how they know?",resolved:false,relatedFactions:[]},{title:"The Land Titles' Buyer",description:'Three parties want the 2185 land titles: the Shadowclaw Clan (to use them), Magistrate Vell (to destroy them), and an unknown fourth party who has offered Cedric more money than he has ever seen. The fourth party\'s identity is the question.',resolved:false,relatedFactions:[]},{title:"Dust's Spire Source",description:"Someone inside the Spire is feeding Dust operational intelligence. The quality of the information implies Level 2 clearance at minimum. If the source is burned — by the party's actions or by accident — the listening-device operation collapses.",resolved:false,relatedFactions:[]}],secrets:[{title:'The Warrants Were Written Blind',content:"Magistrate Vell signed the sealed warrants without reading the full targeting appendix. A Directorate aide inserted the Sub-Tier 7 coordinates after her signature. She does not know. Someone does.",visibility:'private',relatedFactions:[]},{title:'Marr Ordered the 2181 Raids',content:"The Conduit Raids of 2181 were not routine enforcement. Iolanthe Marr — then a Board junior analyst — provided the Directorate with the conduit maps. She traded the intelligence for her seat on the Logistics vertical. Two Shadowclaw runners died because of those maps. Dust knows one of them was her cousin.",visibility:'private',relatedFactions:[]}],sessions:[],locations:[{name:"Cedric's Stall, Sub-Tier 7",description:'A licensed secondhand goods stall in the Lower Markets. The back room connects to three conduit nodes. The 2185 land titles are sealed inside a polymer case beneath the third floorboard.',type:'Interior',status:'active'},{name:"Spire Level 41 — Marr's Office",description:"Director-Emerita Marr's private office. Accessed via credentialed lift only. The listening-device drop point is behind the ventilation panel on the north wall — accessible from the service corridor, which requires a licensed vendor pass to enter.",type:'Restricted',status:'active'}],_preBaked:{strongStart:"The service corridor on Level 41 smells of recycled air and corporate patience. Dust pressed the vendor pass into your hand three minutes ago — Cedric's network, good for one trip up the Spire's maintenance spine. The listening device is a flat disc, nine grams, held against your palm. Behind the north wall panel is a ventilation cavity forty centimetres deep; the disc clips to the second strut from the left. You have eleven minutes before the shift rotation brings a Directorate sweep team through Sub-Tier 6 and someone starts asking why Cedric's vendor pass is showing activity two hundred floors above the Lower Markets. The panel screws are already loose. Someone came this way before.",hooks:["The sealed warrants execute in twenty-two days — and two of them bracket Cedric's Sub-Tier 7 safehouse where the 2185 land titles are hidden. If the Directorate finds those titles, everything Dust's operation was built on burns overnight.","An unknown fourth party has offered Cedric more money than he has seen in his life for the 2185 land titles. Cedric says he doesn't know who they are. Dust says Cedric is lying. Both might be right.","Magistrate Sera Vell is Cedric's estranged sister. She signed the sealed warrants without reading the targeting appendix. Whether that makes her a victim or a weapon depends entirely on who tells her first — and what they say."],secrets:["The 2181 Conduit Raids were not routine enforcement. Iolanthe Marr provided the conduit maps to the Directorate in exchange for her seat on the Logistics vertical. Two Shadowclaw runners died. Dust's cousin was one of them. Dust does not know the source. Yet.","The sealed warrants were altered after Magistrate Vell signed them. A Directorate aide inserted the Sub-Tier 7 coordinates into the targeting appendix post-signature. Someone inside the Directorate is playing both sides.","Cedric's vendor pass shows four prior uses on Level 40 and 41 — none of them his. His pass has been borrowed. He has not reported the discrepancy because doing so would require explaining his network to the Directorate.","Iolanthe Marr knows her office may be under surveillance. She varies her route to work. She does not vary her assistant — and her assistant has been accepting off-cycle payments from an anonymous transfer account for eleven months.","The 2185 land titles, if authenticated, would void the Board's authority over three Lower Market districts and retroactively invalidate the Marr Appointment itself. The Board's legal division has a draft counter-argument ready. It was written in 2183 — two years before the Heist."]},fronts:[],bestiary:[],relations:[],copilotConversation:[],glossary:null,notes:'',oracleLog:[],metadata:{soloMode:false}};
 
-const SAMPLE_REALM_SOLO={name:'Aetherholm',era:'Industrial',government:'Constitutional Monarchy',archetype:'merchant-republic',leader:'King Osbert IV (nominal)',rulingClass:'Commercial and professional classes',currentYear:1891,population:840000,territory:12000,capital:'Aetherholm City',template:'city-state',stats:{legitimacy:62,corruption:6,opposition:4,food_production:55,trade:71,raw_materials:60,manpower:58,knowledge:66,cohesion:44,urbanization:68},factions:[{name:'The Veiled Court',type:'Opposition',position:'gaining',primaryInterest:"Infiltration and manipulation of Aetherholm's elite social layer",description:"A secret cult woven into the city's professional and merchant classes. Members are identified by a white-wax seal left in private correspondence. Their doctrine is deliberately obscure; their methods are social, not violent — so far. At least three Constabulary inspectors are believed to be members.",leaderName:'Unknown (the "Voice Above the Veil")'},{name:'The Constabulary',type:'Government',position:'holding',primaryInterest:'Maintenance of public order and defence of Constabulary institutional authority',description:"Aetherholm's official law-keeping body. Competent in most respects; quietly compromised in others. Inspector Calder heads the investigative division and is personally honest — but his chain of command is not, and he knows it.",leaderName:'Chief Commissioner Holt'}],chronicle:[{name:'The Death of Elena Reye',type:'Social',weight:-16,year:1888,visibility:'public',description:'Elena Reye, wife of private investigator Marik Reye, was found dead in the Brass Lantern district. The official verdict: accidental drowning in the Aether Canal. Marik resigned from the Constabulary three days after the inquest closed. Inspector Calder signed the inquest report. He has never explained why he did not contest the verdict.',relatedStats:['cohesion']},{name:'The White-Wax Letters',type:'Political',weight:-8,year:1889,visibility:'private',description:"Three separate Constabulary investigations into disappearances in the Lamp Quarter were closed within a week of each other — each file stamped with an authorisation code that has since been reassigned and cannot be traced. The closures were accompanied by private correspondence bearing white-wax seals. Marik found one of these letters in Elena's personal papers a year after her death.",relatedStats:['legitimacy','corruption']},{name:'Session 1 — The Brass Lantern',type:'Political',weight:5,year:1891,visibility:'public',description:"Marik Reye accepted a commission from a Lamp Quarter merchant to locate a missing ledger. His investigation led him to the Brass Lantern tavern, where the barkeep — a man named Orlan — became evasive when questioned about the merchant's associates. Marik also observed a woman in grey watching from the back corner. She left before he could approach. This is the third time he has seen her in public spaces.",relatedStats:['knowledge']},{name:"Session 2 — The Pale Woman's Message",type:'Social',weight:-7,year:1891,visibility:'public',description:"The woman in grey — now known to Marik as \"the Pale Woman\" — left a sealed envelope at his lodgings. Inside: a pressed flower and a single line in Elena's handwriting. The sentence reads: \"The canal was not an accident.\" The ink was Elena's. Marik has confirmed the handwriting. The letter is undated. Inspector Calder, shown a copy, said he had no comment.",relatedStats:['opposition','cohesion']},{name:'Session 3 — The Lamp Quarter Audit',type:'Economic',weight:4,year:1891,visibility:'public',description:"Marik traced the missing ledger to a Lamp Quarter counting-house with a recorded Constabulary visit in 1889 — one of the files closed with the white-wax authorisation code. The counting-house owner, a widow named Maret Lund, told Marik that Inspector Calder visited personally in 1889 and left without the ledger he came for. She said Calder looked afraid. She kept the ledger under her floor. It contains seven names. One of them is Elena's.",relatedStats:['knowledge','legitimacy']},{name:'The Constabulary Promotion',type:'Political',weight:6,year:1891,visibility:'public',description:"Chief Commissioner Holt announced the promotion of three inspectors to the investigative division — a routine administrative action that placed two Veiled Court suspects inside Marik's former unit. Inspector Calder was passed over. He sent Marik a short note: \"Watch the new men.\"",relatedStats:['legitimacy','corruption']}],characters:[{name:'Marik Reye',role:'Player character — private investigator',status:'active',drive:'Find out what really happened to Elena and name the person who ordered it',fear:'That someone he trusted — Calder, or someone closer — already knew and said nothing',plotSeeds:["Elena's name is in the Lamp Quarter ledger. Marik does not yet know in what context.","The Pale Woman has appeared three times. She is not following Marik — she is preceding him."],chronicleLinks:[]},{name:'Elena Reye',role:"Marik's deceased wife; the investigation's centre of gravity",status:'deceased',drive:'N/A — referenced in chronicles and outputs only',fear:'N/A',plotSeeds:["Elena's name appears in a ledger she should have had no connection to.","She left a message in her own handwriting — after she died."],chronicleLinks:[]},{name:'Inspector Calder',role:"Marik's former Constabulary partner",status:'active',drive:'Protect Marik from the political machinery that would use him the way it used Elena',fear:'That protecting Marik means admitting what he did and did not do in 1888',plotSeeds:["Calder signed the inquest report. He was afraid when he visited the counting-house in 1889. He was passed over for promotion this year. The timeline connects.","He sent Marik a warning. That warning may be a distraction."],chronicleLinks:[]},{name:'The Pale Woman',role:'Veiled Court operative — possibly a defector',status:'active',drive:'Unknown — but her actions are protective, not hostile',fear:'Being identified by the Veiled Court before she has finished whatever she started',plotSeeds:["She preceded Marik at the Brass Lantern. She left Elena's handwriting on his doorstep. She has been three steps ahead of him for two sessions.","She is not the same woman Constabulary records describe as a Veiled Court messenger. Either the records are wrong or she changed."],chronicleLinks:[]}],hooks:[{title:"Elena's Name in the Ledger",description:'Session 3 produced the Lamp Quarter ledger. Elena\'s name is inside. Marik has not yet read the entry next to her name. The widow Maret Lund is willing to let him return — but she has now received a white-wax letter herself.',resolved:false,relatedFactions:[]},{title:"Calder's Silence",description:"Calder signed the 1888 inquest report. He visited the counting-house in 1889 and left empty-handed and afraid. He sent a warning this year but no explanation. Each data point is consistent with complicity — or with someone trying to stay alive inside the machinery.",resolved:false,relatedFactions:[]}],secrets:[{title:'What the Pale Woman Carries',content:"The Pale Woman is not a Veiled Court messenger. She is a former member who was present the night Elena Reye died — not as a participant but as a witness who could not intervene without exposing herself. The pressed flower she sent Marik was from Elena's own coat pocket. The Pale Woman kept it for three years before deciding Marik was ready to hear the truth. She is terrified she has waited too long.",visibility:'private',relatedFactions:[]}],sessions:[{number:1,title:'The Brass Lantern',summary:'Marik accepted a missing-ledger commission. Followed it to the Brass Lantern. The barkeep Orlan was evasive. Observed the Pale Woman for the third time.',hooks:[]},{number:2,title:"The Pale Woman's Message",summary:"Found Elena's handwriting in a sealed envelope at his lodgings. \"The canal was not an accident.\" Showed Calder. Calder said nothing.",hooks:[]},{number:3,title:'The Lamp Quarter Audit',summary:"Found the ledger under Maret Lund's floor. Elena's name is inside. Calder visited the counting-house in 1889. He was afraid.",hooks:[]}],locations:[{name:'The Brass Lantern',description:'A mid-tier tavern in the Lamp Quarter. Barkeep Orlan has been working here for eleven years. He knows most of the neighbourhood regulars and is evasive about several of them. The Pale Woman has been observed here twice.',type:'Public',status:'active'},{name:"Maret Lund's Counting-House",description:"A small Lamp Quarter commercial bookkeeper. Maret kept the ledger under her floor for two years after Calder's visit. She has now received a white-wax letter. She is still willing to talk — for now.",type:'Interior',status:'active'}],_preBaked:{oracleResult:"Yes — but reluctantly. Orlan the barkeep knows about the Veiled Court's presence in the Brass Lantern's back room, and has known since 1889. He has said nothing because a white-wax letter arrived at his home three days after Elena Reye's inquest closed — addressed not to him but to his daughter. Marik has been in the Brass Lantern four times since Elena's death. On two of those visits, Orlan went to the back room after Marik left. He is not a member. He is afraid.",scenePivots:["A Constabulary patrol appears at the counting-house just as Marik arrives to read Elena's ledger entry — the two new inspectors Calder warned about, moving faster than they should know to move.","Inspector Calder is sitting in Marik's lodgings when he returns from the Lamp Quarter, holding the copy of Elena's letter. He says: \"I need to tell you what I saw in 1888 before someone tells you a version that suits them.\"","Maret Lund sends a message — not to Marik but to the address Elena used when she was alive. The message reads: \"Come before the letter-men do.\" Someone in Maret's circle knew Elena's address."]},fronts:[],bestiary:[],relations:[],copilotConversation:[],glossary:null,notes:'',oracleLog:[],metadata:{soloMode:true}};
+const SAMPLE_REALM_SOLO={name:'Aetherholm',era:'Industrial',government:'Constitutional Monarchy',archetype:'merchant-republic',leader:'King Osbert IV (nominal)',rulingClass:'Commercial and professional classes',currentYear:1891,population:840000,territory:12000,capital:'Aetherholm City',template:'city-state',stats:{legitimacy:62,corruption:6,opposition:4,food_production:55,trade:71,raw_materials:60,manpower:58,knowledge:66,cohesion:44,urbanization:68},factions:[{name:'The Veiled Court',type:'Opposition',position:'gaining',primaryInterest:"Infiltration and manipulation of Aetherholm's elite social layer",description:"A secret cult woven into the city's professional and merchant classes. Members are identified by a white-wax seal left in private correspondence. Their doctrine is deliberately obscure; their methods are social, not violent — so far. At least three Constabulary inspectors are believed to be members.",leaderName:'Unknown (the "Voice Above the Veil")'},{name:'The Constabulary',type:'Government',position:'holding',primaryInterest:'Maintenance of public order and defence of Constabulary institutional authority',description:"Aetherholm's official law-keeping body. Competent in most respects; quietly compromised in others. Inspector Calder heads the investigative division and is personally honest — but his chain of command is not, and he knows it.",leaderName:'Chief Commissioner Holt'}],chronicle:[{name:'The Death of Elena Reye',type:'Social',weight:-16,year:1888,visibility:'public',description:'Elena Reye, wife of private investigator Marik Reye, was found dead in the Brass Lantern district. The official verdict: accidental drowning in the Aether Canal. Marik resigned from the Constabulary three days after the inquest closed. Inspector Calder signed the inquest report. He has never explained why he did not contest the verdict.',relatedStats:['cohesion']},{name:'The White-Wax Letters',type:'Political',weight:-8,year:1889,visibility:'private',description:"Three separate Constabulary investigations into disappearances in the Lamp Quarter were closed within a week of each other — each file stamped with an authorisation code that has since been reassigned and cannot be traced. The closures were accompanied by private correspondence bearing white-wax seals. Marik found one of these letters in Elena's personal papers a year after her death.",relatedStats:['legitimacy','corruption']},{name:'Session 1 — The Brass Lantern',type:'Political',weight:5,year:1891,visibility:'public',description:"Marik Reye accepted a commission from a Lamp Quarter merchant to locate a missing ledger. His investigation led him to the Brass Lantern tavern, where the barkeep — a man named Orlan — became evasive when questioned about the merchant's associates. Marik also observed a woman in grey watching from the back corner. She left before he could approach. This is the third time he has seen her in public spaces.",relatedStats:['knowledge']},{name:"Session 2 — The Pale Woman's Message",type:'Social',weight:-7,year:1891,visibility:'public',description:"The woman in grey — now known to Marik as \"the Pale Woman\" — left a sealed envelope at his lodgings. Inside: a pressed flower and a single line in Elena's handwriting. The sentence reads: \"The canal was not an accident.\" The ink was Elena's. Marik has confirmed the handwriting. The letter is undated. Inspector Calder, shown a copy, said he had no comment.",relatedStats:['opposition','cohesion']},{name:'Session 3 — The Lamp Quarter Audit',type:'Economic',weight:4,year:1891,visibility:'public',description:"Marik traced the missing ledger to a Lamp Quarter counting-house with a recorded Constabulary visit in 1889 — one of the files closed with the white-wax authorisation code. The counting-house owner, a widow named Maret Lund, told Marik that Inspector Calder visited personally in 1889 and left without the ledger he came for. She said Calder looked afraid. She kept the ledger under her floor. It contains seven names. One of them is Elena's.",relatedStats:['knowledge','legitimacy']},{name:'The Constabulary Promotion',type:'Political',weight:6,year:1891,visibility:'public',description:"Chief Commissioner Holt announced the promotion of three inspectors to the investigative division — a routine administrative action that placed two Veiled Court suspects inside Marik's former unit. Inspector Calder was passed over. He sent Marik a short note: \"Watch the new men.\"",relatedStats:['legitimacy','corruption']}],characters:[{name:'Marik Reye',role:'Player character — private investigator',status:'active',drive:'Find out what really happened to Elena and name the person who ordered it',fear:'That someone he trusted — Calder, or someone closer — already knew and said nothing',plotSeeds:["Elena's name is in the Lamp Quarter ledger. Marik does not yet know in what context.","The Pale Woman has appeared three times. She is not following Marik — she is preceding him."],chronicleLinks:[]},{name:'Elena Reye',role:"Marik's deceased wife; the investigation's centre of gravity",status:'deceased',drive:'N/A — referenced in chronicles and outputs only',fear:'N/A',plotSeeds:["Elena's name appears in a ledger she should have had no connection to.","She left a message in her own handwriting — after she died."],chronicleLinks:[]},{name:'Inspector Calder',role:"Marik's former Constabulary partner",status:'active',drive:'Protect Marik from the political machinery that would use him the way it used Elena',fear:'That protecting Marik means admitting what he did and did not do in 1888',plotSeeds:["Calder signed the inquest report. He was afraid when he visited the counting-house in 1889. He was passed over for promotion this year. The timeline connects.","He sent Marik a warning. That warning may be a distraction."],chronicleLinks:[]},{name:'The Pale Woman',role:'Veiled Court operative — possibly a defector',status:'active',drive:'Unknown — but her actions are protective, not hostile',fear:'Being identified by the Veiled Court before she has finished whatever she started',plotSeeds:["She preceded Marik at the Brass Lantern. She left Elena's handwriting on his doorstep. She has been three steps ahead of him for two sessions.","She is not the same woman Constabulary records describe as a Veiled Court messenger. Either the records are wrong or she changed."],chronicleLinks:[]}],hooks:[{title:"Elena's Name in the Ledger",description:'Session 3 produced the Lamp Quarter ledger. Elena\'s name is inside. Marik has not yet read the entry next to her name. The widow Maret Lund is willing to let him return — but she has now received a white-wax letter herself.',resolved:false,relatedFactions:[]},{title:"Calder's Silence",description:"Calder signed the 1888 inquest report. He visited the counting-house in 1889 and left empty-handed and afraid. He sent a warning this year but no explanation. Each data point is consistent with complicity — or with someone trying to stay alive inside the machinery.",resolved:false,relatedFactions:[]}],secrets:[{title:'What the Pale Woman Carries',content:"The Pale Woman is not a Veiled Court messenger. She is a former member who was present the night Elena Reye died — not as a participant but as a witness who could not intervene without exposing herself. The pressed flower she sent Marik was from Elena's own coat pocket. The Pale Woman kept it for three years before deciding Marik was ready to hear the truth. She is terrified she has waited too long.",visibility:'private',relatedFactions:[]}],sessions:[{number:1,title:'The Brass Lantern',summary:'Marik accepted a missing-ledger commission. Followed it to the Brass Lantern. The barkeep Orlan was evasive. Observed the Pale Woman for the third time.',hooks:[]},{number:2,title:"The Pale Woman's Message",summary:"Found Elena's handwriting in a sealed envelope at his lodgings. \"The canal was not an accident.\" Showed Calder. Calder said nothing.",hooks:[]},{number:3,title:'The Lamp Quarter Audit',summary:"Found the ledger under Maret Lund's floor. Elena's name is inside. Calder visited the counting-house in 1889. He was afraid.",hooks:[]}],locations:[{name:'The Brass Lantern',description:'A mid-tier tavern in the Lamp Quarter. Barkeep Orlan has been working here for eleven years. He knows most of the neighbourhood regulars and is evasive about several of them. The Pale Woman has been observed here twice.',type:'Public',status:'active'},{name:"Maret Lund's Counting-House",description:"A small Lamp Quarter commercial bookkeeper. Maret kept the ledger under her floor for two years after Calder's visit. She has now received a white-wax letter. She is still willing to talk — for now.",type:'Interior',status:'active'}],_preBaked:{oracleResult:"Yes — but reluctantly. Orlan the barkeep knows about the Veiled Court's presence in the Brass Lantern's back room, and has known since 1889. He has said nothing because a white-wax letter arrived at his home three days after Elena Reye's inquest closed — addressed not to him but to his daughter. Marik has been in the Brass Lantern four times since Elena's death. On two of those visits, Orlan went to the back room after Marik left. He is not a member. He is afraid.",scenePivots:["A Constabulary patrol appears at the counting-house just as Marik arrives to read Elena's ledger entry — the two new inspectors Calder warned about, moving faster than they should know to move.","Inspector Calder is sitting in Marik's lodgings when he returns from the Lamp Quarter, holding the copy of Elena's letter. He says: \"I need to tell you what I saw in 1888 before someone tells you a version that suits them.\"","Maret Lund sends a message — not to Marik but to the address Elena used when she was alive. The message reads: \"Come before the letter-men do.\" Someone in Maret's circle knew Elena's address."],moodShift:{suggested_mood:'cold, methodical resignation',reason:"Marik has just confirmed Elena's name in the ledger. The grief that drove him is exhausted; what remains is procedural — a man working a case because that is what he is now. The next scene should feel like a man closing a file, not breaking down."}},fronts:[],bestiary:[],relations:[],copilotConversation:[],glossary:null,notes:'',oracleLog:[],metadata:{soloMode:true}};
 
 const SAMPLE_REALM_POLITICAL={name:'The Surassi Compact',era:'Industrial',government:'Republic',archetype:'merchant-republic',leader:'Chancellor Veyna Oss',rulingClass:'Merchant Houses and licensed guild masters',currentYear:1847,population:3100000,territory:88000,capital:'Compact City (Surras)',template:'kingdom',stats:{legitimacy:65,corruption:5,opposition:5,food_production:45,trade:70,raw_materials:66,manpower:60,knowledge:58,cohesion:48,urbanization:52},factions:[{name:'The Merchant Houses',type:'Government',position:'holding',primaryInterest:'Preservation of the licensed-trade monopoly system that funds their political authority',description:"Twelve licensed trading houses that collectively hold fifty-three seats in the Compact Assembly. Their authority rests on a post-founding bargain: the Houses fund the state's infrastructure and military capacity in exchange for exclusive licensing authority over long-distance trade. The bargain is two generations old and increasingly contested.",leaderName:'Chancellor Veyna Oss'},{name:'The Saltmoot Council',type:'Opposition',position:'gaining',primaryInterest:'Provincial assembly representation and reduced licensing fees for regional producers',description:"A coalition of provincial merchant assemblies and regional guild representatives who argue the Compact's founding charter entitles them to proportional Assembly seats. Currently holding nineteen seats — the most they have ever held. Speaker Tomas Rendle has been meeting openly with Bread Coalition delegates for six weeks.",leaderName:'Speaker Tomas Rendle'},{name:'The Bread Coalition',type:'Opposition',position:'gaining',primaryInterest:'Relief from the grain licensing system and direct state food distribution',description:"A populist movement that emerged from three consecutive harvest shortfalls. Formally unregistered (the Assembly has twice refused to grant them observer status), but commanding visible street presence in the industrial districts. Mother Talith has become a public figure too prominent to prosecute. She has declined three private meetings with the Chancellor.",leaderName:'Mother Talith'}],chronicle:[{name:'The Founding Bargain',type:'Political',weight:20,year:1801,visibility:'public',description:"The Surassi Compact was constituted by twelve trading houses who collectively pledged infrastructure funding in exchange for exclusive licensing authority. The charter explicitly reserved forty Assembly seats for House representatives and twenty for \"provincial assemblies to be designated.\" That designation was never completed. The Saltmoot Council has cited this gap in every session since 1839.",relatedStats:['legitimacy','trade']},{name:'The First Grain Licence Reform (Defeated)',type:'Political',weight:-7,year:1821,visibility:'public',description:"A reform bill reducing grain licensing fees for provincial producers was defeated in Assembly by a margin of thirty-one to twenty-two. The Merchant Houses bloc held. Three House representatives who had signalled support for reform were replaced before the next session. No formal explanation was given. Chancellor Oss's predecessor called it \"routine rotation.\"",relatedStats:['legitimacy','cohesion']},{name:'The Three Lean Harvests',type:'Natural',weight:-15,year:1843,visibility:'public',description:"Three consecutive years of reduced harvest — 1843, 1844, 1845 — reduced food production across the Compact's southern provinces by an estimated thirty percent. The Merchant Houses' grain reserve system kept the capital adequately supplied. Provincial bread prices tripled. The Bread Coalition formed in the winter of 1845. Mother Talith began speaking publicly in the spring of 1846.",relatedStats:['food_production','opposition','cohesion']},{name:'The Orryn Defection',type:'Political',weight:-12,year:1845,visibility:'public',description:"Master Guildsman Aldric Orryn, a junior representative of the Weavers' House, resigned his House seat and applied for Saltmoot Council observer status. He brought with him a set of internal House correspondence showing deliberate manipulation of the grain reserve release schedule — correspondence that, if authenticated, demonstrates that the Merchant Houses withheld reserve grain from the southern provinces during the first lean harvest to sustain price floors. Orryn has not yet published the correspondence. He says he is waiting for \"the right assembly session.\"",relatedStats:['legitimacy','corruption','opposition']},{name:'Chancellor Oss Assumes Office',type:'Political',weight:8,year:1846,visibility:'public',description:"Veyna Oss was elected Chancellor by the House bloc after her predecessor's resignation amid a procedural dispute over the provincial seating question. Oss secured her election by promising the two swing Houses a review of the licensing fee structure — a review she has not convened. She is regarded within the Houses as disciplined and reliably aligned. She is regarded outside the Houses as the most capable person currently holding back a constitutional crisis.",relatedStats:['legitimacy']},{name:'The Saltmoot Petition',type:'Political',weight:-9,year:1847,visibility:'public',description:"The Saltmoot Council formally petitioned the Assembly for a constitutional referendum on provincial seat allocation. The petition carries nineteen Assembly signatures — one short of the twenty required to force a floor debate. Speaker Rendle has been meeting with Master Guildsman Orryn and two Bread Coalition delegates to negotiate the twentieth signature. Chancellor Oss has not commented on these meetings. She has, however, quietly asked the Assembly clerk to review the procedural calendar for the next eight months.",relatedStats:['legitimacy','opposition']},{name:"Mother Talith's Public Declaration",type:'Social',weight:11,year:1847,visibility:'public',description:"Before a crowd estimated at four thousand in the Surras mill district, Mother Talith publicly named Chancellor Oss by name and called for a Bread Coalition petition to force an Assembly vote on direct grain distribution. She explicitly stated she was not calling for disorder — \"We are citizens of the Compact and we are petitioning our Assembly as the charter permits.\" The speech was printed in three provincial broadsheets. The Constabulary watched from the perimeter and made no arrests. Chancellor Oss received the report that evening and reportedly read it twice.",relatedStats:['opposition','cohesion','legitimacy']}],characters:[{name:'Chancellor Veyna Oss',role:'Head of the Merchant Houses bloc; Chancellor of the Compact Assembly',status:'active',drive:"Hold the Assembly coalition together long enough to manage the seating question on her terms, not the Saltmoot's",fear:"Orryn publishes the grain reserve correspondence before she can negotiate his silence — which would hand the Saltmoot the constitutional crisis she has spent a year preventing",plotSeeds:["Oss privately believes the Founding Bargain's provincial seating gap must eventually be resolved. She is not opposed to reform; she is opposed to being forced into it.","She has read Talith's speech twice. She has not told anyone why."],chronicleLinks:[]},{name:'Speaker Tomas Rendle',role:'Saltmoot Council leader; currently one vote short of forcing a floor debate',status:'active',drive:"Secure the twentieth Assembly signature before Oss manipulates the procedural calendar to delay the petition past its validity window",fear:"That the Bread Coalition's street presence becomes a liability — that the Assembly bloc will use Talith's name to delegitimise the Saltmoot's constitutional argument",plotSeeds:["Rendle is meeting with Orryn. He wants the grain correspondence — but only timed correctly. Too early and it becomes a scandal that burns the petition. Too late and Oss controls the narrative.","He is also meeting with two Bread Coalition delegates. He has not told the Saltmoot's full council about those meetings."],chronicleLinks:[]},{name:'Mother Talith',role:'Bread Coalition organiser; untouchable due to popular support',status:'active',drive:"Force a direct Assembly vote on grain distribution before a fourth lean harvest makes the Compact's legitimacy question unanswerable by any parliamentary means",fear:'That she becomes a symbol the Assembly can debate instead of a person they must answer',plotSeeds:["Talith has been offered a private meeting with Chancellor Oss three times. She has declined all three. She is waiting for something — possibly the twentieth signature.","She has read the Founding Bargain's charter in full. She knows about the undesignated provincial seats. She has not said so publicly yet."],chronicleLinks:[]},{name:'Master Guildsman Aldric Orryn',role:'Merchant House defector; holder of the grain reserve correspondence',status:'active',drive:'Publish the correspondence at maximum political effect — not just to damage the Houses but to force a structural reform that survives them',fear:'That he miscalculates the moment and the correspondence becomes a historical footnote instead of a constitutional lever',plotSeeds:["Orryn is meeting with Rendle. He is also meeting, quietly, with a Bread Coalition delegate Rendle does not know about.","The grain reserve correspondence is authentic. Orryn had it verified by an independent accountant in 1846. He paid for the verification himself."],chronicleLinks:[]}],hooks:[{title:'The Twentieth Signature',description:'Rendle needs one more Assembly signature to force a floor debate on the provincial seating petition. The candidates are known: three swing-House representatives who have signalled private sympathy but public silence. Oss knows who they are. She is managing them. The question is who gets to them first — and what they are offered.',resolved:false,relatedFactions:[]},{title:"Orryn's Timing Problem",description:"The grain reserve correspondence would, if published, authenticate Saltmoot and Bread Coalition grievances and potentially implicate two sitting House representatives in deliberate provincial harm. Orryn is waiting for \"the right assembly session.\" Rendle wants it before the petition expires. Talith wants it before a fourth harvest. Oss wants it never. The timing is a political weapon all four are holding simultaneously.",resolved:false,relatedFactions:[]},{title:"Talith's Undisclosed Charter Knowledge",description:"Mother Talith has read the Founding Bargain charter in full and knows about the undesignated provincial seats. She has not said so publicly — which means she is holding a legitimate constitutional argument in reserve. When she deploys it, the Bread Coalition's petition is no longer a populist demand but a charter-compliant legal claim. The Assembly has no procedural response to a charter-compliant petition.",resolved:false,relatedFactions:[]}],secrets:[],_preBaked:{copilotAnswer:"Chancellor Veyna Oss has three response options when the Bread Coalition petition arrives, and her choice between them will define the next two years of Compact politics.\n\nHer first option is procedural delay. Oss has already asked the Assembly clerk to review the procedural calendar — this is not accidental. A petition filed under Article 14 of the Founding Bargain has a thirty-day validity window. If she can move three scheduled Assembly sessions into recess on administrative grounds, the petition expires and Rendle must restart from nineteen signatures. This buys her approximately four months. It does not resolve the underlying pressure.\n\nHer second option is a controlled concession. Oss privately believes the provincial seating gap must eventually be resolved. She could offer Rendle a joint committee — not a floor vote, but a formal review process that takes the petition off the immediate calendar and gives her eighteen months to shape the outcome. Rendle would likely accept if the committee had genuine authority. The Bread Coalition would not accept a committee. Talith would call it a delay in polite language.\n\nHer third option is the most dangerous: she could approach Orryn directly and offer him a formal accounting inquiry into the grain reserve schedule in exchange for his correspondence. This neutralises the correspondence as a political weapon, gives Oss control of the audit findings, and splits Orryn from Rendle. The risk is that Orryn is meeting with a Bread Coalition delegate Rendle does not know about — which suggests Orryn's loyalty is more transactional than ideological, and may already be in play.\n\nThe fourth option — doing nothing — is functionally a choice to let Talith's public declaration build momentum unchecked. Given that Oss reportedly read Talith's speech twice and said nothing to her inner council, this possibility cannot be excluded. Sometimes the most disciplined politician in the room is the one who waits for everyone else to make their move first.",factionAnalysis:"The Merchant Houses will spend the next two months managing the twentieth signature — offering license fee reviews, committee seats, and private assurances to the three swing representatives Rendle is courting. Their structural advantage is time: the petition has a validity window and every month it does not reach the floor is a month the Houses hold. Their structural vulnerability is Orryn's correspondence, which they cannot suppress without proving the Saltmoot's central accusation.\n\nThe Saltmoot Council's next probable move is acquiring the twentieth signature through Orryn — either by publishing the correspondence at a moment that forces a swing representative to defect, or by offering Orryn a formal council role that gives him institutional protection. Rendle's undisclosed Bread Coalition meetings suggest he is building a broader coalition than his council knows about. If that coalition holds, the Saltmoot's constitutional argument gains popular legitimacy it currently lacks.\n\nThe Bread Coalition's next move is Talith's undisclosed charter knowledge. When she invokes the undesignated provincial seats in a public statement, the constitutional argument shifts from a political demand to a legal claim the Assembly cannot dismiss on procedural grounds. She is likely waiting for the petition to fail once — giving her the failure as evidence that parliamentary channels are deliberately obstructed — before invoking the charter. That sequence would be very difficult for Oss to contain."},sessions:[],locations:[],fronts:[],bestiary:[],relations:[],copilotConversation:[],glossary:null,notes:'',oracleLog:[],metadata:{soloMode:false}};
 
@@ -7912,7 +8388,7 @@ const SHSPanels={
 
   openPanel(which){
     // Close any open panel first
-    ['sessions','hooks','secrets','fronts','locations','bestiary','relations','web'].forEach(p=>{
+    ['sessions','hooks','secrets','fronts','locations','bestiary','relations','web','solo'].forEach(p=>{
       document.getElementById(`panel-${p}`)?.classList.remove('is-open');
     });
     // Update nav active state
@@ -7927,7 +8403,7 @@ const SHSPanels={
   },
 
   closeAll(){
-    ['sessions','hooks','secrets','fronts','locations','bestiary','relations','web'].forEach(p=>{
+    ['sessions','hooks','secrets','fronts','locations','bestiary','relations','web','solo'].forEach(p=>{
       document.getElementById(`panel-${p}`)?.classList.remove('is-open');
     });
     // Restore war-room as active
@@ -8612,6 +9088,7 @@ const SHSPanels={
   },
 
   // Delegates to dedicated modules
+  renderSolo(){if(typeof Solo!=='undefined')Solo.renderPanel();},
   renderBestiary(){if(typeof Bestiary!=='undefined')Bestiary.render();},
   renderRelations(){if(typeof Relations!=='undefined')Relations.render();},
 
@@ -9222,7 +9699,7 @@ const WorldShell={
         if(typeof SHSPanels!=='undefined')SHSPanels.closeAll();
         return;
       }
-      if(['sessions','hooks','secrets','fronts','locations','bestiary','relations','web'].includes(route)){
+      if(['sessions','hooks','secrets','fronts','locations','bestiary','relations','web','solo'].includes(route)){
         if(typeof SHSPanels!=='undefined')SHSPanels.openPanel(route);
         return;
       }
@@ -11452,6 +11929,7 @@ async function bootstrap(){
   bindEventListeners();
   // Bind front door, sample mode, and tonight module (DOM already exists)
   if(typeof SampleMode!=='undefined')SampleMode.bind();
+  if(typeof Solo!=='undefined')Solo.bind();
   if(typeof FrontDoor!=='undefined')FrontDoor.bind();
   if(typeof Tonight!=='undefined')Tonight.bind();
   if(typeof TransparencyLog!=='undefined')TransparencyLog.bind();
