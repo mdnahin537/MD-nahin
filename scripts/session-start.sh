@@ -58,6 +58,8 @@ if [ -d /tmp/superpowers-core/skills ]; then
   for skill_path in /tmp/superpowers-core/skills/*/; do
     install_skill "$(basename "$skill_path")" "$skill_path"
   done
+  # Nuke the clone so Claude Code doesn't scan it as a secondary skill source
+  rm -rf /tmp/superpowers-core
 fi
 
 # ── Trail of Bits (select) ──────────────────────────────────────────────────
@@ -102,19 +104,33 @@ GSTACK_DIR="$SKILLS_DIR/gstack"
 clone_once "$GSTACK_DIR" https://github.com/garrytan/gstack.git
 if [ -d "$GSTACK_DIR" ]; then
   [ -f "$GSTACK_DIR/setup" ] && bash "$GSTACK_DIR/setup" >/dev/null 2>&1 || true
-  # Install ALL gStack skills as top-level so each one triggers by its own name
-  # Excluded: investigate (conflicts with systematic-debugging)
-  # Excluded: setup-gbrain, sync-gbrain, open-gstack-browser, setup-browser-cookies (internal utilities)
+  # Install gStack skills as top-level so each fires by its own name.
+  # Excluded — conflict: investigate (vs systematic-debugging)
+  # Excluded — noise for solo automation freelancer: pair-agent, plan-tune,
+  #   landing-report, devex-review, plan-devex-review, gstack-upgrade,
+  #   connect-chrome, learn
+  # Excluded — internal utilities: setup-gbrain, sync-gbrain,
+  #   open-gstack-browser, setup-browser-cookies
   for skill in autoplan benchmark benchmark-models browse canary careful codex \
-               connect-chrome context-restore context-save cso \
+               context-restore context-save cso \
                design-consultation design-html design-review design-shotgun \
-               devex-review document-generate document-release freeze \
-               gstack-upgrade guard health land-and-deploy landing-report \
-               learn make-pdf office-hours pair-agent \
-               plan-ceo-review plan-design-review plan-devex-review \
-               plan-eng-review plan-tune qa qa-only retro review \
+               document-generate document-release freeze \
+               guard health land-and-deploy \
+               make-pdf office-hours \
+               plan-ceo-review plan-design-review \
+               plan-eng-review qa qa-only retro review \
                scrape setup-deploy ship skillify unfreeze; do
     install_skill "$skill" "$GSTACK_DIR/$skill"
+  done
+fi
+
+# ── Research skills (alirezarezvani/claude-skills — 15.5k stars, May 2026) ─
+# Installs the router + 3 specialists. Skipping grants/patent/syllabus/notebooklm
+# (domain-specific noise for Hunter's use case).
+clone_once /tmp/arz-claude-skills https://github.com/alirezarezvani/claude-skills.git
+if [ -d /tmp/arz-claude-skills/research ]; then
+  for skill in research pulse dossier litreview; do
+    install_skill "$skill" "/tmp/arz-claude-skills/research/$skill/skills/$skill"
   done
 fi
 
