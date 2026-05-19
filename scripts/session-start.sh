@@ -118,6 +118,26 @@ if [ -d "$GSTACK_DIR" ]; then
   done
 fi
 
+# ── n8n skills (czlonkowski/n8n-skills — production-tested, 5.1k stars) ───
+clone_once /tmp/n8n-skills https://github.com/czlonkowski/n8n-skills.git
+if [ -d /tmp/n8n-skills/skills ]; then
+  for skill in n8n-expression-syntax n8n-workflow-patterns n8n-node-configuration \
+               n8n-validation-expert n8n-mcp-tools-expert \
+               n8n-code-javascript n8n-code-python; do
+    install_skill "$skill" "/tmp/n8n-skills/skills/$skill"
+  done
+fi
+
+# ── Make.com skill (no quality version exists online — built in-house) ─────
+MAKE_SKILL="$SKILLS_DIR/make-com"
+if [ ! -d "$MAKE_SKILL" ]; then
+  mkdir -p "$MAKE_SKILL"
+  cp /home/user/MD-nahin/skills/make-com/SKILL.md "$MAKE_SKILL/SKILL.md" 2>/dev/null \
+    || curl -s "https://raw.githubusercontent.com/mdnahin537/MD-nahin/main/skills/make-com/SKILL.md" \
+         -o "$MAKE_SKILL/SKILL.md" 2>/dev/null || true
+  [ -f "$MAKE_SKILL/SKILL.md" ] && echo -e "${GREEN}✓${NC} make-com" || true
+fi
+
 # ── Remove noise/conflict skills (runs AFTER installs — idempotent) ────────
 for skill in debug-buttercup using-superpowers using-git-worktrees writing-skills \
              property-based-testing finishing-a-development-branch \
