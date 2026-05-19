@@ -466,6 +466,41 @@ body.theme-ember .gm-toolbar{display:none!important}
 .wms-char-role{font-family:var(--font-mono);font-size:9px;letter-spacing:.10em;
   text-transform:uppercase;font-weight:500}
 .wms-empty{font-size:12px;color:var(--color-text-faint);font-style:italic;padding:10px 0}
+/* ──────────────────────────── PLOT THREADS (Phase 3C) ─────────────────────── */
+.plot-thread-card{display:flex;flex-direction:column;gap:0}
+.plot-thread-item{padding:10px 0;border-bottom:1px solid var(--color-border-hairline);cursor:pointer;transition:background .12s,padding-left .18s var(--ease-out);outline:none}
+.plot-thread-item:last-of-type{border-bottom:none}
+.plot-thread-item:hover,.plot-thread-item:focus-visible{background:rgba(255,185,100,.05);padding-left:5px}
+.plot-thread-item__inner{display:flex;align-items:center;gap:8px;margin-bottom:2px}
+.plot-thread-item__title{font-family:'Cinzel',serif;font-size:13px;color:var(--color-text-muted);flex:1;transition:color .12s;letter-spacing:.02em;line-height:1.3}
+.plot-thread-item:hover .plot-thread-item__title,.plot-thread-item:focus-visible .plot-thread-item__title{color:var(--ember-color)}
+.plot-thread-item__desc{font-size:11px;color:var(--color-text-faint);line-height:1.5;font-style:italic}
+.plot-thread-more{margin-top:8px;font-family:var(--font-mono);font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--ember-color);cursor:pointer;opacity:.7;transition:opacity .15s;outline:none}
+.plot-thread-more:hover,.plot-thread-more:focus-visible{opacity:1}
+.plot-thread-empty{font-size:12px;color:var(--color-text-faint);font-style:italic;padding:10px 0}
+.plot-thread-panel-hook{padding:12px 0;border-bottom:1px solid var(--color-border-hairline);cursor:pointer;transition:padding-left .18s var(--ease-out);outline:none}
+.plot-thread-panel-hook:last-of-type{border-bottom:none}
+.plot-thread-panel-hook:hover,.plot-thread-panel-hook:focus-visible{padding-left:5px}
+.plot-thread-panel-hook__head{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.plot-thread-panel-hook__title{font-family:'Cinzel',serif;font-size:14px;color:var(--color-ink);flex:1;letter-spacing:.02em;line-height:1.3;transition:color .12s}
+.plot-thread-panel-hook:hover .plot-thread-panel-hook__title,.plot-thread-panel-hook:focus-visible .plot-thread-panel-hook__title{color:var(--ember-color)}
+.plot-thread-panel-hook__desc{font-size:var(--text-body-sm);color:var(--color-text-muted);line-height:1.55}
+.plot-seed-section{margin-top:6px;padding:8px 10px;border-left:2px solid rgba(255,185,100,.30);background:rgba(255,185,100,.025)}
+.plot-seed-section--card{margin-top:8px;border-radius:0}
+.plot-seed-section--wms{margin-top:4px;padding:6px 8px}
+.plot-seed-section__heading{font-family:var(--font-mono);font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--color-text-faint);margin-bottom:5px;font-weight:500}
+.plot-seed-section__name{font-family:'Cinzel',serif;font-size:13px;color:var(--ember-color);letter-spacing:.03em;margin-bottom:6px;font-weight:500}
+.plot-seed-section__item{font-size:var(--text-body-sm);color:var(--color-text-muted);line-height:1.6;padding:4px 0;border-bottom:1px solid var(--color-border-hairline)}
+.plot-seed-section__item:last-child{border-bottom:none}
+.threads-oracle-row{margin-top:20px;padding-top:16px;border-top:1px solid var(--color-border-hairline);display:flex;flex-direction:column;gap:12px}
+.threads-oracle-result{min-height:24px}
+.threads-oracle-pick{padding:12px 14px;background:rgba(255,185,100,.04);border:1px solid rgba(255,185,100,.20);border-left:3px solid var(--ember-color)}
+.threads-oracle-pick__type{font-family:var(--font-mono);font-size:9px;letter-spacing:.20em;text-transform:uppercase;color:var(--ember-color);margin-bottom:5px;opacity:.7}
+.threads-oracle-pick__label{font-family:'Cinzel',serif;font-size:14px;color:var(--color-ink);line-height:1.4;letter-spacing:.02em}
+.threads-oracle-pick__detail{margin-top:6px;font-size:var(--text-body-sm);color:var(--color-text-muted);line-height:1.6}
+.wms-char-row--seeds{align-items:flex-start}
+.wms-sec-link{font-family:var(--font-mono);font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--ember-color);opacity:.7;float:right}
+.wms-sec-link:hover{opacity:1}
 
 /* ──────────────────────────── RIGHT PANEL (ARSENAL) ────────────────────────────
    Editorial list. NO box per item, NO left ember bar, NO diamond gem separators.
@@ -2369,6 +2404,9 @@ SECTION 8: DOM STRUCTURE
       <a class="wms-nav__item" data-route="solo" href="#" aria-label="Solo Mode">
         <span class="material-symbols-outlined">casino</span>Solo
       </a>
+      <a class="wms-nav__item" data-route="threads" href="#" aria-label="Plot Threads">
+        <span class="material-symbols-outlined">account_tree</span>Threads
+      </a>
     </nav>
     <div class="wms-panels">
       <!-- LEFT PANEL: Stability hero + stat list + Inscribe -->
@@ -2409,6 +2447,13 @@ SECTION 8: DOM STRUCTURE
         <div class="wms-section">
           <div class="wms-sec-label">Notable Figures</div>
           <div class="wms-chars" id="wms-chars"></div>
+        </div>
+        <div class="wms-section" id="wms-threads-section">
+          <div class="wms-sec-label">
+            <span id="wms-threads-label">Open Hooks</span>
+            <span class="wms-sec-link" id="wms-threads-link" style="cursor:pointer">View All →</span>
+          </div>
+          <div class="plot-thread-card" id="wms-threads-card-body"></div>
         </div>
       </section>
       <!-- RIGHT PANEL: Arsenal -->
@@ -3125,6 +3170,14 @@ SECTION 8: DOM STRUCTURE
     <button class="btn btn--primary btn--sm" id="bestiary-add-btn">+ Add Creature</button>
     <button class="btn btn--secondary btn--sm" id="bestiary-generate-btn">⌘ Generate</button>
   </div>
+</div>
+<!-- ─── THREADS PANEL ─── -->
+<div class="sc-panel" id="panel-threads" role="dialog" aria-label="Plot Threads">
+  <div class="sc-panel__header">
+    <h2 class="sc-panel__title">Plot Threads</h2>
+    <button class="sc-panel__close" id="panel-threads-close" aria-label="Close Plot Threads panel">×</button>
+  </div>
+  <div class="sc-panel__body" id="threads-body"></div>
 </div>
 <!-- ─── RELATIONS PANEL ─── -->
 <div class="sc-panel" id="panel-relations" role="dialog" aria-label="Cross-Realm Relations">
@@ -5600,6 +5653,7 @@ const Render={
         const statusLabel=c.status==='inPower'?'In Power':(c.status||'active').replace(/^./,s=>s.toUpperCase());
         const statusClass=`char-card__status--${c.status==='inPower'?'in-power':(c.status||'active')}`;
         const linkCount=(c.chronicleLinks||[]).length;
+        const seedCount=(c.plotSeeds||[]).length;
         html+=`<div class="char-card" data-cid="${E(c.id)}">
           <div class="char-card__top">
             <div class="char-card__name">${E(c.name||'Unnamed')}</div>
@@ -5607,6 +5661,10 @@ const Render={
           </div>
           ${c.role?`<div class="char-card__role">${E(c.role)}</div>`:''}
           ${linkCount?`<div class="char-card__meta"><span class="char-card__meta-link" data-cid-events="${E(c.id)}">📜 ${linkCount} event${linkCount!==1?'s':''}</span></div>`:''}
+          ${seedCount?`<div class="plot-seed-section plot-seed-section--card">
+            <div class="plot-seed-section__heading">Plot Seeds (${seedCount})</div>
+            ${(c.plotSeeds||[]).map(s=>`<div class="plot-seed-section__item">${E(s)}</div>`).join('')}
+          </div>`:''}
         </div>`;
       });
     }
@@ -8508,7 +8566,7 @@ const SHSPanels={
 
   openPanel(which){
     // Close any open panel first
-    ['sessions','hooks','secrets','fronts','locations','bestiary','relations','web','solo'].forEach(p=>{
+    ['sessions','hooks','secrets','fronts','locations','bestiary','relations','web','solo','threads'].forEach(p=>{
       document.getElementById(`panel-${p}`)?.classList.remove('is-open');
     });
     // Update nav active state
@@ -8523,7 +8581,7 @@ const SHSPanels={
   },
 
   closeAll(){
-    ['sessions','hooks','secrets','fronts','locations','bestiary','relations','web','solo'].forEach(p=>{
+    ['sessions','hooks','secrets','fronts','locations','bestiary','relations','web','solo','threads'].forEach(p=>{
       document.getElementById(`panel-${p}`)?.classList.remove('is-open');
     });
     // Restore war-room as active
@@ -9180,6 +9238,7 @@ const SHSPanels={
     document.getElementById('panel-sessions-close')?.addEventListener('click',()=>this.closeAll());
     document.getElementById('panel-hooks-close')?.addEventListener('click',()=>this.closeAll());
     document.getElementById('panel-secrets-close')?.addEventListener('click',()=>this.closeAll());
+    document.getElementById('panel-threads-close')?.addEventListener('click',()=>this.closeAll());
     // New session
     document.getElementById('new-session-btn')?.addEventListener('click',()=>this.openNewSession());
     document.getElementById('end-session-btn')?.addEventListener('click',()=>this.saveSession());
@@ -9211,6 +9270,7 @@ const SHSPanels={
   renderSolo(){if(typeof Solo!=='undefined')Solo.renderPanel();},
   renderBestiary(){if(typeof Bestiary!=='undefined')Bestiary.render();},
   renderRelations(){if(typeof Relations!=='undefined')Relations.render();},
+  renderThreads(){if(typeof Threads!=='undefined')Threads.renderPanel();},
 
   renderWeb(){
     if(typeof RelationshipWeb!=='undefined'){
@@ -9425,6 +9485,170 @@ const GMMode={
     }
   },
 };
+// ─── THREADS MODULE ─────────────────────────────────────────────────────────
+const Threads={
+  _priorityOrder:{high:0,medium:1,low:2},
+
+  _isOpen(h){return h.status==='open'||(!h.status&&!h.resolved);},
+
+  _sortByPriority(hooks){
+    const O=this._priorityOrder;
+    return [...hooks].sort((a,b)=>{
+      const ap=O[a.priority||'medium']??1;
+      const bp=O[b.priority||'medium']??1;
+      return ap-bp;
+    });
+  },
+
+  renderCard(){
+    const ctr=document.getElementById('wms-threads-card-body');
+    if(!ctr)return;
+    const n=State.get();
+    if(!n){ctr.innerHTML='';return;}
+    const E=Utils.escHtml;
+    const openHooks=this._sortByPriority((n.hooks||[]).filter(h=>this._isOpen(h)));
+    if(!openHooks.length){
+      ctr.innerHTML=`<div class="plot-thread-empty">No open ${Term('Hooks').toLowerCase()}. Add one to track plot threads across sessions.</div>`;
+      return;
+    }
+    const shown=openHooks.slice(0,3);
+    const overflow=openHooks.length-shown.length;
+    let html='';
+    shown.forEach(h=>{
+      html+=`<div class="plot-thread-item" data-thread-hook="${E(h.id||'')}" tabindex="0" role="button" aria-label="Open hook: ${E(h.title)}">
+        <div class="plot-thread-item__inner">
+          <span class="plot-thread-item__title">${E(h.title)}</span>
+          <span class="sc-hook-priority sc-hook-priority--${E(h.priority||'medium')}">${E(h.priority||'medium')}</span>
+        </div>
+        ${h.description?`<div class="plot-thread-item__desc">${E(h.description.slice(0,80))}${h.description.length>80?'…':''}</div>`:''}
+      </div>`;
+    });
+    if(overflow>0){
+      html+=`<div class="plot-thread-more" data-threads-open-panel tabindex="0" role="button">+ ${overflow} more — open ${Term('Hooks')} panel</div>`;
+    }
+    ctr.innerHTML=html;
+    ctr.querySelectorAll('[data-thread-hook]').forEach(el=>{
+      const activate=()=>{
+        if(typeof SHSPanels!=='undefined'){
+          SHSPanels.openPanel('hooks');
+          requestAnimationFrame(()=>{
+            const target=document.querySelector(`[data-hook-edit="${el.dataset.threadHook}"]`);
+            target?.closest('.sc-hook-item')?.scrollIntoView({behavior:'smooth',block:'nearest'});
+          });
+        }
+      };
+      el.addEventListener('click',activate);
+      el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();activate();}});
+    });
+    ctr.querySelectorAll('[data-threads-open-panel]').forEach(el=>{
+      const activate=()=>{if(typeof SHSPanels!=='undefined')SHSPanels.openPanel('hooks');};
+      el.addEventListener('click',activate);
+      el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();activate();}});
+    });
+  },
+
+  renderPanel(){
+    const ctr=document.getElementById('threads-body');
+    if(!ctr)return;
+    const n=State.get();
+    if(!n){ctr.innerHTML='';return;}
+    const E=Utils.escHtml;
+    const openHooks=this._sortByPriority((n.hooks||[]).filter(h=>this._isOpen(h)));
+    const chars=(n.characters||[]).filter(c=>(c.plotSeeds||[]).length>0);
+    let html='';
+    html+=`<div class="sc-section-label">Open ${E(Term('Hooks'))} (${openHooks.length})</div>`;
+    if(!openHooks.length){
+      html+=`<div class="sc-empty">No open ${Term('Hooks').toLowerCase()}. Add one via the ${Term('Hooks')} panel.</div>`;
+    }else{
+      html+=this._renderHookList(openHooks);
+    }
+    const totalSeeds=chars.reduce((s,c)=>s+(c.plotSeeds||[]).length,0);
+    html+=`<div class="sc-section-label" style="margin-top:18px">Plot Seeds (${totalSeeds})</div>`;
+    if(!chars.length){
+      html+=`<div class="sc-empty">No plot seeds yet. Edit a character to add seeds.</div>`;
+    }else{
+      chars.forEach(c=>{
+        html+=this._renderSeedList(c.plotSeeds||[],c.name);
+      });
+    }
+    if(openHooks.length||totalSeeds>0){
+      html+=`<div class="threads-oracle-row">
+        <button class="btn btn--secondary btn--sm" id="threads-pick-btn">◈ Pick a Thread</button>
+        <div class="threads-oracle-result" id="threads-oracle-result" role="status" aria-live="polite"></div>
+      </div>`;
+    }
+    ctr.innerHTML=html;
+    ctr.querySelectorAll('[data-thread-hook-panel]').forEach(el=>{
+      el.addEventListener('click',()=>{
+        if(typeof SHSPanels!=='undefined'){
+          SHSPanels.openPanel('hooks');
+          requestAnimationFrame(()=>{
+            const target=document.querySelector(`[data-hook-edit="${el.dataset.threadHookPanel}"]`);
+            target?.closest('.sc-hook-item')?.scrollIntoView({behavior:'smooth',block:'nearest'});
+          });
+        }
+      });
+    });
+    document.getElementById('threads-pick-btn')?.addEventListener('click',()=>{
+      this._pickRandomThread(openHooks,chars);
+    });
+  },
+
+  _renderHookList(hooks){
+    const E=Utils.escHtml;
+    let html='';
+    hooks.forEach(h=>{
+      html+=`<div class="plot-thread-panel-hook" data-thread-hook-panel="${E(h.id||'')}" tabindex="0" role="button" aria-label="View hook: ${E(h.title)}">
+        <div class="plot-thread-panel-hook__head">
+          <span class="plot-thread-panel-hook__title">${E(h.title)}</span>
+          <span class="sc-hook-priority sc-hook-priority--${E(h.priority||'medium')}">${E(h.priority||'medium')}</span>
+        </div>
+        ${h.description?`<div class="plot-thread-panel-hook__desc">${E(h.description)}</div>`:''}
+      </div>`;
+    });
+    return html;
+  },
+
+  _renderSeedList(seeds,characterName){
+    const E=Utils.escHtml;
+    let html=`<div class="plot-seed-section">
+      <div class="plot-seed-section__name">${E(characterName)}</div>`;
+    seeds.forEach(seed=>{
+      html+=`<div class="plot-seed-section__item">${E(seed)}</div>`;
+    });
+    html+='</div>';
+    return html;
+  },
+
+  _pickRandomThread(openHooks,chars){
+    const resultEl=document.getElementById('threads-oracle-result');
+    if(!resultEl)return;
+    const pool=[];
+    openHooks.forEach(h=>{
+      pool.push({type:'hook',label:`Hook: ${h.title}`,detail:h.description||''});
+    });
+    chars.forEach(c=>{
+      (c.plotSeeds||[]).forEach(seed=>{
+        pool.push({type:'seed',label:`${c.name}: ${seed.slice(0,60)}${seed.length>60?'…':''}`,detail:seed});
+      });
+    });
+    if(!pool.length){resultEl.textContent='Nothing to pick from yet.';return;}
+    const pick=pool[Math.floor(Math.random()*pool.length)];
+    const E=Utils.escHtml;
+    resultEl.innerHTML=`<div class="threads-oracle-pick">
+      <div class="threads-oracle-pick__type">${E(pick.type==='hook'?'Open Hook':'Plot Seed')}</div>
+      <div class="threads-oracle-pick__label">${E(pick.label)}</div>
+      ${pick.detail&&pick.detail!==pick.label?`<div class="threads-oracle-pick__detail">${E(pick.detail)}</div>`:''}
+    </div>`;
+  },
+
+  bind(){
+    document.getElementById('panel-threads-close')?.addEventListener('click',()=>{
+      if(typeof SHSPanels!=='undefined')SHSPanels.closeAll();
+    });
+  },
+};
+
 // ─── WORLD SHELL MODULE ───
 // Three-panel dashboard view for Ember theme. All rendering reads from existing
 // State + Compute + PROMPTS — no data model changes. Called from applyTheme()
@@ -9492,6 +9716,7 @@ const WorldShell={
     this._renderPressures(nat);
     this._renderFactions(nat);
     this._renderChars(nat);
+    this._renderThreadsCard(nat);
     this._renderArsenal(nat);
     this._renderChronicle(nat);
     // Sonar — debounced 100ms so rapid slider drags fire only once
@@ -9668,10 +9893,19 @@ const WorldShell={
     let html='';
     chars.slice(0,6).forEach(c=>{
       const col=statusColor(c.status);
-      html+=`<div class="wms-char-row" data-cid="${E(c.id||'')}">
+      const seeds=c.plotSeeds||[];
+      html+=`<div class="wms-char-row wms-char-row--seeds" data-cid="${E(c.id||'')}">
         <div class="wms-char-dot" style="background:${col}"></div>
-        <span class="wms-char-name">${E(c.name||'Unnamed')}</span>
-        <span class="wms-char-role" style="color:${col}">${E(c.role||'')}</span>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+            <span class="wms-char-name">${E(c.name||'Unnamed')}</span>
+            <span class="wms-char-role" style="color:${col}">${E(c.role||'')}</span>
+          </div>
+          ${seeds.length?`<div class="plot-seed-section plot-seed-section--wms">
+            <div class="plot-seed-section__heading">Plot Seeds (${seeds.length})</div>
+            ${seeds.map(s=>`<div class="plot-seed-section__item">${E(s)}</div>`).join('')}
+          </div>`:''}
+        </div>
       </div>`;
     });
     ctr.innerHTML=html;
@@ -9682,6 +9916,20 @@ const WorldShell={
         if(ch&&typeof Modals!=='undefined')Modals.openEditCharacter(ch);
       });
     });
+  },
+
+  _renderThreadsCard(nat){
+    const labelEl=document.getElementById('wms-threads-label');
+    if(labelEl)labelEl.textContent=`Open ${Term('Hooks')}`;
+    if(typeof Threads!=='undefined')Threads.renderCard();
+    const link=document.getElementById('wms-threads-link');
+    if(link){
+      const newLink=link.cloneNode(true);
+      link.replaceWith(newLink);
+      newLink.addEventListener('click',()=>{
+        if(typeof SHSPanels!=='undefined')SHSPanels.openPanel('threads');
+      });
+    }
   },
 
   _renderArsenal(nat){
@@ -9819,7 +10067,7 @@ const WorldShell={
         if(typeof SHSPanels!=='undefined')SHSPanels.closeAll();
         return;
       }
-      if(['sessions','hooks','secrets','fronts','locations','bestiary','relations','web','solo'].includes(route)){
+      if(['sessions','hooks','secrets','fronts','locations','bestiary','relations','web','solo','threads'].includes(route)){
         if(typeof SHSPanels!=='undefined')SHSPanels.openPanel(route);
         return;
       }
@@ -11086,6 +11334,7 @@ function dispatchRender(e){
     if(fields.includes('bestiary')&&SHSPanels._open==='bestiary')SHSPanels.renderBestiary();
     if(fields.includes('relation')&&SHSPanels._open==='relations')SHSPanels.renderRelations();
     if(SHSPanels._open==='web')SHSPanels.renderWeb();
+    if(SHSPanels._open==='threads')SHSPanels.renderThreads();
   }
   // Also update WorldShell for any stat/chronicle/character change in ember mode
   const _theme=State.data?.meta?.settings?.theme||'ember';
@@ -12273,6 +12522,7 @@ async function bootstrap(){
   if(typeof GlossaryUI!=='undefined')GlossaryUI.bind();
   if(typeof NamingUI!=='undefined')NamingUI.bind();
   if(typeof EncounterBuilder!=='undefined')EncounterBuilder.bind();
+  if(typeof Threads!=='undefined')Threads.bind();
   // Auto-snapshot: fire-and-forget after state is loaded; self-throttles via 24h check
   State.snapshotIfDue().catch(()=>{});
   // Wire Decipher FAB
