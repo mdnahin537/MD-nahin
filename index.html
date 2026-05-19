@@ -1831,6 +1831,33 @@ body.gm-mode .gm-toolbar{display:flex}
 .gm-toolbar__btn-mark{color:var(--color-gold);font-size:1em}
 .gm-toolbar__spacer{flex:1}
 .gm-toolbar__hint{font-size:var(--text-label-sm);color:rgba(244,232,208,.4);font-style:italic}
+/* ── ENCOUNTER BUILDER MODAL ─────────────────────────────────────────────── */
+.eb-inputs{display:flex;flex-direction:column;gap:var(--space-5)}
+.eb-field{display:flex;flex-direction:column;gap:var(--space-2)}
+.eb-field__label{font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-text-muted)}
+.eb-field__optional{font-size:9px;color:var(--color-text-faint);font-style:italic;letter-spacing:0;text-transform:none}
+.eb-field__hint{font-size:var(--text-label-sm);color:var(--color-text-faint);margin-top:2px}
+.eb-pill-group{display:flex;flex-wrap:wrap;gap:var(--space-2)}
+.eb-select{background:var(--color-surface-1);border:1px solid var(--color-border);color:var(--color-text-body);border-radius:4px;padding:6px 8px;font-size:var(--text-body-sm);font-family:var(--font-body);width:100%;max-width:480px}
+.eb-select:focus{outline:2px solid var(--color-gold);outline-offset:1px}
+.eb-textarea{background:var(--color-surface-1);border:1px solid var(--color-border);color:var(--color-text-body);border-radius:4px;padding:8px 10px;font-size:var(--text-body-sm);font-family:var(--font-body);resize:vertical;width:100%}
+.eb-textarea:focus{outline:2px solid var(--color-gold);outline-offset:1px}
+.eb-generate-row{margin-top:var(--space-5);display:flex;justify-content:flex-start}
+.eb-result{display:none;margin-top:var(--space-6);border-top:1px solid var(--color-border-hairline);padding-top:var(--space-5)}
+.eb-result.is-visible{display:block}
+.eb-title{font-family:var(--font-display);font-size:var(--text-heading-sm);font-weight:700;color:var(--color-gold);margin-bottom:var(--space-4);letter-spacing:.03em}
+.eb-section{margin-bottom:var(--space-4)}
+.eb-section__label{font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-text-faint);margin-bottom:var(--space-1)}
+.eb-section__body{font-size:var(--text-body-sm);color:var(--color-text-body);line-height:1.6}
+.eb-section__body--highlight{background:rgba(201,169,97,.08);border-left:2px solid var(--color-gold-pale);padding:6px 10px;border-radius:0 4px 4px 0}
+.eb-adversary{display:flex;flex-direction:column;gap:2px;padding:6px 0;border-bottom:1px solid var(--color-border-hairline)}
+.eb-adversary:last-child{border-bottom:none}
+.eb-adversary__name{font-family:var(--font-display);font-weight:600;font-size:var(--text-body-sm);color:var(--color-text-heading)}
+.eb-adversary__notes{font-size:var(--text-label-sm);color:var(--color-text-muted)}
+.eb-result__actions{display:flex;flex-wrap:wrap;gap:var(--space-3);margin-top:var(--space-5)}
+body.theme-ember #modal-encounter .char-status-pill.is-selected{background:var(--color-gold);color:var(--color-parchment);border-color:var(--color-gold-deep)}
+body.theme-ember .eb-select,body.theme-ember .eb-textarea{border-color:var(--color-gold-pale)}
+body.theme-ember .eb-select:focus,body.theme-ember .eb-textarea:focus{outline-color:var(--color-gold)}
 /* When GM mode is on, narrow the chronicle band slightly to fit the toolbar */
 body.gm-mode #app{grid-template-rows:60px 36px 1fr 140px}
 body.gm-mode .gm-toolbar{grid-row:2}
@@ -2238,6 +2265,7 @@ SECTION 8: DOM STRUCTURE
     <button class="gm-toolbar__btn" id="gm-news-btn" title="Generate an in-fiction news bulletin or rumor sheet"><span class="gm-toolbar__btn-mark">📰</span> News</button>
     <button class="gm-toolbar__btn" id="gm-letter-btn" title="Generate an in-character letter from one NPC to another"><span class="gm-toolbar__btn-mark">✉</span> Letter</button>
     <button class="gm-toolbar__btn" id="gm-glossary-btn" title="Build an alphabetized glossary of world-specific terms for this realm" aria-label="Glossary builder"><span class="gm-toolbar__btn-mark">📚</span> Glossary</button>
+    <button class="gm-toolbar__btn" id="gm-encounter-btn" title="Build a context-aware encounter for tonight's session" aria-label="Open Encounter Builder"><span class="gm-toolbar__btn-mark">⚔</span> Encounter</button>
     <button class="gm-toolbar__btn" id="gm-names-btn" title="Generate world-consistent names for people, places, titles, or factions" aria-label="Naming generator"><span class="gm-toolbar__btn-mark">🔤</span> Names</button>
     <span class="gm-toolbar__spacer"></span>
     <span class="gm-toolbar__hint">Powered by your Copilot</span>
@@ -3380,6 +3408,70 @@ SECTION 8: DOM STRUCTURE
   <div id="quick-npc-body"></div>
 </div>
 <div id="print-container" style="display:none"></div>
+<div class="modal modal--lg" id="modal-encounter" role="dialog" aria-modal="true" aria-labelledby="eb-modal-title">
+  <div class="modal__header">
+    <h2 class="modal__title" id="eb-modal-title">Encounter Builder</h2>
+    <button class="modal__close" data-close="encounter" aria-label="Close encounter builder">&#215;</button>
+  </div>
+  <div class="modal__body">
+    <div class="eb-inputs">
+      <div class="eb-field">
+        <label class="eb-field__label" id="eb-difficulty-label">Difficulty</label>
+        <div class="eb-pill-group" role="group" aria-labelledby="eb-difficulty-label">
+          <button type="button" class="char-status-pill" data-eb-group="difficulty" data-eb-val="trivial" aria-label="Trivial difficulty">Trivial</button>
+          <button type="button" class="char-status-pill" data-eb-group="difficulty" data-eb-val="easy" aria-label="Easy difficulty">Easy</button>
+          <button type="button" class="char-status-pill is-selected" data-eb-group="difficulty" data-eb-val="moderate" aria-label="Moderate difficulty">Moderate</button>
+          <button type="button" class="char-status-pill" data-eb-group="difficulty" data-eb-val="hard" aria-label="Hard difficulty">Hard</button>
+          <button type="button" class="char-status-pill" data-eb-group="difficulty" data-eb-val="deadly" aria-label="Deadly difficulty">Deadly</button>
+        </div>
+      </div>
+      <div class="eb-field">
+        <label class="eb-field__label" id="eb-pace-label">Pace</label>
+        <div class="eb-pill-group" role="group" aria-labelledby="eb-pace-label">
+          <button type="button" class="char-status-pill" data-eb-group="pace" data-eb-val="combat" aria-label="Combat pace">Combat</button>
+          <button type="button" class="char-status-pill" data-eb-group="pace" data-eb-val="social" aria-label="Social pace">Social</button>
+          <button type="button" class="char-status-pill" data-eb-group="pace" data-eb-val="exploration" aria-label="Exploration pace">Exploration</button>
+          <button type="button" class="char-status-pill is-selected" data-eb-group="pace" data-eb-val="mixed" aria-label="Mixed pace">Mixed</button>
+        </div>
+      </div>
+      <div class="eb-field">
+        <label class="eb-field__label" id="eb-tone-label">Tone</label>
+        <div class="eb-pill-group" role="group" aria-labelledby="eb-tone-label">
+          <button type="button" class="char-status-pill is-selected" data-eb-group="tone" data-eb-val="tense" aria-label="Tense tone">Tense</button>
+          <button type="button" class="char-status-pill" data-eb-group="tone" data-eb-val="hopeful" aria-label="Hopeful tone">Hopeful</button>
+          <button type="button" class="char-status-pill" data-eb-group="tone" data-eb-val="grim" aria-label="Grim tone">Grim</button>
+          <button type="button" class="char-status-pill" data-eb-group="tone" data-eb-val="mysterious" aria-label="Mysterious tone">Mysterious</button>
+          <button type="button" class="char-status-pill" data-eb-group="tone" data-eb-val="urgent" aria-label="Urgent tone">Urgent</button>
+        </div>
+      </div>
+      <div class="eb-field">
+        <label class="eb-field__label" for="eb-factions">Threat source</label>
+        <select id="eb-factions" class="eb-select" multiple aria-label="Select threat factions (hold Ctrl/Cmd for multiple; none = random)" size="3">
+          <option value="random" selected>Random (Copilot chooses)</option>
+        </select>
+        <div class="eb-field__hint">Hold Ctrl / Cmd to select multiple factions. Leave on Random to let the Copilot decide.</div>
+      </div>
+      <div class="eb-field">
+        <label class="eb-field__label" for="eb-situation">Situation <span class="eb-field__optional">(optional)</span></label>
+        <textarea id="eb-situation" class="eb-textarea" rows="3" placeholder="e.g. The PCs are at the Sub-Tier 7 safehouse when a knock comes at the door…" aria-label="Optional situation context for the encounter"></textarea>
+      </div>
+    </div>
+    <div class="eb-generate-row">
+      <button type="button" class="btn btn--primary" id="eb-generate-btn" aria-label="Generate encounter">Generate Encounter</button>
+    </div>
+    <div class="eb-result" id="eb-result" aria-live="polite" aria-atomic="true">
+      <div class="eb-result__body" id="eb-result-body"></div>
+      <div class="eb-result__actions">
+        <button type="button" class="btn btn--secondary" id="eb-regenerate-btn" aria-label="Regenerate encounter with same inputs">Regenerate</button>
+        <button type="button" class="btn btn--secondary" id="eb-save-session-btn" aria-label="Save encounter to current session">Save to session</button>
+        <button type="button" class="btn btn--secondary" id="eb-add-bestiary-btn" aria-label="Add adversaries to Bestiary">Add adversaries to Bestiary</button>
+      </div>
+    </div>
+  </div>
+  <div class="modal__footer">
+    <button type="button" class="btn btn--secondary" data-close="encounter" aria-label="Close">Close</button>
+  </div>
+</div>
 <input type="file" accept=".json" id="global-import-file" style="display:none">
 <script>
 /*
@@ -3572,6 +3664,34 @@ const PROMPTS=[
   {id:'r79',name:'Decipher Notes',tier:'S',section:'gm',cat:'Utility',statesMatched:null,archetypes:null,minDepth:null,desc:'Paste raw session notes, transcripts, or brainstorms. Extracts structured world changes (characters, events, secrets, hooks) and presents them through CANON review before committing.',vars:[],tpl:'[Paste your raw session notes, transcripts, or brainstormed ideas below. Then send this to the AI. Ask it to extract structured world changes as a CANON block for RealmWright review.]\n\n---\n\n[YOUR NOTES HERE]'},
   {id:'r80',name:'Glossary Builder (GM Modal)',tier:'S',section:'gm',cat:'Reference',statesMatched:null,archetypes:null,minDepth:null,desc:'Generate an alphabetized glossary of world-specific terms, names, institutions, and places. Scope selectable (all / political / cultural / religious). Suitable for sourcebook appendix.',vars:['[STATE]'],tpl:'Nation state: [STATE]\n\nCompile a world glossary. Extract all proper nouns from the world state above and define each in 1–2 sentences. Organise into sections:\n- People (rulers, characters, NPCs)\n- Factions & institutions\n- Places (cities, regions, landmarks)\n- Events (chronicle entries)\n- Concepts (unique cultural or political terms)\n\nAlphabetize within each section. Flag any undefined entities with [UNDEFINED].'},
   {id:'r81',name:'Naming Generator (GM Modal)',tier:'S',section:'gm',cat:'Reference',statesMatched:null,archetypes:null,minDepth:null,desc:'Extract the linguistic patterns from the realm and generate lists of names for people (men/women/non-binary), places, titles, or orders/guilds. World-aware: names match era and culture.',vars:['[STATE]'],tpl:'Nation state: [STATE]\n\nAnalyze the naming conventions visible in this world (existing names, era, culture, government style). Then generate:\n- 10 ruler / noble names\n- 10 common people names (mix of genders)\n- 5 place names (settlements, landmarks)\n- 5 institutional / organizational names\n- 5 faction or order names\n\nNames must feel consistent with the existing world. Note the linguistic pattern you extracted.'},
+  {id:'eb1',name:'Encounter Builder',tier:'S',section:'gm',cat:'Political',statesMatched:null,archetypes:null,minDepth:null,
+   desc:'Generate a structured encounter block — title, setup, adversaries, terrain, complication, tactical objective, and loot — tailored to difficulty, pace, tone, and active factions.',
+   vars:['[STATE]','[FACTIONS]','[DIFFICULTY]','[PACE]','[TONE]','[SITUATION]','[CHAOS_NOTE]'],
+   tpl:`Nation state: [STATE]
+Factions: [FACTIONS]
+Encounter parameters: difficulty=[DIFFICULTY] | pace=[PACE] | tone=[TONE]
+[SITUATION]
+[CHAOS_NOTE]
+
+Generate a single structured encounter for a tabletop RPG session in this realm.
+
+Return ONLY a JSON object with this exact shape:
+{
+  "title": "short evocative encounter name (5 words or fewer)",
+  "setup": "read-aloud paragraph (60-100 words, present tense, second-person plural). Establish the scene. One immediate hook. Do not reveal the complication.",
+  "adversaries": [
+    {"name": "full name or title", "notes": "one-line behavioural/tactical note"}
+  ],
+  "terrain": "one sentence: environment, key features, number of exits",
+  "complication": "mid-encounter twist that changes the stakes or introduces a new element (one sentence)",
+  "tactical_objective": "what players must achieve (not just 'defeat all enemies') — one sentence",
+  "loot": "concrete reward if encounter resolved favourably — one sentence"
+}
+
+Calibrate adversary count and lethality to difficulty=[DIFFICULTY].
+Pace=[PACE] shapes what the encounter IS: combat=violence likely; social=NPCs talk first; exploration=environment is the antagonist; mixed=both.
+Tone=[TONE] shapes mood and prose register.
+No preamble, no markdown, only the JSON object.`},
   // SOLO TIER — Oracle, Scene Pivot, Mood Shift
   {id:'so1',name:'Solo Oracle Narrative',tier:'S',section:'solo',cat:'Political',statesMatched:null,archetypes:null,minDepth:null,desc:'Given a question, dice result, and Chaos Factor, the oracle justifies the outcome with world-grounded reasoning and returns a single narrative paragraph.',vars:['[STATE]','[QUESTION]','[ODDS]','[CHAOS_FACTOR]','[ROLL_RESULT]'],tpl:'You are the narrative oracle for a solo TTRPG session set in this world.\n\nWorld state: [STATE]\n\nCampaign context:\n{CAMPAIGN_CONTEXT}\n\nThe player has asked the oracle: "[QUESTION]"\nOdds declared: [ODDS]\nChaos Factor: [CHAOS_FACTOR]\nDice verdict: [ROLL_RESULT]\n\nYour task: write a single paragraph of 80–140 words that makes the dice verdict feel inevitable within this world. You must not contradict the verdict — if the result is Yes, something affirming happened; if No, something denied it; if ExceptionalYes, the affirmation carries an unexpected gift or complication in the player\'s favour; if ExceptionalNo, the denial is emphatic and costs something. Do not explain the oracle mechanics. Do not use the words "yes" or "no" directly. Speak in the voice of the world: specific names, places, and ongoing pressures visible in the chronicle. Invent only what the established world permits.\n\nReturn ONLY a single JSON object in this exact shape, with no other text, no markdown, no commentary:\n{"narrative":"<your paragraph here>"}'},
   {id:'so2',name:'Scene Pivot Generator',tier:'S',section:'solo',cat:'Political',statesMatched:null,archetypes:null,minDepth:null,desc:'Given the last five chronicle entries, current scene, and Chaos Factor, generates three escalating scene pivots — calm, mid, and hard — ready to drop into play.',vars:['[STATE]','[CHRONICLE_LAST_5]','[CURRENT_SCENE]','[CHAOS_FACTOR]'],tpl:'You are the scene architect for a solo TTRPG session set in this world.\n\nWorld state: [STATE]\nRecent chronicle (last five entries):\n[CHRONICLE_LAST_5]\n\nCurrent scene: [CURRENT_SCENE]\nCurrent Chaos Factor: [CHAOS_FACTOR]\n\nGenerate exactly three scene pivots that could interrupt or redirect this scene. The pivots must escalate in chaos and consequence:\n\nPIVOT 1 — CALM: A complication that adds texture without escalating stakes. A new piece of information, a delayed threat made visible, a familiar face arriving at the wrong moment. It asks a question but does not force action.\n\nPIVOT 2 — MID: A complication that changes the terrain of the scene. An ally\'s position shifts, a door closes, something the player assumed safe is no longer safe. It demands a choice.\n\nPIVOT 3 — HARD: A complication that rewrites the scene\'s purpose. A confrontation, a revelation, an irreversible event. The scene the player expected to have is no longer available. Something must be resolved now.\n\nAll three pivots must be grounded in the established chronicle — names, factions, and ongoing pressures visible above. Do not invent events that contradict the record. Each pivot should feel like the world acting on its own logic, not a contrivance.\n\nReturn ONLY a single JSON object in this exact shape, with no other text, no markdown, no commentary:\n{"pivots":["<pivot 1 text, 40-70 words>","<pivot 2 text, 40-70 words>","<pivot 3 text, 40-70 words>"]}'},
@@ -7837,7 +7957,7 @@ Return ONLY the paragraph as plain text. No preamble, no formatting.`;
   },
 };
 // ─── SAMPLE REALM DATA ───────────────────────────────────────────────────────
-const SAMPLE_REALM_HEIST={name:'Solis Prime',era:'Near-Future',government:'Corporate Sovereignty',archetype:'technocratic',leader:'Director-Emerita Iolanthe Marr',rulingClass:'Board of Synthesists',currentYear:2188,population:4200000,territory:9800,capital:'The Spire District',template:'city-state',stats:{legitimacy:44,corruption:7,opposition:6,food_production:70,trade:82,raw_materials:38,manpower:55,knowledge:79,cohesion:32,urbanization:94},factions:[{name:'The Shadowclaw Clan',type:'Opposition',position:'gaining',primaryInterest:'Control of the Lower Markets redistribution network',description:"A tightly-knit smuggling fraternity that moves contraband, unregistered persons, and grey-market bioware through Solis Prime's sub-tier conduits. Loyalty is enforced through shared risk, not hierarchy.",leaderName:'Dust (operational alias)'},{name:'Spire Security Directorate',type:'Government',position:'holding',primaryInterest:'Enforcement of the Corporate Charter and protection of Board assets',description:"The Board's sanctioned enforcement arm. Funded by Synthesist levies. Prosecutions are routed through Directorate-aligned magistrates — including Magistrate Vell, whose standing orders are classified.",leaderName:'Commandant Pyrren Ash'}],chronicle:[{name:'The Lower Markets Charter',type:'Economic',weight:12,year:2179,visibility:'public',description:"The Board of Synthesists granted provisional trade licenses to seventeen Lower Market guilds — a concession wrested after the Three-Week Blockade of the Spire elevators. Cedric Vell's grandfather co-signed the original petition.",relatedStats:['trade','cohesion']},{name:'The Conduit Raids',type:'Military',weight:-9,year:2181,visibility:'public',description:'The Spire Security Directorate swept seventeen sub-tier conduit nodes, seizing unlicensed bioware and arresting forty-two persons. Shadowclaw Clan lost two veteran runners. Dust was wounded in the escape. Cedric Vell\'s stall was not raided — a fact that was noticed.',relatedStats:['opposition','cohesion']},{name:'The Marr Appointment',type:'Political',weight:14,year:2183,visibility:'public',description:"Iolanthe Marr was elevated to the Board of Synthesists as its youngest-ever seat-holder, overseeing the Logistics and Transit vertical. Her first act was reclassifying six Lower Market trade corridors as Board property — effectively voiding the 2179 charter concessions.",relatedStats:['legitimacy','trade']},{name:'The Vell Estrangement',type:'Social',weight:-6,year:2184,visibility:'public',description:"Magistrate Sera Vell issued standing enforcement orders against unlicensed market activity in the Lower Markets — orders that directly targeted her brother Cedric's fence operation. Cedric has not spoken to his sister since. The Directorate uses his silence as leverage.",relatedStats:['cohesion']},{name:'The Marr Heist of 2185',type:'Political',weight:-11,year:2185,visibility:'public',description:"A Shadowclaw Clan operation penetrated a Spire transit vault and extracted a crate of pre-charter corporate land titles — documents that would, if published, invalidate the Board's authority over three Lower Market districts. Dust coordinated the extraction. Cedric Vell moved the titles to a safehouse in Sub-Tier 7. The crate has not surfaced publicly.",relatedStats:['opposition','legitimacy']},{name:"The Magistrate's Sealed Warrants",type:'Political',weight:-8,year:2187,visibility:'private',description:"Magistrate Sera Vell filed seventeen sealed warrants targeting Shadowclaw distribution nodes — including two that bracket the Sub-Tier 7 safehouse where the Marr Heist titles are stored. Whether she knows the titles are there, or whether she is simply cleaning the grid, is unknown. The warrants execute on the third of next month.",relatedStats:['opposition','legitimacy']},{name:'The Listening Device Contract',type:'Political',weight:6,year:2188,visibility:'private',description:"An anonymous party (suspected: a rival Board faction) has contracted the Shadowclaw Clan to plant a deep-signal listening device inside Director-Emerita Marr's private office on Spire Level 41. Dust has accepted. The operation requires inside access — which only Cedric Vell's network of licensed market vendors can provide.",relatedStats:['trade','knowledge']}],characters:[{name:'Cedric Vell',role:'Fence, Lower Markets broker',status:'active',drive:'Protect the Sub-Tier 7 network his grandfather built',fear:"His sister finds the land titles before he can broker their safe release",plotSeeds:["Cedric holds the 2185 land titles. He wants them off his hands — but only to someone who won't burn the Lower Markets with them.","He knows about the sealed warrants. He won't say how."],chronicleLinks:[]},{name:'Magistrate Sera Vell',role:'Spire Security Directorate prosecutor',status:'active',drive:'Advance within the Directorate by delivering measurable enforcement results',fear:"That her estrangement from Cedric has made her complicit — that she signed warrants she did not fully read",plotSeeds:['Her standing orders are classified at Level 3. The party cannot legally read them.','She is not corrupt — but she is ambitious enough to have stopped asking certain questions.'],chronicleLinks:[]},{name:'Dust',role:'Shadowclaw Clan operative, party contact',status:'active',drive:'Execute the listening-device contract before the sealed warrants execute',fear:'Cedric gets burned by his sister before the operation is complete',plotSeeds:['Dust was wounded in the 2181 Conduit Raids. The scar runs along her left forearm. She does not explain it.','She has a source inside the Spire — unconfirmed, never named in front of the party.'],chronicleLinks:[]},{name:'Iolanthe Marr',role:'Board of Synthesists member, Logistics and Transit vertical',status:'active',drive:'Consolidate the reclassified trade corridors before a Board vote can reverse the Marr Appointment',fear:'The 2185 land titles surface — they would undo everything she built since 2183',plotSeeds:['She is aware her office may be surveilled. She varies her route. She does not vary her assistant.','She once had a relationship with Dust, before either of them were who they are now. Dust has never mentioned it.'],chronicleLinks:[]}],hooks:[{title:'The Sealed Warrants',description:"Magistrate Vell's seventeen sealed warrants execute in twenty-two days. Two of them bracket the Sub-Tier 7 safehouse. The Shadowclaw Clan does not know Cedric is in the blast radius. Does the party warn him — and if so, how do they explain how they know?",resolved:false,relatedFactions:[]},{title:"The Land Titles' Buyer",description:'Three parties want the 2185 land titles: the Shadowclaw Clan (to use them), Magistrate Vell (to destroy them), and an unknown fourth party who has offered Cedric more money than he has ever seen. The fourth party\'s identity is the question.',resolved:false,relatedFactions:[]},{title:"Dust's Spire Source",description:"Someone inside the Spire is feeding Dust operational intelligence. The quality of the information implies Level 2 clearance at minimum. If the source is burned — by the party's actions or by accident — the listening-device operation collapses.",resolved:false,relatedFactions:[]}],secrets:[{title:'The Warrants Were Written Blind',content:"Magistrate Vell signed the sealed warrants without reading the full targeting appendix. A Directorate aide inserted the Sub-Tier 7 coordinates after her signature. She does not know. Someone does.",visibility:'private',relatedFactions:[]},{title:'Marr Ordered the 2181 Raids',content:"The Conduit Raids of 2181 were not routine enforcement. Iolanthe Marr — then a Board junior analyst — provided the Directorate with the conduit maps. She traded the intelligence for her seat on the Logistics vertical. Two Shadowclaw runners died because of those maps. Dust knows one of them was her cousin.",visibility:'private',relatedFactions:[]}],sessions:[],locations:[{name:"Cedric's Stall, Sub-Tier 7",description:'A licensed secondhand goods stall in the Lower Markets. The back room connects to three conduit nodes. The 2185 land titles are sealed inside a polymer case beneath the third floorboard.',type:'Interior',status:'active'},{name:"Spire Level 41 — Marr's Office",description:"Director-Emerita Marr's private office. Accessed via credentialed lift only. The listening-device drop point is behind the ventilation panel on the north wall — accessible from the service corridor, which requires a licensed vendor pass to enter.",type:'Restricted',status:'active'}],_preBaked:{strongStart:"The service corridor on Level 41 smells of recycled air and corporate patience. Dust pressed the vendor pass into your hand three minutes ago — Cedric's network, good for one trip up the Spire's maintenance spine. The listening device is a flat disc, nine grams, held against your palm. Behind the north wall panel is a ventilation cavity forty centimetres deep; the disc clips to the second strut from the left. You have eleven minutes before the shift rotation brings a Directorate sweep team through Sub-Tier 6 and someone starts asking why Cedric's vendor pass is showing activity two hundred floors above the Lower Markets. The panel screws are already loose. Someone came this way before.",hooks:["The sealed warrants execute in twenty-two days — and two of them bracket Cedric's Sub-Tier 7 safehouse where the 2185 land titles are hidden. If the Directorate finds those titles, everything Dust's operation was built on burns overnight.","An unknown fourth party has offered Cedric more money than he has seen in his life for the 2185 land titles. Cedric says he doesn't know who they are. Dust says Cedric is lying. Both might be right.","Magistrate Sera Vell is Cedric's estranged sister. She signed the sealed warrants without reading the targeting appendix. Whether that makes her a victim or a weapon depends entirely on who tells her first — and what they say."],secrets:["The 2181 Conduit Raids were not routine enforcement. Iolanthe Marr provided the conduit maps to the Directorate in exchange for her seat on the Logistics vertical. Two Shadowclaw runners died. Dust's cousin was one of them. Dust does not know the source. Yet.","The sealed warrants were altered after Magistrate Vell signed them. A Directorate aide inserted the Sub-Tier 7 coordinates into the targeting appendix post-signature. Someone inside the Directorate is playing both sides.","Cedric's vendor pass shows four prior uses on Level 40 and 41 — none of them his. His pass has been borrowed. He has not reported the discrepancy because doing so would require explaining his network to the Directorate.","Iolanthe Marr knows her office may be under surveillance. She varies her route to work. She does not vary her assistant — and her assistant has been accepting off-cycle payments from an anonymous transfer account for eleven months.","The 2185 land titles, if authenticated, would void the Board's authority over three Lower Market districts and retroactively invalidate the Marr Appointment itself. The Board's legal division has a draft counter-argument ready. It was written in 2183 — two years before the Heist."]},fronts:[],bestiary:[],relations:[],copilotConversation:[],glossary:null,notes:'',oracleLog:[],metadata:{soloMode:false}};
+const SAMPLE_REALM_HEIST={name:'Solis Prime',era:'Near-Future',government:'Corporate Sovereignty',archetype:'technocratic',leader:'Director-Emerita Iolanthe Marr',rulingClass:'Board of Synthesists',currentYear:2188,population:4200000,territory:9800,capital:'The Spire District',template:'city-state',stats:{legitimacy:44,corruption:7,opposition:6,food_production:70,trade:82,raw_materials:38,manpower:55,knowledge:79,cohesion:32,urbanization:94},factions:[{name:'The Shadowclaw Clan',type:'Opposition',position:'gaining',primaryInterest:'Control of the Lower Markets redistribution network',description:"A tightly-knit smuggling fraternity that moves contraband, unregistered persons, and grey-market bioware through Solis Prime's sub-tier conduits. Loyalty is enforced through shared risk, not hierarchy.",leaderName:'Dust (operational alias)'},{name:'Spire Security Directorate',type:'Government',position:'holding',primaryInterest:'Enforcement of the Corporate Charter and protection of Board assets',description:"The Board's sanctioned enforcement arm. Funded by Synthesist levies. Prosecutions are routed through Directorate-aligned magistrates — including Magistrate Vell, whose standing orders are classified.",leaderName:'Commandant Pyrren Ash'}],chronicle:[{name:'The Lower Markets Charter',type:'Economic',weight:12,year:2179,visibility:'public',description:"The Board of Synthesists granted provisional trade licenses to seventeen Lower Market guilds — a concession wrested after the Three-Week Blockade of the Spire elevators. Cedric Vell's grandfather co-signed the original petition.",relatedStats:['trade','cohesion']},{name:'The Conduit Raids',type:'Military',weight:-9,year:2181,visibility:'public',description:'The Spire Security Directorate swept seventeen sub-tier conduit nodes, seizing unlicensed bioware and arresting forty-two persons. Shadowclaw Clan lost two veteran runners. Dust was wounded in the escape. Cedric Vell\'s stall was not raided — a fact that was noticed.',relatedStats:['opposition','cohesion']},{name:'The Marr Appointment',type:'Political',weight:14,year:2183,visibility:'public',description:"Iolanthe Marr was elevated to the Board of Synthesists as its youngest-ever seat-holder, overseeing the Logistics and Transit vertical. Her first act was reclassifying six Lower Market trade corridors as Board property — effectively voiding the 2179 charter concessions.",relatedStats:['legitimacy','trade']},{name:'The Vell Estrangement',type:'Social',weight:-6,year:2184,visibility:'public',description:"Magistrate Sera Vell issued standing enforcement orders against unlicensed market activity in the Lower Markets — orders that directly targeted her brother Cedric's fence operation. Cedric has not spoken to his sister since. The Directorate uses his silence as leverage.",relatedStats:['cohesion']},{name:'The Marr Heist of 2185',type:'Political',weight:-11,year:2185,visibility:'public',description:"A Shadowclaw Clan operation penetrated a Spire transit vault and extracted a crate of pre-charter corporate land titles — documents that would, if published, invalidate the Board's authority over three Lower Market districts. Dust coordinated the extraction. Cedric Vell moved the titles to a safehouse in Sub-Tier 7. The crate has not surfaced publicly.",relatedStats:['opposition','legitimacy']},{name:"The Magistrate's Sealed Warrants",type:'Political',weight:-8,year:2187,visibility:'private',description:"Magistrate Sera Vell filed seventeen sealed warrants targeting Shadowclaw distribution nodes — including two that bracket the Sub-Tier 7 safehouse where the Marr Heist titles are stored. Whether she knows the titles are there, or whether she is simply cleaning the grid, is unknown. The warrants execute on the third of next month.",relatedStats:['opposition','legitimacy']},{name:'The Listening Device Contract',type:'Political',weight:6,year:2188,visibility:'private',description:"An anonymous party (suspected: a rival Board faction) has contracted the Shadowclaw Clan to plant a deep-signal listening device inside Director-Emerita Marr's private office on Spire Level 41. Dust has accepted. The operation requires inside access — which only Cedric Vell's network of licensed market vendors can provide.",relatedStats:['trade','knowledge']}],characters:[{name:'Cedric Vell',role:'Fence, Lower Markets broker',status:'active',drive:'Protect the Sub-Tier 7 network his grandfather built',fear:"His sister finds the land titles before he can broker their safe release",plotSeeds:["Cedric holds the 2185 land titles. He wants them off his hands — but only to someone who won't burn the Lower Markets with them.","He knows about the sealed warrants. He won't say how."],chronicleLinks:[]},{name:'Magistrate Sera Vell',role:'Spire Security Directorate prosecutor',status:'active',drive:'Advance within the Directorate by delivering measurable enforcement results',fear:"That her estrangement from Cedric has made her complicit — that she signed warrants she did not fully read",plotSeeds:['Her standing orders are classified at Level 3. The party cannot legally read them.','She is not corrupt — but she is ambitious enough to have stopped asking certain questions.'],chronicleLinks:[]},{name:'Dust',role:'Shadowclaw Clan operative, party contact',status:'active',drive:'Execute the listening-device contract before the sealed warrants execute',fear:'Cedric gets burned by his sister before the operation is complete',plotSeeds:['Dust was wounded in the 2181 Conduit Raids. The scar runs along her left forearm. She does not explain it.','She has a source inside the Spire — unconfirmed, never named in front of the party.'],chronicleLinks:[]},{name:'Iolanthe Marr',role:'Board of Synthesists member, Logistics and Transit vertical',status:'active',drive:'Consolidate the reclassified trade corridors before a Board vote can reverse the Marr Appointment',fear:'The 2185 land titles surface — they would undo everything she built since 2183',plotSeeds:['She is aware her office may be surveilled. She varies her route. She does not vary her assistant.','She once had a relationship with Dust, before either of them were who they are now. Dust has never mentioned it.'],chronicleLinks:[]}],hooks:[{title:'The Sealed Warrants',description:"Magistrate Vell's seventeen sealed warrants execute in twenty-two days. Two of them bracket the Sub-Tier 7 safehouse. The Shadowclaw Clan does not know Cedric is in the blast radius. Does the party warn him — and if so, how do they explain how they know?",resolved:false,relatedFactions:[]},{title:"The Land Titles' Buyer",description:'Three parties want the 2185 land titles: the Shadowclaw Clan (to use them), Magistrate Vell (to destroy them), and an unknown fourth party who has offered Cedric more money than he has ever seen. The fourth party\'s identity is the question.',resolved:false,relatedFactions:[]},{title:"Dust's Spire Source",description:"Someone inside the Spire is feeding Dust operational intelligence. The quality of the information implies Level 2 clearance at minimum. If the source is burned — by the party's actions or by accident — the listening-device operation collapses.",resolved:false,relatedFactions:[]}],secrets:[{title:'The Warrants Were Written Blind',content:"Magistrate Vell signed the sealed warrants without reading the full targeting appendix. A Directorate aide inserted the Sub-Tier 7 coordinates after her signature. She does not know. Someone does.",visibility:'private',relatedFactions:[]},{title:'Marr Ordered the 2181 Raids',content:"The Conduit Raids of 2181 were not routine enforcement. Iolanthe Marr — then a Board junior analyst — provided the Directorate with the conduit maps. She traded the intelligence for her seat on the Logistics vertical. Two Shadowclaw runners died because of those maps. Dust knows one of them was her cousin.",visibility:'private',relatedFactions:[]}],sessions:[],locations:[{name:"Cedric's Stall, Sub-Tier 7",description:'A licensed secondhand goods stall in the Lower Markets. The back room connects to three conduit nodes. The 2185 land titles are sealed inside a polymer case beneath the third floorboard.',type:'Interior',status:'active'},{name:"Spire Level 41 — Marr's Office",description:"Director-Emerita Marr's private office. Accessed via credentialed lift only. The listening-device drop point is behind the ventilation panel on the north wall — accessible from the service corridor, which requires a licensed vendor pass to enter.",type:'Restricted',status:'active'}],_preBaked:{strongStart:"The service corridor on Level 41 smells of recycled air and corporate patience. Dust pressed the vendor pass into your hand three minutes ago — Cedric's network, good for one trip up the Spire's maintenance spine. The listening device is a flat disc, nine grams, held against your palm. Behind the north wall panel is a ventilation cavity forty centimetres deep; the disc clips to the second strut from the left. You have eleven minutes before the shift rotation brings a Directorate sweep team through Sub-Tier 6 and someone starts asking why Cedric's vendor pass is showing activity two hundred floors above the Lower Markets. The panel screws are already loose. Someone came this way before.",hooks:["The sealed warrants execute in twenty-two days — and two of them bracket Cedric's Sub-Tier 7 safehouse where the 2185 land titles are hidden. If the Directorate finds those titles, everything Dust's operation was built on burns overnight.","An unknown fourth party has offered Cedric more money than he has seen in his life for the 2185 land titles. Cedric says he doesn't know who they are. Dust says Cedric is lying. Both might be right.","Magistrate Sera Vell is Cedric's estranged sister. She signed the sealed warrants without reading the targeting appendix. Whether that makes her a victim or a weapon depends entirely on who tells her first — and what they say."],secrets:["The 2181 Conduit Raids were not routine enforcement. Iolanthe Marr provided the conduit maps to the Directorate in exchange for her seat on the Logistics vertical. Two Shadowclaw runners died. Dust's cousin was one of them. Dust does not know the source. Yet.","The sealed warrants were altered after Magistrate Vell signed them. A Directorate aide inserted the Sub-Tier 7 coordinates into the targeting appendix post-signature. Someone inside the Directorate is playing both sides.","Cedric's vendor pass shows four prior uses on Level 40 and 41 — none of them his. His pass has been borrowed. He has not reported the discrepancy because doing so would require explaining his network to the Directorate.","Iolanthe Marr knows her office may be under surveillance. She varies her route to work. She does not vary her assistant — and her assistant has been accepting off-cycle payments from an anonymous transfer account for eleven months.","The 2185 land titles, if authenticated, would void the Board's authority over three Lower Market districts and retroactively invalidate the Marr Appointment itself. The Board's legal division has a draft counter-argument ready. It was written in 2183 — two years before the Heist."],encounter:{title:"Sweep Team Arrives",setup:"The service corridor on Level 41 goes quiet in the wrong way — a half-beat of recycled air before footsteps resolve into boots. Three Directorate officers round the sub-junction: a sweep team, manifests in hand, systematic. The lead officer — Sweep Officer Kael Thorn, by the insignia — clocks your group before you clock him. His expression does not change. His hand does not move toward his sidearm. He says, politely: 'Vendor pass validation. Standard sweep. Please hold.'",adversaries:[{name:"Sweep Officer Kael Thorn",notes:"By-the-book, unhurried, suspicious of inconsistencies — specifically Cedric's pass showing Level 41 activity"},{name:"Directorate Officers Mira Vass and Pol Cray",notes:"Follow Thorn's lead; Vass is checking the manifest terminal, Cray is watching the exits"}],terrain:"Service corridor, Level 41 maintenance spine. Low ceiling (1.8m), two exits (forward to Marr's office block, back to the vendor lift), a wall-mounted terminal Vass is already using.",complication:"Mid-sweep, Thorn's terminal flags Cedric's pass for four prior unregistered uses on Level 40 and 41. He looks up slowly and says: 'These aren't your first visits, are they?'",tactical_objective:"Get past the sweep team without triggering a Level 3 alert — either by talking Thorn down, invalidating the manifest flag, or reaching the exit before Vass completes the terminal check.",loot:"If resolved without incident: Vass's unlocked terminal session shows the names and clearance levels of all vendor passes active on Level 41 today — including one belonging to Marr's assistant."}},fronts:[],bestiary:[],relations:[],copilotConversation:[],glossary:null,notes:'',oracleLog:[],metadata:{soloMode:false}};
 
 const SAMPLE_REALM_SOLO={name:'Aetherholm',era:'Industrial',government:'Constitutional Monarchy',archetype:'merchant-republic',leader:'King Osbert IV (nominal)',rulingClass:'Commercial and professional classes',currentYear:1891,population:840000,territory:12000,capital:'Aetherholm City',template:'city-state',stats:{legitimacy:62,corruption:6,opposition:4,food_production:55,trade:71,raw_materials:60,manpower:58,knowledge:66,cohesion:44,urbanization:68},factions:[{name:'The Veiled Court',type:'Opposition',position:'gaining',primaryInterest:"Infiltration and manipulation of Aetherholm's elite social layer",description:"A secret cult woven into the city's professional and merchant classes. Members are identified by a white-wax seal left in private correspondence. Their doctrine is deliberately obscure; their methods are social, not violent — so far. At least three Constabulary inspectors are believed to be members.",leaderName:'Unknown (the "Voice Above the Veil")'},{name:'The Constabulary',type:'Government',position:'holding',primaryInterest:'Maintenance of public order and defence of Constabulary institutional authority',description:"Aetherholm's official law-keeping body. Competent in most respects; quietly compromised in others. Inspector Calder heads the investigative division and is personally honest — but his chain of command is not, and he knows it.",leaderName:'Chief Commissioner Holt'}],chronicle:[{name:'The Death of Elena Reye',type:'Social',weight:-16,year:1888,visibility:'public',description:'Elena Reye, wife of private investigator Marik Reye, was found dead in the Brass Lantern district. The official verdict: accidental drowning in the Aether Canal. Marik resigned from the Constabulary three days after the inquest closed. Inspector Calder signed the inquest report. He has never explained why he did not contest the verdict.',relatedStats:['cohesion']},{name:'The White-Wax Letters',type:'Political',weight:-8,year:1889,visibility:'private',description:"Three separate Constabulary investigations into disappearances in the Lamp Quarter were closed within a week of each other — each file stamped with an authorisation code that has since been reassigned and cannot be traced. The closures were accompanied by private correspondence bearing white-wax seals. Marik found one of these letters in Elena's personal papers a year after her death.",relatedStats:['legitimacy','corruption']},{name:'Session 1 — The Brass Lantern',type:'Political',weight:5,year:1891,visibility:'public',description:"Marik Reye accepted a commission from a Lamp Quarter merchant to locate a missing ledger. His investigation led him to the Brass Lantern tavern, where the barkeep — a man named Orlan — became evasive when questioned about the merchant's associates. Marik also observed a woman in grey watching from the back corner. She left before he could approach. This is the third time he has seen her in public spaces.",relatedStats:['knowledge']},{name:"Session 2 — The Pale Woman's Message",type:'Social',weight:-7,year:1891,visibility:'public',description:"The woman in grey — now known to Marik as \"the Pale Woman\" — left a sealed envelope at his lodgings. Inside: a pressed flower and a single line in Elena's handwriting. The sentence reads: \"The canal was not an accident.\" The ink was Elena's. Marik has confirmed the handwriting. The letter is undated. Inspector Calder, shown a copy, said he had no comment.",relatedStats:['opposition','cohesion']},{name:'Session 3 — The Lamp Quarter Audit',type:'Economic',weight:4,year:1891,visibility:'public',description:"Marik traced the missing ledger to a Lamp Quarter counting-house with a recorded Constabulary visit in 1889 — one of the files closed with the white-wax authorisation code. The counting-house owner, a widow named Maret Lund, told Marik that Inspector Calder visited personally in 1889 and left without the ledger he came for. She said Calder looked afraid. She kept the ledger under her floor. It contains seven names. One of them is Elena's.",relatedStats:['knowledge','legitimacy']},{name:'The Constabulary Promotion',type:'Political',weight:6,year:1891,visibility:'public',description:"Chief Commissioner Holt announced the promotion of three inspectors to the investigative division — a routine administrative action that placed two Veiled Court suspects inside Marik's former unit. Inspector Calder was passed over. He sent Marik a short note: \"Watch the new men.\"",relatedStats:['legitimacy','corruption']}],characters:[{name:'Marik Reye',role:'Player character — private investigator',status:'active',drive:'Find out what really happened to Elena and name the person who ordered it',fear:'That someone he trusted — Calder, or someone closer — already knew and said nothing',plotSeeds:["Elena's name is in the Lamp Quarter ledger. Marik does not yet know in what context.","The Pale Woman has appeared three times. She is not following Marik — she is preceding him."],chronicleLinks:[]},{name:'Elena Reye',role:"Marik's deceased wife; the investigation's centre of gravity",status:'deceased',drive:'N/A — referenced in chronicles and outputs only',fear:'N/A',plotSeeds:["Elena's name appears in a ledger she should have had no connection to.","She left a message in her own handwriting — after she died."],chronicleLinks:[]},{name:'Inspector Calder',role:"Marik's former Constabulary partner",status:'active',drive:'Protect Marik from the political machinery that would use him the way it used Elena',fear:'That protecting Marik means admitting what he did and did not do in 1888',plotSeeds:["Calder signed the inquest report. He was afraid when he visited the counting-house in 1889. He was passed over for promotion this year. The timeline connects.","He sent Marik a warning. That warning may be a distraction."],chronicleLinks:[]},{name:'The Pale Woman',role:'Veiled Court operative — possibly a defector',status:'active',drive:'Unknown — but her actions are protective, not hostile',fear:'Being identified by the Veiled Court before she has finished whatever she started',plotSeeds:["She preceded Marik at the Brass Lantern. She left Elena's handwriting on his doorstep. She has been three steps ahead of him for two sessions.","She is not the same woman Constabulary records describe as a Veiled Court messenger. Either the records are wrong or she changed."],chronicleLinks:[]}],hooks:[{title:"Elena's Name in the Ledger",description:'Session 3 produced the Lamp Quarter ledger. Elena\'s name is inside. Marik has not yet read the entry next to her name. The widow Maret Lund is willing to let him return — but she has now received a white-wax letter herself.',resolved:false,relatedFactions:[]},{title:"Calder's Silence",description:"Calder signed the 1888 inquest report. He visited the counting-house in 1889 and left empty-handed and afraid. He sent a warning this year but no explanation. Each data point is consistent with complicity — or with someone trying to stay alive inside the machinery.",resolved:false,relatedFactions:[]}],secrets:[{title:'What the Pale Woman Carries',content:"The Pale Woman is not a Veiled Court messenger. She is a former member who was present the night Elena Reye died — not as a participant but as a witness who could not intervene without exposing herself. The pressed flower she sent Marik was from Elena's own coat pocket. The Pale Woman kept it for three years before deciding Marik was ready to hear the truth. She is terrified she has waited too long.",visibility:'private',relatedFactions:[]}],sessions:[{number:1,title:'The Brass Lantern',summary:'Marik accepted a missing-ledger commission. Followed it to the Brass Lantern. The barkeep Orlan was evasive. Observed the Pale Woman for the third time.',hooks:[]},{number:2,title:"The Pale Woman's Message",summary:"Found Elena's handwriting in a sealed envelope at his lodgings. \"The canal was not an accident.\" Showed Calder. Calder said nothing.",hooks:[]},{number:3,title:'The Lamp Quarter Audit',summary:"Found the ledger under Maret Lund's floor. Elena's name is inside. Calder visited the counting-house in 1889. He was afraid.",hooks:[]}],locations:[{name:'The Brass Lantern',description:'A mid-tier tavern in the Lamp Quarter. Barkeep Orlan has been working here for eleven years. He knows most of the neighbourhood regulars and is evasive about several of them. The Pale Woman has been observed here twice.',type:'Public',status:'active'},{name:"Maret Lund's Counting-House",description:"A small Lamp Quarter commercial bookkeeper. Maret kept the ledger under her floor for two years after Calder's visit. She has now received a white-wax letter. She is still willing to talk — for now.",type:'Interior',status:'active'}],_preBaked:{oracleResult:"Yes — but reluctantly. Orlan the barkeep knows about the Veiled Court's presence in the Brass Lantern's back room, and has known since 1889. He has said nothing because a white-wax letter arrived at his home three days after Elena Reye's inquest closed — addressed not to him but to his daughter. Marik has been in the Brass Lantern four times since Elena's death. On two of those visits, Orlan went to the back room after Marik left. He is not a member. He is afraid.",scenePivots:["A Constabulary patrol appears at the counting-house just as Marik arrives to read Elena's ledger entry — the two new inspectors Calder warned about, moving faster than they should know to move.","Inspector Calder is sitting in Marik's lodgings when he returns from the Lamp Quarter, holding the copy of Elena's letter. He says: \"I need to tell you what I saw in 1888 before someone tells you a version that suits them.\"","Maret Lund sends a message — not to Marik but to the address Elena used when she was alive. The message reads: \"Come before the letter-men do.\" Someone in Maret's circle knew Elena's address."],moodShift:{suggested_mood:'cold, methodical resignation',reason:"Marik has just confirmed Elena's name in the ledger. The grief that drove him is exhausted; what remains is procedural — a man working a case because that is what he is now. The next scene should feel like a man closing a file, not breaking down."}},fronts:[],bestiary:[],relations:[],copilotConversation:[],glossary:null,notes:'',oracleLog:[],metadata:{soloMode:true}};
 
@@ -11924,6 +12044,213 @@ const NamingUI={
   },
 };
 
+// ─── ENCOUNTER BUILDER ────────────────────────────────────────────────────────
+const EncounterBuilder={
+  _generating:false,
+  _lastResult:null,
+  _lastInputs:null,
+
+  open(){
+    const n=State.get();
+    if(!n){showToast('No active realm. Create or load a realm first.',[],4000);return;}
+    this._showInputView();
+    this._populateFactions(n);
+    this._lastResult=null;
+    this._lastInputs=null;
+    document.getElementById('eb-result')?.classList.remove('is-visible');
+    document.getElementById('eb-result-body').innerHTML='';
+    document.getElementById('eb-situation').value='';
+    Modals.open('encounter');
+  },
+
+  bind(){
+    document.getElementById('gm-encounter-btn')?.addEventListener('click',()=>this.open());
+    document.getElementById('eb-generate-btn')?.addEventListener('click',()=>this._generate());
+    document.getElementById('eb-regenerate-btn')?.addEventListener('click',()=>this._generate(true));
+    document.getElementById('eb-save-session-btn')?.addEventListener('click',()=>this._saveToSession());
+    document.getElementById('eb-add-bestiary-btn')?.addEventListener('click',()=>this._addAdversariesToBestiary());
+    document.getElementById('modal-encounter')?.addEventListener('click',e=>{
+      const pill=e.target.closest('.char-status-pill[data-eb-group]');
+      if(!pill)return;
+      const group=pill.dataset.ebGroup;
+      document.querySelectorAll(`#modal-encounter .char-status-pill[data-eb-group="${group}"]`).forEach(p=>p.classList.remove('is-selected'));
+      pill.classList.add('is-selected');
+    });
+  },
+
+  _showInputView(){
+    document.getElementById('eb-result')?.classList.remove('is-visible');
+    const genBtn=document.getElementById('eb-generate-btn');
+    if(genBtn){genBtn.disabled=false;genBtn.textContent='Generate Encounter';}
+  },
+
+  _populateFactions(n){
+    const sel=document.getElementById('eb-factions');
+    if(!sel)return;
+    const factions=n.factions||[];
+    sel.innerHTML=`<option value="random">Random (Copilot chooses)</option>`+
+      factions.map(f=>`<option value="${Utils.escHtml(f.name)}">${Utils.escHtml(f.name)} (${Utils.escHtml(f.type||'—')})</option>`).join('');
+  },
+
+  _getInputs(){
+    const difficulty=document.querySelector('#modal-encounter .char-status-pill[data-eb-group="difficulty"].is-selected')?.dataset?.ebVal||'moderate';
+    const pace=document.querySelector('#modal-encounter .char-status-pill[data-eb-group="pace"].is-selected')?.dataset?.ebVal||'mixed';
+    const tone=document.querySelector('#modal-encounter .char-status-pill[data-eb-group="tone"].is-selected')?.dataset?.ebVal||'tense';
+    const situation=(document.getElementById('eb-situation')?.value||'').trim();
+    const factionSel=document.getElementById('eb-factions');
+    const selectedFactions=Array.from(factionSel?.selectedOptions||[]).map(o=>o.value).filter(v=>v!=='random');
+    return{difficulty,pace,tone,situation,selectedFactions};
+  },
+
+  async _generate(isRegen=false){
+    if(this._generating)return;
+    const n=State.get();
+    if(!n){showToast('No active realm.',[],3000);return;}
+
+    if(typeof SampleMode!=='undefined'&&SampleMode.isActive()&&SampleMode._activeSampleId==='heist'){
+      const prebaked=SampleMode.getPreBakedOutput('heist','encounter');
+      if(prebaked&&typeof prebaked==='object'){
+        this._lastResult=prebaked;
+        this._lastInputs=this._getInputs();
+        this._renderResult(prebaked);
+        return;
+      }
+    }
+
+    if(typeof Copilot==='undefined'||!Copilot.isConfigured()){
+      showToast('Configure your API key in Settings → Copilot first.',[],5000);
+      return;
+    }
+
+    const inputs=this._getInputs();
+    this._lastInputs=inputs;
+    this._generating=true;
+
+    const genBtn=document.getElementById('eb-generate-btn');
+    const regenBtn=document.getElementById('eb-regenerate-btn');
+    if(genBtn){genBtn.disabled=true;genBtn.textContent='Generating…';}
+    if(regenBtn)regenBtn.disabled=true;
+
+    try{
+      const result=await this._callCopilot(n,inputs);
+      this._lastResult=result;
+      this._renderResult(result);
+    }catch(err){
+      showToast(Utils.escHtml(err.message||'Encounter generation failed. Try again.'),[],6000);
+    }finally{
+      this._generating=false;
+      if(genBtn){genBtn.disabled=false;genBtn.textContent='Generate Encounter';}
+      if(regenBtn)regenBtn.disabled=false;
+    }
+  },
+
+  async _callCopilot(n,inputs){
+    const chaosFactor=n.metadata?.chaosFactor??null;
+    const chaosNote=chaosFactor!==null
+      ? `Chaos Factor: ${chaosFactor}/10. Higher chaos = more volatile complications and unexpected twists.`
+      : '';
+    const allFactions=n.factions||[];
+    const factionLines=inputs.selectedFactions.length
+      ? allFactions.filter(f=>inputs.selectedFactions.includes(f.name)).map(f=>`${f.name} (${f.type||'—'}, ${f.position||'—'}): ${f.description||''}`).join('\n')
+      : allFactions.map(f=>`${f.name} (${f.type||'—'}, ${f.position||'—'}): ${f.description||''}`).join('\n');
+    const situationLine=inputs.situation?`Situation context: ${inputs.situation}`:'';
+    const extraVars={
+      '[DIFFICULTY]':inputs.difficulty,
+      '[PACE]':inputs.pace,
+      '[TONE]':inputs.tone,
+      '[SITUATION]':situationLine,
+      '[CHAOS_NOTE]':chaosNote,
+      '[FACTIONS]':factionLines,
+    };
+    TransparencyLog._pendingLabel='Encounter Builder';
+    const filled=PromptFill.build('eb1',extraVars,n);
+    const messages=[
+      {role:'system',content:filled.system},
+      {role:'user',content:filled.user},
+    ];
+    return await Copilot._apiFetchJson(messages,{stream:false,max_tokens:1200});
+  },
+
+  _renderResult(result){
+    const E=Utils.escHtml;
+    const body=document.getElementById('eb-result-body');
+    if(!body)return;
+    const adversariesHtml=(result.adversaries||[]).map(a=>
+      `<div class="eb-adversary"><span class="eb-adversary__name">${E(a.name||'Unknown')}</span>${a.notes?`<span class="eb-adversary__notes">${E(a.notes)}</span>`:''}</div>`
+    ).join('');
+    body.innerHTML=`
+      <div class="eb-title">${E(result.title||'Unnamed Encounter')}</div>
+      <div class="eb-section"><div class="eb-section__label">Setup</div><div class="eb-section__body">${E(result.setup||'—')}</div></div>
+      ${result.terrain?`<div class="eb-section"><div class="eb-section__label">Terrain</div><div class="eb-section__body">${E(result.terrain)}</div></div>`:''}
+      ${(result.adversaries||[]).length?`<div class="eb-section"><div class="eb-section__label">Adversaries</div><div class="eb-section__body">${adversariesHtml}</div></div>`:''}
+      ${result.complication?`<div class="eb-section"><div class="eb-section__label">Complication</div><div class="eb-section__body eb-section__body--highlight">${E(result.complication)}</div></div>`:''}
+      ${result.tactical_objective?`<div class="eb-section"><div class="eb-section__label">Tactical Objective</div><div class="eb-section__body">${E(result.tactical_objective)}</div></div>`:''}
+      ${result.loot?`<div class="eb-section"><div class="eb-section__label">Loot / Reward</div><div class="eb-section__body">${E(result.loot)}</div></div>`:''}
+    `;
+    const resultEl=document.getElementById('eb-result');
+    if(resultEl)resultEl.classList.add('is-visible');
+    resultEl?.scrollIntoView({behavior:'smooth',block:'nearest'});
+  },
+
+  _saveToSession(){
+    if(!this._lastResult){showToast('Generate an encounter first.',[],3000);return;}
+    const n=State.get();
+    if(!n){showToast('No active realm.',[],3000);return;}
+    const sessions=n.sessions||[];
+    let targetSession=sessions[sessions.length-1]||null;
+    if(!targetSession){
+      const sid=State.addSession(n.id,{title:'Session 1',summary:''});
+      targetSession=(State.get().sessions||[]).find(s=>s.id===sid)||null;
+    }
+    if(!targetSession){showToast('Could not find or create a session.',[],4000);return;}
+    State.pushUndo();
+    targetSession.encounters=targetSession.encounters||[];
+    targetSession.encounters.push({
+      id:Utils.uuid(),
+      title:this._lastResult.title||'Unnamed Encounter',
+      setup:this._lastResult.setup||'',
+      adversaries:this._lastResult.adversaries||[],
+      terrain:this._lastResult.terrain||'',
+      complication:this._lastResult.complication||'',
+      tactical_objective:this._lastResult.tactical_objective||'',
+      loot:this._lastResult.loot||'',
+      inputs:this._lastInputs||{},
+      createdAt:Utils.now(),
+    });
+    State.persist();
+    showToast(`Encounter saved to Session ${targetSession.number||targetSession.title}.`,[],3500);
+  },
+
+  _addAdversariesToBestiary(){
+    if(!this._lastResult){showToast('Generate an encounter first.',[],3000);return;}
+    const n=State.get();
+    if(!n){showToast('No active realm.',[],3000);return;}
+    const adversaries=this._lastResult.adversaries||[];
+    if(!adversaries.length){showToast('No adversaries to add.',[],3000);return;}
+    const existing=(n.bestiary||[]).map(e=>e.name.toLowerCase());
+    let added=0;
+    adversaries.forEach(a=>{
+      if(!a.name)return;
+      if(existing.includes(a.name.toLowerCase()))return;
+      State.addBestiaryEntry(n.id,{
+        name:a.name,
+        type:'humanoid',
+        description:a.notes||'',
+        statBlock:'',
+        environment:`Encountered during: ${this._lastResult.title||'unknown encounter'}`,
+        lore:'',
+      });
+      added++;
+    });
+    if(added===0){
+      showToast('All adversaries are already in the Bestiary.',[],3500);
+    }else{
+      showToast(`${added} adversar${added===1?'y':'ies'} added to Bestiary.`,[],3500);
+      if(typeof Bestiary!=='undefined')Bestiary.render();
+    }
+  },
+};
+
 async function bootstrap(){
   await State.load();
   bindEventListeners();
@@ -11945,6 +12272,7 @@ async function bootstrap(){
   if(typeof SnapshotManager!=='undefined')SnapshotManager.bind();
   if(typeof GlossaryUI!=='undefined')GlossaryUI.bind();
   if(typeof NamingUI!=='undefined')NamingUI.bind();
+  if(typeof EncounterBuilder!=='undefined')EncounterBuilder.bind();
   // Auto-snapshot: fire-and-forget after state is loaded; self-throttles via 24h check
   State.snapshotIfDue().catch(()=>{});
   // Wire Decipher FAB
