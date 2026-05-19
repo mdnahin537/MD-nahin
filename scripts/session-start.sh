@@ -102,11 +102,18 @@ GSTACK_DIR="$SKILLS_DIR/gstack"
 clone_once "$GSTACK_DIR" https://github.com/garrytan/gstack.git
 if [ -d "$GSTACK_DIR" ]; then
   [ -f "$GSTACK_DIR/setup" ] && bash "$GSTACK_DIR/setup" >/dev/null 2>&1 || true
-  # Expose individual gStack skills as top-level so they trigger independently
-  # investigate excluded — conflicts with systematic-debugging (same iron law, same triggers)
-  for skill in design-consultation design-html design-review design-shotgun \
-               office-hours plan-ceo-review plan-eng-review \
-               ship qa cso skillify; do
+  # Install ALL gStack skills as top-level so each one triggers by its own name
+  # Excluded: investigate (conflicts with systematic-debugging)
+  # Excluded: setup-gbrain, sync-gbrain, open-gstack-browser, setup-browser-cookies (internal utilities)
+  for skill in autoplan benchmark benchmark-models browse canary careful codex \
+               connect-chrome context-restore context-save cso \
+               design-consultation design-html design-review design-shotgun \
+               devex-review document-generate document-release freeze \
+               gstack-upgrade guard health land-and-deploy landing-report \
+               learn make-pdf office-hours pair-agent \
+               plan-ceo-review plan-design-review plan-devex-review \
+               plan-eng-review plan-tune qa qa-only retro review \
+               scrape setup-deploy ship skillify unfreeze; do
     install_skill "$skill" "$GSTACK_DIR/$skill"
   done
 fi
