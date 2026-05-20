@@ -2330,6 +2330,7 @@ SECTION 8: DOM STRUCTURE
         <div class="export-dropdown" id="export-dropdown">
           <div class="export-dropdown__item" id="export-json-btn">Export as JSON</div>
           <div class="export-dropdown__item" id="export-pdf-btn">Export as Story Bible (PDF)</div>
+          <div class="export-dropdown__item" id="export-foundry-btn">Export to Foundry VTT</div>
           <div class="export-dropdown__item" id="export-session-prep-btn">⌘ Generate GM Session Prep (PDF)</div>
         </div>
       </div>
@@ -7113,6 +7114,92 @@ function handleImport(data){
     Render.all();Modals.closeAll();showToast(`Imported ${migrated.nations.length} nations.`);
   }else{showToast('Unrecognized JSON format. Expected a RealmWright or Sovereign Codex export file.');}
 }
+// ─── FOUNDRY VTT EXPORT ───
+// Produces a Foundry V12-compatible JSON bundle of JournalEntry documents.
+// User imports via Foundry V12 → Journals sidebar → right-click → Import Data.
+// One JournalEntry per category (Overview, Chronicle, Factions, Characters, Locations, Hooks, Secrets);
+// one page per item inside. Actors/Scenes deferred — system-specific schemas vary too much.
+const FoundryExport={
+  _id16(){const chars='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';let s='';for(let i=0;i<16;i++)s+=chars[Math.floor(Math.random()*chars.length)];return s;},
+  _h(s){return Utils.escHtml(String(s==null?'':s));},
+  _page(name,html,sort){return{_id:this._id16(),type:'text',name,title:{show:true,level:1},text:{content:html,format:1},sort:sort||0,flags:{}};},
+  _entry(name,pages,folder){return{_id:this._id16(),name,pages,folder:folder||null,sort:0,ownership:{default:0},flags:{realmwright:{sourceVersion:'1.0',exportedAt:new Date().toISOString()}},_stats:{systemId:null,systemVersion:null,coreVersion:'12'}};},
+  _buildRealmOverview(n){
+    const pages=[];let sort=0;
+    pages.push(this._page('Realm Overview',`<h1>${this._h(n.name)}</h1><p><strong>Era:</strong> ${this._h(n.era||'—')}<br><strong>Government:</strong> ${this._h(n.government||'—')}<br><strong>Capital:</strong> ${this._h(n.capital||'—')}<br><strong>Population:</strong> ${this._h(n.population||'—')}<br><strong>Current Year:</strong> ${this._h(n.currentYear||'—')}</p>`,sort++));
+    if(n.stats&&typeof n.stats==='object'){
+      const rows=Object.entries(n.stats).map(([k,v])=>{const val=(v&&typeof v==='object'&&'value' in v)?v.value:v;return `<tr><td>${this._h(k)}</td><td>${this._h(val)}</td></tr>`;}).join('');
+      if(rows)pages.push(this._page('Nation Stats',`<table>${rows}</table>`,sort++));
+    }
+    return this._entry(`${n.name} — Realm Overview`,pages);
+  },
+  _buildChronicle(n){
+    if(!Array.isArray(n.chronicle)||!n.chronicle.length)return null;
+    const pages=n.chronicle.map((ev,i)=>this._page(`${ev.year?'['+this._h(ev.year)+'] ':''}${this._h(ev.name||ev.title||'Unnamed event')}`,`<p><strong>Type:</strong> ${this._h(ev.type||'—')} · <strong>Weight:</strong> ${this._h(ev.weight==null?0:ev.weight)} · <strong>Visibility:</strong> ${this._h(ev.visibility||'public')}</p><p>${this._h(ev.description||'')}</p>`,i));
+    return this._entry(`${n.name} — Chronicle`,pages);
+  },
+  _buildFactions(n){
+    if(!Array.isArray(n.factions)||!n.factions.length)return null;
+    const pages=n.factions.map((f,i)=>this._page(this._h(f.name||'Unnamed faction'),`<p><strong>Type:</strong> ${this._h(f.type||'—')} · <strong>Position:</strong> ${this._h(f.position||'—')}</p>${f.leaderName?`<p><strong>Leader:</strong> ${this._h(f.leaderName)}</p>`:''}<p>${this._h(f.description||'')}</p>${f.primaryInterest?`<p><strong>Primary Interest:</strong> ${this._h(f.primaryInterest)}</p>`:''}`,i));
+    return this._entry(`${n.name} — Factions`,pages);
+  },
+  _buildCharacters(n){
+    if(!Array.isArray(n.characters)||!n.characters.length)return null;
+    const pages=n.characters.map((c,i)=>{
+      let html=`<p><strong>Role:</strong> ${this._h(c.role||'—')} · <strong>Status:</strong> ${this._h(c.status||'active')}</p>`;
+      if(c.drive)html+=`<p><strong>Drive:</strong> ${this._h(c.drive)}</p>`;
+      if(c.fear)html+=`<p><strong>Fear:</strong> ${this._h(c.fear)}</p>`;
+      if(c.description)html+=`<p>${this._h(c.description)}</p>`;
+      if(Array.isArray(c.plotSeeds)&&c.plotSeeds.length)html+=`<h2>Plot Seeds</h2><ul>${c.plotSeeds.map(s=>`<li>${this._h(typeof s==='string'?s:(s&&s.text)||'')}</li>`).join('')}</ul>`;
+      return this._page(this._h(c.name||'Unnamed NPC'),html,i);
+    });
+    return this._entry(`${n.name} — Characters / NPCs`,pages);
+  },
+  _buildLocations(n){
+    if(!Array.isArray(n.locations)||!n.locations.length)return null;
+    const pages=n.locations.map((l,i)=>this._page(this._h(l.name||'Unnamed location'),`<p><strong>Type:</strong> ${this._h(l.type||'—')} · <strong>Status:</strong> ${this._h(l.status||'active')}</p><p>${this._h(l.description||'')}</p>`,i));
+    return this._entry(`${n.name} — Locations`,pages);
+  },
+  _buildHooks(n){
+    if(!Array.isArray(n.hooks)||!n.hooks.length)return null;
+    const pages=n.hooks.map((h,i)=>this._page(this._h(h.title||'Unnamed hook'),`<p><strong>Status:</strong> ${h.resolved?'Resolved':'Unresolved'}</p><p>${this._h(h.description||'')}</p>`,i));
+    return this._entry(`${n.name} — Plot Hooks`,pages);
+  },
+  _buildSecrets(n){
+    if(!Array.isArray(n.secrets)||!n.secrets.length)return null;
+    const pages=n.secrets.map((s,i)=>this._page(this._h(s.title||'Unnamed secret'),`<p><strong>Visibility:</strong> ${this._h(s.visibility||'private')}</p><p>${this._h(s.content||s.description||'')}</p>`,i));
+    return this._entry(`${n.name} — Secrets`,pages);
+  },
+  build(scope){
+    scope=scope||'active';
+    const data=State.data;
+    if(!data||!Array.isArray(data.nations)||!data.nations.length)throw new Error('No realms to export.');
+    const nations=scope==='all'?data.nations:[data.nations.find(n=>n.id===(data.meta&&data.meta.activeNationId))].filter(Boolean);
+    if(!nations.length)throw new Error('No active realm.');
+    const entries=[];
+    nations.forEach(n=>{
+      [this._buildRealmOverview(n),this._buildChronicle(n),this._buildFactions(n),this._buildCharacters(n),this._buildLocations(n),this._buildHooks(n),this._buildSecrets(n)].forEach(e=>{if(e)entries.push(e);});
+    });
+    return entries;
+  },
+  download(scope){
+    scope=scope||'active';
+    try{
+      const entries=this.build(scope);
+      const blob=new Blob([JSON.stringify(entries,null,2)],{type:'application/json'});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');a.href=url;
+      const baseName=scope==='all'?'all-realms':((State.data.nations.find(n=>n.id===(State.data.meta&&State.data.meta.activeNationId))||{}).name||'realm');
+      const slug=baseName.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40)||'realm';
+      a.download=`realmwright-foundry-${slug}-${new Date().toISOString().slice(0,10)}.json`;
+      document.body.appendChild(a);a.click();document.body.removeChild(a);
+      setTimeout(()=>URL.revokeObjectURL(url),1000);
+      if(typeof showToast==='function')showToast(`Exported ${entries.length} Foundry journal entries. Import in Foundry V12 → Journals sidebar → right-click → Import Data.`,[],8000);
+    }catch(e){
+      if(typeof showToast==='function')showToast('Foundry export failed: '+(e.message||e));
+    }
+  },
+};
 function generatePDF(){
   const n=State.get();const stab=Compute.stability(n);const status=Compute.status(stab);
   const E=Utils.escHtml;
@@ -12511,6 +12598,7 @@ function bindEventListeners(){
   }
   document.getElementById('export-json-btn')?.addEventListener('click',()=>{expDD.classList.remove('is-open');exportJSON('single');});
   document.getElementById('export-pdf-btn')?.addEventListener('click',()=>{expDD.classList.remove('is-open');Modals.open('export-opts');});
+  document.getElementById('export-foundry-btn')?.addEventListener('click',()=>{expDD.classList.remove('is-open');FoundryExport.download('active');});
   document.getElementById('generate-pdf-btn')?.addEventListener('click',()=>generatePDF());
   document.getElementById('export-session-prep-btn')?.addEventListener('click',()=>{
     expDD.classList.remove('is-open');
