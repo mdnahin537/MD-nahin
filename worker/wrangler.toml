@@ -1,0 +1,10 @@
+name = "rw-license"
+main = "index.js"
+compatibility_date = "2024-11-01"
+
+# After deploying, set these in Cloudflare dashboard:
+# Workers & Pages → rw-license → Settings → Variables and Secrets
+# ITCHIO_API_KEY = "your-itch-developer-api-key"
+# ITCHIO_GAME_ID = "your-numeric-game-id"
+
+# Free tier: 100,000 requests/day — more than enough for a $29 indie tool.

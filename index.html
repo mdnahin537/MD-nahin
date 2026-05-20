@@ -1690,6 +1690,15 @@ SECTION 6: COMPONENT STYLES
   border:.5px solid var(--color-gold);border-radius:var(--radius-md);
   box-shadow:var(--shadow-toast);z-index:var(--z-modal-toast);opacity:0;pointer-events:none;
   transition:opacity var(--duration-default) var(--ease-out),transform var(--duration-default) var(--ease-out)}
+/* ── PHASE 4: LICENSE GATE ───────────────────────────────────────────── */
+.license-active-card{background:rgba(255,185,100,0.06);border:1px solid rgba(255,185,100,0.20);border-radius:var(--radius-md);padding:var(--space-4);display:flex;flex-direction:column;gap:var(--space-2)}
+.license-active-card__badge{font-family:var(--font-display);font-size:var(--text-h4);color:var(--ember-color)}
+.license-active-card__detail{font-family:var(--font-mono);font-size:var(--text-label-sm);color:var(--color-text-muted)}
+.license-status-indicator{font-family:var(--font-mono);font-size:9px;letter-spacing:.10em;text-transform:uppercase;padding:2px 6px;border-radius:2px;background:rgba(255,185,100,0.08);border:1px solid rgba(255,185,100,0.18);color:var(--color-text-muted)}
+.license-status-indicator.is-active{background:rgba(255,185,100,0.14);border-color:rgba(255,185,100,0.35);color:var(--ember-color)}
+.form-hint{font-size:var(--text-label-sm);color:var(--color-text-muted);margin-top:var(--space-1);line-height:1.4}
+.license-gate-banner{display:none;background:rgba(255,185,100,0.06);border-top:1px solid rgba(255,185,100,0.15);padding:var(--space-3) var(--space-4);text-align:center;font-size:var(--text-label-sm);color:var(--color-text-muted)}
+.license-gate-banner a,.license-gate-banner button{color:var(--ember-color);cursor:pointer;background:none;border:none;padding:0;font:inherit;text-decoration:underline}
 body.theme-ember .toast{background:#0a0705;border-color:rgba(255,185,100,0.30);box-shadow:0 8px 32px rgba(0,0,0,0.7),0 0 24px rgba(255,185,100,0.06)}
 body.theme-ember .toast__msg{color:var(--color-ink)}
 body.theme-ember .toast__link{color:var(--ember-color)}
@@ -3540,6 +3549,18 @@ SECTION 8: DOM STRUCTURE
 SECTION 9: DATA & STATE
 ==============================================================================
 */
+/* ══════════════════════════════════════════════════════════════════════
+   PHASE 4 — LICENSE GATE & AUTO-SAVE
+   ══════════════════════════════════════════════════════════════════════ */
+const DEMO_API_KEY=''; // Hunter: paste your Claude/OpenRouter key here before launch
+const LS_PRODUCT_ID=''; // Hunter: paste Lemon Squeezy product_id after creating the product
+const WORKER_URL='https://rw-license.realmwright.workers.dev'; // Cloudflare Worker for itch.io
+const DEMO_MESSAGE_LIMIT=5;
+const AUTO_SAVE_THRESHOLD=20;
+const IDB_KEY_LICENSE='rw_license_v1';
+const IDB_KEY_BACKUP_HANDLE='rw_backup_handle';
+const IDB_KEY_DEMO_USES='rw_demo_uses';
+
 const SCHEMA_VERSION='2.4.1';
 const DEFAULT_SETTINGS={theme:'ember',respectMotionPref:true,showForecasts:false,showSecrets:false,onboardingComplete:false,copilotProvider:'openrouter',copilotModel:'anthropic/claude-sonnet-latest',copilotKey:null,ollamaUrl:'http://localhost:11434',ollamaModel:'llama3.1',copilotScope:'standard',copilotAutoApply:false,gmMode:false};
 const ERA_GAP={Ancient:100,Classical:75,Medieval:50,Renaissance:75,Industrial:25,Modern:15,'Near-Future':10,'Far-Future':5,'Post-Collapse':30};
@@ -4407,6 +4428,175 @@ function Term(key){
   }catch(e){return key;}
 }
 function isGMMode(){return !!State.data?.meta?.settings?.gmMode;}
+const LicenseGate={
+  _data:null,
+  async init(){
+    try{const s=await IDB.get(IDB_KEY_LICENSE);this._data=s||null;}catch(e){this._data=null;}
+    if(this._data)this._backgroundValidate();
+    document.dispatchEvent(new CustomEvent('license:changed'));
+  },
+  isActive(){return!!(this._data&&this._data.valid);},
+  _detectPlatform(key){
+    return/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(key.trim())?'lemonsqueezy':'itchio';
+  },
+  async activate(key){
+    const platform=this._detectPlatform(key);
+    return platform==='lemonsqueezy'?this._activateLS(key.trim()):this._activateItchio(key.trim());
+  },
+  async _activateLS(key){
+    try{
+      const body=new URLSearchParams({license_key:key,instance_name:'RealmWright-'+Date.now()});
+      const res=await fetch('https://api-cors-anywhere.lemonsqueezy.com/v1/licenses/activate',
+        {method:'POST',headers:{Accept:'application/json','Content-Type':'application/x-www-form-urlencoded'},body});
+      const json=await res.json();
+      if(json.activated){
+        this._data={key,instanceId:json.instance?.id||null,platform:'lemonsqueezy',activatedAt:Date.now(),valid:true};
+        await IDB.set(IDB_KEY_LICENSE,this._data);
+        document.dispatchEvent(new CustomEvent('license:changed'));
+        return{success:true};
+      }
+      return{success:false,error:json.error||'Activation failed.'};
+    }catch(e){return{success:false,error:'Network error — check your connection.'};}
+  },
+  async _activateItchio(key){
+    try{
+      const res=await fetch(WORKER_URL+'/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key})});
+      const json=await res.json();
+      if(json.valid){
+        this._data={key,instanceId:null,platform:'itchio',activatedAt:Date.now(),valid:true};
+        await IDB.set(IDB_KEY_LICENSE,this._data);
+        document.dispatchEvent(new CustomEvent('license:changed'));
+        return{success:true};
+      }
+      return{success:false,error:json.error||'Key not recognised on itch.io.'};
+    }catch(e){return{success:false,error:'Could not reach validation server.'};}
+  },
+  async _backgroundValidate(){
+    if(!this._data||this._data.platform!=='lemonsqueezy')return;
+    try{
+      const body=new URLSearchParams({license_key:this._data.key,instance_id:this._data.instanceId||''});
+      const res=await fetch('https://api-cors-anywhere.lemonsqueezy.com/v1/licenses/validate',
+        {method:'POST',headers:{Accept:'application/json','Content-Type':'application/x-www-form-urlencoded'},body});
+      const json=await res.json();
+      const wasValid=this._data.valid;
+      this._data.valid=!!json.valid;
+      await IDB.set(IDB_KEY_LICENSE,this._data);
+      if(wasValid&&!json.valid)document.dispatchEvent(new CustomEvent('license:expired'));
+    }catch(e){}
+  },
+  async deactivate(){
+    if(!this._data)return;
+    try{
+      if(this._data.platform==='lemonsqueezy'&&this._data.instanceId){
+        const body=new URLSearchParams({license_key:this._data.key,instance_id:this._data.instanceId});
+        await fetch('https://api-cors-anywhere.lemonsqueezy.com/v1/licenses/deactivate',
+          {method:'POST',headers:{Accept:'application/json','Content-Type':'application/x-www-form-urlencoded'},body});
+      }
+    }catch(e){}
+    this._data=null;
+    await IDB.set(IDB_KEY_LICENSE,null);
+    document.dispatchEvent(new CustomEvent('license:changed'));
+  },
+  info(){
+    if(!this._data)return null;
+    return{platform:this._data.platform,keyPreview:this._data.key.slice(0,8)+'…',activatedAt:this._data.activatedAt,valid:this._data.valid};
+  }
+};
+
+const DemoCounter={
+  _uses:0,
+  async init(){
+    try{const s=await IDB.get(IDB_KEY_DEMO_USES);this._uses=typeof s==='number'?s:0;}catch(e){this._uses=0;}
+  },
+  hasKey(){return!!(DEMO_API_KEY);},
+  left(){return Math.max(0,DEMO_MESSAGE_LIMIT-this._uses);},
+  canUse(){return this.hasKey()&&this._uses<DEMO_MESSAGE_LIMIT;},
+  async consume(){this._uses++;try{await IDB.set(IDB_KEY_DEMO_USES,this._uses);}catch(e){}},
+  key(){return DEMO_API_KEY;},
+};
+
+const AutoSave={
+  _counter:0,
+  _handle:null,
+  _supported:'showSaveFilePicker' in window,
+  _promptPending:false,
+  async init(){
+    if(!this._supported)return;
+    try{this._handle=await IDB.get(IDB_KEY_BACKUP_HANDLE)||null;}catch(e){this._handle=null;}
+  },
+  tick(){
+    if(!LicenseGate.isActive())return; // only auto-save for licensed users
+    if(State.data.meta?._sampleMode)return; // never save sample data
+    this._counter++;
+    if(this._counter%AUTO_SAVE_THRESHOLD===0)this._triggerSave();
+  },
+  async _triggerSave(){
+    if(!this._supported){this._fallbackDownload();return;}
+    if(!this._handle){
+      if(!this._promptPending){
+        this._promptPending=true;
+        showToast('Auto-backup available — RealmWright can save your realm to your device.',[
+          {label:'Set up backup',handler:()=>this.setupPicker()}
+        ],10000);
+      }
+      return;
+    }
+    await this._write();
+  },
+  async setupPicker(){
+    if(!this._supported){this._fallbackDownload();return;}
+    try{
+      const handle=await window.showSaveFilePicker({
+        suggestedName:'realmwright-backup.json',
+        types:[{description:'RealmWright Backup',accept:{'application/json':['.json']}}]
+      });
+      this._handle=handle;
+      this._promptPending=false;
+      try{await IDB.set(IDB_KEY_BACKUP_HANDLE,handle);}catch(e){}
+      await this._write();
+      showToast('Auto-backup configured — your realm will be saved here every '+AUTO_SAVE_THRESHOLD+' actions.');
+    }catch(e){if(e.name!=='AbortError')showToast('Backup setup cancelled.');}
+  },
+  async _write(){
+    if(!this._handle)return;
+    try{
+      const perm=await this._handle.queryPermission({mode:'readwrite'});
+      if(perm!=='granted'){
+        showToast('Auto-backup needs permission to continue.',[{label:'Allow',handler:()=>this._reqPermAndWrite()}],0);
+        return;
+      }
+      const writable=await this._handle.createWritable();
+      await writable.write(JSON.stringify(State.data,null,2));
+      await writable.close();
+    }catch(e){
+      if(e.name==='NotAllowedError')showToast('Auto-backup paused — permission revoked.',[{label:'Re-enable',handler:()=>this._reqPermAndWrite()}],0);
+    }
+  },
+  async _reqPermAndWrite(){
+    if(!this._handle){await this.setupPicker();return;}
+    try{
+      const r=await this._handle.requestPermission({mode:'readwrite'});
+      if(r==='granted')await this._write();
+      else{this._handle=null;try{await IDB.set(IDB_KEY_BACKUP_HANDLE,null);}catch(e){}}
+    }catch(e){}
+  },
+  _fallbackDownload(){
+    try{
+      const blob=new Blob([JSON.stringify(State.data,null,2)],{type:'application/json'});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');
+      a.href=url;a.download='realmwright-backup-'+new Date().toISOString().slice(0,10)+'.json';
+      document.body.appendChild(a);a.click();document.body.removeChild(a);
+      setTimeout(()=>URL.revokeObjectURL(url),1000);
+    }catch(e){}
+  },
+  manualSave(){
+    if(this._handle)this._write();
+    else if(this._supported)this.setupPicker();
+    else this._fallbackDownload();
+  }
+};
+
 function buildNationFromSeed(seed){
   // This function handles two input shapes:
   //   1. A SEED_NATIONS entry — shorthand stats {legitimacy: 42}, no characters array.
@@ -4681,6 +4871,7 @@ const State={
       if(this._undoStack.length>this._undoMax)this._undoStack.shift();
       this._redoStack=[];
       this._updateUndoUI();
+      if(typeof AutoSave!=='undefined')AutoSave.tick();
     }catch(e){}
   },
   undo(){
@@ -8232,8 +8423,21 @@ const FrontDoor={
       }
       await this._saveRecent({prompt,style});
     }else{
-      // [TODO-P4-DEMO] Replace with actual free-demo backend call.
-      showToast('Free demo coming in v1.0 launch. Try a sample below, or paste your OpenRouter key in Settings.',[{label:'Settings',handler:()=>{if(typeof Modals!=='undefined')Modals.open('settings');}}],6000);
+      // Phase 4: 5 free AI messages via demo key, then gate
+      if(DemoCounter.canUse()){
+        const savedKey=State.data.meta?.settings?.copilotKey;
+        State.data.meta.settings.copilotKey=DemoCounter.key();
+        await DemoCounter.consume();
+        try{await this._generate(prompt,style);}finally{
+          State.data.meta.settings.copilotKey=savedKey;
+        }
+        const left=DemoCounter.left();
+        if(left>0)showToast(left+' free preview message'+(left===1?'':'s')+' remaining.',[{label:'Get full access',handler:()=>LicenseGateUI.openModal()}],5000);
+        else showToast('Free preview used — activate your license to continue.',[{label:'Activate',handler:()=>LicenseGateUI.openModal()}],8000);
+      }else{
+        LicenseGateUI.openModal();
+        showToast('Activate RealmWright to generate realms and use all features.',[{label:'Activate',handler:()=>LicenseGateUI.openModal()}],6000);
+      }
     }
   },
 
@@ -8243,9 +8447,7 @@ const FrontDoor={
   },
 
   _handleActivate(){
-    // [TODO-P4-LICENSE] Phase 4 wires real license validation here.
-    if(typeof Modals!=='undefined'){Modals.open('license-activate');}
-    else{showToast('License activation coming in v1.0 launch.');}
+    LicenseGateUI.openModal();
   },
 
   async _loadRecent(){
@@ -12516,10 +12718,133 @@ const EncounterBuilder={
   },
 };
 
+const LicenseGateUI={
+  bind(){
+    // Wire the Activate buttons in front door and nav
+    document.querySelectorAll('[data-action="activate-license"]').forEach(btn=>{
+      btn.addEventListener('click',()=>this.openModal());
+    });
+    // Wire deactivate in settings
+    const deactivateBtn=document.getElementById('license-deactivate-btn');
+    if(deactivateBtn)deactivateBtn.addEventListener('click',()=>this._deactivate());
+    // Wire license form submit
+    const submitBtn=document.getElementById('la-submit');
+    if(submitBtn)submitBtn.addEventListener('click',()=>this._submit());
+    const keyInput=document.getElementById('la-key-input');
+    if(keyInput){
+      keyInput.addEventListener('input',()=>{
+        const v=keyInput.value.trim();
+        if(submitBtn)submitBtn.disabled=v.length<10;
+        const err=document.getElementById('la-key-err');
+        if(err)err.style.display='none';
+      });
+      keyInput.addEventListener('keydown',e=>{if(e.key==='Enter'&&!submitBtn?.disabled)this._submit();});
+    }
+    // Listen for license changes to update status UI
+    document.addEventListener('license:changed',()=>this._updateStatusUI());
+    document.addEventListener('license:expired',()=>{
+      showToast('Your RealmWright license could not be verified. Please re-activate.',[{label:'Re-activate',handler:()=>this.openModal()}],0);
+      this._updateStatusUI();
+    });
+    this._updateStatusUI();
+  },
+  openModal(){
+    if(typeof Modals!=='undefined')Modals.open('license-activate');
+    const inp=document.getElementById('la-key-input');
+    if(inp){inp.value='';inp.focus();}
+    const err=document.getElementById('la-key-err');
+    if(err)err.style.display='none';
+    const sub=document.getElementById('la-submit');
+    if(sub)sub.disabled=true;
+    this._updateModalStatus();
+  },
+  _updateModalStatus(){
+    const info=LicenseGate.info();
+    const body=document.getElementById('la-modal-body');
+    if(!body)return;
+    if(info&&info.valid){
+      body.innerHTML=`
+        <div class="license-active-card">
+          <div class="license-active-card__badge">✓ Licensed</div>
+          <div class="license-active-card__detail">Platform: ${info.platform==='lemonsqueezy'?'Lemon Squeezy':'itch.io'}</div>
+          <div class="license-active-card__detail">Key: ${Utils.escHtml(info.keyPreview)}</div>
+          <div class="license-active-card__detail">Activated: ${new Date(info.activatedAt).toLocaleDateString()}</div>
+        </div>
+        <button class="btn btn--ghost btn--sm" id="license-deactivate-btn" style="margin-top:var(--space-3);color:var(--color-text-muted)">Deactivate this device</button>`;
+      const db=document.getElementById('license-deactivate-btn');
+      if(db)db.addEventListener('click',()=>this._deactivate());
+    }else{
+      body.innerHTML=`
+        <div class="form-field">
+          <label class="form-label" for="la-key-input">License key</label>
+          <input class="form-input" id="la-key-input" type="text" placeholder="Lemon Squeezy UUID or itch.io key" autocomplete="off" spellcheck="false" aria-describedby="la-key-err la-key-hint">
+          <p class="form-hint" id="la-key-hint">Paste the key from your purchase email. Works with both Lemon Squeezy and itch.io purchases.</p>
+          <p class="form-error" id="la-key-err" role="alert" aria-live="polite" style="display:none"></p>
+        </div>`;
+      const inp=document.getElementById('la-key-input');
+      const sub=document.getElementById('la-submit');
+      if(inp){
+        inp.addEventListener('input',()=>{if(sub)sub.disabled=inp.value.trim().length<10;});
+        inp.addEventListener('keydown',e=>{if(e.key==='Enter'&&!sub?.disabled)this._submit();});
+      }
+    }
+    const footer=document.getElementById('la-footer');
+    if(footer){
+      if(info&&info.valid){
+        footer.innerHTML=`<button class="btn btn--secondary" data-close="license-activate">Close</button>`;
+      }else{
+        footer.innerHTML=`<button class="btn btn--secondary" data-close="license-activate">Cancel</button><button class="btn btn--primary" id="la-submit" disabled>Activate</button>`;
+        const sub=document.getElementById('la-submit');
+        if(sub)sub.addEventListener('click',()=>this._submit());
+      }
+    }
+  },
+  async _submit(){
+    const inp=document.getElementById('la-key-input');
+    const err=document.getElementById('la-key-err');
+    const sub=document.getElementById('la-submit');
+    if(!inp)return;
+    const key=inp.value.trim();
+    if(!key){return;}
+    if(sub){sub.disabled=true;sub.textContent='Activating…';}
+    const result=await LicenseGate.activate(key);
+    if(result.success){
+      showToast('RealmWright activated. Welcome.');
+      if(typeof Modals!=='undefined')Modals.close('license-activate');
+      this._updateModalStatus();
+    }else{
+      if(err){err.textContent=result.error||'Activation failed.';err.style.display='block';}
+      if(sub){sub.disabled=false;sub.textContent='Activate';}
+    }
+  },
+  async _deactivate(){
+    if(!confirm('Deactivate this device? You can re-activate later with the same key.'))return;
+    await LicenseGate.deactivate();
+    showToast('License deactivated on this device.');
+    this._updateModalStatus();
+  },
+  _updateStatusUI(){
+    const isActive=LicenseGate.isActive();
+    // Update any license status indicators
+    document.querySelectorAll('.license-status-indicator').forEach(el=>{
+      el.textContent=isActive?'Licensed':'Demo';
+      el.classList.toggle('is-active',isActive);
+    });
+    // Show/hide "Get full access" banners
+    document.querySelectorAll('.license-gate-banner').forEach(el=>{
+      el.style.display=isActive?'none':'';
+    });
+  }
+};
+
 async function bootstrap(){
   await State.load();
   bindEventListeners();
   // Bind front door, sample mode, and tonight module (DOM already exists)
+  await LicenseGate.init();
+  await DemoCounter.init();
+  await AutoSave.init();
+  LicenseGateUI.bind();
   if(typeof SampleMode!=='undefined')SampleMode.bind();
   if(typeof Solo!=='undefined')Solo.bind();
   if(typeof FrontDoor!=='undefined')FrontDoor.bind();
@@ -12818,22 +13143,21 @@ window.__rwClearDevTheme=function(){localStorage.removeItem('rw_dev_theme');loca
   </div>
 </div>
 
-<!-- ── LICENSE ACTIVATE STUB MODAL ─────────────────────────────────────────── -->
-<!-- [TODO-P4-LICENSE] Replace this stub with real activation flow in Phase 4. -->
+<!-- ── LICENSE ACTIVATE MODAL (Phase 4) ──────────────────────────────────── -->
 <div class="modal modal--sm" id="modal-license-activate" role="dialog" aria-modal="true" aria-labelledby="la-title">
   <div class="modal__header">
-    <h2 class="modal__title" id="la-title">Activate License</h2>
+    <h2 class="modal__title" id="la-title">Activate RealmWright</h2>
     <button class="modal__close" data-close="license-activate" aria-label="Close">×</button>
   </div>
-  <div class="modal__body">
+  <div class="modal__body" id="la-modal-body">
     <div class="form-field">
       <label class="form-label" for="la-key-input">License key</label>
-      <input class="form-input" id="la-key-input" type="text" placeholder="RWRT-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false">
+      <input class="form-input" id="la-key-input" type="text" placeholder="Lemon Squeezy UUID or itch.io key" autocomplete="off" spellcheck="false" aria-describedby="la-key-err la-key-hint">
+      <p class="form-hint" id="la-key-hint">Paste the key from your purchase email. Works with both Lemon Squeezy and itch.io purchases.</p>
       <p class="form-error" id="la-key-err" role="alert" aria-live="polite" style="display:none"></p>
     </div>
-    <p style="font-size:var(--text-label-sm);color:var(--color-text-muted);margin-top:var(--space-3)">License activation is coming in v1.0. Purchase at <a href="https://gumroad.com" target="_blank" rel="noopener" style="color:var(--ember-color)">gumroad.com</a>.</p>
   </div>
-  <div class="modal__footer">
+  <div class="modal__footer" id="la-footer">
     <button class="btn btn--secondary" data-close="license-activate">Cancel</button>
     <button class="btn btn--primary" id="la-submit" disabled>Activate</button>
   </div>
