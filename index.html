@@ -2202,6 +2202,11 @@ SECTION 7: MOTION & STATE STYLES
 .web-edge{transition:opacity .15s}
 .web-label{font-size:9px;fill:#94a3b8;pointer-events:none;
   font-family:'Cinzel',serif;letter-spacing:.05em}
+/* Phase 5F: edge labels on Relationship Web */
+.web-edge-label{font-family:var(--font-mono);font-size:9px;letter-spacing:.06em;fill:var(--color-text-faint);text-anchor:middle;pointer-events:none}
+/* Phase 5F: per-call inline cost stamp on AI render sites */
+.ai-cost-stamp{margin-top:6px;font-size:10px;letter-spacing:.05em;color:var(--color-text-faint);font-family:var(--font-mono);opacity:.7}
+.ai-cost-stamp:hover{opacity:1}
 .web-node-detail{
   position:absolute;bottom:12px;left:12px;
   background:#0d1117;border:1px solid rgba(255,185,100,0.3);
@@ -2844,6 +2849,7 @@ SECTION 8: DOM STRUCTURE
             </label>
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:var(--text-body-sm)">
               <input type="radio" name="copilot-provider" id="provider-ollama" value="ollama" style="accent-color:var(--ember-color)"> Ollama (local)
+              <span id="ollama-detected-badge" style="display:none;font-size:var(--text-label-sm);color:var(--color-success,#9ce8a3);margin-left:8px"></span>
             </label>
           </div>
         </div>
@@ -2854,10 +2860,14 @@ SECTION 8: DOM STRUCTURE
           <div style="flex:1">
             <div class="settings-label">OpenRouter API key</div>
             <div class="settings-desc">Stored locally only — never sent anywhere except OpenRouter. Get one free at <a href="https://openrouter.ai/keys" target="_blank" rel="noopener" style="color:var(--color-gold-deep)">openrouter.ai/keys</a></div>
-            <input class="form-input" type="password" id="copilot-key-input" placeholder="sk-or-v1-..." style="width:100%;margin-top:var(--space-2);font-family:var(--font-mono);font-size:var(--text-mono-sm)">
-            <div style="display:flex;gap:var(--space-2);margin-top:var(--space-2);align-items:center">
+            <div style="position:relative;margin-top:var(--space-2)">
+              <input class="form-input" type="password" id="copilot-key-input" placeholder="sk-or-v1-..." style="width:100%;padding-right:38px;font-family:var(--font-mono);font-size:var(--text-mono-sm)">
+              <button type="button" class="copilot-key-eye" id="copilot-key-eye" aria-label="Show or hide API key" title="Show key" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:0;cursor:pointer;padding:4px;color:var(--color-text-muted);display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" id="copilot-key-eye-icon" style="font-size:18px">visibility</span></button>
+            </div>
+            <div style="display:flex;gap:var(--space-2);margin-top:var(--space-2);align-items:center;flex-wrap:wrap">
               <button class="btn btn--secondary" id="copilot-key-save" style="font-size:var(--text-label-sm)">Save key</button>
               <button class="btn btn--secondary" id="copilot-key-clear" style="font-size:var(--text-label-sm);display:none">Clear key</button>
+              <button class="btn btn--secondary" id="copilot-key-delete" style="font-size:var(--text-label-sm);color:var(--color-crisis,#ff6b6b);border-color:rgba(255,107,107,0.4);display:none">Delete my key</button>
               <span id="copilot-key-status" style="font-size:var(--text-label-sm);color:var(--color-text-muted)"></span>
             </div>
           </div>
@@ -3279,8 +3289,9 @@ SECTION 8: DOM STRUCTURE
       <span class="web-legend-item"><svg width="10" height="10"><circle cx="5" cy="5" r="5" fill="#f59e0b"/></svg>&nbsp;Character</span>
       <span class="web-legend-item"><svg width="10" height="10"><rect width="10" height="10" fill="#6366f1"/></svg>&nbsp;Faction</span>
       <span class="web-legend-item"><svg width="10" height="10"><polygon points="5,0 10,5 5,10 0,5" fill="#10b981"/></svg>&nbsp;Location</span>
-      <span style="margin-left:8px;display:flex;align-items:center;gap:4px"><svg width="20" height="4"><line x1="0" y1="2" x2="20" y2="2" stroke="#f59e0b" stroke-width="1.5"/></svg>&nbsp;Member</span>
-      <span style="display:flex;align-items:center;gap:4px"><svg width="20" height="4"><line x1="0" y1="2" x2="20" y2="2" stroke="#10b981" stroke-width="1" stroke-dasharray="3,2"/></svg>&nbsp;Based-in/Controls</span>
+      <span class="web-legend-item"><svg width="22" height="4"><line x1="0" y1="2" x2="22" y2="2" stroke="rgba(245,158,11,0.7)" stroke-width="1.5"/></svg>&nbsp;member of</span>
+      <span class="web-legend-item"><svg width="22" height="4"><line x1="0" y1="2" x2="22" y2="2" stroke="rgba(16,185,129,0.6)" stroke-width="1" stroke-dasharray="4,3"/></svg>&nbsp;controls</span>
+      <span class="web-legend-item"><svg width="22" height="4"><line x1="0" y1="2" x2="22" y2="2" stroke="rgba(16,185,129,0.45)" stroke-width="1" stroke-dasharray="4,3"/></svg>&nbsp;based in</span>
     </div>
   </div>
 </div>
@@ -4356,6 +4367,27 @@ const TransparencyLog={
     document.getElementById('tlog-close-btn')?.addEventListener('click',()=>this.close());
     document.getElementById('tlog-clear-btn')?.addEventListener('click',()=>{this._entries=[];this.render();this.close();});
     this.render();
+  },
+  // Phase 5F: return the most recent log entry (or null) for inline cost stamps.
+  lastCost(){
+    const e=this._entries[0];
+    if(!e)return null;
+    return{usd:e.cost,inputTokens:e.inputTokens,outputTokens:e.outputTokens,model:e.model,label:e.label};
+  },
+  // Phase 5F: build a small cost-stamp HTML block. Detects sample/free-preview modes
+  // so we don't claim a real cost for a stubbed response.
+  costStampHtml(opts){
+    opts=opts||{};
+    const sample=(typeof SampleMode!=='undefined'&&SampleMode.isActive&&SampleMode.isActive());
+    const demo=(typeof DemoCounter!=='undefined'&&DemoCounter.isDemoCall&&DemoCounter.isDemoCall());
+    if(sample)return'<div class="ai-cost-stamp">Sample mode — no AI call</div>';
+    if(opts.freePreview||demo)return'<div class="ai-cost-stamp">Cost: $0.00 (free preview)</div>';
+    const c=this.lastCost();
+    if(!c)return'';
+    const est=opts.estimated?' · ~est':'';
+    const usd=this._fmtUSD(c.usd);
+    const model=this._fmtModel(c.model||'unknown');
+    return`<div class="ai-cost-stamp">Cost: ~${usd} · ${c.inputTokens} in / ${c.outputTokens} out · ${model}${est}</div>`;
   },
 };
 
@@ -6964,6 +6996,33 @@ const Modals={
     };
     document.getElementById('discard-all-btn').onclick=()=>this.close('canon-review');
   },
+  // Phase 5F: dedicated modal listing CANON lines the parser couldn't handle.
+  // Dynamically built so we don't need static HTML in the document body.
+  openCanonFailures(failures){
+    failures=failures||[];
+    const E=Utils.escHtml;
+    // Remove any prior instance to avoid duplicates on repeat opens.
+    document.getElementById('modal-canon-failures')?.remove();
+    const modal=document.createElement('div');
+    modal.className='modal modal--sm';
+    modal.id='modal-canon-failures';
+    modal.setAttribute('role','dialog');
+    modal.setAttribute('aria-modal','true');
+    const itemsHtml=failures.length
+      ? '<ul style="margin:0;padding:0 0 0 var(--space-4);list-style:disc;font-size:var(--text-body-sm);color:var(--color-text-muted);max-height:50vh;overflow:auto">'
+        +failures.map(f=>`<li style="margin-bottom:var(--space-2)"><div style="color:var(--color-amber,#d8a017);font-size:var(--text-label-sm);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px">${E(f.reason||'unrecognized')}</div><code style="font-family:var(--font-mono);font-size:var(--text-mono-sm);color:var(--color-text)">${E(f.line||'')}</code></li>`).join('')
+        +'</ul>'
+      : '<p style="color:var(--color-text-muted);font-size:var(--text-body-sm)">No failed lines recorded.</p>';
+    modal.innerHTML=`<div class="modal__header"><h2 class="modal__title">CANON parse failures (${failures.length})</h2><button class="modal__close" data-close="canon-failures">×</button></div>
+      <div class="modal__body">
+        <p style="font-size:var(--text-body-sm);color:var(--color-text-muted);margin:0 0 var(--space-3)">These lines from the AI response couldn't be parsed into your realm. Common causes: malformed prefix, missing pipe-separated fields, or stat name unknown to this nation.</p>
+        ${itemsHtml}
+      </div>
+      <div class="modal__footer"><button class="btn btn--primary" data-close="canon-failures">Close</button></div>`;
+    document.body.appendChild(modal);
+    modal.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>this.close('canon-failures')));
+    this.open('canon-failures');
+  },
   openContinuityCheck(ev){
     const E=Utils.escHtml;
     const n=State.get();
@@ -7683,7 +7742,7 @@ const Copilot={
       document.getElementById('cp-open-settings')?.addEventListener('click',()=>{
         Modals.open('settings');
         // Sync the key/model UI in Settings, otherwise the saved key won't display when this path opens settings
-        setTimeout(()=>{if(typeof Copilot._refreshKeySettingsUI==='function')Copilot._refreshKeySettingsUI();},80);
+        setTimeout(()=>{if(typeof Copilot._refreshKeySettingsUI==='function')Copilot._refreshKeySettingsUI();if(typeof Copilot._probeOllama==='function')Copilot._probeOllama();},80);
       });
       return;
     }
@@ -7719,6 +7778,11 @@ const Copilot={
         body.textContent=m.content||'';
       }
       wrap.appendChild(role);wrap.appendChild(body);
+      // Phase 5F: per-call inline cost stamp on completed assistant turns
+      if(m.role==='assistant'&&m._costStamp&&!m._streaming){
+        const stamp=document.createElement('div');stamp.innerHTML=m._costStamp;
+        if(stamp.firstChild)wrap.appendChild(stamp.firstChild);
+      }
       // Show-context disclosure (Phase 5C) — only for finished assistant turns with stored context.
       if(m.role==='assistant'&&m._sentContext&&!m._streaming){
         const det=document.createElement('details');
@@ -8338,11 +8402,32 @@ Keep responses concise and grounded. If you don't know, say so. If the user asks
         State._touch(targetNation.id);
         State.persist();
       }
-      // Log real streaming cost — Phase 5F preview (usage capture).
-      if(finalUsage&&typeof TransparencyLog!=='undefined'){
+      // Phase 5F STREAMING COST FIX: capture usage from final SSE chunk, or estimate
+      // (chars/4) if upstream omits it. Resolves the "$0.000 forever for real Copilot
+      // conversations" gap from Hunter's verified review.
+      let _lastUsage=finalUsage;
+      let _usageEstimated=false;
+      if(!_lastUsage){
+        // Fallback estimate — rough chars/4 token heuristic.
+        const inChars=messages.reduce((s,m)=>s+(typeof m.content==='string'?m.content.length:0),0);
+        const outChars=accumulated?accumulated.length:0;
+        _lastUsage={prompt_tokens:Math.round(inChars/4),completion_tokens:Math.round(outChars/4)};
+        _usageEstimated=true;
+      }
+      if(_lastUsage&&typeof TransparencyLog!=='undefined'){
         try{
-          TransparencyLog.push({label:TransparencyLog._pendingLabel||'Copilot chat',model,inputTokens:finalUsage.prompt_tokens||0,outputTokens:finalUsage.completion_tokens||0});
+          const baseLabel=TransparencyLog._pendingLabel||'Copilot Chat';
+          const label=_usageEstimated?baseLabel+' (~est)':baseLabel;
+          TransparencyLog.push({label,model,inputTokens:_lastUsage.prompt_tokens||0,outputTokens:_lastUsage.completion_tokens||0});
           TransparencyLog._pendingLabel=null;
+          // Attach cost stamp data to the message so renderMessages can show it inline.
+          if(targetNation){
+            const lastMsg=targetNation.copilotConversation[targetNation.copilotConversation.length-1];
+            if(lastMsg){
+              lastMsg._costStamp=TransparencyLog.costStampHtml({estimated:_usageEstimated});
+              State.persist();
+            }
+          }
         }catch(e){}
       }
       // Detect canon block in the final response and offer review
@@ -8355,6 +8440,10 @@ Keep responses concise and grounded. If you don't know, say so. If the user asks
                 Modals.openCanonReview(parsed.candidates,this._streamingNationId,parsed.failures||[]);
               }
             },300);
+          }else if(parsed&&parsed.failures&&parsed.failures.length){
+            // Phase 5F: failures with no candidates — surface to user via toast.
+            const fs=parsed.failures;
+            setTimeout(()=>showToast(`${fs.length} CANON line${fs.length===1?'':'s'} couldn't be parsed. Review?`,[{label:'Review',handler:()=>Modals.openCanonFailures(fs)}],8000),300);
           }
         }catch(e){/* parse failures are non-fatal */}
       }
@@ -9565,7 +9654,7 @@ const Tonight={
       html+=`<div class="tonight-section"><div class="tonight-section__label">Strong Start — Pick One</div><div id="tonight-strong-variants"></div></div>`;
     }else{
       const txt=typeof strongStart==='string'?strongStart:(strongStart?.variants?.[0]||'');
-      html+=`<div class="tonight-section"><div class="tonight-section__label">Strong Start — Read Aloud</div><div class="tonight-strong-start" style="white-space:pre-wrap">${Markdown.render(txt||'No opening generated.')}</div></div>`;
+      html+=`<div class="tonight-section"><div class="tonight-section__label">Strong Start — Read Aloud</div><div class="tonight-strong-start" style="white-space:pre-wrap">${Markdown.render(txt||'No opening generated.')}</div>${TransparencyLog.costStampHtml()}</div>`;
     }
 
     // Session Prep — error fallback with retry button if it failed.
@@ -9670,7 +9759,7 @@ const Tonight={
           if(section){
             const label=section.querySelector('.tonight-section__label');
             if(label)label.textContent='Strong Start \u2014 Read Aloud';
-            variantsCtr.outerHTML=`<div class="tonight-strong-start" style="white-space:pre-wrap">${Markdown.render(variant||'')}</div>`;
+            variantsCtr.outerHTML=`<div class="tonight-strong-start" style="white-space:pre-wrap">${Markdown.render(variant||'')}</div>${TransparencyLog.costStampHtml()}`;
           }
         },
       });
@@ -12178,6 +12267,7 @@ const RelationshipWeb = {
 
     const nodeColors={character:'#f59e0b',faction:'#6366f1',location:'#10b981'};
     const edgeColors={member:'rgba(245,158,11,0.5)',controls:'rgba(16,185,129,0.4)',based:'rgba(16,185,129,0.3)'};
+    const edgeLabels={member:'member of',controls:'controls',based:'based in'};
 
     const {x:tx,y:ty,scale:ts}=this._transform;
 
@@ -12190,6 +12280,15 @@ const RelationshipWeb = {
       const ax=a.x*ts+tx, ay=a.y*ts+ty, bx=b.x*ts+tx, by=b.y*ts+ty;
       const dash=e.type==='member'?'':' stroke-dasharray="4 3"';
       edgeSvg+=`<line x1="${ax.toFixed(1)}" y1="${ay.toFixed(1)}" x2="${bx.toFixed(1)}" y2="${by.toFixed(1)}" stroke="${edgeColors[e.type]||'#475569'}" stroke-width="1.2"${dash} opacity="${dimmed?0.1:0.8}" class="web-edge"/>`;
+      // Phase 5F: text label at edge midpoint, rotated to follow line angle (flipped if upside-down)
+      const lbl=edgeLabels[e.type];
+      if(lbl){
+        const mx=(ax+bx)/2, my=(ay+by)/2;
+        let ang=Math.atan2(by-ay,bx-ax)*180/Math.PI;
+        if(ang>90||ang<-90)ang+=180;
+        const op=dimmed?0.1:0.85;
+        edgeSvg+=`<text x="${mx.toFixed(1)}" y="${(my-4).toFixed(1)}" class="web-edge-label" opacity="${op}" transform="rotate(${ang.toFixed(1)}, ${mx.toFixed(1)}, ${my.toFixed(1)})">${lbl}</text>`;
+      }
     });
 
     this._nodes.forEach(n=>{
@@ -12656,7 +12755,7 @@ function bindEventListeners(){
   });
 
   // Settings
-  document.getElementById('settings-btn')?.addEventListener('click',()=>{Modals.open('settings');Copilot._refreshKeySettingsUI&&Copilot._refreshKeySettingsUI();const tg=document.getElementById('toggle-gm-mode');if(tg)tg.classList.toggle('is-on',!!State.data?.meta?.settings?.gmMode);});
+  document.getElementById('settings-btn')?.addEventListener('click',()=>{Modals.open('settings');Copilot._refreshKeySettingsUI&&Copilot._refreshKeySettingsUI();Copilot._probeOllama&&Copilot._probeOllama();const tg=document.getElementById('toggle-gm-mode');if(tg)tg.classList.toggle('is-on',!!State.data?.meta?.settings?.gmMode);});
 
   // Undo button
   document.getElementById('undo-btn')?.addEventListener('click',()=>{
@@ -12716,9 +12815,20 @@ function bindEventListeners(){
       setTimeout(()=>Modals.open('sweep'),300);
       return;
     }
-    if(!parsed.candidates.length&&parsed.failures.length){showToast('No canon candidates parsed (only unrecognized lines).');return;}
+    if(!parsed.candidates.length&&parsed.failures.length){
+      // Phase 5F: surface parse failures via toast → dedicated modal.
+      const fs=parsed.failures;
+      showToast(`${fs.length} CANON line${fs.length===1?'':'s'} couldn't be parsed. Review?`,[{label:'Review',handler:()=>Modals.openCanonFailures(fs)}],8000);
+      return;
+    }
     Modals.close('paste');
     setTimeout(()=>Modals.openCanonReview(parsed.candidates,nid,parsed.failures),300);
+    // Phase 5F: also toast when failures exist alongside candidates so the user knows
+    // some lines were dropped even if they accept everything in the review modal.
+    if(parsed.failures&&parsed.failures.length){
+      const fs=parsed.failures;
+      setTimeout(()=>showToast(`${fs.length} CANON line${fs.length===1?'':'s'} couldn't be parsed. Review?`,[{label:'Review',handler:()=>Modals.openCanonFailures(fs)}],8000),600);
+    }
   });
 
   // Process swept response
@@ -12729,6 +12839,11 @@ function bindEventListeners(){
     const parsed=Parse.canonBlock(text,{detail:true});
     Modals.close('sweep');
     setTimeout(()=>Modals.openCanonReview(parsed.candidates||[],nid,parsed.failures||[]),300);
+    // Phase 5F: surface parse failures via toast → dedicated modal.
+    if(parsed&&parsed.failures&&parsed.failures.length){
+      const fs=parsed.failures;
+      setTimeout(()=>showToast(`${fs.length} CANON line${fs.length===1?'':'s'} couldn't be parsed. Review?`,[{label:'Review',handler:()=>Modals.openCanonFailures(fs)}],8000),600);
+    }
   });
 
   // Copy sweep prompt (with file:// fallback)
@@ -13153,6 +13268,41 @@ function bindEventListeners(){
     Copilot.renderMessages();
     showToast('API key cleared.',[],2500);
   });
+  // Phase 5F: prominent one-click "Delete my key"
+  document.getElementById('copilot-key-delete')?.addEventListener('click',()=>{
+    if(!confirm("Delete your API key? You'll need to paste it again to use the Copilot."))return;
+    State.setSetting('copilotKey',null);
+    const input=document.getElementById('copilot-key-input');
+    if(input){input.value='';input.type='password';}
+    const eyeIcon=document.getElementById('copilot-key-eye-icon');
+    if(eyeIcon)eyeIcon.textContent='visibility';
+    Copilot._refreshKeySettingsUI();
+    Copilot.updateStatus();
+    Copilot.renderMessages();
+    showToast('API key deleted.',[],3000);
+  });
+  // Phase 5F: eye-icon toggle (mask/unmask the key field)
+  document.getElementById('copilot-key-eye')?.addEventListener('click',()=>{
+    const input=document.getElementById('copilot-key-input');
+    const icon=document.getElementById('copilot-key-eye-icon');
+    const btn=document.getElementById('copilot-key-eye');
+    if(!input||!icon)return;
+    // If field still shows masked bullets, swap to the actual saved key so reveal is meaningful.
+    if(input.type==='password'){
+      const saved=State.data?.meta?.settings?.copilotKey;
+      if(saved&&input.value.startsWith('••'))input.value=saved;
+      input.type='text';
+      icon.textContent='visibility_off';
+      if(btn)btn.title='Hide key';
+    }else{
+      input.type='password';
+      icon.textContent='visibility';
+      if(btn)btn.title='Show key';
+      // Re-mask on hide if a key is saved
+      const k=State.data?.meta?.settings?.copilotKey;
+      if(k)input.value='••••••••••••••••••••'+k.slice(-4);
+    }
+  });
   // Model select
   document.getElementById('copilot-model-select')?.addEventListener('change',(e)=>{
     State.setSetting('copilotModel',e.target.value);
@@ -13190,21 +13340,52 @@ function bindEventListeners(){
     showToast('Ollama settings saved.',[],2500);
   });
 
+  // Phase 5F: one-shot Ollama auto-detect probe (called when Settings opens).
+  Copilot._probeOllama=async function(){
+    if(this._ollamaProbed)return;
+    this._ollamaProbed=true;
+    const url=(State.data?.meta?.settings?.ollamaUrl||'http://localhost:11434').replace(/\/$/,'')+'/api/tags';
+    try{
+      const opts={};
+      if(typeof AbortSignal!=='undefined'&&AbortSignal.timeout){opts.signal=AbortSignal.timeout(800);}
+      const res=await fetch(url,opts);
+      if(!res.ok)return;
+      const data=await res.json();
+      if(!Array.isArray(data.models))return;
+      const badge=document.getElementById('ollama-detected-badge');
+      if(badge){badge.textContent=`Ollama detected ✓ — ${data.models.length} model${data.models.length===1?'':'s'}`;badge.style.display='inline';}
+      let dl=document.getElementById('ollama-models-datalist');
+      if(!dl){
+        dl=document.createElement('datalist');
+        dl.id='ollama-models-datalist';
+        document.body.appendChild(dl);
+        const input=document.getElementById('ollama-model-input');
+        if(input)input.setAttribute('list','ollama-models-datalist');
+      }
+      dl.innerHTML=data.models.map(m=>`<option value="${Utils.escHtml(m.name)}">`).join('');
+    }catch(e){/* silent — Ollama not running */}
+  };
   // Helper to update the Settings UI (key indicator, button visibility)
   Copilot._refreshKeySettingsUI=function(){
     const input=document.getElementById('copilot-key-input');
     const status=document.getElementById('copilot-key-status');
     const clear=document.getElementById('copilot-key-clear');
+    const del=document.getElementById('copilot-key-delete');
+    const eyeIcon=document.getElementById('copilot-key-eye-icon');
     const k=State.data?.meta?.settings?.copilotKey;
     if(k){
       // Always re-mask to the saved value when this UI refreshes.
-      if(input)input.value='••••••••••••••••••••'+k.slice(-4);
+      if(input){input.value='••••••••••••••••••••'+k.slice(-4);input.type='password';}
+      if(eyeIcon)eyeIcon.textContent='visibility';
       if(status){status.textContent=`Saved (ends in …${k.slice(-4)})`;status.style.color='var(--color-thriving)';}
       if(clear)clear.style.display='inline-block';
+      if(del)del.style.display='inline-block';
     }else{
-      if(input)input.value='';
+      if(input){input.value='';input.type='password';}
+      if(eyeIcon)eyeIcon.textContent='visibility';
       if(status){status.textContent='No key saved';status.style.color='var(--color-text-muted)';}
       if(clear)clear.style.display='none';
+      if(del)del.style.display='none';
     }
     // Sync model select to current setting
     const modelSel=document.getElementById('copilot-model-select');
@@ -13672,6 +13853,7 @@ const EncounterBuilder={
       ${result.complication?`<div class="eb-section"><div class="eb-section__label">Complication</div><div class="eb-section__body eb-section__body--highlight">${E(result.complication)}</div></div>`:''}
       ${result.tactical_objective?`<div class="eb-section"><div class="eb-section__label">Tactical Objective</div><div class="eb-section__body">${E(result.tactical_objective)}</div></div>`:''}
       ${result.loot?`<div class="eb-section"><div class="eb-section__label">Loot / Reward</div><div class="eb-section__body">${E(result.loot)}</div></div>`:''}
+      ${TransparencyLog.costStampHtml()}
     `;
     const resultEl=document.getElementById('eb-result');
     if(resultEl)resultEl.classList.add('is-visible');
@@ -13920,11 +14102,22 @@ async function bootstrap(){
         if(!parsed||!parsed.candidates||!parsed.candidates.length){
           showToast('Could not extract structured changes. Try adding more detail to your notes.');
           if(status)status.textContent='No changes extracted.';
+          // Phase 5F: if there were failures, also offer the review modal so the
+          // user can see exactly what the parser couldn't handle.
+          if(parsed&&parsed.failures&&parsed.failures.length){
+            const fs=parsed.failures;
+            setTimeout(()=>showToast(`${fs.length} CANON line${fs.length===1?'':'s'} couldn't be parsed. Review?`,[{label:'Review',handler:()=>Modals.openCanonFailures(fs)}],8000),600);
+          }
           return;
         }
         if(typeof Modals!=='undefined'){
           Modals.close();
           setTimeout(()=>Modals.openCanonReview(parsed.candidates,State.data.meta.activeNationId,parsed.failures||[]),300);
+          // Phase 5F: surface parse failures via toast → dedicated modal.
+          if(parsed.failures&&parsed.failures.length){
+            const fs=parsed.failures;
+            setTimeout(()=>showToast(`${fs.length} CANON line${fs.length===1?'':'s'} couldn't be parsed. Review?`,[{label:'Review',handler:()=>Modals.openCanonFailures(fs)}],8000),600);
+          }
         }
         if(status)status.textContent='';
         if(document.getElementById('decipher-input'))document.getElementById('decipher-input').value='';
