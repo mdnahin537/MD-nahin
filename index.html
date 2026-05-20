@@ -2259,7 +2259,19 @@ SECTION 7: MOTION & STATE STYLES
 .search-result-name{font-size:13px;color:#e2e8f0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .search-result-meta{font-size:10px;color:#475569;white-space:nowrap}
 .search-empty{padding:32px 18px;text-align:center;color:#334155;font-size:13px}
+
+/* Phase 5A: Turnstile + front-door demo output */
+.fd-turnstile{display:flex;justify-content:center;margin:var(--space-4) 0;min-height:65px}
+.fd-turnstile:empty::before{content:'Loading captcha…';font-size:var(--text-label-sm);color:var(--color-text-faint)}
+.fd-demo{margin-top:var(--space-6);padding:var(--space-5);border:1px solid var(--color-border-hairline);border-radius:var(--radius-md,4px);background:rgba(255,185,100,0.025);display:none}
+.fd-demo__loading{font-style:italic;color:var(--color-text-muted);font-size:var(--text-body-sm);text-align:center;padding:var(--space-4)}
+.fd-demo__result{font-size:var(--text-body-sm);line-height:1.65;color:var(--color-ink);white-space:pre-wrap}
+.fd-demo__result strong{color:var(--ember-color)}
+.fd-demo__error{color:var(--color-warning,#f87171);font-size:var(--text-body-sm);text-align:center;padding:var(--space-4)}
+.fd-demo__footer{margin-top:var(--space-4);padding-top:var(--space-3);border-top:1px solid var(--color-border-hairline);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--space-3)}
+.fd-demo__quota{font-size:var(--text-label-sm);color:var(--color-text-muted);letter-spacing:.06em}
 </style>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 </head>
 <body>
 <!--
@@ -3552,14 +3564,17 @@ SECTION 9: DATA & STATE
 /* ══════════════════════════════════════════════════════════════════════
    PHASE 4 — LICENSE GATE & AUTO-SAVE
    ══════════════════════════════════════════════════════════════════════ */
-const DEMO_API_KEY=''; // Hunter: paste your Claude/OpenRouter key here before launch
+// Phase 5A: DEMO_API_KEY removed — Worker now holds the OpenRouter key server-side.
+// Free-demo requests go through WORKER_URL + '/api/demo/generate' with Turnstile.
 const LS_PRODUCT_ID=''; // Hunter: paste Lemon Squeezy product_id after creating the product
-const WORKER_URL='https://rw-license.realmwright.workers.dev'; // Cloudflare Worker for itch.io
+const WORKER_URL='https://rw-license.realmwright.workers.dev'; // Cloudflare Worker
+const TURNSTILE_SITEKEY=''; // Hunter: paste Cloudflare Turnstile site key (public, safe to commit)
 const DEMO_MESSAGE_LIMIT=5;
 const AUTO_SAVE_THRESHOLD=20;
 const IDB_KEY_LICENSE='rw_license_v1';
 const IDB_KEY_BACKUP_HANDLE='rw_backup_handle';
 const IDB_KEY_DEMO_USES='rw_demo_uses';
+const IDB_KEY_FINGERPRINT='rw_device_fp';
 
 const SCHEMA_VERSION='2.4.1';
 const DEFAULT_SETTINGS={theme:'ember',respectMotionPref:true,showForecasts:false,showSecrets:false,onboardingComplete:false,copilotProvider:'openrouter',copilotModel:'anthropic/claude-sonnet-latest',copilotKey:null,ollamaUrl:'http://localhost:11434',ollamaModel:'llama3.1',copilotScope:'standard',copilotAutoApply:false,gmMode:false};
@@ -4428,6 +4443,27 @@ function Term(key){
   }catch(e){return key;}
 }
 function isGMMode(){return !!State.data?.meta?.settings?.gmMode;}
+// Device fingerprint — anonymous hash of UA + screen + timezone. Not PII.
+// Used by both LicenseGate (3-device cap) and Demo (no PII demo identity).
+async function deviceFingerprint(){
+  try{
+    const cached=await IDB.get(IDB_KEY_FINGERPRINT);
+    if(cached&&typeof cached==='string'&&cached.length>=16)return cached;
+  }catch(e){}
+  const raw=[
+    navigator.userAgent||'',
+    String(screen.width||0)+'x'+String(screen.height||0),
+    String(screen.colorDepth||0),
+    Intl.DateTimeFormat().resolvedOptions().timeZone||'',
+    navigator.language||'',
+  ].join('|');
+  let hash=0;
+  for(let i=0;i<raw.length;i++){hash=((hash<<5)-hash+raw.charCodeAt(i))|0;}
+  const fp=('fp_'+Math.abs(hash).toString(16).padStart(8,'0')+Math.abs(hash*31).toString(16).padStart(8,'0')).slice(0,20);
+  try{await IDB.set(IDB_KEY_FINGERPRINT,fp);}catch(e){}
+  return fp;
+}
+
 const LicenseGate={
   _data:null,
   async init(){
@@ -4439,13 +4475,25 @@ const LicenseGate={
   _detectPlatform(key){
     return/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(key.trim())?'lemonsqueezy':'itchio';
   },
-  _clearDemoKey(){
-    // Post-activation: scrub Hunter's demo key from settings so licensed users
-    // don't keep burning the shared API budget. They'll enter their own key in Settings.
-    if(DEMO_API_KEY&&State.data?.meta?.settings?.copilotKey===DEMO_API_KEY){
-      State.data.meta.settings.copilotKey=null;
-      State.persistNow();
-    }
+  async _registerDeviceWithWorker(key){
+    // Worker-side device cap (Phase 5A). Falls open if Worker/KV unreachable
+    // so a temporary outage doesn't lock paying users out — the LS API call
+    // remains the source of truth for "is this key real".
+    try{
+      const fp=await deviceFingerprint();
+      const res=await fetch(WORKER_URL+'/api/license/activate',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({key,fingerprint:fp}),
+      });
+      if(!res.ok){
+        const j=await res.json().catch(()=>({}));
+        if(res.status===403)return{ok:false,error:j.error||'Device limit reached.'};
+        // Other errors → fall open
+        return{ok:true,warning:'Worker unreachable; device cap not enforced.'};
+      }
+      return{ok:true};
+    }catch(e){return{ok:true,warning:'Worker unreachable; device cap not enforced.'};}
   },
   async activate(key){
     const platform=this._detectPlatform(key);
@@ -4453,32 +4501,45 @@ const LicenseGate={
   },
   async _activateLS(key){
     try{
+      // 1) Verify with Lemon Squeezy directly (source of truth for "is this key real")
       const body=new URLSearchParams({license_key:key,instance_name:'RealmWright-'+Date.now()});
       const res=await fetch('https://api-cors-anywhere.lemonsqueezy.com/v1/licenses/activate',
         {method:'POST',headers:{Accept:'application/json','Content-Type':'application/x-www-form-urlencoded'},body});
       const json=await res.json();
-      if(json.activated){
-        this._data={key,instanceId:json.instance?.id||null,platform:'lemonsqueezy',activatedAt:Date.now(),valid:true};
-        await IDB.set(IDB_KEY_LICENSE,this._data);
-        this._clearDemoKey();
-        document.dispatchEvent(new CustomEvent('license:changed'));
-        return{success:true};
+      if(!json.activated){
+        return{success:false,error:json.error||'Activation failed.'};
       }
-      return{success:false,error:json.error||'Activation failed.'};
+      // 2) Register device with our Worker (3-device cap)
+      const reg=await this._registerDeviceWithWorker(key);
+      if(!reg.ok){
+        // Roll back the LS activation so the device cap is honoured
+        try{
+          const rb=new URLSearchParams({license_key:key,instance_id:json.instance?.id||''});
+          await fetch('https://api-cors-anywhere.lemonsqueezy.com/v1/licenses/deactivate',
+            {method:'POST',headers:{Accept:'application/json','Content-Type':'application/x-www-form-urlencoded'},body:rb});
+        }catch(e){}
+        return{success:false,error:reg.error};
+      }
+      this._data={key,instanceId:json.instance?.id||null,platform:'lemonsqueezy',activatedAt:Date.now(),valid:true};
+      await IDB.set(IDB_KEY_LICENSE,this._data);
+      document.dispatchEvent(new CustomEvent('license:changed'));
+      return{success:true};
     }catch(e){return{success:false,error:'Network error — check your connection.'};}
   },
   async _activateItchio(key){
     try{
       const res=await fetch(WORKER_URL+'/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key})});
       const json=await res.json();
-      if(json.valid){
-        this._data={key,instanceId:null,platform:'itchio',activatedAt:Date.now(),valid:true};
-        await IDB.set(IDB_KEY_LICENSE,this._data);
-        this._clearDemoKey();
-        document.dispatchEvent(new CustomEvent('license:changed'));
-        return{success:true};
+      if(!json.valid){
+        return{success:false,error:json.error||'Key not recognised on itch.io.'};
       }
-      return{success:false,error:json.error||'Key not recognised on itch.io.'};
+      // Register device for itch.io keys too
+      const reg=await this._registerDeviceWithWorker(key);
+      if(!reg.ok)return{success:false,error:reg.error};
+      this._data={key,instanceId:null,platform:'itchio',activatedAt:Date.now(),valid:true};
+      await IDB.set(IDB_KEY_LICENSE,this._data);
+      document.dispatchEvent(new CustomEvent('license:changed'));
+      return{success:true};
     }catch(e){return{success:false,error:'Could not reach validation server.'};}
   },
   async _backgroundValidate(){
@@ -4513,16 +4574,67 @@ const LicenseGate={
   }
 };
 
+// DemoCounter is now a client-side UX hint only. Real enforcement lives in the
+// Worker (per-IP daily cap in Cloudflare KV). Resetting rw_demo_uses in DevTools
+// is harmless — the Worker still rejects after DEMO_PER_IP_DAILY.
 const DemoCounter={
   _uses:0,
   async init(){
     try{const s=await IDB.get(IDB_KEY_DEMO_USES);this._uses=typeof s==='number'?s:0;}catch(e){this._uses=0;}
   },
-  hasKey(){return!!(DEMO_API_KEY);},
+  // Demo is available whenever Turnstile is configured. Worker checks the actual quota.
+  hasKey(){return !!TURNSTILE_SITEKEY;},
   left(){return Math.max(0,DEMO_MESSAGE_LIMIT-this._uses);},
   canUse(){return this.hasKey()&&this._uses<DEMO_MESSAGE_LIMIT;},
   async consume(){this._uses++;try{await IDB.set(IDB_KEY_DEMO_USES,this._uses);}catch(e){}},
-  key(){return DEMO_API_KEY;},
+};
+
+// Demo proxy — calls the Worker, which holds the OpenRouter key.
+// Browser never sees the key; abort-and-retry doesn't bypass the cap.
+const Demo={
+  _turnstileWidgetId:null,
+  _turnstileToken:null,
+  // Render the Turnstile widget into a container element. Called when the
+  // demo UI becomes visible (front door or Tonight Mode unlocked path).
+  renderTurnstile(containerId){
+    if(!TURNSTILE_SITEKEY){return false;}
+    if(!window.turnstile){return false;}
+    const el=document.getElementById(containerId);
+    if(!el){return false;}
+    if(this._turnstileWidgetId!==null){try{window.turnstile.reset(this._turnstileWidgetId);}catch(e){}return true;}
+    try{
+      this._turnstileWidgetId=window.turnstile.render(el,{
+        sitekey:TURNSTILE_SITEKEY,
+        size:'flexible',
+        callback:(token)=>{Demo._turnstileToken=token;},
+        'error-callback':()=>{Demo._turnstileToken=null;},
+        'expired-callback':()=>{Demo._turnstileToken=null;},
+      });
+      return true;
+    }catch(e){return false;}
+  },
+  hasToken(){return !!this._turnstileToken;},
+  // POST to Worker /api/demo/generate. Returns {ok, content, usage, remaining_today} or {error}.
+  async proxyRequest(messages,model){
+    if(!this._turnstileToken){return{error:'Please complete the captcha before generating.'};}
+    try{
+      const res=await fetch(WORKER_URL+'/api/demo/generate',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          turnstileToken:this._turnstileToken,
+          messages,
+          model:model||'anthropic/claude-haiku-latest',
+        }),
+      });
+      const data=await res.json();
+      // Reset Turnstile token — single-use
+      this._turnstileToken=null;
+      if(this._turnstileWidgetId!==null&&window.turnstile){try{window.turnstile.reset(this._turnstileWidgetId);}catch(e){}}
+      if(!res.ok){return{error:data.error||'Demo request failed.',status:res.status};}
+      return data;
+    }catch(e){return{error:'Could not reach demo server. Try Sample Mode below.'};}
+  },
 };
 
 const AutoSave={
@@ -8374,6 +8486,24 @@ const FrontDoor={
     setTimeout(()=>{const ta=document.getElementById('fd-prompt');if(ta)ta.focus();},200);
     this._startPlaceholderRotation();
     this._loadRecent();
+    // Phase 5A: render Turnstile only for unlicensed visitors who don't have their own key
+    const turnstileEl=document.getElementById('fd-turnstile');
+    const demoOut=document.getElementById('fd-demo-output');
+    if(demoOut)demoOut.style.display='none';
+    const licensed=(typeof LicenseGate!=='undefined'&&LicenseGate.isActive())||(typeof Copilot!=='undefined'&&Copilot.isConfigured());
+    if(licensed){
+      if(turnstileEl)turnstileEl.style.display='none';
+    }else if(turnstileEl&&DemoCounter.hasKey()){
+      turnstileEl.style.display='flex';
+      // Wait briefly for the Turnstile script to load
+      const tryRender=(attempt=0)=>{
+        if(window.turnstile){Demo.renderTurnstile('fd-turnstile');}
+        else if(attempt<10){setTimeout(()=>tryRender(attempt+1),300);}
+      };
+      tryRender();
+    }else if(turnstileEl){
+      turnstileEl.style.display='none';
+    }
   },
 
   close(){
@@ -8392,7 +8522,7 @@ const FrontDoor={
   bind(){
     if(this._bound)return;
     this._bound=true;
-    document.getElementById('fd-generate')?.addEventListener('click',()=>this._handleGenerate());
+    document.getElementById('fd-generate-btn')?.addEventListener('click',()=>this._handleGenerate());
     document.getElementById('fd-sample')?.addEventListener('click',()=>this._handleSample());
     document.getElementById('fd-activate')?.addEventListener('click',()=>this._handleActivate());
     document.getElementById('fd-style-group')?.addEventListener('click',e=>{
@@ -8425,6 +8555,7 @@ const FrontDoor={
     const style=this._getSelectedStyle();
     const prefixed=`[${style}] ${prompt}`;
     if(typeof Copilot!=='undefined'&&Copilot.isConfigured()){
+      // Licensed (or BYO-key) user — full Tonight Mode
       this.close();
       if(typeof Tonight!=='undefined'){
         Tonight.open();
@@ -8432,27 +8563,62 @@ const FrontDoor={
         if(typeof Tonight.generate==='function')setTimeout(()=>Tonight.generate(),80);
       }
       await this._saveRecent({prompt,style});
+    }else if(DemoCounter.canUse()){
+      // Unlicensed visitor — single-shot demo via Worker proxy (Turnstile-gated).
+      // Output renders inline. To unlock Tonight Mode + Copilot, they need a license or BYO key.
+      await this._runDemoGeneration(prefixed,prompt,style);
+    }else if(DemoCounter.hasKey()){
+      // Demo configured but local quota hit (client-side hint only — Worker is source of truth)
+      showToast('You\'ve used your free previews on this device. Activate for full access or try Sample Mode.',
+        [{label:'Activate',handler:()=>LicenseGateUI.openModal()},{label:'Sample Mode',handler:()=>{this.close();SampleMode.openPicker();}}],8000);
     }else{
-      // Phase 4: 5 free AI messages via demo key, then gate
-      if(DemoCounter.canUse()){
-        if(!State.data.meta.settings)State.data.meta.settings={};
-        State.data.meta.settings.copilotKey=DemoCounter.key();
-        await DemoCounter.consume();
-        this.close();
-        if(typeof Tonight!=='undefined'){
-          Tonight.open();
-          const inp=document.getElementById('tonight-input');if(inp)inp.value=prefixed;
-          if(typeof Tonight.generate==='function')setTimeout(()=>Tonight.generate(),80);
-        }
-        await this._saveRecent({prompt,style});
-        const left=DemoCounter.left();
-        if(left>0)showToast(left+' free preview message'+(left===1?'':'s')+' remaining.',[{label:'Get full access',handler:()=>LicenseGateUI.openModal()}],5000);
-        else showToast('Free preview used — activate your license to continue.',[{label:'Activate',handler:()=>LicenseGateUI.openModal()}],8000);
-      }else{
-        LicenseGateUI.openModal();
-        showToast('Activate RealmWright to generate realms and use all features.',[{label:'Activate',handler:()=>LicenseGateUI.openModal()}],6000);
-      }
+      // Demo not configured at all — route to activation
+      LicenseGateUI.openModal();
+      showToast('Activate RealmWright to generate realms and use all features.',[{label:'Activate',handler:()=>LicenseGateUI.openModal()}],6000);
     }
+  },
+
+  // Single-shot demo: one prompt → one AI response → inline preview + "Activate for full" CTA.
+  // Does NOT open Tonight Mode (which would need the user's own API key for follow-up calls).
+  async _runDemoGeneration(prefixed,prompt,style){
+    const ta=document.getElementById('fd-prompt');
+    const btn=document.getElementById('fd-generate-btn');
+    const outBox=document.getElementById('fd-demo-output');
+    if(!Demo.hasToken()){
+      showToast('Please complete the captcha first.',[],4000);
+      return;
+    }
+    if(btn){btn.disabled=true;btn.textContent='Generating…';}
+    if(outBox){outBox.style.display='block';outBox.innerHTML='<div class="fd-demo__loading">The realm is taking shape…</div>';}
+    const sys=`You are RealmWright's demo Copilot. The visitor is exploring whether to buy. Give them a vivid 200-word taste of what a real session prep looks like — opening scene + one immediate hook + one twist. Style: ${style}. End with a single line: "(This is a free preview. Activate to unlock Tonight Mode, Solo Mode, and the full Copilot.)"`;
+    const result=await Demo.proxyRequest([
+      {role:'system',content:sys},
+      {role:'user',content:prompt},
+    ],'anthropic/claude-haiku-latest');
+    if(btn){btn.disabled=false;btn.textContent='Generate session';}
+    if(result.error){
+      if(outBox)outBox.innerHTML=`<div class="fd-demo__error">${Utils.escHtml(result.error)}</div>`;
+      // Re-render captcha for the next attempt
+      Demo.renderTurnstile('fd-turnstile');
+      return;
+    }
+    await DemoCounter.consume();
+    await this._saveRecent({prompt,style});
+    const content=result.content||'(no content returned)';
+    const safe=(typeof Markdown!=='undefined'&&Markdown.render)?Markdown.render(content):Utils.escHtml(content).replace(/\n/g,'<br>');
+    const remaining=typeof result.remaining_today==='number'?result.remaining_today:null;
+    if(outBox){
+      outBox.innerHTML=`
+        <div class="fd-demo__result">${safe}</div>
+        <div class="fd-demo__footer">
+          ${remaining!==null?`<span class="fd-demo__quota">${remaining} free preview${remaining===1?'':'s'} left today</span>`:''}
+          <button class="btn btn--primary btn--sm" type="button" data-fd-activate="true">Activate for full Tonight Mode</button>
+        </div>`;
+      const ab=outBox.querySelector('[data-fd-activate]');
+      if(ab)ab.addEventListener('click',()=>LicenseGateUI.openModal());
+    }
+    // Re-render the captcha so the visitor can try another prompt
+    setTimeout(()=>Demo.renderTurnstile('fd-turnstile'),200);
   },
 
   _handleSample(){
@@ -13139,7 +13305,11 @@ window.__rwClearDevTheme=function(){localStorage.removeItem('rw_dev_theme');loca
         <button type="button" class="char-status-pill" data-style="explore" aria-pressed="false">Just exploring</button>
       </div>
     </div>
-    <button type="button" class="btn btn--primary fd-generate-btn" id="fd-generate">Generate session</button>
+    <!-- Phase 5A: Turnstile captcha for unlicensed visitors. Auto-hides for licensed users via FrontDoor.open(). -->
+    <div class="fd-turnstile" id="fd-turnstile" aria-label="Free-preview verification"></div>
+    <button type="button" class="btn btn--primary fd-generate-btn" id="fd-generate-btn">Generate session</button>
+    <!-- Phase 5A: Inline demo output (single-shot preview for unlicensed visitors). -->
+    <div class="fd-demo" id="fd-demo-output" aria-live="polite"></div>
     <div class="fd-divider" role="separator" aria-hidden="true">
       <hr class="fd-divider__rule">
       <span class="fd-divider__label">or</span>

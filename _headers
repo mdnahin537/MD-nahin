@@ -1,0 +1,21 @@
+# Cloudflare Pages headers for realmwright.pages.dev
+#
+# Verifies the privacy claims on the storefront: a user in DevTools → Network can
+# confirm RealmWright only talks to the four domains listed in connect-src below.
+#
+# connect-src allowlist (the only network destinations the app may reach):
+#   'self'                         — same-origin fetches (none currently, but safe)
+#   https://openrouter.ai          — licensed users' direct AI calls
+#   https://*.workers.dev          — RealmWright Worker (license + demo proxy)
+#   http://localhost:11434         — Ollama (local model, opt-in)
+#   http://127.0.0.1:11434         — Ollama (IPv4 alt)
+#   https://challenges.cloudflare.com — Turnstile siteverify (demo CAPTCHA)
+#   https://api.lemonsqueezy.com   — Lemon Squeezy license API
+#   https://api-cors-anywhere.lemonsqueezy.com — LS official CORS proxy
+
+/*
+  Content-Security-Policy: default-src 'self'; connect-src 'self' https://openrouter.ai https://*.workers.dev http://localhost:11434 http://127.0.0.1:11434 https://challenges.cloudflare.com https://api.lemonsqueezy.com https://api-cors-anywhere.lemonsqueezy.com; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; frame-src https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), interest-cohort=()
