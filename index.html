@@ -1838,6 +1838,11 @@ body.theme-ember .sc-panel__title{color:var(--ember-color)}
 .cp-queue__btn--approve{border-color:var(--color-event-economic);color:var(--color-event-economic)}
 .cp-queue__btn--reject{border-color:var(--color-event-military);color:var(--color-event-military)}
 .cp-queue__btn:hover{filter:brightness(1.1)}
+/* Phase 5D: Variants picker */
+.variants-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--space-3);margin:var(--space-4) 0}
+.variants-card{padding:var(--space-4);border:1px solid var(--color-border-hairline);border-radius:var(--radius-md,4px);background:rgba(255,185,100,.02);display:flex;flex-direction:column;gap:var(--space-3)}
+.variants-card__body{font-size:var(--text-body-sm);line-height:1.6;color:var(--color-ink);flex:1}
+.variants-dice{display:block;margin:var(--space-2) auto 0}
 .copilot-panel__compose{flex-shrink:0;padding:var(--space-3) var(--space-4);
   border-top:.5px solid var(--color-gold-pale);background:var(--color-parchment-warm)}
 .copilot-panel__compose-row{display:flex;gap:var(--space-2);align-items:flex-end}
@@ -3772,7 +3777,7 @@ const PROMPTS=[
   {id:'r29',name:'The Chapter Opener Bank',tier:'A',section:'reference',cat:'Cultural',statesMatched:null,archetypes:null,minDepth:null,desc:'Generate five opening paragraphs — political, intimate, historical, sensory, dialogic.',vars:['[STATE]','[CHRONICLE_FULL]'],tpl:'Nation state: [STATE]\nChronicle: [CHRONICLE_FULL]\n\nFive opening paragraphs:\nPOLITICAL OPENING / INTIMATE OPENING / HISTORICAL OPENING / SENSORY OPENING / DIALOGIC OPENING'},
   {id:'r30',name:'The Glossary Builder',tier:'A',section:'reference',cat:'Political',statesMatched:null,archetypes:null,minDepth:null,desc:'Compile an alphabetized glossary of all proper nouns — people, factions, institutions, places, events, artifacts.',vars:['[STATE]','[CHRONICLE_FULL]','[CHARACTERS]','[FACTIONS]'],tpl:'Nation state: [STATE]\n\nCompile glossary:\nPEOPLE / FACTIONS / INSTITUTIONS / PLACES / EVENTS / ARTIFACTS\n\nGAPS — undefined entities.\nINCONSISTENCIES — varying descriptions.'},
 
-  {id:'r72',name:'Strong Start Generator',tier:'S',section:'gm',cat:'Political',statesMatched:null,archetypes:null,minDepth:null,desc:'Evocative 60-100 word read-aloud paragraph opening tonight\'s session with immediate tension or revelation. Used by Tonight Mode and GM toolbar.',vars:['[STATE]','[SITUATION]'],tpl:'Nation state: [STATE]\n\nSituation: [SITUATION]\n\nWrite the strong start paragraph. Present tense, second-person plural ("you"). Sensory detail. Establish the scene and one immediate hook. Do not reveal the central mystery. Do not introduce all NPCs at once.'},
+  {id:'r72',name:'Strong Start Generator',tier:'S',section:'gm',cat:'Political',statesMatched:null,archetypes:null,minDepth:null,desc:'Three distinct 60-100 word read-aloud strong-start paragraphs. GM picks one (or rolls a d3). Used by Tonight Mode and GM toolbar.',vars:['[STATE]','[SITUATION]'],tpl:'Nation state: [STATE]\n\nSituation: [SITUATION]\n\nWrite three distinct strong-start paragraphs. Present tense, second-person plural ("you"). Sensory detail. Establish the scene and one immediate hook. Do not reveal the central mystery. Do not introduce all NPCs at once.\n\nReturn exactly 3 distinct variants. Format: JSON {"variants":["<variant 1>","<variant 2>","<variant 3>"]}. Each variant must be meaningfully different — not three rewordings of the same idea. At least one variant should be uncomfortable or unexpected, pushing the GM out of obvious choices.'},
   {id:'r73',name:'Secrets & Clues Generator',tier:'S',section:'gm',cat:'Political',statesMatched:null,archetypes:null,minDepth:null,desc:'Generate 10 single-sentence world facts ("secrets and clues") the players might discover. Each abstracted from method of discovery.',vars:['[STATE]'],tpl:'Nation state: [STATE]\n\nGenerate 10 secrets and clues — short single-sentence facts the players might discover. Each should be a different aspect of the world. Do not specify how players learn it.'},
   // D1 fix: r74–r81 had tpl:'' which caused Fill&Copy to produce only the safety preamble.
   // These prompts are API-only when using the Copilot, but users without a key see Fill&Copy.
@@ -3786,7 +3791,7 @@ const PROMPTS=[
   {id:'r80',name:'Glossary Builder (GM Modal)',tier:'S',section:'gm',cat:'Reference',statesMatched:null,archetypes:null,minDepth:null,desc:'Generate an alphabetized glossary of world-specific terms, names, institutions, and places. Scope selectable (all / political / cultural / religious). Suitable for sourcebook appendix.',vars:['[STATE]'],tpl:'Nation state: [STATE]\n\nCompile a world glossary. Extract all proper nouns from the world state above and define each in 1–2 sentences. Organise into sections:\n- People (rulers, characters, NPCs)\n- Factions & institutions\n- Places (cities, regions, landmarks)\n- Events (chronicle entries)\n- Concepts (unique cultural or political terms)\n\nAlphabetize within each section. Flag any undefined entities with [UNDEFINED].'},
   {id:'r81',name:'Naming Generator (GM Modal)',tier:'S',section:'gm',cat:'Reference',statesMatched:null,archetypes:null,minDepth:null,desc:'Extract the linguistic patterns from the realm and generate lists of names for people (men/women/non-binary), places, titles, or orders/guilds. World-aware: names match era and culture.',vars:['[STATE]'],tpl:'Nation state: [STATE]\n\nAnalyze the naming conventions visible in this world (existing names, era, culture, government style). Then generate:\n- 10 ruler / noble names\n- 10 common people names (mix of genders)\n- 5 place names (settlements, landmarks)\n- 5 institutional / organizational names\n- 5 faction or order names\n\nNames must feel consistent with the existing world. Note the linguistic pattern you extracted.'},
   {id:'eb1',name:'Encounter Builder',tier:'S',section:'gm',cat:'Political',statesMatched:null,archetypes:null,minDepth:null,
-   desc:'Generate a structured encounter block — title, setup, adversaries, terrain, complication, tactical objective, and loot — tailored to difficulty, pace, tone, and active factions.',
+   desc:'Generate three distinct encounter variants — each with title, setup, adversaries, terrain, complication, tactical objective, and loot — tailored to difficulty, pace, tone, and active factions. GM picks one (or rolls a d3).',
    vars:['[STATE]','[FACTIONS]','[DIFFICULTY]','[PACE]','[TONE]','[SITUATION]','[CHAOS_NOTE]'],
    tpl:`Nation state: [STATE]
 Factions: [FACTIONS]
@@ -3794,9 +3799,9 @@ Encounter parameters: difficulty=[DIFFICULTY] | pace=[PACE] | tone=[TONE]
 [SITUATION]
 [CHAOS_NOTE]
 
-Generate a single structured encounter for a tabletop RPG session in this realm.
+Generate three distinct structured encounters for a tabletop RPG session in this realm.
 
-Return ONLY a JSON object with this exact shape:
+Return exactly 3 distinct variants. Format: JSON {"variants":[<encounter 1>,<encounter 2>,<encounter 3>]}. Each variant is an object with this exact shape:
 {
   "title": "short evocative encounter name (5 words or fewer)",
   "setup": "read-aloud paragraph (60-100 words, present tense, second-person plural). Establish the scene. One immediate hook. Do not reveal the complication.",
@@ -3808,6 +3813,8 @@ Return ONLY a JSON object with this exact shape:
   "tactical_objective": "what players must achieve (not just 'defeat all enemies') — one sentence",
   "loot": "concrete reward if encounter resolved favourably — one sentence"
 }
+
+Each variant must be meaningfully different — not three rewordings of the same encounter. Differ in setting, adversary type, or the central tactical problem. At least one variant should be uncomfortable or unexpected, pushing the GM out of obvious choices.
 
 Calibrate adversary count and lethality to difficulty=[DIFFICULTY].
 Pace=[PACE] shapes what the encounter IS: combat=violence likely; social=NPCs talk first; exploration=environment is the antagonist; mixed=both.
@@ -4489,6 +4496,44 @@ const Markdown={
       s=s.replace(/ CB(\d+) /g,(m,i)=>'<pre><code>'+codeBlocks[+i]+'</code></pre>');
       return s;
     }catch(e){return Utils.escHtml(src).replace(/\n/g,'<br>');}
+  },
+};
+// ─── VARIANTS PICKER (Phase 5D) ───
+// Renders N (typically 3) variant cards side-by-side; user picks one (or rolls a die).
+// opts: {variants:[...], onPick:(idx,variant)=>void, container:DOMElement}
+const Variants={
+  render(opts){
+    const {variants, onPick, container} = opts||{};
+    if(!container||!Array.isArray(variants)||!variants.length){return;}
+    const wrap=document.createElement('div');
+    wrap.className='variants-grid';
+    variants.forEach((v,i)=>{
+      const card=document.createElement('div');
+      card.className='variants-card';
+      const body=document.createElement('div');
+      body.className='variants-card__body';
+      const text=typeof v==='string'?v:(v&&typeof v==='object'?JSON.stringify(v,null,2):String(v));
+      body.innerHTML=(typeof Markdown!=='undefined'?Markdown.render(text):Utils.escHtml(text));
+      const btn=document.createElement('button');
+      btn.type='button';
+      btn.className='btn btn--primary btn--sm';
+      btn.textContent='Use this one';
+      btn.addEventListener('click',()=>{if(typeof onPick==='function')onPick(i,v);});
+      card.appendChild(body);
+      card.appendChild(btn);
+      wrap.appendChild(card);
+    });
+    const dice=document.createElement('button');
+    dice.type='button';
+    dice.className='btn btn--secondary btn--sm variants-dice';
+    dice.textContent='Roll d'+variants.length;
+    dice.addEventListener('click',()=>{
+      const i=Math.floor(Math.random()*variants.length);
+      if(typeof onPick==='function')onPick(i,variants[i]);
+    });
+    container.innerHTML='';
+    container.appendChild(wrap);
+    container.appendChild(dice);
   },
 };
 function storageAvailable(){try{localStorage.setItem('__t__','x');localStorage.removeItem('__t__');return true;}catch(e){return false;}}
@@ -8458,10 +8503,24 @@ Include 0-3 founding chronicle events that match the description. Include 1-3 fa
   async generateStrongStart({nation, situation}){
     if(!this.isConfigured())throw new Error('Copilot not configured. Add an API key in Settings.');
     const ctx=this.buildContext(nation||State.get());
-    const sys=`You are a TTRPG game master assistant. Write a single evocative paragraph (60–100 words) that opens tonight's session with immediate action, tension, or revelation. The paragraph is read aloud to players. Pull them out of the real world and into the scene. Use sensory detail, present tense, second-person plural ("you"). Do not introduce all NPCs at once. Do not reveal the central mystery. Establish the scene and a single immediate hook. Return ONLY the paragraph — no title, no preamble.`;
-    const user=`# World context\n${ctx}\n\n# Situation\n${situation||'Begin the session.'}\n\nWrite the strong start paragraph.`;
-    const data=await this._apiFetch([{role:'system',content:sys},{role:'user',content:user}],{stream:false,max_tokens:400});
-    return (data?.choices?.[0]?.message?.content||'').trim();
+    // Phase 5D: request 3 variants so the GM can pick the one that fits the table.
+    const sys=`You are a TTRPG game master assistant. Generate three distinct evocative paragraphs (each 60–100 words) that each could open tonight's session with immediate action, tension, or revelation. Each paragraph is read aloud to players. Pull them out of the real world and into the scene. Use sensory detail, present tense, second-person plural ("you"). Do not introduce all NPCs at once. Do not reveal the central mystery. Each variant should establish the scene with a single immediate hook.\n\nReturn exactly 3 distinct variants. Format: JSON {"variants":["<variant 1>","<variant 2>","<variant 3>"]}. Each variant must be meaningfully different — not three rewordings of the same idea. At least one variant should be uncomfortable or unexpected, pushing the GM out of obvious choices.`;
+    const user=`# World context\n${ctx}\n\n# Situation\n${situation||'Begin the session.'}\n\nReturn the JSON now.`;
+    const data=await this._apiFetch([{role:'system',content:sys},{role:'user',content:user}],{stream:false,max_tokens:1200,response_format:{type:'json_object'}});
+    const raw=(data?.choices?.[0]?.message?.content||'').trim();
+    let parsed=null;
+    try{parsed=JSON.parse(raw);}
+    catch(e){
+      let cleaned=raw.replace(/^```(?:json)?\s*/i,'').replace(/\s*```\s*$/,'').trim();
+      const fb=cleaned.indexOf('{'),lb=cleaned.lastIndexOf('}');
+      if(fb>=0&&lb>fb)cleaned=cleaned.slice(fb,lb+1);
+      try{parsed=JSON.parse(cleaned);}catch(e2){parsed=null;}
+    }
+    if(parsed&&Array.isArray(parsed.variants)&&parsed.variants.length){
+      return {variants:parsed.variants.map(v=>typeof v==='string'?v.trim():String(v||'').trim()).filter(Boolean)};
+    }
+    // Backward-compat fallback: model returned a plain string. Wrap as single-variant.
+    return raw;
   },
   // ─── GENERATE SECRETS (r73) ───
   // Returns array of single-sentence fact strings.
@@ -8674,15 +8733,16 @@ No preamble, no markdown fences, only the JSON.`;
     const n=State.get();
     if(!n)throw new Error('No active realm.');
     const context=this.buildContext(n);
-    const systemPrompt=`You are generating a single NPC for a tabletop RPG GM who needs someone to introduce immediately. Read the realm state below and produce one NPC who fits — someone the players might encounter at the start of tonight's session.
+    // Phase 5D: request 3 NPC variants so the GM can pick the one that fits.
+    const systemPrompt=`You are generating NPCs for a tabletop RPG GM who needs someone to introduce immediately. Read the realm state below and produce three distinct NPC candidates — each someone the players might encounter at the start of tonight's session.
 
-The NPC should:
+Each NPC should:
 - Have a name that fits the era and culture
 - Have a clear role in the realm (faction member, court figure, commoner with a problem, etc.)
 - Have one specific, concrete reason they matter to the current dramatic situation
 - Have a distinctive trait the GM can describe in one breath
 
-Return ONLY a JSON object with this shape:
+Return exactly 3 distinct variants. Format: JSON {"variants":[<npc 1>,<npc 2>,<npc 3>]}. Each variant is an NPC object with this exact shape:
 {
   "name": "string",
   "role": "string (one line, e.g. 'Disgraced former captain of the city watch')",
@@ -8692,12 +8752,14 @@ Return ONLY a JSON object with this shape:
   "hook": "string (why they matter tonight, one sentence the GM can paraphrase)"
 }
 
+Each variant must be meaningfully different — not three rewordings of the same character. Differ in role, social class, motivation, or relationship to the central conflict. At least one variant should be uncomfortable or unexpected, pushing the GM out of obvious choices.
+
 No preamble, no markdown, only the JSON.`;
     const messages=[
       {role:'system',content:systemPrompt},
-      {role:'user',content:`# Realm State\n${context}\n\nGenerate one NPC for tonight.`},
+      {role:'user',content:`# Realm State\n${context}\n\nGenerate three NPC variants for tonight.`},
     ];
-    const data=await this._apiFetch(messages,{stream:false,max_tokens:600,response_format:{type:'json_object'}});
+    const data=await this._apiFetch(messages,{stream:false,max_tokens:1400,response_format:{type:'json_object'}});
     const raw=data?.choices?.[0]?.message?.content||'';
     let parsed;
     try{parsed=JSON.parse(raw);}
@@ -8707,6 +8769,11 @@ No preamble, no markdown, only the JSON.`;
       if(fb>=0&&lb>fb)cleaned=cleaned.slice(fb,lb+1);
       try{parsed=JSON.parse(cleaned);}catch(e2){throw new Error('The model returned malformed JSON. Try again.');}
     }
+    if(parsed&&Array.isArray(parsed.variants)&&parsed.variants.length){
+      const vs=parsed.variants.filter(v=>v&&typeof v==='object'&&v.name);
+      if(vs.length)return {variants:vs};
+    }
+    // Backward-compat fallback: model returned a single NPC object as before.
     if(!parsed||!parsed.name)throw new Error('No NPC generated. Try again.');
     return parsed;
   },
@@ -9341,20 +9408,29 @@ const Tonight={
       Tonight._generatedNationId=nation.id;
       Render.all();
 
-      // Step 2: Strong start paragraph
-      this._setSpinner('Step 2/3 — Crafting the opening…');
-      const strongStart=await Copilot.generateStrongStart({nation,situation});
-
-      this._setSpinner('Step 3/3 — Preparing the session pack…');
-      const prep=await Copilot.generateSessionPrep({
-        focus:'mystery',
-        length,
-        twist:situation,
-        proposeSecrets:10,
-      });
-
+      // Phase 5D: Step 2 + Step 3 run in parallel — both consume the imported nation,
+      // neither depends on the other. Per-step error isolation: a failed call returns
+      // an {_error} marker so the surviving call still renders, with a retry button.
+      this._setSpinner('Steps 2 & 3 — Crafting opening + session pack in parallel…');
+      const [strongStartRes,prepRes]=await Promise.all([
+        Copilot.generateStrongStart({nation,situation}).catch(e=>({_error:e?.message||'Strong Start failed.'})),
+        Copilot.generateSessionPrep({focus:'mystery',length,twist:situation,proposeSecrets:10}).catch(e=>({_error:e?.message||'Session Prep failed.'})),
+      ]);
+      // If both failed, throw to enter the catch block + clean up the orphan nation.
+      const ssFailed=strongStartRes&&typeof strongStartRes==='object'&&strongStartRes._error;
+      const prepFailed=prepRes&&typeof prepRes==='object'&&prepRes._error;
+      if(ssFailed&&prepFailed){
+        throw new Error(strongStartRes._error+' / '+prepRes._error);
+      }
       this._setSpinner('');
-      this._renderResults({strongStart,prep,nation});
+      this._renderResults({
+        strongStart:ssFailed?null:strongStartRes,
+        strongStartError:ssFailed?strongStartRes._error:null,
+        prep:prepFailed?null:prepRes,
+        prepError:prepFailed?prepRes._error:null,
+        nation,
+        retryInputs:{nation,situation,length},
+      });
     }catch(err){
       this._setSpinner('');
       // Clean up orphan nation created in step 1 if steps 2/3 failed
@@ -9379,20 +9455,36 @@ const Tonight={
     }
   },
 
-  _renderResults({strongStart,prep,nation}){
+  _renderResults({strongStart,prep,nation,strongStartError,prepError,retryInputs}){
     const E=Utils.escHtml;
     const intro=document.getElementById('tonight-intro');
     const results=document.getElementById('tonight-results');
     if(!results)return;
     if(intro)intro.style.display='none';
 
+    // Phase 5D: stash retry inputs so a single-piece failure can be retried inline.
+    this._lastRetryInputs=retryInputs||null;
+
     // Stash secrets for later save
     this._lastSecrets=Array.isArray(prep?.secrets)?prep.secrets:[];
 
     let html='';
 
-    // Strong Start
-    html+=`<div class="tonight-section"><div class="tonight-section__label">Strong Start — Read Aloud</div><div class="tonight-strong-start" style="white-space:pre-wrap">${Markdown.render(strongStart||'No opening generated.')}</div></div>`;
+    // Strong Start — supports {variants:[...]} (Phase 5D), plain string (back-compat),
+    // or an error fallback with a retry button.
+    if(strongStartError){
+      html+=`<div class="tonight-section"><div class="tonight-section__label">Strong Start — Read Aloud</div><div class="tonight-strong-start" style="border-left-color:var(--color-crisis);white-space:pre-wrap">${E(strongStartError)}<br><button class="btn btn--secondary btn--sm" id="tonight-retry-strongstart" type="button" style="margin-top:8px">Retry Strong Start</button></div></div>`;
+    }else if(strongStart&&typeof strongStart==='object'&&Array.isArray(strongStart.variants)&&strongStart.variants.length){
+      html+=`<div class="tonight-section"><div class="tonight-section__label">Strong Start — Pick One</div><div id="tonight-strong-variants"></div></div>`;
+    }else{
+      const txt=typeof strongStart==='string'?strongStart:(strongStart?.variants?.[0]||'');
+      html+=`<div class="tonight-section"><div class="tonight-section__label">Strong Start — Read Aloud</div><div class="tonight-strong-start" style="white-space:pre-wrap">${Markdown.render(txt||'No opening generated.')}</div></div>`;
+    }
+
+    // Session Prep — error fallback with retry button if it failed.
+    if(prepError){
+      html+=`<div class="tonight-section"><div class="tonight-section__label">Session Pack</div><div class="tonight-strong-start" style="border-left-color:var(--color-crisis);white-space:pre-wrap">${E(prepError)}<br><button class="btn btn--secondary btn--sm" id="tonight-retry-prep" type="button" style="margin-top:8px">Retry Session Prep</button></div></div>`;
+    }
 
     // Three Scenes (hooks mapped to scene ideas)
     const hooks=prep?.hooks||[];
@@ -9478,6 +9570,49 @@ const Tonight={
       // Bug 4 fix: null-guard both DOM ops; collapse to one query.
       const saveBtn=document.getElementById('tonight-save-secrets-btn');
       if(saveBtn){saveBtn.disabled=true;saveBtn.textContent='Secrets saved \u2713';}
+    });
+
+    // Phase 5D: strong-start variant picker \u2192 on pick, replace with chosen text.
+    const variantsCtr=document.getElementById('tonight-strong-variants');
+    if(variantsCtr&&strongStart&&typeof strongStart==='object'&&Array.isArray(strongStart.variants)){
+      Variants.render({
+        variants:strongStart.variants,
+        container:variantsCtr,
+        onPick:(idx,variant)=>{
+          const section=variantsCtr.closest('.tonight-section');
+          if(section){
+            const label=section.querySelector('.tonight-section__label');
+            if(label)label.textContent='Strong Start \u2014 Read Aloud';
+            variantsCtr.outerHTML=`<div class="tonight-strong-start" style="white-space:pre-wrap">${Markdown.render(variant||'')}</div>`;
+          }
+        },
+      });
+    }
+
+    // Phase 5D: per-piece retry buttons (Tonight Mode parallel error fallback).
+    document.getElementById('tonight-retry-strongstart')?.addEventListener('click',async ()=>{
+      const inputs=this._lastRetryInputs;if(!inputs)return;
+      const btn=document.getElementById('tonight-retry-strongstart');
+      if(btn){btn.disabled=true;btn.textContent='Retrying\u2026';}
+      try{
+        const ss=await Copilot.generateStrongStart({nation:inputs.nation,situation:inputs.situation});
+        this._renderResults({strongStart:ss,prep,nation,retryInputs:inputs});
+      }catch(e){
+        if(btn){btn.disabled=false;btn.textContent='Retry Strong Start';}
+        showToast('Retry failed: '+(e?.message||'unknown error'));
+      }
+    });
+    document.getElementById('tonight-retry-prep')?.addEventListener('click',async ()=>{
+      const inputs=this._lastRetryInputs;if(!inputs)return;
+      const btn=document.getElementById('tonight-retry-prep');
+      if(btn){btn.disabled=true;btn.textContent='Retrying\u2026';}
+      try{
+        const p=await Copilot.generateSessionPrep({focus:'mystery',length:inputs.length,twist:inputs.situation,proposeSecrets:10});
+        this._renderResults({strongStart,prep:p,nation,retryInputs:inputs});
+      }catch(e){
+        if(btn){btn.disabled=false;btn.textContent='Retry Session Prep';}
+        showToast('Retry failed: '+(e?.message||'unknown error'));
+      }
     });
   },
 
@@ -10275,8 +10410,13 @@ const GMMode={
     body.innerHTML=`<div class="quick-npc-card__loading"><div class="copilot-panel__meta-dot is-active" style="animation:pulse 1.4s ease-in-out infinite"></div><span>Casting an NPC...</span></div>`;
     card.classList.add('is-visible');
     try{
-      const npc=await Copilot.generateQuickNPC();
-      this._renderNPC(npc);
+      const result=await Copilot.generateQuickNPC();
+      // Phase 5D: response may be {variants:[npc,npc,npc]} OR a single npc (back-compat).
+      if(result&&typeof result==='object'&&Array.isArray(result.variants)&&result.variants.length){
+        this._renderNPCVariants(result.variants);
+      }else{
+        this._renderNPC(result);
+      }
     }catch(err){
       body.innerHTML=`<div class="quick-npc-card__error">${Utils.escHtml(err.message||'Generation failed.')}</div>
         <div class="quick-npc-card__actions"><button class="btn btn--secondary" id="qnpc-retry">Retry</button><button class="btn btn--secondary" id="qnpc-cancel">Close</button></div>`;
@@ -10285,6 +10425,23 @@ const GMMode={
     }finally{
       this._generatingNPC=false;
     }
+  },
+  // Phase 5D: Quick NPC variant picker — renders 3 candidates side-by-side,
+  // chosen NPC flows into the existing _renderNPC card.
+  _renderNPCVariants(variants){
+    const body=document.getElementById('quick-npc-body');
+    if(!body)return;
+    const E=Utils.escHtml;
+    body.innerHTML=`<div class="quick-npc-card__field-label" style="margin-bottom:8px">Pick one — 3 candidates</div><div id="qnpc-variants"></div><div class="quick-npc-card__actions"><button class="btn btn--secondary" id="qnpc-variants-reroll">🎲 Re-roll all 3</button><button class="btn btn--secondary" id="qnpc-variants-cancel">Discard</button></div>`;
+    // Render each variant as a markdown-formatted summary, picker drops user into _renderNPC.
+    const formatted=variants.map(v=>`**${E(v.name||'Unnamed')}** — *${E(v.role||'')}*\n\n${v.hook?'_Why tonight:_ '+E(v.hook)+'\n\n':''}${v.drive?'Drive: '+E(v.drive)+'  \n':''}${v.fear?'Fear: '+E(v.fear)+'  \n':''}${v.trait?'Trait: '+E(v.trait):''}`);
+    Variants.render({
+      variants:formatted,
+      container:document.getElementById('qnpc-variants'),
+      onPick:(idx)=>{this._renderNPC(variants[idx]);},
+    });
+    document.getElementById('qnpc-variants-reroll')?.addEventListener('click',()=>this.openQuickNPC());
+    document.getElementById('qnpc-variants-cancel')?.addEventListener('click',()=>this.closeQuickNPC());
   },
   _renderNPC(npc){
     const body=document.getElementById('quick-npc-body');
@@ -10386,11 +10543,31 @@ const GMMode={
     if(copyBtn)copyBtn.style.display='none';
     if(rerunBtn)rerunBtn.style.display='none';
     try{
-      const text=await Copilot.generateStrongStart({nation:State.get(),situation});
+      const result=await Copilot.generateStrongStart({nation:State.get(),situation});
       if(statusEl){statusEl.textContent='';statusEl.style.color='';}
-      if(resultEl){resultEl.textContent=text||'(No response.)';resultEl.style.display='block';}
-      if(copyBtn)copyBtn.style.display='inline-block';
-      if(rerunBtn)rerunBtn.style.display='inline-block';
+      // Phase 5D: response may be {variants:[...]} OR a plain string (back-compat).
+      if(result&&typeof result==='object'&&Array.isArray(result.variants)&&result.variants.length){
+        if(resultEl){
+          resultEl.innerHTML='<div class="settings-desc" style="margin-bottom:8px">Pick one (or roll a d3):</div><div id="ss-variants"></div>';
+          resultEl.style.display='block';
+          Variants.render({
+            variants:result.variants,
+            container:document.getElementById('ss-variants'),
+            onPick:(idx,variant)=>{
+              // Selected variant becomes canonical — replace picker with the chosen paragraph.
+              resultEl.textContent=variant||'';
+              if(copyBtn)copyBtn.style.display='inline-block';
+            },
+          });
+        }
+        if(copyBtn)copyBtn.style.display='none';
+        if(rerunBtn)rerunBtn.style.display='inline-block';
+      }else{
+        const text=typeof result==='string'?result:'';
+        if(resultEl){resultEl.textContent=text||'(No response.)';resultEl.style.display='block';}
+        if(copyBtn)copyBtn.style.display='inline-block';
+        if(rerunBtn)rerunBtn.style.display='inline-block';
+      }
     }catch(err){
       if(statusEl){statusEl.textContent='Failed: '+(err.message||'unknown error');statusEl.style.color='var(--color-crisis)';}
     }finally{
@@ -13325,8 +13502,13 @@ const EncounterBuilder={
 
     try{
       const result=await this._callCopilot(n,inputs);
-      this._lastResult=result;
-      this._renderResult(result);
+      // Phase 5D: result may be {variants:[encounter,encounter,encounter]} OR a single encounter (back-compat).
+      if(result&&typeof result==='object'&&Array.isArray(result.variants)&&result.variants.length){
+        this._renderVariants(result.variants);
+      }else{
+        this._lastResult=result;
+        this._renderResult(result);
+      }
     }catch(err){
       showToast(Utils.escHtml(err.message||'Encounter generation failed. Try again.'),[],6000);
     }finally{
@@ -13334,6 +13516,30 @@ const EncounterBuilder={
       if(genBtn){genBtn.disabled=false;genBtn.textContent='Generate Encounter';}
       if(regenBtn)regenBtn.disabled=false;
     }
+  },
+
+  // Phase 5D: render 3 encounter candidates side-by-side. On pick, chosen variant
+  // flows into _renderResult and becomes the canonical _lastResult for save/bestiary.
+  _renderVariants(variants){
+    const body=document.getElementById('eb-result-body');
+    const resultEl=document.getElementById('eb-result');
+    if(!body)return;
+    const E=Utils.escHtml;
+    body.innerHTML=`<div class="eb-title">3 Encounter Variants — Pick One</div><div id="eb-variants"></div>`;
+    if(resultEl)resultEl.classList.add('is-visible');
+    const formatted=variants.map(v=>{
+      const advs=(v?.adversaries||[]).map(a=>'- **'+(a.name||'?')+'**'+(a.notes?' — '+a.notes:'')).join('\n');
+      return `**${v?.title||'Unnamed Encounter'}**\n\n${v?.setup||''}\n\n${advs?'_Adversaries:_\n'+advs+'\n\n':''}${v?.complication?'_Complication:_ '+v.complication:''}`;
+    });
+    Variants.render({
+      variants:formatted,
+      container:document.getElementById('eb-variants'),
+      onPick:(idx)=>{
+        this._lastResult=variants[idx];
+        this._renderResult(variants[idx]);
+      },
+    });
+    resultEl?.scrollIntoView({behavior:'smooth',block:'nearest'});
   },
 
   async _callCopilot(n,inputs){
