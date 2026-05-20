@@ -4415,6 +4415,58 @@ const Utils={
     navigator.clipboard.writeText(text).then(()=>showToast('Copied to clipboard.')).catch(fallback);
   },
 };
+// Inline Markdown renderer. Escapes HTML first (XSS-safe), then tokenizes
+// bold/italic/headers/lists/inline+block code. Defensive: falls back to
+// plain-text-with-<br> on any parse error.
+const Markdown={
+  render(raw){
+    if(raw==null)return'';
+    const src=String(raw);
+    try{
+      let s=Utils.escHtml(src);
+      // Fenced code blocks first (so inner ** etc. is not re-tokenized).
+      const codeBlocks=[];
+      s=s.replace(/```([\s\S]*?)```/g,(m,c)=>{codeBlocks.push(c);return' CB'+(codeBlocks.length-1)+' ';});
+      // Inline code (single backticks).
+      const inlineCodes=[];
+      s=s.replace(/`([^`\n]+)`/g,(m,c)=>{inlineCodes.push(c);return' IC'+(inlineCodes.length-1)+' ';});
+      // Headers (line-anchored) — render as h4/h5/h6 to avoid page hierarchy clash.
+      s=s.replace(/^###\s+(.+)$/gm,'<h6>$1</h6>');
+      s=s.replace(/^##\s+(.+)$/gm,'<h5>$1</h5>');
+      s=s.replace(/^#\s+(.+)$/gm,'<h4>$1</h4>');
+      // Bold then italic. Order matters so ** is not eaten by *.
+      s=s.replace(/\*\*([^*\n]+)\*\*/g,'<strong>$1</strong>');
+      s=s.replace(/(?:^|[^*])\*([^*\n]+)\*/g,(m,c)=>m.replace('*'+c+'*','<em>'+c+'</em>'));
+      s=s.replace(/(?:^|[^_])_([^_\n]+)_/g,(m,c)=>m.replace('_'+c+'_','<em>'+c+'</em>'));
+      // Group consecutive list items into a single <ul> / <ol>.
+      const lines=s.split('\n');
+      const out=[];
+      let listType=null;
+      const flush=()=>{if(listType){out.push('</'+listType+'>');listType=null;}};
+      for(let i=0;i<lines.length;i++){
+        const ln=lines[i];
+        const ul=ln.match(/^\s*[-*]\s+(.+)$/);
+        const ol=ln.match(/^\s*\d+\.\s+(.+)$/);
+        if(ul){if(listType!=='ul'){flush();out.push('<ul>');listType='ul';}out.push('<li>'+ul[1]+'</li>');}
+        else if(ol){if(listType!=='ol'){flush();out.push('<ol>');listType='ol';}out.push('<li>'+ol[1]+'</li>');}
+        else{flush();out.push(ln);}
+      }
+      flush();
+      s=out.join('\n');
+      // Paragraph breaks (blank lines) → </p><p>; remaining newlines → <br>.
+      const paras=s.split(/\n\s*\n+/).map(p=>p.trim()).filter(p=>p.length);
+      s=paras.map(p=>{
+        // Don't wrap block-level elements (headers, lists) in <p>.
+        if(/^<(h[1-6]|ul|ol|pre)/.test(p))return p.replace(/\n/g,'');
+        return'<p>'+p.replace(/\n/g,'<br>')+'</p>';
+      }).join('');
+      // Restore inline + fenced code (already HTML-escaped via initial escHtml pass).
+      s=s.replace(/ IC(\d+) /g,(m,i)=>'<code>'+inlineCodes[+i]+'</code>');
+      s=s.replace(/ CB(\d+) /g,(m,i)=>'<pre><code>'+codeBlocks[+i]+'</code></pre>');
+      return s;
+    }catch(e){return Utils.escHtml(src).replace(/\n/g,'<br>');}
+  },
+};
 function storageAvailable(){try{localStorage.setItem('__t__','x');localStorage.removeItem('__t__');return true;}catch(e){return false;}}
 // Terminology helper — single source of truth for GM-mode label swaps.
 // Use Term('nation') etc. anywhere a user-facing label needs to flex.
@@ -6388,7 +6440,7 @@ const Interact={
       <div class="detail-panel__name">${Utils.escHtml(ev.name)}</div>
       <div class="detail-panel__meta">${Utils.escHtml(ev.type)} · weight ${weightDisplay} · ${ev.visibility}${ev.source?` · source: ${Utils.escHtml(ev.source)}`:''}</div>
       <hr style="height:.5px;background:var(--color-gold-pale);border:none;margin:12px 0">
-      <div class="detail-panel__desc">${Utils.escHtml(ev.description||'No description.')}</div>
+      <div class="detail-panel__desc">${Markdown.render(ev.description||'No description.')}</div>
       ${ev.relatedStats?.length?`<div style="font-size:var(--text-label-sm);color:var(--color-text-muted)">Affected stats: ${ev.relatedStats.map(s=>Utils.escHtml(s)).join(', ')}</div>`:''}
       ${(()=>{
         const linked=(n.characters||[]).filter(c=>(c.chronicleLinks||[]).includes(eid));
@@ -7825,7 +7877,7 @@ Keep responses concise and grounded. If you don't know, say so. If the user asks
     // Find the streaming message element (always the last one)
     const lastMsg=ctr.querySelector('.cp-msg:last-child .cp-msg__body');
     if(lastMsg){
-      lastMsg.textContent=text;
+      lastMsg.innerHTML=Markdown.render(text);
       ctr.scrollTop=ctr.scrollHeight;
     }
   },
@@ -8727,6 +8779,18 @@ const Tonight={
   // Bug 5: tracks which nation was generated for this Tonight session so
   // saveSecretsToRealm writes to the right nation even after a nation switch.
   _generatedNationId:null,
+  _taglines:[
+    'Consulting your chronicle…',
+    'Cross-referencing factions…',
+    'Calibrating to your world\'s tone…',
+    'Reviewing recent oracle results…',
+    'Threading hooks through the scene…',
+    'Listening to what the realm wants next…',
+    'Weaving NPC relationships…',
+    'Drawing tension from the chronicle…',
+  ],
+  _taglineTimer:null,
+  _taglineIdx:0,
 
   open(){
     const el=document.getElementById('tonight-mode');
@@ -8774,7 +8838,28 @@ const Tonight={
 
   _setSpinner(msg){
     const s=document.getElementById('tonight-spinner');
-    if(s){s.textContent=msg||'';s.classList.toggle('is-visible',!!msg);}
+    if(!s)return;
+    s.classList.toggle('is-visible',!!msg);
+    if(!msg){this._stopTaglines();s.textContent='';return;}
+    this._currentStep=msg;
+    this._renderSpinnerText();
+    this._startTaglines();
+  },
+  _renderSpinnerText(){
+    const s=document.getElementById('tonight-spinner');
+    if(!s)return;
+    const tag=this._taglines[this._taglineIdx%this._taglines.length]||'';
+    s.textContent=(this._currentStep||'')+'  ·  '+tag;
+  },
+  _startTaglines(){
+    if(this._taglineTimer)return;
+    this._taglineIdx=Math.floor(Math.random()*this._taglines.length);
+    this._renderSpinnerText();
+    this._taglineTimer=setInterval(()=>{this._taglineIdx=(this._taglineIdx+1)%this._taglines.length;this._renderSpinnerText();},3000);
+  },
+  _stopTaglines(){
+    if(this._taglineTimer){clearInterval(this._taglineTimer);this._taglineTimer=null;}
+    this._currentStep='';
   },
 
   async generate(){
@@ -8857,14 +8942,14 @@ const Tonight={
     let html='';
 
     // Strong Start
-    html+=`<div class="tonight-section"><div class="tonight-section__label">Strong Start — Read Aloud</div><div class="tonight-strong-start" style="white-space:pre-wrap">${E(strongStart||'No opening generated.')}</div></div>`;
+    html+=`<div class="tonight-section"><div class="tonight-section__label">Strong Start — Read Aloud</div><div class="tonight-strong-start" style="white-space:pre-wrap">${Markdown.render(strongStart||'No opening generated.')}</div></div>`;
 
     // Three Scenes (hooks mapped to scene ideas)
     const hooks=prep?.hooks||[];
     if(hooks.length){
       html+=`<div class="tonight-section"><div class="tonight-section__label">Scenes & Hooks</div><ul class="tonight-list">`;
       hooks.forEach(h=>{
-        html+=`<li><strong>${E(h.name||'')}</strong> — ${E(h.description||'')}</li>`;
+        html+=`<li><strong>${E(h.name||'')}</strong> — ${Markdown.render(h.description||'')}</li>`;
       });
       html+='</ul></div>';
     }
@@ -12827,7 +12912,7 @@ const EncounterBuilder={
     ).join('');
     body.innerHTML=`
       <div class="eb-title">${E(result.title||'Unnamed Encounter')}</div>
-      <div class="eb-section"><div class="eb-section__label">Setup</div><div class="eb-section__body">${E(result.setup||'—')}</div></div>
+      <div class="eb-section"><div class="eb-section__label">Setup</div><div class="eb-section__body">${Markdown.render(result.setup||'—')}</div></div>
       ${result.terrain?`<div class="eb-section"><div class="eb-section__label">Terrain</div><div class="eb-section__body">${E(result.terrain)}</div></div>`:''}
       ${(result.adversaries||[]).length?`<div class="eb-section"><div class="eb-section__label">Adversaries</div><div class="eb-section__body">${adversariesHtml}</div></div>`:''}
       ${result.complication?`<div class="eb-section"><div class="eb-section__label">Complication</div><div class="eb-section__body eb-section__body--highlight">${E(result.complication)}</div></div>`:''}
