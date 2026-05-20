@@ -1824,6 +1824,20 @@ body.theme-ember .sc-panel__title{color:var(--ember-color)}
   color:var(--color-ink);line-height:1.5;white-space:pre-wrap;word-wrap:break-word}
 .cp-msg__time{font-family:var(--font-mono);font-size:9px;
   color:var(--color-text-faint);margin-top:2px}
+/* Phase 5C: Show-context toggle */
+.copilot-show-context{margin-top:6px;font-size:var(--text-label-sm);color:var(--color-text-faint)}
+.copilot-show-context summary{cursor:pointer;user-select:none;padding:4px 8px;border:1px solid var(--color-border-hairline);border-radius:3px;display:inline-block}
+.copilot-show-context__pre{margin-top:8px;padding:10px;background:rgba(0,0,0,.15);border-radius:3px;max-height:300px;overflow:auto;font-family:var(--font-mono);font-size:11px;white-space:pre-wrap;color:var(--color-text-muted)}
+/* Phase 5C: Review queue */
+#copilot-review-queue{flex-shrink:0;padding:var(--space-2) var(--space-4);background:rgba(0,0,0,.08);border-bottom:.5px solid var(--color-gold-pale)}
+.cp-queue__header{font-family:var(--font-mono);font-size:var(--text-mono-sm);color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:var(--space-2)}
+.cp-queue__item{display:flex;align-items:center;gap:var(--space-2);padding:var(--space-1) 0;font-size:var(--text-body-sm);color:var(--color-ink)}
+.cp-queue__summary{flex:1;line-height:1.4}
+.cp-queue__actions{display:flex;gap:4px;flex-shrink:0}
+.cp-queue__btn{font-family:var(--font-mono);font-size:var(--text-mono-sm);padding:3px 8px;border:1px solid var(--color-border-hairline);background:var(--color-parchment-warm);color:var(--color-ink);cursor:pointer;border-radius:3px}
+.cp-queue__btn--approve{border-color:var(--color-event-economic);color:var(--color-event-economic)}
+.cp-queue__btn--reject{border-color:var(--color-event-military);color:var(--color-event-military)}
+.cp-queue__btn:hover{filter:brightness(1.1)}
 .copilot-panel__compose{flex-shrink:0;padding:var(--space-3) var(--space-4);
   border-top:.5px solid var(--color-gold-pale);background:var(--color-parchment-warm)}
 .copilot-panel__compose-row{display:flex;gap:var(--space-2);align-items:flex-end}
@@ -2547,7 +2561,17 @@ SECTION 8: DOM STRUCTURE
   <div class="copilot-panel__meta" id="copilot-meta">
     <div class="copilot-panel__meta-item"><span class="copilot-panel__meta-dot" id="copilot-status-dot"></span><span id="copilot-status-text">Not configured</span></div>
     <div class="copilot-panel__meta-item" id="copilot-model-display" style="display:none"><span id="copilot-model-text"></span></div>
+    <div class="copilot-panel__meta-item" style="margin-left:auto">
+      <label for="copilot-depth-select" style="font-size:var(--text-label-sm);color:var(--color-text-muted);margin-right:4px">Depth:</label>
+      <select class="form-input" id="copilot-depth-select" style="width:auto;font-size:var(--text-label-sm);padding:2px 6px" aria-label="Context depth">
+        <option value="low">Low · 10 events · ~$0.005/turn</option>
+        <option value="medium" selected>Medium · 30 events · ~$0.015/turn</option>
+        <option value="high">High · 50 events · ~$0.04/turn</option>
+        <option value="full">Full · everything · variable</option>
+      </select>
+    </div>
   </div>
+  <div id="copilot-review-queue" style="display:none"></div>
   <div class="copilot-panel__messages" id="copilot-messages"></div>
   <div class="copilot-panel__compose">
     <div class="copilot-panel__compose-row">
@@ -3576,7 +3600,7 @@ const IDB_KEY_BACKUP_HANDLE='rw_backup_handle';
 const IDB_KEY_DEMO_USES='rw_demo_uses';
 const IDB_KEY_FINGERPRINT='rw_device_fp';
 
-const SCHEMA_VERSION='2.4.1';
+const SCHEMA_VERSION='2.4.2';
 const DEFAULT_SETTINGS={theme:'ember',respectMotionPref:true,showForecasts:false,showSecrets:false,onboardingComplete:false,copilotProvider:'openrouter',copilotModel:'anthropic/claude-sonnet-latest',copilotKey:null,ollamaUrl:'http://localhost:11434',ollamaModel:'llama3.1',copilotScope:'standard',copilotAutoApply:false,gmMode:false};
 const ERA_GAP={Ancient:100,Classical:75,Medieval:50,Renaissance:75,Industrial:25,Modern:15,'Near-Future':10,'Far-Future':5,'Post-Collapse':30};
 const ERA_NAMES={Political:'The Reform Years',Military:'The Long War',Economic:'The Trade Awakening',Cultural:'The Silent Century',Social:"The Generation's Turning",Diplomatic:'The Quiet Borders',Natural:'The Lean Years'};
@@ -4796,6 +4820,8 @@ function buildNationFromSeed(seed){
     artifacts:(seed.artifacts||[]).map(a=>({...a,id:a.id||Utils.uuid()})),
     relations:seed.relations||[],
     copilotConversation:seed.copilotConversation||[],
+    copilotQueue:Array.isArray(seed.copilotQueue)?seed.copilotQueue:[],
+    copilotContextDepth:seed.copilotContextDepth||'medium',
     sessions:seed.sessions||[],
     hooks:seed.hooks||[],
     secrets:seed.secrets||[],
@@ -4968,6 +4994,14 @@ function migrateIfNeeded(d){
       }
     });
     d.schemaVersion='2.4.1';
+  }
+  // v2.4.1 → v2.4.2: Phase 5C Copilot tool-calling — per-nation queue + context depth
+  if(d.schemaVersion==='2.4.1'){
+    (d.nations||[]).forEach(n=>{
+      if(!Array.isArray(n.copilotQueue))n.copilotQueue=[];
+      if(!n.copilotContextDepth)n.copilotContextDepth='medium';
+    });
+    d.schemaVersion='2.4.2';
   }
   return d;
 }
@@ -7410,6 +7444,27 @@ function renderSessionPrepPDF(prep,nation){
     setTimeout(()=>{window.print();setTimeout(()=>{pc.innerHTML='';pc.style.display='none';},1000);},200);
   }
 }
+// ─── COPILOT TOOL DEFINITIONS (Phase 5C) ───
+// OpenAI-shape tool definitions sent to OpenRouter on the streaming Copilot path.
+// Reads are unconditional. Writes are gated by State.data.meta.settings.copilotScope:
+//   'standard' → only add_chronicle_entry, add_npc, add_plot_seed, mark_hook_resolved
+//   'full'     → all writes
+// When State.data.meta.settings.copilotAutoApply is false (default), writes are
+// queued onto n.copilotQueue for human approval instead of mutating state.
+const COPILOT_TOOLS=[
+  {type:'function',function:{name:'read_chronicle',description:'Read recent chronicle entries for the active nation. Use when you need facts about what has happened.',parameters:{type:'object',properties:{limit:{type:'integer',description:'How many recent entries to return (default 10, max 100)'},filter:{type:'string',description:'Optional substring to filter event names/descriptions'}},required:[]}}},
+  {type:'function',function:{name:'read_factions',description:'List active factions in the current realm.',parameters:{type:'object',properties:{}}}},
+  {type:'function',function:{name:'read_npcs',description:'List named NPCs / characters in the current realm.',parameters:{type:'object',properties:{filter:{type:'string',description:'Optional name substring filter'}},required:[]}}},
+  {type:'function',function:{name:'read_realm_state',description:'Return the active nation summary: name, era, stats, archetype, leader.',parameters:{type:'object',properties:{}}}},
+  {type:'function',function:{name:'add_chronicle_entry',description:'Append a new event to the chronicle. Use when something narratively meaningful just happened that the world should remember.',parameters:{type:'object',properties:{name:{type:'string'},description:{type:'string'},type:{type:'string',enum:['Political','Economic','Social','Military','Cultural','Natural','Diplomatic']},weight:{type:'integer',description:'-30 to +30 representing significance'},visibility:{type:'string',enum:['public','private']}},required:['name','description','type']}}},
+  {type:'function',function:{name:'add_npc',description:'Create a new named character in the realm.',parameters:{type:'object',properties:{name:{type:'string'},role:{type:'string'},description:{type:'string'},status:{type:'string',enum:['active','deceased','missing','retired']}},required:['name','role']}}},
+  {type:'function',function:{name:'add_plot_seed',description:'Add a plot seed to an existing NPC. Use to plant future story hooks tied to a character.',parameters:{type:'object',properties:{characterId:{type:'string',description:'NPC id (or name if id unknown)'},seed:{type:'string'}},required:['characterId','seed']}}},
+  {type:'function',function:{name:'mark_hook_resolved',description:'Mark an unresolved plot hook as resolved.',parameters:{type:'object',properties:{hookId:{type:'string'}},required:['hookId']}}},
+  {type:'function',function:{name:'update_faction_stance',description:'Adjust a faction\'s position (gaining / holding / losing). Restricted to copilotScope=full.',parameters:{type:'object',properties:{factionId:{type:'string'},position:{type:'string',enum:['gaining','holding','losing']}},required:['factionId','position']}}},
+  {type:'function',function:{name:'update_nation_stat',description:'Apply a delta to a nation stat (e.g. legitimacy -3). Restricted to copilotScope=full.',parameters:{type:'object',properties:{stat:{type:'string'},delta:{type:'integer'}},required:['stat','delta']}}},
+];
+// Write tools allowed when copilotScope='standard'. Others require 'full'.
+const COPILOT_TOOLS_STANDARD_ALLOWED=['add_chronicle_entry','add_npc','add_plot_seed','mark_hook_resolved'];
 // ─── COPILOT MODULE (delivery 1: UI + persistence; delivery 2 will add API calls) ───
 const Copilot={
   _open:false,
@@ -7472,6 +7527,11 @@ const Copilot={
     const n=State.get();
     const nameEl=document.getElementById('copilot-nation-name');
     if(nameEl)nameEl.textContent=n?'· '+n.name:'';
+    // Phase 5C: sync the context-depth selector to the current nation.
+    const depthSel=document.getElementById('copilot-depth-select');
+    if(depthSel&&n)depthSel.value=n.copilotContextDepth||'medium';
+    // Phase 5C: render any pending review queue items.
+    this._renderQueue();
   },
   renderMessages(){
     const ctr=document.getElementById('copilot-messages');
@@ -7510,14 +7570,35 @@ const Copilot={
     // Render the conversation
     ctr.innerHTML='';
     conv.forEach(m=>{
+      // Hide summarized-system messages from the visible thread (they're context-only).
+      if(m.role==='system'&&m._summarized)return;
       const wrap=document.createElement('div');
       wrap.className=`cp-msg cp-msg--${m.role==='user'?'user':'assistant'}`;
       wrap.dataset.role=m.role;
       const roleLabel=m.role==='user'?'You':m.role==='assistant'?'Copilot':'System';
       const roleClass=m.role==='user'?'cp-msg__role--you':'cp-msg__role--copilot';
       const role=document.createElement('div');role.className=`cp-msg__role ${roleClass}`;role.textContent=roleLabel;
-      const body=document.createElement('div');body.className='cp-msg__body';body.textContent=m.content||'';
+      const body=document.createElement('div');body.className='cp-msg__body';
+      // Render assistant content as markdown; user content as plain text to preserve their phrasing.
+      if(m.role==='assistant'&&m.content){
+        try{body.innerHTML=Markdown.render(m.content);}
+        catch(e){body.textContent=m.content||'';}
+      }else{
+        body.textContent=m.content||'';
+      }
       wrap.appendChild(role);wrap.appendChild(body);
+      // Show-context disclosure (Phase 5C) — only for finished assistant turns with stored context.
+      if(m.role==='assistant'&&m._sentContext&&!m._streaming){
+        const det=document.createElement('details');
+        det.className='copilot-show-context';
+        const sum=document.createElement('summary');sum.textContent='Show context sent to AI';
+        const pre=document.createElement('pre');pre.className='copilot-show-context__pre';
+        const sys=m._sentContext.system||'';
+        const lu=m._sentContext.lastUser||'';
+        pre.textContent=`# System\n${sys}\n\n# Last user message\n${lu}`;
+        det.appendChild(sum);det.appendChild(pre);
+        wrap.appendChild(det);
+      }
       if(m.timestamp){
         const t=document.createElement('div');t.className='cp-msg__time';
         try{
@@ -7533,6 +7614,8 @@ const Copilot={
     // Show clear button if there are messages
     const clr=document.getElementById('copilot-clear');
     if(clr)clr.style.display=conv.length?'inline-block':'none';
+    // Re-render the review queue (in case nation switched).
+    this._renderQueue();
   },
   updateStatus(){
     const dot=document.getElementById('copilot-status-dot');
@@ -7594,6 +7677,206 @@ const Copilot={
     this.renderMessages();
     showToast('Conversation cleared. Press Ctrl+Z to restore.');
   },
+  // ─── TOOL-CALLING DISPATCHER (Phase 5C) ───
+  // Executes a single tool call from the model. Returns a JSON-serialisable object.
+  // Read tools pull directly from State.data. Write tools either apply (autoApply:true)
+  // or queue onto n.copilotQueue for human review (autoApply:false, default).
+  _isWriteTool(name){
+    return ['add_chronicle_entry','add_npc','add_plot_seed','mark_hook_resolved','update_faction_stance','update_nation_stat'].indexOf(name)>=0;
+  },
+  _executeTool(name,args){
+    const n=State.get();
+    if(!n)return {error:'No active nation.'};
+    args=args||{};
+    const settings=State.data?.meta?.settings||{};
+    const scope=settings.copilotScope||'standard';
+    const autoApply=!!settings.copilotAutoApply;
+    // ─── READ TOOLS ──────────────────────────────────────────────
+    if(name==='read_chronicle'){
+      let limit=Math.max(1,Math.min(100,parseInt(args.limit,10)||10));
+      const filter=(args.filter||'').toString().toLowerCase();
+      const sorted=(n.chronicle||[]).slice().sort((a,b)=>a.year!==b.year?(a.year-b.year):((a.createdAt||'')<(b.createdAt||'')?-1:1));
+      let entries=sorted.slice(-limit);
+      if(filter){
+        entries=sorted.filter(e=>((e.name||'')+' '+(e.description||'')).toLowerCase().indexOf(filter)>=0).slice(-limit);
+      }
+      return {entries:entries.map(e=>({id:e.id,year:e.year,name:e.name,type:e.type,weight:e.weight,visibility:e.visibility,description:e.description}))};
+    }
+    if(name==='read_factions'){
+      return {factions:(n.factions||[]).map(f=>({id:f.id,name:f.name,type:f.type,position:f.position,description:f.description,leaderName:f.leaderName}))};
+    }
+    if(name==='read_npcs'){
+      const filter=(args.filter||'').toString().toLowerCase();
+      let chars=(n.characters||[]);
+      if(filter)chars=chars.filter(c=>(c.name||'').toLowerCase().indexOf(filter)>=0);
+      return {npcs:chars.map(c=>({id:c.id,name:c.name,role:c.role,status:c.status,description:c.description}))};
+    }
+    if(name==='read_realm_state'){
+      const stab=Compute.stability(n);
+      return {name:n.name,era:n.era,year:n.currentYear,government:n.government,archetype:n.archetype,leader:n.leader,rulingClass:n.rulingClass,capital:n.capital,population:n.population,stability:stab,status:Compute.status(stab),stats:Object.values(n.stats||{}).map(s=>({key:s.key,name:s.displayName,value:s.value,max:s.max,weight:s.weight}))};
+    }
+    // ─── WRITE TOOLS (scope-gated) ───────────────────────────────
+    if(this._isWriteTool(name)){
+      if(scope!=='full'&&COPILOT_TOOLS_STANDARD_ALLOWED.indexOf(name)<0){
+        return {error:'Out of scope. Ask user to switch to "full" scope in Settings.'};
+      }
+      // Build the proposal — same shape used for both autoApply and queue.
+      const proposal=this._buildProposal(name,args,n);
+      if(proposal.error)return {error:proposal.error};
+      if(autoApply){
+        State.pushUndo();
+        const summary=this._applyProposal(proposal,n);
+        State._touch(n.id);
+        State.persist();
+        this._renderQueue();
+        return {ok:true,applied:true,summary};
+      }else{
+        n.copilotQueue=n.copilotQueue||[];
+        const queueId=Utils.uuid();
+        n.copilotQueue.push({id:queueId,tool:name,args,proposal,createdAt:Utils.now()});
+        State._touch(n.id);
+        State.persist();
+        this._renderQueue();
+        return {ok:true,queued:true,queueId,summary:proposal.summary};
+      }
+    }
+    return {error:`Unknown tool: ${name}`};
+  },
+  // Construct a normalised proposal object from a tool call. Used by both the
+  // auto-apply path and the review queue. Returns {error} on validation failure.
+  _buildProposal(name,args,n){
+    if(name==='add_chronicle_entry'){
+      if(!args.name||!args.description||!args.type)return {error:'Missing required fields: name, description, type.'};
+      return {kind:'chronicle',data:{name:args.name,description:args.description,type:args.type,weight:typeof args.weight==='number'?args.weight:0,visibility:args.visibility||'public'},summary:`Add chronicle: ${args.name}`};
+    }
+    if(name==='add_npc'){
+      if(!args.name||!args.role)return {error:'Missing required fields: name, role.'};
+      return {kind:'npc',data:{name:args.name,role:args.role,description:args.description||'',status:args.status||'active'},summary:`Add NPC: ${args.name} (${args.role})`};
+    }
+    if(name==='add_plot_seed'){
+      if(!args.characterId||!args.seed)return {error:'Missing required fields: characterId, seed.'};
+      // Resolve character by id OR by name
+      const c=(n.characters||[]).find(x=>x.id===args.characterId)||(n.characters||[]).find(x=>(x.name||'').toLowerCase()===String(args.characterId).toLowerCase());
+      if(!c)return {error:`No character matching '${args.characterId}'.`};
+      return {kind:'plotSeed',data:{characterId:c.id,characterName:c.name,seed:args.seed},summary:`Add plot seed to ${c.name}: "${String(args.seed).slice(0,60)}${args.seed.length>60?'…':''}"`};
+    }
+    if(name==='mark_hook_resolved'){
+      if(!args.hookId)return {error:'Missing required field: hookId.'};
+      const h=(n.hooks||[]).find(x=>x.id===args.hookId)||(n.hooks||[]).find(x=>(x.title||'').toLowerCase()===String(args.hookId).toLowerCase());
+      if(!h)return {error:`No hook matching '${args.hookId}'.`};
+      return {kind:'hookResolved',data:{hookId:h.id,title:h.title},summary:`Mark hook resolved: ${h.title}`};
+    }
+    if(name==='update_faction_stance'){
+      if(!args.factionId||!args.position)return {error:'Missing required fields: factionId, position.'};
+      const f=(n.factions||[]).find(x=>x.id===args.factionId)||(n.factions||[]).find(x=>(x.name||'').toLowerCase()===String(args.factionId).toLowerCase());
+      if(!f)return {error:`No faction matching '${args.factionId}'.`};
+      return {kind:'factionStance',data:{factionId:f.id,factionName:f.name,oldPosition:f.position,position:args.position},summary:`${f.name}: ${f.position||'holding'} → ${args.position}`};
+    }
+    if(name==='update_nation_stat'){
+      if(!args.stat||typeof args.delta!=='number')return {error:'Missing required fields: stat, delta (integer).'};
+      const s=n.stats&&n.stats[args.stat];
+      if(!s)return {error:`No stat named '${args.stat}'. Available: ${Object.keys(n.stats||{}).join(', ')}`};
+      return {kind:'statDelta',data:{stat:args.stat,statName:s.displayName,delta:args.delta,oldValue:s.value,newValue:Utils.clamp(s.value+args.delta,0,s.max)},summary:`${s.displayName}: ${s.value} ${args.delta>=0?'+':''}${args.delta} → ${Utils.clamp(s.value+args.delta,0,s.max)}`};
+    }
+    return {error:`Unknown tool: ${name}`};
+  },
+  // Apply a proposal to the active nation. Caller must have already pushUndo'd.
+  // Returns a one-line summary string for logging back to the model.
+  _applyProposal(p,n){
+    if(p.kind==='chronicle'){
+      const ev={id:Utils.uuid(),name:p.data.name,type:p.data.type,weight:p.data.weight,description:p.data.description,year:n.currentYear,visibility:p.data.visibility,relatedStats:[],source:'ai-tool',createdAt:Utils.now()};
+      n.chronicle=n.chronicle||[];n.chronicle.push(ev);
+      document.dispatchEvent(new CustomEvent('sc:eventAdded',{detail:{eid:ev.id,nid:n.id}}));
+      document.dispatchEvent(new CustomEvent('sc:changed',{detail:{fields:['chronicle'],nid:n.id}}));
+      return `Chronicle entry "${ev.name}" added (id ${ev.id}).`;
+    }
+    if(p.kind==='npc'){
+      const c={id:Utils.uuid(),name:p.data.name,role:p.data.role,description:p.data.description,status:p.data.status,drive:'',fear:'',factionId:null,chronicleLinks:[],plotSeeds:[],createdAt:Utils.now()};
+      n.characters=n.characters||[];n.characters.push(c);
+      document.dispatchEvent(new CustomEvent('sc:changed',{detail:{fields:['character'],nid:n.id}}));
+      return `NPC "${c.name}" added (id ${c.id}).`;
+    }
+    if(p.kind==='plotSeed'){
+      const c=(n.characters||[]).find(x=>x.id===p.data.characterId);
+      if(!c)return `Could not find character ${p.data.characterId}.`;
+      c.plotSeeds=Array.isArray(c.plotSeeds)?c.plotSeeds:[];
+      c.plotSeeds.push(p.data.seed);
+      document.dispatchEvent(new CustomEvent('sc:changed',{detail:{fields:['character'],nid:n.id}}));
+      return `Plot seed added to ${c.name}.`;
+    }
+    if(p.kind==='hookResolved'){
+      const h=(n.hooks||[]).find(x=>x.id===p.data.hookId);
+      if(!h)return `Could not find hook ${p.data.hookId}.`;
+      h.resolved=true;h.status='resolved';h.resolvedAt=Utils.now();
+      document.dispatchEvent(new CustomEvent('sc:changed',{detail:{fields:['hook'],nid:n.id}}));
+      return `Hook "${h.title}" marked resolved.`;
+    }
+    if(p.kind==='factionStance'){
+      const f=(n.factions||[]).find(x=>x.id===p.data.factionId);
+      if(!f)return `Could not find faction ${p.data.factionId}.`;
+      f.position=p.data.position;
+      document.dispatchEvent(new CustomEvent('sc:changed',{detail:{fields:['faction'],nid:n.id}}));
+      return `${f.name} stance → ${f.position}.`;
+    }
+    if(p.kind==='statDelta'){
+      const s=n.stats&&n.stats[p.data.stat];
+      if(!s)return `Could not find stat ${p.data.stat}.`;
+      s.value=p.data.newValue;
+      document.dispatchEvent(new CustomEvent('sc:changed',{detail:{fields:['stat'],nid:n.id}}));
+      return `${s.displayName} = ${s.value}.`;
+    }
+    return 'Applied.';
+  },
+  // ─── REVIEW QUEUE UI (Phase 5C) ───
+  // Renders pending Copilot-proposed changes under the panel header. Approve
+  // applies via pushUndo+mutation; Reject discards.
+  _renderQueue(){
+    const host=document.getElementById('copilot-review-queue');
+    if(!host)return;
+    const n=State.get();
+    const queue=n&&Array.isArray(n.copilotQueue)?n.copilotQueue:[];
+    if(!queue.length){host.innerHTML='';host.style.display='none';return;}
+    host.style.display='block';
+    const items=queue.map(it=>{
+      const summary=Utils.escHtml(it.proposal?.summary||it.tool);
+      return `<div class="cp-queue__item" data-qid="${it.id}">
+        <div class="cp-queue__summary">${summary}</div>
+        <div class="cp-queue__actions">
+          <button class="cp-queue__btn cp-queue__btn--approve" data-act="approve" data-qid="${it.id}">Approve</button>
+          <button class="cp-queue__btn cp-queue__btn--reject" data-act="reject" data-qid="${it.id}">Reject</button>
+        </div>
+      </div>`;
+    }).join('');
+    host.innerHTML=`<div class="cp-queue__header">Pending Copilot proposals (${queue.length})</div>${items}`;
+    host.querySelectorAll('button[data-act]').forEach(btn=>{
+      btn.addEventListener('click',e=>{
+        const act=btn.dataset.act,qid=btn.dataset.qid;
+        if(act==='approve')Copilot._approveQueueItem(qid);
+        else if(act==='reject')Copilot._rejectQueueItem(qid);
+      });
+    });
+  },
+  _approveQueueItem(qid){
+    const n=State.get();if(!n||!Array.isArray(n.copilotQueue))return;
+    const idx=n.copilotQueue.findIndex(x=>x.id===qid);if(idx<0)return;
+    const item=n.copilotQueue[idx];
+    State.pushUndo();
+    this._applyProposal(item.proposal,n);
+    n.copilotQueue.splice(idx,1);
+    State._touch(n.id);
+    State.persist();
+    this._renderQueue();
+    showToast('Copilot proposal applied.');
+  },
+  _rejectQueueItem(qid){
+    const n=State.get();if(!n||!Array.isArray(n.copilotQueue))return;
+    const idx=n.copilotQueue.findIndex(x=>x.id===qid);if(idx<0)return;
+    State.pushUndo();
+    n.copilotQueue.splice(idx,1);
+    State._touch(n.id);
+    State.persist();
+    this._renderQueue();
+  },
   // ─── WIRE INTEGRATION (OpenRouter) ───
   // Internal state for in-flight requests
   _sending:false,
@@ -7601,9 +7884,21 @@ const Copilot={
   _streamingNationId:null,
   _streamingMsgEl:null,
   // Build the world-state context sent with every message.
-  // Standard scope: stats, factions, characters, last 10 chronicle events, active pressures.
+  // Scope is controlled per-nation by `copilotContextDepth` (Phase 5C):
+  //   low    → 10 chronicle events + factions + active NPCs
+  //   medium → 30 chronicle events + factions + all named NPCs + unresolved hooks (default)
+  //   high   → 50 chronicle events + factions + all NPCs + hooks + secrets + recent oracle log
+  //   full   → entire chronicle + everything we have
   buildContext(nation){
     if(!nation)return '';
+    const depth=nation.copilotContextDepth||'medium';
+    const DEPTH_CFG={
+      low:   {chron:10, npcsActiveOnly:true,  includeHooks:false, unresolvedOnly:false, includeSecrets:false, includeOracle:false},
+      medium:{chron:30, npcsActiveOnly:false, includeHooks:true,  unresolvedOnly:true,  includeSecrets:false, includeOracle:false},
+      high:  {chron:50, npcsActiveOnly:false, includeHooks:true,  unresolvedOnly:false, includeSecrets:true,  includeOracle:true},
+      full:  {chron:Infinity, npcsActiveOnly:false, includeHooks:true, unresolvedOnly:false, includeSecrets:true, includeOracle:true},
+    };
+    const cfg=DEPTH_CFG[depth]||DEPTH_CFG.medium;
     const lines=[];
     lines.push(`# Nation: ${nation.name}`);
     lines.push(`Era: ${nation.era}, Year: ${nation.currentYear}`);
@@ -7615,12 +7910,13 @@ const Copilot={
     const stab=Compute.stability(nation);
     const status=Compute.status(stab);
     lines.push(`Stability: ${stab} (${status})`);
+    lines.push(`Context depth: ${depth}`);
     // Stats
     lines.push('\n## Stats');
     Object.values(nation.stats).forEach(s=>{
       lines.push(`- ${s.displayName}: ${s.value}/${s.max} (weight ${s.weight>0?'+':''}${s.weight})`);
     });
-    // Factions
+    // Factions (always included; cheap)
     if(nation.factions&&nation.factions.length){
       lines.push('\n## Factions');
       nation.factions.forEach(f=>{
@@ -7628,24 +7924,51 @@ const Copilot={
         lines.push(`- ${f.name} (${f.type||'Unknown'}, ${f.position||'holding'})${lead}: ${f.description||''}`);
       });
     }
-    // Characters
+    // Characters — filter by status if depth=low
     if(nation.characters&&nation.characters.length){
       lines.push('\n## Characters');
-      nation.characters.forEach(c=>{
+      const chars=cfg.npcsActiveOnly?nation.characters.filter(c=>c.status==='active'||!c.status):nation.characters;
+      chars.forEach(c=>{
         const role=c.role?`, ${c.role}`:'';
         const charStatus=c.status&&c.status!=='active'?` [${c.status}]`:'';
         lines.push(`- ${c.name}${role}${charStatus}: ${c.description||''}`);
       });
     }
-    // Recent chronicle (last 10)
+    // Chronicle — slice by depth
     const sortedChron=(nation.chronicle||[]).slice().sort((a,b)=>a.year!==b.year?(a.year-b.year):((a.createdAt||'')===(b.createdAt||'')?0:(a.createdAt||'')<(b.createdAt||'')?-1:1));
-    const recentChron=sortedChron.slice(-10);
+    const recentChron=isFinite(cfg.chron)?sortedChron.slice(-cfg.chron):sortedChron;
     if(recentChron.length){
-      lines.push('\n## Recent Chronicle Events');
+      lines.push(`\n## ${isFinite(cfg.chron)?'Recent ':''}Chronicle Events`);
       recentChron.forEach(e=>{
         const w=e.weight>0?`+${e.weight}`:String(e.weight);
         const vis=e.visibility==='private'?' [secret]':e.visibility==='forecast'?' [forecast]':'';
         lines.push(`- Year ${e.year}: ${e.name} (${e.type}, weight ${w})${vis}: ${e.description||''}`);
+      });
+    }
+    // Hooks
+    if(cfg.includeHooks&&nation.hooks&&nation.hooks.length){
+      const hooks=cfg.unresolvedOnly?nation.hooks.filter(h=>!h.resolved&&h.status!=='resolved'):nation.hooks;
+      if(hooks.length){
+        lines.push('\n## Plot Hooks');
+        hooks.forEach(h=>{
+          const st=h.resolved||h.status==='resolved'?' [resolved]':'';
+          lines.push(`- [${h.id}] ${h.title||'Untitled hook'}${st}: ${h.description||''}`);
+        });
+      }
+    }
+    // Secrets (high/full only)
+    if(cfg.includeSecrets&&nation.secrets&&nation.secrets.length){
+      lines.push('\n## Secrets');
+      nation.secrets.forEach(s=>lines.push(`- ${s.title||'(untitled)'}: ${s.content||''}`));
+    }
+    // Oracle log (high/full only)
+    if(cfg.includeOracle&&Array.isArray(nation.oracleLog)&&nation.oracleLog.length){
+      const recent=nation.oracleLog.slice(0,10);
+      lines.push('\n## Recent Oracle Log');
+      recent.forEach(o=>{
+        const q=o.question||o.prompt||'';
+        const a=o.answer||o.result||'';
+        lines.push(`- ${q} → ${a}`);
       });
     }
     // Pressures
@@ -7680,7 +8003,7 @@ Without a CANON block, your response is conversational only — no simulation ef
 
 Keep responses concise and grounded. If you don't know, say so. If the user asks for something unrelated to the world, decline politely.`;
   },
-  // Send a message via OpenRouter
+  // Send a message via OpenRouter (streaming, with tool-calling loop — Phase 5C).
   async send(){
     if(this._sending){showToast('A response is already streaming.');return;}
     if(!this.isConfigured()){showToast('Configure your API key first.');return;}
@@ -7707,13 +8030,18 @@ Keep responses concise and grounded. If you don't know, say so. If the user asks
       };
       model=settings.copilotModel||'anthropic/claude-sonnet-latest';
     }
+    // Tool-calling is only enabled when we have a real API key on a hosted provider.
+    // Ollama's local chat-completions endpoint doesn't reliably support OpenAI tool-calls.
+    const toolsEnabled=provider!=='ollama'&&!!settings.copilotKey;
     // Lock UI
     this._sending=true;
     this._streamingNationId=n.id;
+    this._isGenerating=true;
     const sendBtn=document.getElementById('copilot-send');
     if(sendBtn){sendBtn.disabled=false;sendBtn.textContent='Stop';sendBtn.title='Click to stop streaming';}
     if(input)input.disabled=true;
     // Append user message immediately (visible feedback)
+    this._lastUserMessageAt=Date.now();
     this.appendMessage('user',userText);
     if(input){input.value='';input.style.height='auto';}
     // Build assistant placeholder message
@@ -7724,12 +8052,13 @@ Keep responses concise and grounded. If you don't know, say so. If the user asks
     // Build messages array for the API: system prompt + world context + history
     const context=this.buildContext(n);
     const systemPrompt=this.buildSystemPrompt()+'\n\n# Current World State\n'+context;
-    // Convert past conversation (excluding the empty placeholder we just added) to API format
+    // Convert past conversation (excluding the empty placeholder we just added) to API format.
+    // Skip prior tool / tool-result messages; just send user/assistant turns.
     const history=n.copilotConversation
-      .slice(0,-1) // exclude the empty placeholder
-      .filter(m=>m.role==='user'||m.role==='assistant')
+      .slice(0,-1)
+      .filter(m=>(m.role==='user'||m.role==='assistant'||(m.role==='system'&&m._summarized)))
       .map(m=>({role:m.role,content:m.content}));
-    const messages=[
+    let messages=[
       {role:'system',content:systemPrompt},
       ...history,
     ];
@@ -7738,75 +8067,118 @@ Keep responses concise and grounded. If you don't know, say so. If the user asks
     let accumulated='';
     let receivedAnything=false;
     let errorMessage=null;
-    try{
+    let finalUsage=null;
+    // Inner helper: stream one round-trip. Accumulates content into `accumulated`
+    // (visible to the UI) and returns {toolCalls, usage, finishReason}.
+    const streamOnce=async (msgs)=>{
+      const body={model,messages:msgs,stream:true,max_tokens:1500};
+      if(toolsEnabled){body.tools=COPILOT_TOOLS;body.tool_choice='auto';}
       const resp=await fetch(streamUrl,{
         method:'POST',
         headers:streamHeaders,
-        body:JSON.stringify({
-          model,
-          messages,
-          stream:true,
-          max_tokens:1500, // Hard cap to prevent runaway costs. ~$0.02 worst case on Sonnet.
-        }),
+        body:JSON.stringify(body),
         signal:this._abortController.signal,
       });
       if(!resp.ok){
-        // Non-200 means the request itself failed before streaming
         let errText=`HTTP ${resp.status}`;
-        try{
-          const errJson=await resp.json();
-          errText=errJson?.error?.message||errJson?.error||errText;
-        }catch(e){
-          try{errText=(await resp.text()).slice(0,200)||errText;}catch(_){}
-        }
+        try{const j=await resp.json();errText=j?.error?.message||j?.error||errText;}
+        catch(e){try{errText=(await resp.text()).slice(0,200)||errText;}catch(_){}}
         if(resp.status===401)errorMessage='Invalid API key. Check Settings → Copilot.';
         else if(resp.status===402)errorMessage='Out of credits. Top up at openrouter.ai/credits.';
         else if(resp.status===429)errorMessage='Rate limited. Wait a moment and try again.';
         else errorMessage=`Request failed: ${errText}`;
         throw new Error(errorMessage);
       }
-      // Stream the response
       const reader=resp.body.getReader();
       const decoder=new TextDecoder();
       let buffer='';
+      const toolCallsAcc=[]; // indexed by tool_call.index
+      let usage=null;
+      let finishReason=null;
       while(true){
         const {done,value}=await reader.read();
         if(done)break;
-        // Bail if the user switched nations mid-stream
-        if(this._streamingNationId!==State.data.meta.activeNationId){
-          // Still finish writing to the original nation, just don't update visible UI for the stale request
-        }
         buffer+=decoder.decode(value,{stream:true});
-        // SSE format: lines separated by \n, events separated by \n\n
-        // Each event has "data: <json>" or ":<comment>" or "data: [DONE]"
         const lines=buffer.split('\n');
-        buffer=lines.pop()||''; // keep incomplete line for next chunk
+        buffer=lines.pop()||'';
         for(const rawLine of lines){
           const line=rawLine.trim();
           if(!line)continue;
-          if(line.startsWith(':'))continue; // SSE comment, ignore
+          if(line.startsWith(':'))continue;
           if(!line.startsWith('data:'))continue;
           const data=line.slice(5).trim();
           if(data==='[DONE]')continue;
           try{
             const parsed=JSON.parse(data);
-            // Check for error in stream (status was 200 but provider returned error)
             if(parsed.error){
               errorMessage=parsed.error.message||'Provider returned an error mid-stream.';
               throw new Error(errorMessage);
             }
-            const delta=parsed.choices?.[0]?.delta?.content;
-            if(typeof delta==='string'&&delta.length){
-              accumulated+=delta;
+            if(parsed.usage)usage=parsed.usage;
+            const ch0=parsed.choices&&parsed.choices[0];
+            if(!ch0)continue;
+            if(ch0.finish_reason)finishReason=ch0.finish_reason;
+            const delta=ch0.delta||{};
+            if(typeof delta.content==='string'&&delta.content.length){
+              accumulated+=delta.content;
               receivedAnything=true;
               this._updateStreamingMessage(accumulated);
             }
+            // Accumulate tool_call fragments by index.
+            // OpenAI/OpenRouter stream: delta.tool_calls=[{index,id?,type?,function:{name?,arguments?}}]
+            if(Array.isArray(delta.tool_calls)){
+              delta.tool_calls.forEach(tc=>{
+                const idx=typeof tc.index==='number'?tc.index:0;
+                let slot=toolCallsAcc[idx];
+                if(!slot){slot={id:'',type:'function',function:{name:'',arguments:''}};toolCallsAcc[idx]=slot;}
+                if(tc.id)slot.id=tc.id;
+                if(tc.type)slot.type=tc.type;
+                if(tc.function){
+                  if(tc.function.name)slot.function.name+=tc.function.name;
+                  if(typeof tc.function.arguments==='string')slot.function.arguments+=tc.function.arguments;
+                }
+              });
+            }
           }catch(parseErr){
-            // Skip malformed chunks — don't abort the whole stream
-            if(errorMessage)throw parseErr; // re-throw if we set an error
+            if(errorMessage)throw parseErr;
             continue;
           }
         }
+      }
+      // Filter out any half-formed tool-call slots without a name.
+      const toolCalls=toolCallsAcc.filter(t=>t&&t.function&&t.function.name);
+      return {toolCalls,usage,finishReason};
+    };
+    try{
+      // Tool-call loop — cap at 5 iterations to prevent runaway recursion.
+      let iter=0;
+      const MAX_ITER=5;
+      while(iter<MAX_ITER){
+        iter++;
+        const round=await streamOnce(messages);
+        if(round.usage)finalUsage=round.usage;
+        if(!round.toolCalls.length)break;
+        // We have tool calls to execute. Push the assistant turn (with tool_calls and any
+        // partial content) into messages, then execute each tool and append role:'tool'
+        // results, then loop.
+        messages=[...messages,{role:'assistant',content:accumulated||null,tool_calls:round.toolCalls.map(tc=>({id:tc.id||Utils.uuid(),type:'function',function:{name:tc.function.name,arguments:tc.function.arguments||'{}'}}))}];
+        for(const tc of round.toolCalls){
+          let args={};
+          try{args=tc.function.arguments?JSON.parse(tc.function.arguments):{};}
+          catch(e){args={};}
+          let result;
+          try{result=this._executeTool(tc.function.name,args);}
+          catch(e){result={error:String(e&&e.message||e)};}
+          messages.push({role:'tool',tool_call_id:tc.id||messages[messages.length-1].tool_calls.find(x=>x.function.name===tc.function.name)?.id||Utils.uuid(),content:JSON.stringify(result)});
+        }
+        // Reset accumulated for the next assistant turn — but keep the visible content
+        // so the user sees progressive output. Simple approach: append a marker so the
+        // model's follow-up appears below tool work.
+        if(accumulated&&!accumulated.endsWith('\n\n'))accumulated+='\n\n';
+        this._updateStreamingMessage(accumulated);
+      }
+      if(iter>=MAX_ITER&&!errorMessage){
+        accumulated+='\n\n_[Tool-call loop hit 5-iteration cap.]_';
       }
     }catch(err){
       if(err.name==='AbortError'){
@@ -7821,23 +8193,31 @@ Keep responses concise and grounded. If you don't know, say so. If the user asks
         showToast(msg,[],6000);
       }
     }finally{
-      // Finalize the streaming message
+      // Finalize the streaming message — and attach the system+lastUser context
+      // for the Show-Context toggle (Phase 5C).
       const targetNation=State.data.nations.find(x=>x.id===this._streamingNationId);
       if(targetNation){
         const last=targetNation.copilotConversation[targetNation.copilotConversation.length-1];
         if(last&&last._streaming){
           last.content=accumulated||'_[No response]_';
+          last._sentContext={system:systemPrompt,lastUser:userText};
           delete last._streaming;
         }
         State._touch(targetNation.id);
         State.persist();
+      }
+      // Log real streaming cost — Phase 5F preview (usage capture).
+      if(finalUsage&&typeof TransparencyLog!=='undefined'){
+        try{
+          TransparencyLog.push({label:TransparencyLog._pendingLabel||'Copilot chat',model,inputTokens:finalUsage.prompt_tokens||0,outputTokens:finalUsage.completion_tokens||0});
+          TransparencyLog._pendingLabel=null;
+        }catch(e){}
       }
       // Detect canon block in the final response and offer review
       if(accumulated&&!errorMessage){
         try{
           const parsed=Parse.canonBlock(accumulated,{detail:true});
           if(parsed&&parsed.candidates&&parsed.candidates.length){
-            // Defer slightly so the message render completes first
             setTimeout(()=>{
               if(this._streamingNationId===State.data.meta.activeNationId&&!Modals._current){
                 Modals.openCanonReview(parsed.candidates,this._streamingNationId,parsed.failures||[]);
@@ -7848,15 +8228,17 @@ Keep responses concise and grounded. If you don't know, say so. If the user asks
       }
       // Unlock UI
       this._sending=false;
+      this._isGenerating=false;
       this._abortController=null;
       this._streamingNationId=null;
       const sb=document.getElementById('copilot-send');
       if(sb){sb.disabled=false;sb.textContent='Send';}
       const inp=document.getElementById('copilot-input');
       if(inp){inp.disabled=false;inp.focus();}
-      // Re-render to remove the streaming class
       if(this._open)this.renderMessages();
       this.updateStatus();
+      // Phase 5C: 20-turn auto-summarization (fires async, idle-guarded).
+      try{this._maybeSummarize();}catch(e){}
     }
   },
   // Update the in-progress assistant message during streaming
@@ -8392,6 +8774,74 @@ Return ONLY the paragraph as plain text. No preamble, no formatting.`;
       const clean=text.replace(/```json|```/g,'').trim();
       return JSON.parse(clean);
     }catch(e){return{names:[]};}
+  },
+  // ─── CONVERSATION SUMMARIZATION (Phase 5C, 20-turn cap) ───
+  // When the visible conversation exceeds 20 turns, fold the oldest 10 into a
+  // single PRIOR_CONTEXT system message via a Haiku-tier summarization call.
+  // Idle-guard: only fires when the user has been quiet for 5s AND no generation
+  // is in flight. Failures are silent (summarization is an optimization, not load-bearing).
+  _lastUserMessageAt:0,
+  _isGenerating:false,
+  _summarizing:false,
+  _maybeSummarize(){
+    if(this._summarizing||this._isGenerating)return;
+    const n=State.get();
+    if(!n||!Array.isArray(n.copilotConversation))return;
+    // Count only visible turns (skip already-summarized system entries).
+    const visible=n.copilotConversation.filter(m=>!(m.role==='system'&&m._summarized));
+    if(visible.length<=20)return;
+    // Defer 5s; on fire, re-check idle.
+    if(this._summarizeTimer)clearTimeout(this._summarizeTimer);
+    this._summarizeTimer=setTimeout(()=>{this._runSummarization(n.id);},5000);
+  },
+  async _runSummarization(nationId){
+    if(this._summarizing||this._isGenerating)return;
+    const idleFor=Date.now()-(this._lastUserMessageAt||0);
+    if(idleFor<5000){this._maybeSummarize();return;}
+    const n=State.data.nations.find(x=>x.id===nationId);
+    if(!n||!Array.isArray(n.copilotConversation))return;
+    if(!this.isConfigured())return;
+    // Find the oldest 10 non-summarized turns.
+    const idxs=[];
+    n.copilotConversation.forEach((m,i)=>{
+      if(idxs.length>=10)return;
+      if(m.role==='system'&&m._summarized)return;
+      idxs.push(i);
+    });
+    if(idxs.length<10)return;
+    const oldest=idxs.map(i=>n.copilotConversation[i]);
+    const transcript=oldest.map(m=>`${m.role.toUpperCase()}: ${m.content||''}`).join('\n\n');
+    this._summarizing=true;
+    try{
+      const sysPrompt='Summarize the following 10 messages from a TTRPG worldbuilding conversation into a single dense paragraph that preserves named entities, faction movements, and unresolved threads. Return only JSON: {"summary":"..."}.';
+      // Force Haiku-tier model for cost; transparency log labels accordingly.
+      const messages=[
+        {role:'system',content:sysPrompt},
+        {role:'user',content:transcript},
+      ];
+      if(typeof TransparencyLog!=='undefined')TransparencyLog._pendingLabel='Conversation Summary';
+      const result=await this._apiFetchJson(messages,{max_tokens:600});
+      const summary=(result&&result.summary)?String(result.summary).trim():'';
+      if(!summary)return;
+      // Re-resolve the nation (state may have mutated) and splice in the summary.
+      const n2=State.data.nations.find(x=>x.id===nationId);
+      if(!n2||!Array.isArray(n2.copilotConversation))return;
+      // Verify indices still point at the same messages (cheap content check on first/last).
+      if(!n2.copilotConversation[idxs[0]]||n2.copilotConversation[idxs[0]].content!==oldest[0].content)return;
+      State.pushUndo();
+      // Replace the 10 oldest with a single summarized system entry.
+      // Splice removes contiguous runs; oldest indices are dense from index 0 unless prior summary exists.
+      const first=idxs[0];
+      const last=idxs[idxs.length-1];
+      n2.copilotConversation.splice(first,last-first+1,{role:'system',content:'PRIOR_CONTEXT: '+summary,_summarized:true,timestamp:Utils.now()});
+      State._touch(n2.id);
+      State.persist();
+      if(this._open)this.renderMessages();
+    }catch(e){
+      // Silent fail — summarization is non-essential.
+    }finally{
+      this._summarizing=false;
+    }
   },
 };
 // ─── SAMPLE REALM DATA ───────────────────────────────────────────────────────
@@ -12372,6 +12822,16 @@ function bindEventListeners(){
   document.getElementById('copilot-launch')?.addEventListener('click',()=>Copilot.toggle());
   document.getElementById('copilot-close')?.addEventListener('click',()=>Copilot.close());
   document.getElementById('copilot-clear')?.addEventListener('click',()=>Copilot.clearConversation());
+  // Phase 5C: Context-depth selector (per-nation)
+  const cpDepthSel=document.getElementById('copilot-depth-select');
+  if(cpDepthSel){
+    cpDepthSel.addEventListener('change',(e)=>{
+      const n=State.get();if(!n)return;
+      n.copilotContextDepth=e.target.value||'medium';
+      State._touch(n.id);
+      State.persistNow();
+    });
+  }
   // Send button — now wired (delivery 2)
   document.getElementById('copilot-send')?.addEventListener('click',()=>{
     if(Copilot._sending){
