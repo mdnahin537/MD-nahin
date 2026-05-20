@@ -4439,6 +4439,14 @@ const LicenseGate={
   _detectPlatform(key){
     return/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(key.trim())?'lemonsqueezy':'itchio';
   },
+  _clearDemoKey(){
+    // Post-activation: scrub Hunter's demo key from settings so licensed users
+    // don't keep burning the shared API budget. They'll enter their own key in Settings.
+    if(DEMO_API_KEY&&State.data?.meta?.settings?.copilotKey===DEMO_API_KEY){
+      State.data.meta.settings.copilotKey=null;
+      State.persistNow();
+    }
+  },
   async activate(key){
     const platform=this._detectPlatform(key);
     return platform==='lemonsqueezy'?this._activateLS(key.trim()):this._activateItchio(key.trim());
@@ -4452,6 +4460,7 @@ const LicenseGate={
       if(json.activated){
         this._data={key,instanceId:json.instance?.id||null,platform:'lemonsqueezy',activatedAt:Date.now(),valid:true};
         await IDB.set(IDB_KEY_LICENSE,this._data);
+        this._clearDemoKey();
         document.dispatchEvent(new CustomEvent('license:changed'));
         return{success:true};
       }
@@ -4465,6 +4474,7 @@ const LicenseGate={
       if(json.valid){
         this._data={key,instanceId:null,platform:'itchio',activatedAt:Date.now(),valid:true};
         await IDB.set(IDB_KEY_LICENSE,this._data);
+        this._clearDemoKey();
         document.dispatchEvent(new CustomEvent('license:changed'));
         return{success:true};
       }
@@ -8425,12 +8435,16 @@ const FrontDoor={
     }else{
       // Phase 4: 5 free AI messages via demo key, then gate
       if(DemoCounter.canUse()){
-        const savedKey=State.data.meta?.settings?.copilotKey;
+        if(!State.data.meta.settings)State.data.meta.settings={};
         State.data.meta.settings.copilotKey=DemoCounter.key();
         await DemoCounter.consume();
-        try{await this._generate(prompt,style);}finally{
-          State.data.meta.settings.copilotKey=savedKey;
+        this.close();
+        if(typeof Tonight!=='undefined'){
+          Tonight.open();
+          const inp=document.getElementById('tonight-input');if(inp)inp.value=prefixed;
+          if(typeof Tonight.generate==='function')setTimeout(()=>Tonight.generate(),80);
         }
+        await this._saveRecent({prompt,style});
         const left=DemoCounter.left();
         if(left>0)showToast(left+' free preview message'+(left===1?'':'s')+' remaining.',[{label:'Get full access',handler:()=>LicenseGateUI.openModal()}],5000);
         else showToast('Free preview used — activate your license to continue.',[{label:'Activate',handler:()=>LicenseGateUI.openModal()}],8000);

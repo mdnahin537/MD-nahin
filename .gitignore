@@ -28,3 +28,4 @@ Thumbs.db
 
 # QA review artifacts — screenshots and probe scripts from automated browser tests
 .review/
+.claude/worktrees/
