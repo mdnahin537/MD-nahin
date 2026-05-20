@@ -46,7 +46,10 @@ export default {
         const itchUrl = `https://itch.io/api/1/${env.ITCHIO_API_KEY}/game/${env.ITCHIO_GAME_ID}/download_keys?download_key=${encodeURIComponent(key)}`;
         const res = await fetch(itchUrl, { headers: { Accept: 'application/json' } });
         const data = await res.json();
-        const valid = Array.isArray(data.download_keys) && data.download_keys.length > 0;
+        // itch.io returns { "download_key": {...} } (singular object) on success,
+        // or { "errors": ["invalid download key"] } on failure.
+        // The plural "download_keys" array does NOT exist in this endpoint's response.
+        const valid = !!data.download_key && !data.errors;
         return json({ valid, error: valid ? null : 'Key not found for this product.' });
       } catch (e) {
         return json({ valid: false, error: 'itch.io verification temporarily unavailable.' }, 502);
