@@ -3610,6 +3610,17 @@ SECTION 9: DATA & STATE
 const LS_PRODUCT_ID=''; // Hunter: paste Lemon Squeezy product_id after creating the product
 const WORKER_URL='https://rw-license.realmwright.workers.dev'; // Cloudflare Worker
 const TURNSTILE_SITEKEY=''; // Hunter: paste Cloudflare Turnstile site key (public, safe to commit)
+// Build-time guard — scream loudly if a public (non-file://) build was shipped
+// with the license/demo site keys still blank. Silent on file:// loads so
+// itch.io desktop bundles and local opens don't nag during development.
+(function _siteKeyGuard(){
+  try{
+    if(location.protocol==='file:')return;
+    if(!LS_PRODUCT_ID||!TURNSTILE_SITEKEY){
+      console.error('[RealmWright] Missing site keys — license/demo disabled. Set LS_PRODUCT_ID and TURNSTILE_SITEKEY in src/index.html before publishing.');
+    }
+  }catch(e){}
+})();
 const DEMO_MESSAGE_LIMIT=5;
 const AUTO_SAVE_THRESHOLD=20;
 const IDB_KEY_LICENSE='rw_license_v1';
