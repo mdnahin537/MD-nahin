@@ -7999,8 +7999,11 @@ const Copilot={
   _isWriteTool(name){
     return ['add_chronicle_entry','add_npc','add_plot_seed','mark_hook_resolved','update_faction_stance','update_nation_stat'].indexOf(name)>=0;
   },
-  _executeTool(name,args){
-    const n=State.get();
+  _executeTool(name,args,nationId){
+    // P1.8: tool calls must always resolve against the nation that the stream
+    // started on. Previously this used State.get() (the *active* nation), so if
+    // the user switched nations mid-stream, writes landed on the wrong realm.
+    const n=(nationId?State.getById(nationId):null)||State.get();
     if(!n)return {error:'No active nation.'};
     args=args||{};
     const settings=State.data?.meta?.settings||{};
@@ -8482,7 +8485,7 @@ Keep responses concise and grounded. If you don't know, say so. If the user asks
           try{args=tc.function.arguments?JSON.parse(tc.function.arguments):{};}
           catch(e){args={};}
           let result;
-          try{result=this._executeTool(tc.function.name,args);}
+          try{result=this._executeTool(tc.function.name,args,this._streamingNationId);}
           catch(e){result={error:String(e&&e.message||e)};}
           messages.push({role:'tool',tool_call_id:tc.id||messages[messages.length-1].tool_calls.find(x=>x.function.name===tc.function.name)?.id||Utils.uuid(),content:JSON.stringify(result)});
         }
