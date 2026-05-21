@@ -424,7 +424,7 @@ body.theme-ember .gm-toolbar{border-bottom-color:var(--color-gold)}
   white-space:nowrap;align-self:flex-start;line-height:1.4;text-align:right}
 .wms-nation-era strong{color:var(--ember-color);font-weight:500;font-size:11px}
 .wms-nation-notes{font-size:var(--text-body-sm);color:var(--color-text-muted);font-style:italic;
-  margin-top:10px;line-height:1.65;white-space:pre-wrap;
+  margin-top:-14px;line-height:1.65;white-space:pre-wrap;
   border-left:2px solid var(--color-gold-pale);padding-left:10px;display:none}
 .wms-section{display:flex;flex-direction:column;gap:14px}
 .wms-sec-label{font-family:'Cinzel',serif;font-size:10px;letter-spacing:.28em;
@@ -456,6 +456,15 @@ body.theme-ember .gm-toolbar{border-bottom-color:var(--color-gold)}
 /* When pressures stack on a narrower viewport */
 @media (max-width:1100px){.wms-pressures{grid-template-columns:1fr 1fr}}
 @media (max-width:780px){.wms-pressures{grid-template-columns:1fr}}
+/* Tablet reflow — left/right rails shrink, center keeps breathing room. */
+@media (max-width:1100px){.wms-panels{grid-template-columns:248px 1fr 256px}}
+/* Below 900px: collapse the right rail under the center column. */
+@media (max-width:900px){.wms-panels{grid-template-columns:240px 1fr;grid-auto-rows:auto}
+  .wms-panels>.wms-rp{grid-column:1 / -1}}
+/* Below 768px the front door gate replaces the app, but if a user resizes
+   while inside the app we still need a usable single-column layout. */
+@media (max-width:767px){.wms-panels{grid-template-columns:1fr;overflow-y:auto;height:auto}
+  .wms-panels>.wms-lp,.wms-panels>.wms-cp,.wms-panels>.wms-rp{grid-column:1 / -1;min-height:0;overflow-y:visible}}
 /* Faction grid — keeps the 3D tilt, refines the chrome */
 .wms-fgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .wms-fc{background:rgba(255,185,100,.025);border:1px solid var(--color-border-hairline);
@@ -2602,8 +2611,8 @@ SECTION 8: DOM STRUCTURE
         <div class="wms-cp-head">
           <div class="wms-nation-title" id="wms-nation-title">—</div>
           <div class="wms-nation-era" id="wms-nation-era"></div>
-          <div class="wms-nation-notes" id="wms-nation-notes"></div>
         </div>
+        <div class="wms-nation-notes" id="wms-nation-notes"></div>
         <div class="wms-section">
           <div class="wms-sec-label">Active Pressures</div>
           <div class="wms-pressures" id="wms-pressures"></div>
