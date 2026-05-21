@@ -1929,10 +1929,14 @@ body.gm-mode .gm-toolbar{display:flex}
 body.theme-ember .eb-select,body.theme-ember .eb-textarea{border-color:rgba(255,185,100,0.18);background:#150f09}
 body.theme-ember .eb-select:focus,body.theme-ember .eb-textarea:focus{outline-color:var(--color-gold)}
 /* When GM mode is on, narrow the chronicle band slightly to fit the toolbar */
-body.gm-mode #app{grid-template-rows:60px 36px 1fr 140px}
-body.gm-mode .gm-toolbar{grid-row:2}
-body.gm-mode .main-row{grid-row:3}
-body.gm-mode .chronicle-band{grid-row:4}
+body.gm-mode #app{grid-template-rows:60px 36px 1fr 140px;
+  grid-template-areas:"identity" "gm-toolbar" "main" "chronicle"}
+body.gm-mode .gm-toolbar{grid-area:gm-toolbar}
+body.gm-mode .main-row{grid-area:main}
+body.gm-mode .chronicle-band{grid-area:chronicle}
+/* P1.9: world-mode-shell sits below identity strip (60px); when the GM
+   toolbar is shown (gm-mode), it also has to clear the 36px toolbar. */
+body.gm-mode .world-mode-shell{top:96px}
 /* Quick NPC card — modal-ish overlay above content */
 .quick-npc-card{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.96);
   z-index:1100;background:var(--color-parchment);border:1px solid var(--color-gold);
