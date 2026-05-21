@@ -199,15 +199,15 @@ Per phase:
 - [ ] P1.4 License retry queue + telemetry
 
 ### Phase 1b (State/Render/UX/CSS/Security)
-- [ ] P1.5 `State.addNation()` full init
-- [ ] P1.6 `Render.*` null-guards
-- [ ] P1.7 First-run UX
-- [ ] P1.8 Tool-call nation race
-- [ ] P1.9 `gm-mode` grid + shell offset
-- [ ] P1.10 Dedupe `.wms-sec-link`
-- [ ] P1.11 Dedupe DOM IDs
-- [ ] P1.12 CSP + DOMPurify
-- [ ] P1.13 OpenRouter key out of localStorage
+- [x] P1.5 `State.addNation()` full init
+- [x] P1.6 `Render.*` null-guards
+- [x] P1.7 First-run UX (folded into P1.6 empty-state CTA)
+- [x] P1.8 Tool-call nation race
+- [x] P1.9 `gm-mode` grid + shell offset
+- [x] P1.10 Dedupe `.wms-sec-link`
+- [x] P1.11 Dedupe DOM IDs (license modal only — heralds were a false alarm; see commit)
+- [x] P1.12 CSP + DOMPurify (Hunter must paste official DOMPurify build before publish)
+- [x] P1.13 OpenRouter key out of localStorage
 
 ### Phase 2 — [ ] pending
 ### Phase 3 — [ ] pending
