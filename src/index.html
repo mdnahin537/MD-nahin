@@ -4930,6 +4930,7 @@ const LicenseGate={
 // is harmless — the Worker still rejects after DEMO_PER_IP_DAILY.
 const DemoCounter={
   _uses:0,
+  _lastWasDemo:false,
   async init(){
     try{const s=await IDB.get(IDB_KEY_DEMO_USES);this._uses=typeof s==='number'?s:0;}catch(e){this._uses=0;}
   },
@@ -4937,7 +4938,10 @@ const DemoCounter={
   hasKey(){return !!TURNSTILE_SITEKEY;},
   left(){return Math.max(0,DEMO_MESSAGE_LIMIT-this._uses);},
   canUse(){return this.hasKey()&&this._uses<DEMO_MESSAGE_LIMIT;},
-  async consume(){this._uses++;try{await IDB.set(IDB_KEY_DEMO_USES,this._uses);}catch(e){}},
+  async consume(){this._uses++;this._lastWasDemo=true;try{await IDB.set(IDB_KEY_DEMO_USES,this._uses);}catch(e){}},
+  // True iff the most recent generation was routed through the demo Worker proxy.
+  // Read-and-clear: cost-stamp consumers call this exactly once per render pass.
+  isDemoCall(){const v=this._lastWasDemo;this._lastWasDemo=false;return v;},
 };
 
 // Demo proxy — calls the Worker, which holds the OpenRouter key.
