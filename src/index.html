@@ -14131,7 +14131,7 @@ const EncounterBuilder={
   async _callCopilot(n,inputs){
     const chaosFactor=n.metadata?.chaosFactor??null;
     const chaosNote=chaosFactor!==null
-      ? `Chaos Factor: ${chaosFactor}/10. Higher chaos = more volatile complications and unexpected twists.`
+      ? `Chaos Factor: ${chaosFactor}/9. Higher chaos = more volatile complications and unexpected twists.`
       : '';
     const allFactions=n.factions||[];
     const factionLines=inputs.selectedFactions.length
