@@ -4598,7 +4598,7 @@ const MobileGate={
 // ─── Utilities ───
 const _escDiv=document.createElement('div');
 const Utils={
-  uuid(){if(crypto.randomUUID)return crypto.randomUUID();return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&0x3|0x8)).toString(16)})},
+  uuid(){return crypto.randomUUID();},
   escHtml(s){_escDiv.textContent=s;return _escDiv.innerHTML},
   now(){return new Date().toISOString()},
   slugify(s){return s.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'')},
@@ -7504,7 +7504,7 @@ function handleImport(data){
 // One JournalEntry per category (Overview, Chronicle, Factions, Characters, Locations, Hooks, Secrets);
 // one page per item inside. Actors/Scenes deferred — system-specific schemas vary too much.
 const FoundryExport={
-  _id16(){const chars='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';let s='';for(let i=0;i<16;i++)s+=chars[Math.floor(Math.random()*chars.length)];return s;},
+  _id16(){const chars='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';let s='';const buf=new Uint8Array(16);crypto.getRandomValues(buf);for(let i=0;i<16;i++)s+=chars[buf[i]%chars.length];return s;},
   _h(s){return Utils.escHtml(String(s==null?'':s));},
   _page(name,html,sort){return{_id:this._id16(),type:'text',name,title:{show:true,level:1},text:{content:html,format:1},sort:sort||0,flags:{}};},
   _entry(name,pages,folder){return{_id:this._id16(),name,pages,folder:folder||null,sort:0,ownership:{default:0},flags:{realmwright:{sourceVersion:'1.0',exportedAt:new Date().toISOString()}},_stats:{systemId:null,systemVersion:null,coreVersion:'12'}};},
@@ -9716,7 +9716,7 @@ const FrontDoor={
   async _saveRecent(entry){
     let entries=[];
     try{const stored=await IDB.get(this._IDB_KEY);if(Array.isArray(stored))entries=stored;}catch(e){entries=[];}
-    const record={id:`rg-${Date.now()}-${Math.random().toString(36).slice(2,7)}`,title:entry.prompt.slice(0,50).trimEnd(),prompt:entry.prompt,style:entry.style,timestamp:Date.now(),summary:''};
+    const record={id:`rg-${Date.now()}-${crypto.randomUUID().slice(0,8)}`,title:entry.prompt.slice(0,50).trimEnd(),prompt:entry.prompt,style:entry.style,timestamp:Date.now(),summary:''};
     entries.unshift(record);
     if(entries.length>this._MAX_RECENT)entries=entries.slice(0,this._MAX_RECENT);
     try{await IDB.set(this._IDB_KEY,entries);}catch(e){}
