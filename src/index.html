@@ -4633,6 +4633,73 @@ async function _readDeviceToken(){
   try{const t=await IDB.get(IDB_KEY_DEVICE_TOKEN);return (typeof t==='string'&&t)?t:'';}catch(e){return '';}
 }
 
+// PHASE 1a P1.4 — License retry queue + telemetry.
+// Network blips on rollback or background validate previously fell into an
+// empty catch and silently leaked active LS instances. Now we retry with
+// exponential backoff (1s, 2s, 4s) and persist any final failure to
+// localStorage so it's drained on the next app startup. The Worker's
+// fortnightly cleanup-orphans cron is the safety net for queue entries that
+// outlive the user's interest in retrying.
+const LICENSE_QUEUE_KEY='rw_license_queue';
+const LicenseQueue={
+  _read(){
+    try{const raw=localStorage.getItem(LICENSE_QUEUE_KEY);if(!raw)return[];const arr=JSON.parse(raw);return Array.isArray(arr)?arr:[];}catch(e){return[];}
+  },
+  _write(arr){
+    try{localStorage.setItem(LICENSE_QUEUE_KEY,JSON.stringify(arr.slice(0,50)));}catch(e){}
+  },
+  push(entry){
+    const arr=this._read();
+    arr.push({...entry,queued_at:Date.now(),attempts:0});
+    this._write(arr);
+    if(typeof showToast==='function'){
+      showToast('License sync queued — will retry on next launch.',[],4000);
+    }
+    console.warn('[license:queue] queued',entry);
+  },
+  // Retry one network POST with exponential backoff. Returns true on success.
+  async retryPost(url,bodyParams){
+    const delays=[1000,2000,4000];
+    for(let i=0;i<delays.length+1;i++){
+      try{
+        const tok=await _readDeviceToken();
+        const headers={Accept:'application/json','Content-Type':'application/x-www-form-urlencoded'};
+        if(tok)headers['X-Device-Token']=tok;
+        const res=await fetch(url,{method:'POST',headers,credentials:'include',body:bodyParams});
+        if(res.ok)return true;
+        // 4xx is not retryable — the server has rejected the request, not a network blip.
+        if(res.status>=400&&res.status<500&&res.status!==408&&res.status!==429)return false;
+      }catch(e){/* network — fall through to retry */}
+      if(i<delays.length)await new Promise(r=>setTimeout(r,delays[i]));
+    }
+    return false;
+  },
+  // Best-effort drain on startup. Logs failures with explicit tag so they
+  // surface in DevTools without nagging the user.
+  async drain(){
+    const arr=this._read();
+    if(arr.length===0)return;
+    console.info('[license:queue] draining',arr.length,'entries');
+    const survivors=[];
+    for(const entry of arr){
+      let ok=false;
+      try{
+        if(entry.action==='deactivate'&&entry.license_key&&entry.instance_id){
+          const body=new URLSearchParams({license_key:entry.license_key,instance_id:entry.instance_id});
+          ok=await this.retryPost(WORKER_URL+'/api/license/deactivate',body);
+        }
+      }catch(e){console.error('[license:queue] drain error',e);}
+      if(!ok){
+        entry.attempts=(entry.attempts||0)+1;
+        // Drop after 10 attempts — Worker's cleanup-orphans cron will catch it.
+        if(entry.attempts<10)survivors.push(entry);
+        else console.error('[license:queue] giving up on',entry);
+      }
+    }
+    this._write(survivors);
+  },
+};
+
 const LicenseGate={
   _data:null,
   async init(){
@@ -4705,17 +4772,24 @@ const LicenseGate={
       this._data.valid=!!json.valid;
       await IDB.set(IDB_KEY_LICENSE,this._data);
       if(wasValid&&!json.valid)document.dispatchEvent(new CustomEvent('license:expired'));
-    }catch(e){}
+    }catch(e){
+      // Network blip — log and move on. The next bootstrap will retry.
+      console.warn('[license:validate] background validate failed',e&&e.message);
+    }
   },
   async deactivate(){
     if(!this._data)return;
-    try{
-      if(this._data.platform==='lemonsqueezy'&&this._data.instanceId){
-        const body=new URLSearchParams({license_key:this._data.key,instance_id:this._data.instanceId});
-        await fetch(WORKER_URL+'/api/license/deactivate',
-          {method:'POST',headers:await this._hdr('application/x-www-form-urlencoded'),credentials:'include',body});
+    const ls=this._data.platform==='lemonsqueezy'&&this._data.instanceId
+      ?{license_key:this._data.key,instance_id:this._data.instanceId}
+      :null;
+    if(ls){
+      const body=new URLSearchParams(ls);
+      const ok=await LicenseQueue.retryPost(WORKER_URL+'/api/license/deactivate',body);
+      if(!ok){
+        // Persist for next-startup drain so the LS instance doesn't leak active.
+        LicenseQueue.push({action:'deactivate',license_key:ls.license_key,instance_id:ls.instance_id});
       }
-    }catch(e){}
+    }
     this._data=null;
     await IDB.set(IDB_KEY_LICENSE,null);
     try{await IDB.set(IDB_KEY_DEVICE_TOKEN,null);}catch(e){}
@@ -14042,6 +14116,9 @@ async function bootstrap(){
   bindEventListeners();
   // Bind front door, sample mode, and tonight module (DOM already exists)
   await LicenseGate.init();
+  // Fire-and-forget: drain any license operations that failed network calls
+  // on a previous session. Best-effort; failures are logged, not surfaced.
+  LicenseQueue.drain().catch(e=>console.error('[license:queue] drain failed',e));
   await DemoCounter.init();
   await AutoSave.init();
   LicenseGateUI.bind();
