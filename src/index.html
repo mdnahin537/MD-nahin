@@ -5528,8 +5528,14 @@ const State={
     if(!n)return;
     this.pushUndo();
     n.chronicle=n.chronicle.filter(e=>e.id!==eid);
+    // Sweep orphaned chronicleLinks from characters so they don't dereference a deleted event.
+    (n.characters||[]).forEach(c=>{
+      if(Array.isArray(c.chronicleLinks)&&c.chronicleLinks.includes(eid)){
+        c.chronicleLinks=c.chronicleLinks.filter(x=>x!==eid);
+      }
+    });
     this._touch(nid);
-    document.dispatchEvent(new CustomEvent('sc:changed',{detail:{fields:['chronicle'],nid}}));
+    document.dispatchEvent(new CustomEvent('sc:changed',{detail:{fields:['chronicle','character'],nid}}));
     this.persist();
   },
   updateEvent(nid,eid,patch){
