@@ -10271,7 +10271,9 @@ const SHSPanels={
       // as a fractional increment rounded to 2 decimal places.
       // Prior code used `>= 365` which silently discarded all season/month advances.
       if(advanceDays>0){
-        const yearDelta=advanceDays/365;
+        // 365.25 averages in the leap day so a 1-year advance lands exactly on the next integer
+        // year over the Julian cycle. Good enough for in-fiction time; avoids drift on long campaigns.
+        const yearDelta=advanceDays/365.25;
         n.currentYear=Math.round(((n.currentYear||0)+yearDelta)*100)/100;
         // If the result is a whole number, keep it as integer (avoids Year 1247.25 display)
         if(Number.isInteger(n.currentYear*1))n.currentYear=Math.round(n.currentYear);
