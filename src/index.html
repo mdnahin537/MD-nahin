@@ -8592,6 +8592,7 @@ Keep responses concise and grounded. If you don't know, say so. If the user asks
     let receivedAnything=false;
     let errorMessage=null;
     let finalUsage=null;
+    let aborted=false;
     // Inner helper: stream one round-trip. Accumulates content into `accumulated`
     // (visible to the UI) and returns {toolCalls, usage, finishReason}.
     const streamOnce=async (msgs)=>{
@@ -8707,6 +8708,7 @@ Keep responses concise and grounded. If you don't know, say so. If the user asks
     }catch(err){
       if(err.name==='AbortError'){
         accumulated+=accumulated?'\n\n_[Stopped]_':'_[Stopped before any response]_';
+        aborted=true;
       }else{
         const msg=errorMessage||err.message||'Unknown error.';
         if(receivedAnything){
@@ -8758,8 +8760,10 @@ Keep responses concise and grounded. If you don't know, say so. If the user asks
           }
         }catch(e){}
       }
-      // Detect canon block in the final response and offer review
-      if(accumulated&&!errorMessage){
+      // Detect canon block in the final response and offer review.
+      // Skip when the stream was aborted — partial output is not a complete proposal,
+      // and parsing it would surface a phantom review modal.
+      if(accumulated&&!errorMessage&&!aborted){
         try{
           const parsed=Parse.canonBlock(accumulated,{detail:true});
           if(parsed&&parsed.candidates&&parsed.candidates.length){
