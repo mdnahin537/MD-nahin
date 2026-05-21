@@ -6165,6 +6165,18 @@ const Render={
   },
   identityStrip(){
     const n=State.get();
+    if(!n){
+      // P1.6/P1.7: empty-state CTA so first-run users have an obvious entry point.
+      // Without this guard, every downstream Compute.* call crashes on a missing nation.
+      const anEl=document.getElementById('active-nation-name');
+      if(anEl)anEl.innerHTML='<button type="button" id="empty-state-create-realm" class="btn btn--primary" style="font-family:inherit">+ Create your first realm</button>';
+      const sl=document.getElementById('status-label');if(sl)sl.textContent='';
+      const numEl=document.getElementById('stability-number');if(numEl)numEl.textContent='—';
+      const bsEl=document.getElementById('breakdown-sentence');if(bsEl)bsEl.textContent='No realm yet. Create one to begin worldbuilding.';
+      const btn=document.getElementById('empty-state-create-realm');
+      if(btn)btn.addEventListener('click',()=>{if(typeof Modals!=='undefined')Modals.open('new-nation');});
+      return;
+    }
     const stab=Compute.stability(n);
     const status=Compute.status(stab);
     const breakdown=Compute.breakdown(n);
@@ -6188,6 +6200,7 @@ const Render={
   },
   workbench(){
     const n=State.get();
+    if(!n)return; // P1.6: no active nation — nothing to render
     ['Political','Economic','Military','Social'].forEach(domain=>{
       const ctr=document.getElementById(`domain-${domain.toLowerCase()}-content`);
       if(!ctr)return;
@@ -6226,6 +6239,7 @@ const Render={
   },
   workbenchCharacters(){
     const n=State.get();
+    if(!n)return; // P1.6
     const ctr=document.getElementById('domain-characters-content');
     if(!ctr)return;
     const E=Utils.escHtml;
@@ -6287,6 +6301,7 @@ const Render={
   },
   workbenchAdvanced(){
     const n=State.get();
+    if(!n)return; // P1.6
     const ctr=document.getElementById('domain-advanced-content');
     if(!ctr)return;
     const custom=Object.values(n.stats).filter(s=>s.isCustom);
@@ -6326,6 +6341,7 @@ const Render={
   },
   nationCard(){
     const n=State.get();const ctr=document.getElementById('nation-card');if(!ctr)return;
+    if(!n){ctr.innerHTML='<div class="nation-card__name" style="opacity:.6">No realm yet</div><p style="color:var(--color-text-muted);font-size:var(--text-body-sm);margin-top:var(--space-3)">Create a realm to populate this card.</p>';return;} // P1.6
     let html=`<div style="margin-bottom:var(--space-4)"><div class="nation-card__name"><span class="ornament">§</span>${Utils.escHtml(n.name)}</div><div class="nation-card__sub">${Utils.escHtml(n.era)} · ${Utils.escHtml(n.government)} · Year ${n.currentYear}</div>${n.leader?`<div class="nation-card__sub">Ruler: ${Utils.escHtml(n.leader)}${n.rulingClass?' · Ruling class: '+Utils.escHtml(n.rulingClass):''}</div>`:''}</div><hr class="nation-card__rule">`;
     ['Political','Economic','Military','Social'].forEach(d=>{
       const stats=Object.values(n.stats).filter(s=>s.category===d);
@@ -6354,6 +6370,7 @@ const Render={
   },
   pressurePoints(){
     const n=State.get();const ctr=document.getElementById('pressure-points');if(!ctr)return;
+    if(!n){ctr.innerHTML='';return;} // P1.6
     const pts=Compute.pressures(n).slice(0,3);
     let html='<div class="pressure-points__header">Pressures</div><hr class="pressure-points__rule">';
     if(!pts.length)html+='<p class="pressure-points__empty">No active pressures. The nation is at rest.</p>';
@@ -6362,7 +6379,8 @@ const Render={
   },
   recentPulse(){
     const n=State.get();const ctr=document.getElementById('recent-pulse');if(!ctr)return;
-    const vis=n.chronicle.filter(e=>{if(e.visibility==='private'&&!State.data.meta.settings.showSecrets)return false;if(e.visibility==='forecast'&&!State.data.meta.settings.showForecasts)return false;return true;});
+    if(!n){ctr.innerHTML='';return;} // P1.6
+    const vis=(n.chronicle||[]).filter(e=>{if(e.visibility==='private'&&!State.data.meta.settings.showSecrets)return false;if(e.visibility==='forecast'&&!State.data.meta.settings.showForecasts)return false;return true;});
     // Stable sort: primary by year, secondary by createdAt as tiebreaker
     const sorted=[...vis].sort((a,b)=>a.year!==b.year?(a.year-b.year):(a.createdAt===b.createdAt?0:a.createdAt<b.createdAt?-1:1));
     const last=sorted.slice(-3).reverse();
@@ -6375,6 +6393,7 @@ const Render={
   },
   arsenal(){
     const n=State.get();const ctr=document.getElementById('arsenal-inner');if(!ctr)return;
+    if(!n){ctr.innerHTML='<div style="padding:var(--space-4);color:var(--color-text-muted);font-size:var(--text-body-sm)">Prompts appear once you create a realm.</div>';return;} // P1.6
     const stab=Compute.stability(n);const status=Compute.status(stab);
     const pending=State.data.meta.workflowState?.promptPending;
     const showAll=Render._arsenalShowAll||false;
@@ -6430,8 +6449,9 @@ const Render={
     const dotArea=document.getElementById('chronicle-dots-area');
     const eraArea=document.getElementById('chronicle-era-area');
     const empty=document.getElementById('chronicle-empty');
+    if(!n){if(empty)empty.style.display='flex';return;} // P1.6
     const settings=State.data.meta.settings;
-    let visible=n.chronicle.filter(e=>{
+    let visible=(n.chronicle||[]).filter(e=>{
       if(e.visibility==='private'&&!settings.showSecrets)return false;
       if(e.visibility==='forecast'&&!settings.showForecasts)return false;
       return true;
