@@ -10,6 +10,37 @@ SECTION 1: DOCUMENT METADATA
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#040609">
 <meta name="description" content="RealmWright — A worldbuilding instrument for Game Masters and serious fiction.">
+<!--
+  P1.12 Content Security Policy
+  ─────────────────────────────────────────────────────────────────────────
+  default-src 'self'          - block third-party loads by default
+  script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com
+                              - 'unsafe-inline' is REQUIRED because the entire
+                                app is a single inline <script> block (itch.io
+                                upload constraint = single HTML file, no
+                                bundler). Turnstile is whitelisted explicitly.
+                                HONEST POSTURE: unsafe-inline means an
+                                injected inline <script> would still execute.
+                                The real protection here is DOMPurify on every
+                                untrusted-string innerHTML sink, NOT CSP.
+  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com
+                              - inline style attributes are used heavily in
+                                this codebase; Google Fonts ships CSS.
+  font-src 'self' data: https://fonts.gstatic.com
+  img-src 'self' data: blob:  - exports/snapshots use blob: and data: URIs
+  connect-src 'self' https://rw-license.realmwright.workers.dev
+              https://openrouter.ai https://challenges.cloudflare.com
+              http://localhost:11434
+                              - Worker, OpenRouter API, Turnstile challenge,
+                                local Ollama for desktop users
+  frame-src https://challenges.cloudflare.com
+                              - Turnstile widget renders in an iframe
+  frame-ancestors 'self' https://*.itch.io https://itch.io
+                              - itch.io embeds the page in their player iframe
+  object-src 'none'           - kill <object>/<embed>/<applet>
+  base-uri 'self'             - prevent <base href> hijack
+-->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://rw-license.realmwright.workers.dev https://openrouter.ai https://challenges.cloudflare.com http://localhost:11434; frame-src https://challenges.cloudflare.com; frame-ancestors 'self' https://*.itch.io https://itch.io; object-src 'none'; base-uri 'self'">
 <title>RealmWright</title>
 <!--
 ==============================================================================
@@ -2306,6 +2337,86 @@ SECTION 7: MOTION & STATE STYLES
 </head>
 <body>
 <!--
+  ═══════════════════════════════════════════════════════════════════════════
+  P1.12 — DOMPurify (inline, no CDN)
+  ═══════════════════════════════════════════════════════════════════════════
+  HUNTER ACTION REQUIRED before publishing to itch.io:
+    1. Download DOMPurify v3.2.4 (or latest 3.x) minified UMD build from:
+       https://github.com/cure53/DOMPurify/releases
+       File: dist/purify.min.js
+    2. Paste the entire file contents between the PASTE markers below,
+       REPLACING the fallback sanitizer.
+    3. Verify by opening DevTools console and running:
+         DOMPurify.version
+       → should print a version string (e.g. "3.2.4")
+
+  Until you do step 1, a conservative fallback sanitizer is exposed as
+  window.DOMPurify so the app still functions. The fallback uses DOMParser
+  + an allow-list of tags/attributes. It is strictly weaker than the real
+  DOMPurify and MUST be replaced before public release.
+-->
+<script>
+/* ── PASTE DOMPURIFY HERE — BEGIN ──────────────────────────────────────── */
+/* Fallback sanitizer. Replace this entire block with the official DOMPurify
+   minified bundle before shipping. Strategy:
+     - parse HTML in an inert document
+     - allow only a small set of tags & attributes
+     - strip event handlers and javascript:/data: URIs (except image data:)
+   Public API matches DOMPurify.sanitize(dirty, config?) → string. */
+(function(){
+  if(window.DOMPurify)return;
+  var ALLOWED_TAGS=new Set(['a','abbr','b','blockquote','br','cite','code','del','div','em','h1','h2','h3','h4','h5','h6','hr','i','img','ins','kbd','li','mark','ol','p','pre','q','s','small','span','strong','sub','sup','table','tbody','td','tfoot','th','thead','tr','u','ul']);
+  var ALLOWED_ATTRS=new Set(['href','title','alt','src','class','colspan','rowspan','start','type','id']);
+  var SAFE_URI=/^(?:https?:|mailto:|tel:|#|\/|\.\/|\.\.\/)/i;
+  function clean(node){
+    // Walk children (collect first, since we'll mutate)
+    var i,child,kids=Array.prototype.slice.call(node.childNodes);
+    for(i=0;i<kids.length;i++){
+      child=kids[i];
+      if(child.nodeType===1){ // element
+        var tag=child.tagName.toLowerCase();
+        if(!ALLOWED_TAGS.has(tag)){
+          // Move children up before removing
+          while(child.firstChild)node.insertBefore(child.firstChild,child);
+          node.removeChild(child);
+          continue;
+        }
+        // Strip attributes
+        var attrs=Array.prototype.slice.call(child.attributes);
+        for(var j=0;j<attrs.length;j++){
+          var a=attrs[j];
+          var name=a.name.toLowerCase();
+          if(name.indexOf('on')===0||!ALLOWED_ATTRS.has(name)){
+            child.removeAttribute(a.name);
+            continue;
+          }
+          if((name==='href'||name==='src')){
+            var v=String(a.value||'').trim();
+            // Allow data: URIs for images only
+            if(/^data:/i.test(v)){
+              if(!(name==='src'&&tag==='img'&&/^data:image\//i.test(v)))child.removeAttribute(a.name);
+              continue;
+            }
+            if(!SAFE_URI.test(v))child.removeAttribute(a.name);
+          }
+        }
+        clean(child);
+      }else if(child.nodeType===8){ // comment
+        node.removeChild(child);
+      }
+    }
+  }
+  function sanitize(dirty,_cfg){
+    if(dirty==null)return '';
+    var doc=new DOMParser().parseFromString('<!doctype html><body>'+String(dirty),'text/html');
+    clean(doc.body);
+    return doc.body.innerHTML;
+  }
+  window.DOMPurify={sanitize:sanitize,version:'fallback'};
+})();
+/* ── PASTE DOMPURIFY HERE — END ────────────────────────────────────────── */
+</script>
+<!--
 ==============================================================================
 SECTION 8: DOM STRUCTURE
 ==============================================================================
@@ -4546,7 +4657,13 @@ const Markdown={
       // Restore inline + fenced code (already HTML-escaped via initial escHtml pass).
       s=s.replace(/ IC(\d+) /g,(m,i)=>'<code>'+inlineCodes[+i]+'</code>');
       s=s.replace(/ CB(\d+) /g,(m,i)=>'<pre><code>'+codeBlocks[+i]+'</code></pre>');
-      return s;
+      // P1.12: sanitize the rendered HTML through DOMPurify. Belt-and-braces:
+      // even though Markdown.render escapes input first, any HTML the renderer
+      // emits is now passed through an allow-list sanitizer so a crafted payload
+      // like <img src=x onerror=...> can never reach an innerHTML sink alive.
+      return (typeof DOMPurify!=='undefined'&&DOMPurify.sanitize)
+        ?DOMPurify.sanitize(s,{ALLOWED_URI_REGEXP:/^(?:https?|mailto|tel|#|\/):/i})
+        :s;
     }catch(e){return Utils.escHtml(src).replace(/\n/g,'<br>');}
   },
 };
