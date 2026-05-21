@@ -5354,18 +5354,44 @@ const State={
   addNation(nation){
     this.pushUndo();
     nation.id=nation.id||Utils.uuid();
-    // Preserve metadata.createdAt if it came in (e.g. from import); refresh lastUpdatedAt always.
-    // The previous version blindly reset metadata, destroying the original creation date on import.
-    const existingCreated=nation.metadata?.createdAt;
-    nation.metadata={createdAt:existingCreated||Utils.now(),lastUpdatedAt:Utils.now()};
+    // P1.5: shallow-merge metadata so seed-time fields (soloMode, chaosFactor) are preserved.
+    // Previous version wholesale-replaced metadata, destroying those flags whenever a
+    // pre-built nation (e.g. from buildNationFromSeed) was added via addNation.
+    nation.metadata={
+      ...(nation.metadata||{}),
+      createdAt:nation.metadata?.createdAt||Utils.now(),
+      lastUpdatedAt:Utils.now(),
+    };
     nation.template=nation.template||'kingdom';
     nation.characters=nation.characters||[];
     nation.copilotConversation=nation.copilotConversation||[];
+    // Ensure all per-nation arrays/objects exist so downstream Render/Compute paths
+    // can safely read them without optional-chaining everywhere. Matches the shape
+    // produced by buildNationFromSeed (see ~L4970-4990).
+    nation.copilotQueue=Array.isArray(nation.copilotQueue)?nation.copilotQueue:[];
+    nation.copilotContextDepth=nation.copilotContextDepth||'medium';
+    nation.hooks=nation.hooks||[];
+    nation.sessions=nation.sessions||[];
+    nation.fronts=nation.fronts||[];
+    nation.locations=nation.locations||[];
+    nation.secrets=nation.secrets||[];
+    nation.bestiary=nation.bestiary||[];
+    nation.relations=nation.relations||[];
+    nation.chronicle=nation.chronicle||[];
+    nation.factions=nation.factions||[];
+    nation.artifacts=nation.artifacts||[];
+    nation.oracleLog=Array.isArray(nation.oracleLog)?nation.oracleLog:[];
+    nation.stats=nation.stats||{};
+    nation.glossary=nation.glossary===undefined?null:nation.glossary;
+    nation.notes=nation.notes||'';
     this.data.nations.push(nation);
     this.data.meta.activeNationId=nation.id;
     this._touchMeta();
     document.dispatchEvent(new CustomEvent('sc:changed',{detail:{fields:['nation'],nid:nation.id}}));
     this.persist();
+  },
+  getById(id){
+    return this.data.nations.find(n=>n.id===id)||null;
   },
   switchNation(nid){
     this.data.meta.activeNationId=nid;
