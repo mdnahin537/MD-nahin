@@ -1,0 +1,18 @@
+{
+  "name": "rw-license-worker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "RealmWright license/demo Worker. Proxies Lemon Squeezy license API, issues opaque device tokens, enforces 3-device cap, and reaps orphan instances on a cron.",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240909.0",
+    "typescript": "^5.5.4",
+    "wrangler": "^3.78.0"
+  }
+}
