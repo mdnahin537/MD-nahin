@@ -3627,6 +3627,7 @@ const IDB_KEY_LICENSE='rw_license_v1';
 const IDB_KEY_BACKUP_HANDLE='rw_backup_handle';
 const IDB_KEY_DEMO_USES='rw_demo_uses';
 const IDB_KEY_FINGERPRINT='rw_device_fp';
+const IDB_KEY_DEVICE_TOKEN='rw_device_token'; // server-issued opaque UUID (Phase 1a P1.3)
 
 const SCHEMA_VERSION='2.4.2';
 const DEFAULT_SETTINGS={theme:'ember',respectMotionPref:true,showForecasts:false,showSecrets:false,onboardingComplete:false,copilotProvider:'openrouter',copilotModel:'anthropic/claude-sonnet-latest',copilotKey:null,ollamaUrl:'http://localhost:11434',ollamaModel:'llama3.1',copilotScope:'standard',copilotAutoApply:false,gmMode:false};
@@ -4608,25 +4609,28 @@ function Term(key){
   }catch(e){return key;}
 }
 function isGMMode(){return !!State.data?.meta?.settings?.gmMode;}
-// Device fingerprint — anonymous hash of UA + screen + timezone. Not PII.
-// Used by both LicenseGate (3-device cap) and Demo (no PII demo identity).
+// PHASE 1a P1.3 — Server-issued device token is now the source of truth for
+// device identity. The Worker mints an opaque UUID on first activate and
+// echoes it back via Set-Cookie + JSON body. Client-side hash fingerprints
+// were trivially forgeable; this stub is preserved only so migrated state
+// referencing `deviceFingerprint` doesn't crash.
 async function deviceFingerprint(){
   try{
-    const cached=await IDB.get(IDB_KEY_FINGERPRINT);
-    if(cached&&typeof cached==='string'&&cached.length>=16)return cached;
+    const tok=await IDB.get(IDB_KEY_DEVICE_TOKEN);
+    if(tok&&typeof tok==='string')return tok;
   }catch(e){}
-  const raw=[
-    navigator.userAgent||'',
-    String(screen.width||0)+'x'+String(screen.height||0),
-    String(screen.colorDepth||0),
-    Intl.DateTimeFormat().resolvedOptions().timeZone||'',
-    navigator.language||'',
-  ].join('|');
-  let hash=0;
-  for(let i=0;i<raw.length;i++){hash=((hash<<5)-hash+raw.charCodeAt(i))|0;}
-  const fp=('fp_'+Math.abs(hash).toString(16).padStart(8,'0')+Math.abs(hash*31).toString(16).padStart(8,'0')).slice(0,20);
-  try{await IDB.set(IDB_KEY_FINGERPRINT,fp);}catch(e){}
-  return fp;
+  return ''; // Worker will mint and return one on first activate.
+}
+// Persist the server-issued token after a successful activate so it can be
+// echoed back to the Worker on subsequent validate/deactivate calls (cookie
+// is HttpOnly so JS cannot read it directly; itch.io iframes block cookies
+// entirely, hence the header fallback).
+async function _persistDeviceToken(tok){
+  if(!tok||typeof tok!=='string')return;
+  try{await IDB.set(IDB_KEY_DEVICE_TOKEN,tok);}catch(e){}
+}
+async function _readDeviceToken(){
+  try{const t=await IDB.get(IDB_KEY_DEVICE_TOKEN);return (typeof t==='string'&&t)?t:'';}catch(e){return '';}
 }
 
 const LicenseGate={
@@ -4640,25 +4644,15 @@ const LicenseGate={
   _detectPlatform(key){
     return/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(key.trim())?'lemonsqueezy':'itchio';
   },
-  async _registerDeviceWithWorker(key){
-    // Worker-side device cap (Phase 5A). Falls open if Worker/KV unreachable
-    // so a temporary outage doesn't lock paying users out — the LS API call
-    // remains the source of truth for "is this key real".
-    try{
-      const fp=await deviceFingerprint();
-      const res=await fetch(WORKER_URL+'/api/license/activate',{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({key,fingerprint:fp}),
-      });
-      if(!res.ok){
-        const j=await res.json().catch(()=>({}));
-        if(res.status===403)return{ok:false,error:j.error||'Device limit reached.'};
-        // Other errors → fall open
-        return{ok:true,warning:'Worker unreachable; device cap not enforced.'};
-      }
-      return{ok:true};
-    }catch(e){return{ok:true,warning:'Worker unreachable; device cap not enforced.'};}
+  // Build headers for license calls. Echoes the cached server-issued
+  // device_token as X-Device-Token so itch.io iframes / file:// loads (where
+  // the HttpOnly cookie is not available) still identify the same device.
+  async _hdr(ct){
+    const h={Accept:'application/json'};
+    if(ct)h['Content-Type']=ct;
+    const tok=await _readDeviceToken();
+    if(tok)h['X-Device-Token']=tok;
+    return h;
   },
   async activate(key){
     const platform=this._detectPlatform(key);
@@ -4666,25 +4660,20 @@ const LicenseGate={
   },
   async _activateLS(key){
     try{
-      // 1) Verify with Lemon Squeezy directly (source of truth for "is this key real")
+      // The Worker proxies LS activate AND mints/refreshes the opaque
+      // device_token in one call. Response includes device_token + cap info.
       const body=new URLSearchParams({license_key:key,instance_name:'RealmWright-'+Date.now()});
       const res=await fetch(WORKER_URL+'/api/license/activate',
-        {method:'POST',headers:{Accept:'application/json','Content-Type':'application/x-www-form-urlencoded'},credentials:'include',body});
-      const json=await res.json();
+        {method:'POST',headers:await this._hdr('application/x-www-form-urlencoded'),credentials:'include',body});
+      const json=await res.json().catch(()=>({}));
+      if(res.status===403&&!json.activated){
+        // Device cap hit — Worker has already rolled back the LS instance.
+        return{success:false,error:json.error||'Device limit reached.'};
+      }
       if(!json.activated){
         return{success:false,error:json.error||'Activation failed.'};
       }
-      // 2) Register device with our Worker (3-device cap)
-      const reg=await this._registerDeviceWithWorker(key);
-      if(!reg.ok){
-        // Roll back the LS activation so the device cap is honoured
-        try{
-          const rb=new URLSearchParams({license_key:key,instance_id:json.instance?.id||''});
-          await fetch(WORKER_URL+'/api/license/deactivate',
-            {method:'POST',headers:{Accept:'application/json','Content-Type':'application/x-www-form-urlencoded'},credentials:'include',body:rb});
-        }catch(e){}
-        return{success:false,error:reg.error};
-      }
+      if(json.device_token)await _persistDeviceToken(json.device_token);
       this._data={key,instanceId:json.instance?.id||null,platform:'lemonsqueezy',activatedAt:Date.now(),valid:true};
       await IDB.set(IDB_KEY_LICENSE,this._data);
       document.dispatchEvent(new CustomEvent('license:changed'));
@@ -4693,14 +4682,12 @@ const LicenseGate={
   },
   async _activateItchio(key){
     try{
-      const res=await fetch(WORKER_URL+'/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key})});
-      const json=await res.json();
+      const res=await fetch(WORKER_URL+'/verify',{method:'POST',headers:await this._hdr('application/json'),credentials:'include',body:JSON.stringify({key})});
+      const json=await res.json().catch(()=>({}));
       if(!json.valid){
         return{success:false,error:json.error||'Key not recognised on itch.io.'};
       }
-      // Register device for itch.io keys too
-      const reg=await this._registerDeviceWithWorker(key);
-      if(!reg.ok)return{success:false,error:reg.error};
+      if(json.device_token)await _persistDeviceToken(json.device_token);
       this._data={key,instanceId:null,platform:'itchio',activatedAt:Date.now(),valid:true};
       await IDB.set(IDB_KEY_LICENSE,this._data);
       document.dispatchEvent(new CustomEvent('license:changed'));
@@ -4712,7 +4699,7 @@ const LicenseGate={
     try{
       const body=new URLSearchParams({license_key:this._data.key,instance_id:this._data.instanceId||''});
       const res=await fetch(WORKER_URL+'/api/license/validate',
-        {method:'POST',headers:{Accept:'application/json','Content-Type':'application/x-www-form-urlencoded'},credentials:'include',body});
+        {method:'POST',headers:await this._hdr('application/x-www-form-urlencoded'),credentials:'include',body});
       const json=await res.json();
       const wasValid=this._data.valid;
       this._data.valid=!!json.valid;
@@ -4726,11 +4713,12 @@ const LicenseGate={
       if(this._data.platform==='lemonsqueezy'&&this._data.instanceId){
         const body=new URLSearchParams({license_key:this._data.key,instance_id:this._data.instanceId});
         await fetch(WORKER_URL+'/api/license/deactivate',
-          {method:'POST',headers:{Accept:'application/json','Content-Type':'application/x-www-form-urlencoded'},credentials:'include',body});
+          {method:'POST',headers:await this._hdr('application/x-www-form-urlencoded'),credentials:'include',body});
       }
     }catch(e){}
     this._data=null;
     await IDB.set(IDB_KEY_LICENSE,null);
+    try{await IDB.set(IDB_KEY_DEVICE_TOKEN,null);}catch(e){}
     document.dispatchEvent(new CustomEvent('license:changed'));
   },
   info(){
