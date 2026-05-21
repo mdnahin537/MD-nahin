@@ -2737,8 +2737,8 @@ SECTION 8: DOM STRUCTURE
 <!-- Modal backdrop -->
 <div class="modal-backdrop" id="modal-backdrop"></div>
 <!-- MODALS -->
-<div class="modal modal--md" id="modal-new-nation" role="dialog" aria-modal="true">
-  <div class="modal__header"><h2 class="modal__title">Create new realm</h2><button class="modal__close" data-close="new-nation">×</button></div>
+<div class="modal modal--md" id="modal-new-nation" role="dialog" aria-modal="true" aria-labelledby="modal-new-nation-title">
+  <div class="modal__header"><h2 class="modal__title" id="modal-new-nation-title">Create new realm</h2><button class="modal__close" data-close="new-nation">×</button></div>
   <div class="modal__body">
     <!-- Tab bar -->
     <div class="char-status-group" id="nn-mode-tabs" style="margin:0 0 20px">
@@ -2783,7 +2783,7 @@ SECTION 8: DOM STRUCTURE
   </div>
 </div>
 <!-- Manual Event Modal -->
-<div class="modal modal--md" id="modal-manual-event" role="dialog" aria-modal="true">
+<div class="modal modal--md" id="modal-manual-event" role="dialog" aria-modal="true" aria-labelledby="manual-event-title">
   <div class="modal__header"><h2 class="modal__title" id="manual-event-title">Inscribe event</h2><button class="modal__close" data-close="manual-event">×</button></div>
   <div class="modal__body">
     <div class="form-field"><label class="form-label">Event name</label><input class="form-input" id="ev-name" placeholder="e.g. The Merchant's Charter Refused"><div class="form-error" id="ev-name-err"></div></div>
@@ -2813,8 +2813,8 @@ SECTION 8: DOM STRUCTURE
   </div>
 </div>
 <!-- Paste AI Response Modal -->
-<div class="modal modal--lg" id="modal-paste" role="dialog" aria-modal="true">
-  <div class="modal__header"><h2 class="modal__title">Paste your AI's response</h2><button class="modal__close" data-close="paste">×</button></div>
+<div class="modal modal--lg" id="modal-paste" role="dialog" aria-modal="true" aria-labelledby="modal-paste-title">
+  <div class="modal__header"><h2 class="modal__title" id="modal-paste-title">Paste your AI's response</h2><button class="modal__close" data-close="paste">×</button></div>
   <div class="modal__body">
     <div id="paste-wrong-nation" style="display:none;background:rgba(212,160,23,.1);border:1px solid var(--color-amber);border-radius:4px;padding:12px 16px;margin-bottom:16px;font-size:var(--text-body-sm);color:var(--color-amber-deep)"></div>
     <textarea class="form-textarea form-textarea--lg" id="paste-textarea" placeholder="Paste your AI's complete response here. Include the [CANON] block at the end."></textarea>
@@ -2826,8 +2826,8 @@ SECTION 8: DOM STRUCTURE
   </div>
 </div>
 <!-- Canon Review Modal -->
-<div class="modal modal--lg" id="modal-canon-review" role="dialog" aria-modal="true">
-  <div class="modal__header"><h2 class="modal__title">Review proposed changes</h2><button class="modal__close" data-close="canon-review">×</button></div>
+<div class="modal modal--lg" id="modal-canon-review" role="dialog" aria-modal="true" aria-labelledby="modal-canon-review-title">
+  <div class="modal__header"><h2 class="modal__title" id="modal-canon-review-title">Review proposed changes</h2><button class="modal__close" data-close="canon-review">×</button></div>
   <div class="modal__body">
     <p style="font-size:var(--text-body-sm);color:var(--color-text-muted);margin-bottom:var(--space-4)">The AI proposes these changes to your nation. Accept, edit, or discard each.</p>
     <div id="canon-candidates-list"></div>
@@ -2839,8 +2839,8 @@ SECTION 8: DOM STRUCTURE
   </div>
 </div>
 <!-- Canon Sweep Modal -->
-<div class="modal modal--md" id="modal-sweep" role="dialog" aria-modal="true">
-  <div class="modal__header"><h2 class="modal__title">Canon Sweep — clean up the response</h2><button class="modal__close" data-close="sweep">×</button></div>
+<div class="modal modal--md" id="modal-sweep" role="dialog" aria-modal="true" aria-labelledby="modal-sweep-title">
+  <div class="modal__header"><h2 class="modal__title" id="modal-sweep-title">Canon Sweep — clean up the response</h2><button class="modal__close" data-close="sweep">×</button></div>
   <div class="modal__body">
     <p style="font-size:var(--text-body-sm);color:var(--color-ink);margin-bottom:var(--space-4)">Your AI's response didn't include a structured canon block. Use the cleanup prompt below.</p>
     <p style="font-size:var(--text-label-sm);color:var(--color-gold);margin-bottom:var(--space-2)">Step 1: Copy the cleanup prompt.</p>
@@ -2856,13 +2856,13 @@ SECTION 8: DOM STRUCTURE
   </div>
 </div>
 <!-- Stability Inspector Modal -->
-<div class="modal modal--md" id="modal-stability" role="dialog" aria-modal="true">
-  <div class="modal__header"><h2 class="modal__title">How stability is calculated</h2><button class="modal__close" data-close="stability">×</button></div>
+<div class="modal modal--md" id="modal-stability" role="dialog" aria-modal="true" aria-labelledby="modal-stability-title">
+  <div class="modal__header"><h2 class="modal__title" id="modal-stability-title">How stability is calculated</h2><button class="modal__close" data-close="stability">×</button></div>
   <div class="modal__body" id="stability-inspector-body"></div>
   <div class="modal__footer"><button class="btn btn--primary" data-close="stability">Close</button></div>
 </div>
 <!-- Add/Edit Custom Stat Modal -->
-<div class="modal modal--sm" id="modal-custom-stat" role="dialog" aria-modal="true">
+<div class="modal modal--sm" id="modal-custom-stat" role="dialog" aria-modal="true" aria-labelledby="custom-stat-title">
   <div class="modal__header"><h2 class="modal__title" id="custom-stat-title">Add custom stat</h2><button class="modal__close" data-close="custom-stat">×</button></div>
   <div class="modal__body">
     <div class="form-field"><label class="form-label">Stat name</label><input class="form-input" id="cs-name" placeholder="e.g. Magical Drift"><div class="form-error" id="cs-name-err"></div></div>
@@ -2886,7 +2886,7 @@ SECTION 8: DOM STRUCTURE
   </div>
 </div>
 <!-- Character Modal -->
-<div class="modal modal--md" id="modal-character" role="dialog" aria-modal="true">
+<div class="modal modal--md" id="modal-character" role="dialog" aria-modal="true" aria-labelledby="character-title">
   <div class="modal__header"><h2 class="modal__title" id="character-title">Add character</h2><button class="modal__close" data-close="character">×</button></div>
   <div class="modal__body">
     <div class="char-form">
@@ -2929,7 +2929,7 @@ SECTION 8: DOM STRUCTURE
   </div>
 </div>
 <!-- Continuity Check Modal -->
-<div class="modal modal--md" id="modal-continuity" role="dialog" aria-modal="true">
+<div class="modal modal--md" id="modal-continuity" role="dialog" aria-modal="true" aria-labelledby="continuity-title">
   <div class="modal__header"><h2 class="modal__title" id="continuity-title">⌘ Continuity check</h2><button class="modal__close" data-close="continuity">×</button></div>
   <div class="modal__body">
     <div id="continuity-event-summary" style="padding:var(--space-3);background:var(--color-parchment-warm);border-left:2px solid var(--color-gold);margin-bottom:var(--space-4);font-size:var(--text-body-sm)"></div>
@@ -2946,8 +2946,8 @@ SECTION 8: DOM STRUCTURE
   </div>
 </div>
 <!-- Settings Modal -->
-<div class="modal modal--md" id="modal-settings" role="dialog" aria-modal="true">
-  <div class="modal__header"><h2 class="modal__title">Settings</h2><button class="modal__close" data-close="settings">×</button></div>
+<div class="modal modal--md" id="modal-settings" role="dialog" aria-modal="true" aria-labelledby="modal-settings-title">
+  <div class="modal__header"><h2 class="modal__title" id="modal-settings-title">Settings</h2><button class="modal__close" data-close="settings">×</button></div>
   <div class="modal__body">
     <div class="settings-section"><div class="settings-section__title">About</div>
       <p style="font-size:var(--text-body-sm);color:var(--color-text-muted)">RealmWright · Version 2.3.0</p></div>
@@ -3079,8 +3079,8 @@ SECTION 8: DOM STRUCTURE
   <div class="modal__footer"><button class="btn btn--primary" data-close="settings">Close</button></div>
 </div>
 <!-- Export PDF Options Modal -->
-<div class="modal modal--sm" id="modal-export-opts" role="dialog" aria-modal="true">
-  <div class="modal__header"><h2 class="modal__title">Export options</h2><button class="modal__close" data-close="export-opts">×</button></div>
+<div class="modal modal--sm" id="modal-export-opts" role="dialog" aria-modal="true" aria-labelledby="modal-export-opts-title">
+  <div class="modal__header"><h2 class="modal__title" id="modal-export-opts-title">Export options</h2><button class="modal__close" data-close="export-opts">×</button></div>
   <div class="modal__body">
     <p style="font-size:var(--text-body-sm);color:var(--color-text-muted);margin-bottom:16px">Choose what to include in the Story Bible:</p>
     <div class="export-opt"><input type="checkbox" id="exp-public" checked disabled><label for="exp-public">Public chronicle events (always included)</label></div>
@@ -3097,8 +3097,8 @@ SECTION 8: DOM STRUCTURE
   </div>
 </div>
 <!-- GM Session Prep Modal -->
-<div class="modal modal--md" id="modal-session-prep" role="dialog" aria-modal="true">
-  <div class="modal__header"><h2 class="modal__title">⌘ GM Session Prep</h2><button class="modal__close" data-close="session-prep">×</button></div>
+<div class="modal modal--md" id="modal-session-prep" role="dialog" aria-modal="true" aria-labelledby="modal-session-prep-title">
+  <div class="modal__header"><h2 class="modal__title" id="modal-session-prep-title">⌘ GM Session Prep</h2><button class="modal__close" data-close="session-prep">×</button></div>
   <div class="modal__body">
     <p style="font-size:var(--text-body-sm);color:var(--color-text-muted);margin-bottom:var(--space-4)">A printable one-pager for tonight's session. The Copilot reads your nation's current state — pressures, factions, characters, recent events — and generates plot hooks, NPC notes, and table-ready prompts.</p>
     <div class="form-field">
@@ -3131,8 +3131,8 @@ SECTION 8: DOM STRUCTURE
   </div>
 </div>
 <!-- What's at Stake Modal -->
-<div class="modal modal--md" id="modal-stakes" role="dialog" aria-modal="true">
-  <div class="modal__header"><h2 class="modal__title">⚠ What's at stake?</h2><button class="modal__close" data-close="stakes">×</button></div>
+<div class="modal modal--md" id="modal-stakes" role="dialog" aria-modal="true" aria-labelledby="modal-stakes-title">
+  <div class="modal__header"><h2 class="modal__title" id="modal-stakes-title">⚠ What's at stake?</h2><button class="modal__close" data-close="stakes">×</button></div>
   <div class="modal__body">
     <p style="font-size:var(--text-body-sm);color:var(--color-text-muted);margin-bottom:var(--space-3)">A read-aloud summary of the realm's dramatic situation right now. Useful at the start of a session to set the table.</p>
     <div id="stakes-status" style="display:flex;align-items:center;gap:var(--space-2);padding:var(--space-3);font-size:var(--text-body-sm);color:var(--color-text-muted)">
@@ -3147,8 +3147,8 @@ SECTION 8: DOM STRUCTURE
   </div>
 </div>
 <!-- Strong Start Modal -->
-<div class="modal modal--md" id="modal-strong-start" role="dialog" aria-modal="true">
-  <div class="modal__header"><h2 class="modal__title">🔥 Strong Start</h2><button class="modal__close" data-close="strong-start">×</button></div>
+<div class="modal modal--md" id="modal-strong-start" role="dialog" aria-modal="true" aria-labelledby="modal-strong-start-title">
+  <div class="modal__header"><h2 class="modal__title" id="modal-strong-start-title">🔥 Strong Start</h2><button class="modal__close" data-close="strong-start">×</button></div>
   <div class="modal__body">
     <p style="font-size:var(--text-body-sm);color:var(--color-text-muted);margin-bottom:var(--space-3)">A single evocative paragraph read aloud to pull players into the scene. 60–100 words, present tense.</p>
     <div class="form-field">
@@ -3203,9 +3203,9 @@ SECTION 8: DOM STRUCTURE
 </div>
 
 <!-- ── MODAL: NEW / EDIT SESSION ─────────────────────────────────────── -->
-<div class="modal modal--md" id="modal-new-session" role="dialog" aria-modal="true">
+<div class="modal modal--md" id="modal-new-session" role="dialog" aria-modal="true" aria-labelledby="modal-new-session-title">
   <div class="modal__header">
-    <h2 class="modal__title">Session <span id="ns-number"></span></h2>
+    <h2 class="modal__title" id="modal-new-session-title">Session <span id="ns-number"></span></h2>
     <button class="modal__close" data-close="new-session">×</button>
   </div>
   <div class="modal__body">
@@ -3254,7 +3254,7 @@ SECTION 8: DOM STRUCTURE
 </div>
 
 <!-- ── MODAL: NEW / EDIT HOOK ─────────────────────────────────────────── -->
-<div class="modal modal--md" id="modal-new-hook" role="dialog" aria-modal="true">
+<div class="modal modal--md" id="modal-new-hook" role="dialog" aria-modal="true" aria-labelledby="hook-modal-title">
   <div class="modal__header">
     <h2 class="modal__title" id="hook-modal-title">Add Hook</h2>
     <button class="modal__close" data-close="new-hook">×</button>
@@ -3294,7 +3294,7 @@ SECTION 8: DOM STRUCTURE
 </div>
 
 <!-- ── MODAL: NEW / EDIT SECRET ──────────────────────────────────────── -->
-<div class="modal modal--md" id="modal-new-secret" role="dialog" aria-modal="true">
+<div class="modal modal--md" id="modal-new-secret" role="dialog" aria-modal="true" aria-labelledby="secret-modal-title">
   <div class="modal__header">
     <h2 class="modal__title" id="secret-modal-title">Add Secret</h2>
     <button class="modal__close" data-close="new-secret">×</button>
