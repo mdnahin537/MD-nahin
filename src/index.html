@@ -5311,6 +5311,34 @@ const IDB={
 };
 const STORAGE_KEY='realmwright_data';
 const LEGACY_KEY='sovereign_codex_data';
+// P1.13: secrets live in a dedicated IDB key so they never sit inside
+// the State JSON that gets mirrored to localStorage (which any XSS can
+// read). The Secrets helper centralises load/save/migration.
+const SECRET_COPILOT_KEY='rw_secret_copilot_key';
+const Secrets={
+  async loadKey(){
+    try{return await IDB.get(SECRET_COPILOT_KEY);}catch(e){return null;}
+  },
+  async saveKey(v){
+    try{
+      if(v==null||v==='')await IDB.remove(SECRET_COPILOT_KEY);
+      else await IDB.set(SECRET_COPILOT_KEY,String(v));
+    }catch(e){/* IDB unavailable — key only lives in-memory this session */}
+  },
+};
+// Build the on-disk shape of State.data with secrets stripped out. Used by
+// every persistence sink (IDB STORAGE_KEY, localStorage mirror) so the key
+// is structurally impossible to expose via JSON.parse(localStorage.<...>).
+function _stateForPersist(){
+  const d=State.data;
+  if(!d)return d;
+  const settings=d.meta?.settings;
+  if(!settings||settings.copilotKey==null)return d;
+  // Build a shallow-clone with copilotKey nulled for the serialization. We
+  // intentionally do NOT mutate State.data itself — the runtime value stays
+  // in memory so OpenRouter calls keep working without a re-fetch from IDB.
+  return {...d,meta:{...d.meta,settings:{...settings,copilotKey:null}}};
+}
 // ─── STATE MODULE ───
 const State={
   data:null,
@@ -5329,7 +5357,16 @@ const State={
         if(legacy){raw=legacy;}
       }catch(e){}
     }
-    if(!raw){this.data=createDefaultState();await this.persistNow();return;}
+    if(!raw){
+      this.data=createDefaultState();
+      // P1.13: cold start should still hydrate any stored copilotKey from
+      // the dedicated IDB secret slot (e.g. user resetAll'd app data but
+      // kept the secret store, or upgraded mid-session).
+      const cold=await Secrets.loadKey();
+      if(cold)this.data.meta.settings.copilotKey=cold;
+      await this.persistNow();
+      return;
+    }
     try{
       const parsed=typeof raw==='string'?JSON.parse(raw):raw;
       this.data=migrateIfNeeded(parsed);
@@ -5343,8 +5380,29 @@ const State={
           }
         });
       });
-      // After successful load, write to IDB so legacy storage is no longer needed
-      try{await IDB.set(STORAGE_KEY,JSON.stringify(this.data));}catch(e){}
+      // P1.13: secrets-migration.
+      // 1. If the loaded blob still has a copilotKey (pre-P1.13 install),
+      //    promote it to the dedicated IDB secret store.
+      // 2. Re-hydrate copilotKey from the secret store regardless, so a
+      //    user who already migrated still has the runtime value.
+      // 3. The subsequent persistNow() will scrub it from both the IDB
+      //    STORAGE_KEY blob and the localStorage mirror.
+      const inlineKey=this.data?.meta?.settings?.copilotKey;
+      if(inlineKey)await Secrets.saveKey(inlineKey);
+      const stored=await Secrets.loadKey();
+      if(stored&&this.data?.meta?.settings){
+        this.data.meta.settings.copilotKey=stored;
+      }
+      // After successful load, write scrubbed blob to IDB so legacy storage
+      // is no longer needed AND so any leftover key in the old blob is gone.
+      try{await this.persistNow();}catch(e){}
+      // Belt-and-braces: hard-overwrite the legacy localStorage mirror so
+      // an attacker can't read an old un-scrubbed snapshot from there.
+      try{
+        const scrubbed=JSON.stringify(_stateForPersist());
+        localStorage.setItem(STORAGE_KEY,scrubbed);
+        localStorage.removeItem(LEGACY_KEY);
+      }catch(e){}
     }catch(e){handleCorruptStorage(typeof raw==='string'?raw:JSON.stringify(raw));}
   },
   pushUndo(){
@@ -5392,7 +5450,8 @@ const State={
   persist:Utils.debounce(function(){
     if(State.data.meta?._sampleMode){UI.setSave('saved');return;}
     UI.setSave('saving');
-    const json=JSON.stringify(State.data);
+    // P1.13: scrub copilotKey from the serialized blob.
+    const json=JSON.stringify(_stateForPersist());
     // A3 fix: snapshot the generation counter BEFORE the async IDB.set.
     // If resetAll() runs while IDB.set is in-flight, the counter increments and we discard
     // the stale write in .then(), preventing the clean reset from being silently overwritten.
@@ -5412,7 +5471,8 @@ const State={
   },400),
   async persistNow(){
     if(this.data.meta?._sampleMode)return;
-    const json=JSON.stringify(this.data);
+    // P1.13: scrub copilotKey from the serialized blob.
+    const json=JSON.stringify(_stateForPersist());
     try{await IDB.set(STORAGE_KEY,json);}catch(e){}
     try{localStorage.setItem(STORAGE_KEY,json);}catch(e){}
   },
@@ -5646,7 +5706,12 @@ const State={
   setWorkflow(ws){Object.assign(this.data.meta.workflowState,ws);this._touchMeta();this.persist();},
   clearPending(){this.data.meta.workflowState.promptPending=null;this._touchMeta();this.persist();},
   setOnboardingComplete(){this.data.meta.settings.onboardingComplete=true;this._touchMeta();this.persistNow();},
-  setSetting(k,v){this.data.meta.settings[k]=v;this._touchMeta();this.persist();},
+  setSetting(k,v){
+    this.data.meta.settings[k]=v;
+    // P1.13: fork the secret to IDB so it survives persist() (which scrubs it).
+    if(k==='copilotKey')Secrets.saveKey(v);
+    this._touchMeta();this.persist();
+  },
 
   // ── AUTO-SNAPSHOT SYSTEM (Delivery H) ──────────────────────────────────────
   async snapshotIfDue(){
@@ -5733,6 +5798,8 @@ const State={
     this.data=createDefaultState();
     this._undoStack=[];this._redoStack=[];
     try{localStorage.removeItem(STORAGE_KEY);localStorage.removeItem(LEGACY_KEY);}catch(e){}
+    // P1.13: also wipe the secret store so a reset truly forgets the API key.
+    Secrets.saveKey(null);
     IDB.remove(STORAGE_KEY).finally(()=>{
       this._updateUndoUI();
       Modals.closeAll();Render.all();
