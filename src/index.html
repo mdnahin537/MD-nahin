@@ -14080,13 +14080,15 @@ const LicenseGateUI={
   },
   openModal(){
     if(typeof Modals!=='undefined')Modals.open('license-activate');
+    // P1.11: body/footer are now populated by _updateModalStatus (the static
+    // template lost its duplicate inputs), so populate first, then focus.
+    this._updateModalStatus();
     const inp=document.getElementById('la-key-input');
     if(inp){inp.value='';inp.focus();}
     const err=document.getElementById('la-key-err');
     if(err)err.style.display='none';
     const sub=document.getElementById('la-submit');
     if(sub)sub.disabled=true;
-    this._updateModalStatus();
   },
   _updateModalStatus(){
     const info=LicenseGate.info();
@@ -14492,23 +14494,17 @@ window.__rwClearDevTheme=function(){localStorage.removeItem('rw_dev_theme');loca
 </div>
 
 <!-- ── LICENSE ACTIVATE MODAL (Phase 4) ──────────────────────────────────── -->
+<!-- P1.11: static markup intentionally has empty body/footer. LicenseGate._updateModalStatus()
+     is the source of truth for la-key-input / la-key-hint / la-key-err / la-submit. Previously
+     the same IDs lived in both this static block AND the dynamic re-render, producing duplicate
+     IDs in the DOM on first paint and confusing scoped lookups. -->
 <div class="modal modal--sm" id="modal-license-activate" role="dialog" aria-modal="true" aria-labelledby="la-title">
   <div class="modal__header">
     <h2 class="modal__title" id="la-title">Activate RealmWright</h2>
     <button class="modal__close" data-close="license-activate" aria-label="Close">×</button>
   </div>
-  <div class="modal__body" id="la-modal-body">
-    <div class="form-field">
-      <label class="form-label" for="la-key-input">License key</label>
-      <input class="form-input" id="la-key-input" type="text" placeholder="Lemon Squeezy UUID or itch.io key" autocomplete="off" spellcheck="false" aria-describedby="la-key-err la-key-hint">
-      <p class="form-hint" id="la-key-hint">Paste the key from your purchase email. Works with both Lemon Squeezy and itch.io purchases.</p>
-      <p class="form-error" id="la-key-err" role="alert" aria-live="polite" style="display:none"></p>
-    </div>
-  </div>
-  <div class="modal__footer" id="la-footer">
-    <button class="btn btn--secondary" data-close="license-activate">Cancel</button>
-    <button class="btn btn--primary" id="la-submit" disabled>Activate</button>
-  </div>
+  <div class="modal__body" id="la-modal-body"></div>
+  <div class="modal__footer" id="la-footer"></div>
 </div>
 
 <!-- ── TONIGHT MODE OVERLAY ──────────────────────────────────────────────── -->
