@@ -8294,7 +8294,7 @@ const Copilot={
       if(!args.stat||typeof args.delta!=='number')return {error:'Missing required fields: stat, delta (integer).'};
       const s=n.stats&&n.stats[args.stat];
       if(!s)return {error:`No stat named '${args.stat}'. Available: ${Object.keys(n.stats||{}).join(', ')}`};
-      return {kind:'statDelta',data:{stat:args.stat,statName:s.displayName,delta:args.delta,oldValue:s.value,newValue:Utils.clamp(s.value+args.delta,0,s.max)},summary:`${s.displayName}: ${s.value} ${args.delta>=0?'+':''}${args.delta} → ${Utils.clamp(s.value+args.delta,0,s.max)}`};
+      return {kind:'statDelta',data:{stat:args.stat,statName:s.displayName,delta:args.delta,oldValue:s.value,newValue:Utils.clamp(s.value+args.delta,s.min,s.max)},summary:`${s.displayName}: ${s.value} ${args.delta>=0?'+':''}${args.delta} → ${Utils.clamp(s.value+args.delta,s.min,s.max)}`};
     }
     return {error:`Unknown tool: ${name}`};
   },
