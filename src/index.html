@@ -3280,6 +3280,10 @@ SECTION 8: DOM STRUCTURE
   </div>
   <div class="modal__body">
     <div class="form-field">
+      <label class="form-label" for="secret-title">Title (short label)</label>
+      <input type="text" class="form-input" id="secret-title" placeholder="Harbor blackmail" maxlength="80">
+    </div>
+    <div class="form-field">
       <label class="form-label">Secret (single sentence fact)</label>
       <textarea class="form-textarea" id="secret-content" rows="3" placeholder="The harbor master is being blackmailed by the smuggler's guild." maxlength="300"></textarea>
       <div class="form-error" id="secret-content-err"></div>
@@ -5904,6 +5908,7 @@ const State={
     n.secrets=n.secrets||[];
     const s={
       id:Utils.uuid(),
+      title:cfg.title||'',
       content:cfg.content||'',
       status:cfg.status||'undeployed',
       deployedInSession:cfg.deployedInSession||null,
@@ -10451,6 +10456,7 @@ const SHSPanels={
 
   openNewSecret(){
     document.getElementById('secret-modal-title').textContent='Add Secret';
+    const t=document.getElementById('secret-title');if(t)t.value='';
     document.getElementById('secret-content').value='';
     document.getElementById('secret-notes').value='';
     document.getElementById('secret-edit-id').value='';
@@ -10461,6 +10467,7 @@ const SHSPanels={
 
   openEditSecret(s){
     document.getElementById('secret-modal-title').textContent='Edit Secret';
+    const t=document.getElementById('secret-title');if(t)t.value=s.title||'';
     document.getElementById('secret-content').value=s.content||'';
     document.getElementById('secret-notes').value=s.notes||'';
     document.getElementById('secret-edit-id').value=s.id;
@@ -10501,6 +10508,8 @@ const SHSPanels={
     const errEl=document.getElementById('secret-content-err');
     if(!content){if(errEl)errEl.textContent='Secret content is required.';return;}
     if(errEl)errEl.textContent='';
+    const titleEl=document.getElementById('secret-title');
+    const title=titleEl?titleEl.value.trim():'';
     const notes=document.getElementById('secret-notes').value.trim();
     const editId=document.getElementById('secret-edit-id').value;
     // Collect relatedNpcs, relatedFactions, relatedLocations
@@ -10511,9 +10520,9 @@ const SHSPanels={
     const relatedLocations=[];
     document.querySelectorAll('#secret-locations-multi input[type=checkbox]:checked').forEach(cb=>relatedLocations.push(cb.dataset.sloc));
     if(editId){
-      State.updateSecret(n.id,editId,{content,notes,relatedNpcs,relatedFactions,relatedLocations});
+      State.updateSecret(n.id,editId,{title,content,notes,relatedNpcs,relatedFactions,relatedLocations});
     }else{
-      State.addSecret(n.id,{content,notes,relatedNpcs,relatedFactions,relatedLocations});
+      State.addSecret(n.id,{title,content,notes,relatedNpcs,relatedFactions,relatedLocations});
     }
     Modals.close('new-secret');
     this.renderSecrets();
