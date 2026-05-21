@@ -209,7 +209,21 @@ Per phase:
 - [x] P1.12 CSP + DOMPurify (Hunter must paste official DOMPurify build before publish)
 - [x] P1.13 OpenRouter key out of localStorage
 
-### Phase 2 — [ ] pending
+### Phase 2 — landed
+- [x] #8 DemoCounter.isDemoCall stub
+- [x] #9 Chaos scale /10 → /9 in Copilot prompt
+- [x] #11 Secret model gains title field
+- [x] #12 Stat clamp uses stat.min
+- [x] NEW-A3 Orphan chronicleLinks swept on event delete
+- [x] NEW-A4 Year advance uses 365.25
+- [x] NEW-A5 Skip canon review on aborted stream
+- [x] S4 Crypto-backed ID generation (no Math.random)
+- [x] #16 Mobile/tablet reflow for .wms-panels
+- [x] #19 wms-nation-notes moved out of head row
+- [x] NEW-B3 Focus-visible outlines restored
+- [x] NEW-B4 Shape redundancy on faction/loyalty
+- [x] NEW-B6 aria-labelledby on all modals
+- [x] NEW-B7/B8 Hover reveals gated to (hover: hover); persisted on touch
 ### Phase 3 — [ ] pending
 ### Phase 4 — [ ] pending
 ### Phase 5 — [ ] pending
