@@ -2801,7 +2801,7 @@ SECTION 8: DOM STRUCTURE
 <div class="modal modal--md" id="modal-manual-event" role="dialog" aria-modal="true" aria-labelledby="manual-event-title">
   <div class="modal__header"><h2 class="modal__title" id="manual-event-title">Inscribe event</h2><button class="modal__close" data-close="manual-event" aria-label="Close">×</button></div>
   <div class="modal__body">
-    <div class="form-field"><label class="form-label">Event name</label><input class="form-input" id="ev-name" placeholder="e.g. The Merchant's Charter Refused"><div class="form-error" id="ev-name-err"></div></div>
+    <div class="form-field"><label class="form-label" for="ev-name">Event name</label><input class="form-input" id="ev-name" aria-describedby="ev-name-err" placeholder="e.g. The Merchant's Charter Refused"><div class="form-error" id="ev-name-err"></div></div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
       <div class="form-field"><label class="form-label">Type</label>
         <select class="form-select" id="ev-type"><option>Political</option><option>Military</option><option>Economic</option><option>Cultural</option><option>Social</option><option>Diplomatic</option><option>Natural</option></select></div>
@@ -2880,7 +2880,7 @@ SECTION 8: DOM STRUCTURE
 <div class="modal modal--sm" id="modal-custom-stat" role="dialog" aria-modal="true" aria-labelledby="custom-stat-title">
   <div class="modal__header"><h2 class="modal__title" id="custom-stat-title">Add custom stat</h2><button class="modal__close" data-close="custom-stat" aria-label="Close">×</button></div>
   <div class="modal__body">
-    <div class="form-field"><label class="form-label">Stat name</label><input class="form-input" id="cs-name" placeholder="e.g. Magical Drift"><div class="form-error" id="cs-name-err"></div></div>
+    <div class="form-field"><label class="form-label" for="cs-name">Stat name</label><input class="form-input" id="cs-name" aria-describedby="cs-name-err" placeholder="e.g. Magical Drift"><div class="form-error" id="cs-name-err"></div></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
       <div class="form-field"><label class="form-label">Range min</label><input class="form-input form-input--number" type="number" id="cs-min" value="0"></div>
       <div class="form-field"><label class="form-label">Range max</label><input class="form-input form-input--number" type="number" id="cs-max" value="100"></div>
@@ -2906,7 +2906,7 @@ SECTION 8: DOM STRUCTURE
   <div class="modal__body">
     <div class="char-form">
       <div class="char-form__row">
-        <div class="form-field"><label class="form-label">Name</label><input class="form-input" id="ch-name" placeholder="e.g. Minister Harun"><div class="form-error" id="ch-name-err"></div></div>
+        <div class="form-field"><label class="form-label" for="ch-name">Name</label><input class="form-input" id="ch-name" aria-describedby="ch-name-err" placeholder="e.g. Minister Harun"><div class="form-error" id="ch-name-err"></div></div>
         <div class="form-field"><label class="form-label">Role</label><input class="form-input" id="ch-role" placeholder="e.g. Former Treasury Minister"></div>
       </div>
       <div class="form-field"><label class="form-label">Faction (optional)</label><select class="form-select" id="ch-faction"><option value="">— None —</option></select></div>
@@ -3276,8 +3276,8 @@ SECTION 8: DOM STRUCTURE
   </div>
   <div class="modal__body">
     <div class="form-field">
-      <label class="form-label">Hook title</label>
-      <input class="form-input" id="hook-title" placeholder="The Missing Merchant" type="text">
+      <label class="form-label" for="hook-title">Hook title</label>
+      <input class="form-input" id="hook-title" aria-describedby="hook-title-err" placeholder="The Missing Merchant" type="text">
       <div class="form-error" id="hook-title-err"></div>
     </div>
     <div class="form-field">
@@ -3320,8 +3320,8 @@ SECTION 8: DOM STRUCTURE
       <input type="text" class="form-input" id="secret-title" placeholder="Harbor blackmail" maxlength="80">
     </div>
     <div class="form-field">
-      <label class="form-label">Secret (single sentence fact)</label>
-      <textarea class="form-textarea" id="secret-content" rows="3" placeholder="The harbor master is being blackmailed by the smuggler's guild." maxlength="300"></textarea>
+      <label class="form-label" for="secret-content">Secret (single sentence fact)</label>
+      <textarea class="form-textarea" id="secret-content" aria-describedby="secret-content-err" rows="3" placeholder="The harbor master is being blackmailed by the smuggler's guild." maxlength="300"></textarea>
       <div class="form-error" id="secret-content-err"></div>
     </div>
     <div class="form-field">
@@ -3611,8 +3611,8 @@ SECTION 8: DOM STRUCTURE
   </div>
   <div class="modal__body">
     <div class="form-field">
-      <label class="form-label">Name <span style="color:var(--ember-color)">*</span></label>
-      <input class="form-input" id="loc-name" placeholder="e.g. Eastern Province, Aldenmoor, The Docks" autocomplete="off">
+      <label class="form-label" for="loc-name">Name <span style="color:var(--ember-color)">*</span></label>
+      <input class="form-input" id="loc-name" aria-describedby="loc-name-err" placeholder="e.g. Eastern Province, Aldenmoor, The Docks" autocomplete="off">
       <div class="form-error" id="loc-name-err"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
