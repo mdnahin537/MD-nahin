@@ -7068,7 +7068,7 @@ const Parse={
         const dupe=n.factions.find(f=>f.name.toLowerCase()===c.name.toLowerCase());
         if(!dupe){n.factions.push({id:Utils.uuid(),name:c.name,type:'Unknown',position:'holding',description:c.desc||'',leaderName:''});touched.add('faction');}
       }
-      else if(c.type==='character'){n.characters.push({id:Utils.uuid(),name:c.name,role:c.role||'',description:c.desc||'',status:'active',drive:'',fear:'',factionId:null,chronicleLinks:[],createdAt:Utils.now()});touched.add('character');} // Bug 8 fix: factionId not faction
+      else if(c.type==='character'){n.characters.push({id:Utils.uuid(),name:c.name,role:c.role||'',description:c.desc||'',status:'active',drive:'',fear:'',factionId:null,chronicleLinks:[],createdAt:Utils.now()});touched.add('character');}
       else if(c.type==='artifact'){n.artifacts.push({id:Utils.uuid(),type:c.artType,content:c.content||''});touched.add('artifact');}
     });
     }finally{State._suppressUndo=false;}
@@ -7533,7 +7533,6 @@ function handleImport(data){
     State.addNation(nation);Render.all();Modals.closeAll();
     showToast(`Imported: ${nation.name}`);
   }else if(data.nations&&Array.isArray(data.nations)){
-    // Bug 9 fix: apply migrateIfNeeded to multi-nation imports (was silently skipped before)
     const migrated=migrateIfNeeded({nations:data.nations,schemaVersion:data.schemaVersion||'1.0'});
     migrated.nations.forEach(ns=>{const nation=buildNationFromSeed(ns);State.addNation(nation);});
     Render.all();Modals.closeAll();showToast(`Imported ${migrated.nations.length} nations.`);
@@ -8887,7 +8886,6 @@ Keep responses concise and grounded. If you don't know, say so. If the user asks
       };
       model=settings.copilotModel||'anthropic/claude-sonnet-latest';
     }
-    // Bug 5 fix: translate response_format key for Ollama (uses "format":"json" not response_format)
     let finalExtras={...bodyExtras};
     if(provider==='ollama'&&finalExtras.response_format?.type==='json_object'){
       delete finalExtras.response_format;
@@ -9885,7 +9883,6 @@ const Tonight={
     }else{
       State.data.meta.activeNationId=State.data.nations[State.data.nations.length-1].id;
     }
-    // Bug 6 fix: notify the reactive event system so nation switcher and any
     // sc:changed listeners see the removal (State.persist() alone is not enough).
     document.dispatchEvent(new CustomEvent('sc:changed',{detail:{fields:['nation']}}));
     State.persist();
@@ -9952,7 +9949,6 @@ const Tonight={
       nation._tonightGenerated=true;
       State.addNation(nation);
       generatedNationId=nation.id;
-      // Bug 5 fix: record which nation this Tonight session generated so
       // saveSecretsToRealm targets the right nation even if the user switched.
       Tonight._generatedNationId=nation.id;
       Render.all();
@@ -9992,7 +9988,6 @@ const Tonight={
           }else{
             State.data.meta.activeNationId=State.data.nations[State.data.nations.length-1].id;
           }
-          // Bug 6 fix: notify listeners so nation switcher stays in sync after orphan cleanup.
           document.dispatchEvent(new CustomEvent('sc:changed',{detail:{fields:['nation']}}));
           State.persist();
           Render.all();
@@ -10088,7 +10083,6 @@ const Tonight={
 
     // Wire action bar
     document.getElementById('tonight-print-btn')?.addEventListener('click',()=>{
-      // Bug 4 fix: use PrintPreview.open() so @media print hides the rest of the app
       const resultsEl=document.getElementById('tonight-results');
       if(resultsEl&&typeof PrintPreview!=='undefined'){
         const clone=document.createElement('div');
@@ -10116,7 +10110,6 @@ const Tonight={
     });
     document.getElementById('tonight-save-secrets-btn')?.addEventListener('click',()=>{
       if(typeof SHSPanels!=='undefined')SHSPanels.saveSecretsToRealm(this._lastSecrets);
-      // Bug 4 fix: null-guard both DOM ops; collapse to one query.
       const saveBtn=document.getElementById('tonight-save-secrets-btn');
       if(saveBtn){saveBtn.disabled=true;saveBtn.textContent='Secrets saved \u2713';}
     });
@@ -10292,7 +10285,6 @@ const SHSPanels={
     // Parse new hooks (newline split)
     const newHooksRaw=(document.getElementById('ns-hooks-new').value||'').split('\n').map(l=>l.trim()).filter(Boolean);
 
-    // Bug 8 fix: single undo snapshot for the entire End Session operation.
     // Suppress individual pushUndo calls inside each sub-method so one Ctrl+Z
     // reverts the whole session rather than step-by-step.
     State.pushUndo();
@@ -10329,9 +10321,7 @@ const SHSPanels={
     }
     Modals.close('new-session');
     this.renderSessions();
-    // Bug 3 fix: refresh Hooks panel immediately if it's currently open.
     if(this._open==='hooks')this.renderHooks();
-    // Bug 9 fix: toast uses session .number (stable), not .length (shifts on delete).
     showToast(`Session ${added?.number||'?'} saved. World now Year ${n.currentYear}.`,[],4000);
     Render.all();
   },
@@ -10603,13 +10593,11 @@ const SHSPanels={
   // ── TONIGHT "Save secrets to realm" ───────────────────────────────────────
   saveSecretsToRealm(secrets){
     if(!secrets||!secrets.length)return;
-    // Bug 5 fix: use the Tonight-generated nation's id if available, not the currently
     // active nation (which may have been switched between generation and this button click).
     const targetId=(typeof Tonight!=='undefined'&&Tonight._generatedNationId)||State.get()?.id;
     const n=State.data.nations.find(x=>x.id===targetId)||State.get();
     if(!n)return;
     secrets.forEach(content=>State.addSecret(n.id,{content}));
-    // Bug 1 fix: refresh the Secrets panel if it is currently open.
     if(this._open==='secrets')this.renderSecrets();
     showToast(`${secrets.length} secret${secrets.length!==1?'s':''} saved to realm.`,[],3000);
   },
@@ -10796,7 +10784,6 @@ const SHSPanels={
     };
     if(editId){
       State.updateLocation(n.id,editId,cfg);
-      // B8 fix: showToast uses m.textContent so encoding is handled by the DOM;
       // wrapping with Utils.escHtml causes double-encoding (&lt; shows as literal text).
       showToast(`"${name}" updated.`,[],2000);
     }else{
@@ -11498,7 +11485,6 @@ const WorldShell={
       cultural:'theater_comedy',government:'gavel',academic:'school'};
     const iconFor=t=>{if(!t)return'groups';const tl=t.toLowerCase();
       for(const[k,v]of Object.entries(TYPE_ICON)){if(tl.includes(k))return v;}return'groups';};
-    // B6 fix: show a "+N more" indicator when there are more than 4 factions
     const visibleFacs=factions.slice(0,4);
     const hiddenCount=factions.length-visibleFacs.length;
     let html='';
@@ -11531,7 +11517,6 @@ const WorldShell={
         </div>
       </div>`;
     });
-    // B6 fix: append overflow indicator if factions were truncated
     if(hiddenCount>0){
       html+=`<div class="wms-empty" style="grid-column:1/-1;text-align:center;padding:10px 0;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--color-text-faint);cursor:pointer" id="wms-fac-showall">+ ${hiddenCount} more faction${hiddenCount>1?'s':''} — open Workbench</div>`;
     }
@@ -13006,7 +12991,6 @@ function dispatchRender(e){
   }
   if(fields.includes('customStat'))Render.workbench();
   if(fields.includes('character')){Render.workbenchCharacters();Render.nationCard();}
-  // Bug 7 fix: session/hook/secret mutations dispatch these field names but dispatchRender
   // previously had no branch for them. Open panels now refresh reactively (e.g. after undo).
   if(typeof SHSPanels!=='undefined'){
     if(fields.includes('session')&&SHSPanels._open==='sessions')SHSPanels.renderSessions();
