@@ -158,9 +158,37 @@ Confirmed 🟠:
 - NEW-B7/B8 — Hover-only reveal on touch (700-703, 578)
 - S4 — `Math.random()`-based IDs in ID-generation paths (4467, 7182, 9387)
 
-## Phase 3 — Medium polish (PR #6)
+## Phase 3 — Re-audited Spec (replaces original)
 
-#18, #21, #22, #23, #26, #27, #29 (keyboard handlers on `role="button"`), #30, NEW-A6-A9, NEW-B5 (touch target), NEW-B9-B12, S6, S9.
+The original Senior A/B/C audit numbering (#18, #21, #22, #23, #26, #27, #29, #30,
+NEW-A6-A9, NEW-B5, NEW-B9-B12, S6, S9) was never committed with descriptions and
+cannot be reconstructed. This section is a fresh re-audit of `src/index.html`
+against the same categories the hints implied: keyboard a11y, touch targets,
+color-only / a11y signals, security surfaces, and miscellaneous polish.
+
+Security sweep result: clean. No `eval`, `new Function`, `document.write`,
+`setTimeout(string)`, `setInterval(string)`, `postMessage` listener, or
+DOMPurify-bypassing `innerHTML` from user input found. All `Markdown.render()`
+output is sanitized inside the renderer itself (Phase 1b P1.12). All
+`target="_blank"` links carry `rel="noopener"` (browser floor = latest-2 Chrome/
+Edge/Safari/Firefox, where this also blocks referrer leak).
+
+Polish sweep result: clean. No `console.log`/`debugger` leftovers. The 11
+remaining `console.*` calls are intentional diagnostics. Empty `catch(e){}`
+blocks are scoped to best-effort persistence paths (IDB/localStorage writes)
+and are deliberate.
+
+- [x] **A3-1** [a11y/kbd] — `#stability-wrap` at line 2475 — `role="button"` + `tabindex="0"` but the click listener at 13054 has no Enter/Space keyboard handler. Add `keydown` handler matching click.
+- [x] **A3-2** [a11y/kbd] — `[data-sc]` nation-card stat rows at 6596 (rendered by `Render.statRows`) — `role="button"` + `tabindex="0"` but listener at 6607 only handles click. Add Enter/Space.
+- [x] **A3-3** [a11y/kbd] — `[data-thread-hook-panel]` at 11261 (rendered by `PlotThreads._renderHookList`) — `role="button"` + `tabindex="0"` but listener at 11241 only handles click. Add Enter/Space.
+- [x] **A3-4** [a11y/label] — Modal close `×` buttons at 2756, 2802, 2832, 2845, 2858, 2875, 2881, 2905, 2948, 2965, 3098, 3116, 3150, 3166, 3224, 3275, 3315, 7382 lack `aria-label`. Screen readers read the "×" glyph as "multiplication sign" or nothing. Add `aria-label="Close"`.
+- [x] **A3-5** [a11y/label] — `#detail-panel` at 2709 — `role="dialog"` without `aria-label`/`aria-labelledby` and without `aria-modal`. Close button at 2712 also unlabeled. Add `aria-label` to the panel and the close button.
+- [x] **A3-6** [a11y/label] — Inline `×` remove buttons in dynamic rows (`.affected-stat-row__rm` at 7158 and 13282; `.char-link-row__rm` at 7235) have no accessible name. Add `aria-label="Remove"` at template-string sites.
+- [x] **A3-7** [a11y/touch] — `.workbench__custom-stat-delete` at 1538 hard-codes `width:16px` with no min-height — fails WCAG 2.5.8 (24×24 minimum). Expand to 24×24 minimum, keep visual size.
+- [x] **A3-8** [a11y/touch] — `.char-link-row__rm` at 1580 has only `font-size:14px` and no min sizing — same WCAG 2.5.8 miss. Add 24×24 minimum. (Landed in same commit as A3-7.)
+- [x] **A3-9** [a11y/describedby] — Form-error elements (`#ev-name-err`, `#cs-name-err`, `#ch-name-err`, `#hook-title-err`, `#secret-content-err`, `#loc-name-err`) are visual-only — they are not bound to their inputs via `aria-describedby`, so error text is never announced by AT when the input gains focus. Add `aria-describedby` on each input.
+
+## Phase 3 — Medium polish (original list, superseded by re-audit above)
 
 ## Phase 4 — Cleanup (PR #7)
 
@@ -224,6 +252,15 @@ Per phase:
 - [x] NEW-B4 Shape redundancy on faction/loyalty
 - [x] NEW-B6 aria-labelledby on all modals
 - [x] NEW-B7/B8 Hover reveals gated to (hover: hover); persisted on touch
-### Phase 3 — [ ] pending
+### Phase 3 — re-audited
+- [x] A3-1 stability-wrap keyboard handler
+- [x] A3-2 [data-sc] keyboard handler
+- [x] A3-3 [data-thread-hook-panel] keyboard handler
+- [x] A3-4 Modal close buttons aria-label
+- [x] A3-5 detail-panel aria-label + close aria-label
+- [x] A3-6 Inline × remove buttons aria-label
+- [x] A3-7 .workbench__custom-stat-delete 24×24 target
+- [x] A3-8 .char-link-row__rm 24×24 target (in A3-7 commit)
+- [x] A3-9 Form-error aria-describedby on inputs
 ### Phase 4 — [ ] pending
 ### Phase 5 — [ ] pending
