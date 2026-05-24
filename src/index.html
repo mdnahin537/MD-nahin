@@ -13049,9 +13049,13 @@ function bindEventListeners(){
     document.addEventListener('click',()=>nsDD.classList.remove('is-open'));
   }
 
-  // Stability inspector click
+  // Stability inspector click + keyboard (A3-1: role=button needs Enter/Space)
   const sw=document.getElementById('stability-wrap');
-  if(sw)sw.addEventListener('click',()=>Modals.open('stability'));
+  if(sw){
+    const openStability=()=>Modals.open('stability');
+    sw.addEventListener('click',openStability);
+    sw.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openStability();}});
+  }
 
   // Inscribe event
   const ib=document.getElementById('inscribe-btn');
