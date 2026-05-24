@@ -2706,10 +2706,10 @@ SECTION 8: DOM STRUCTURE
 <div class="tooltip" id="tooltip"></div>
 <div class="toast" id="toast"><div class="toast__msg" id="toast-msg"></div><div class="toast__links" id="toast-links"></div></div>
 <!-- Detail panel -->
-<div class="detail-panel" id="detail-panel" role="dialog">
+<div class="detail-panel" id="detail-panel" role="dialog" aria-label="Event details" aria-modal="false">
   <div style="display:flex;justify-content:space-between;align-items:center">
     <span class="detail-panel__year" id="dp-year"></span>
-    <button class="detail-panel__close" id="detail-panel-close">×</button>
+    <button class="detail-panel__close" id="detail-panel-close" aria-label="Close event details">×</button>
   </div>
   <div id="dp-content"></div>
 </div>
