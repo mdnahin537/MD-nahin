@@ -7160,7 +7160,7 @@ const Modals={
       (ev.relatedStats||[]).forEach(key=>{
         if(!statKeys.includes(key))return;
         const row=document.createElement('div');row.className='affected-stat-row';
-        row.innerHTML=`<select class="form-select">${statKeys.map(k=>`<option value="${Utils.escHtml(k)}"${k===key?' selected':''}>${Utils.escHtml(n.stats[k].displayName)}</option>`).join('')}</select><button class="affected-stat-row__rm">×</button>`;
+        row.innerHTML=`<select class="form-select">${statKeys.map(k=>`<option value="${Utils.escHtml(k)}"${k===key?' selected':''}>${Utils.escHtml(n.stats[k].displayName)}</option>`).join('')}</select><button class="affected-stat-row__rm" type="button" aria-label="Remove this affected stat">×</button>`;
         ctr.appendChild(row);
         row.querySelector('.affected-stat-row__rm').addEventListener('click',()=>row.remove());
       });
@@ -7237,7 +7237,7 @@ const Modals={
       list.dataset.linkIds=JSON.stringify(linkIds||[]);
       return;
     }
-    list.innerHTML=linked.map(e=>`<div class="char-link-row" data-link="${E(e.id)}"><span>[Year ${e.year}] ${E(e.name)}</span><button class="char-link-row__rm" data-rm="${E(e.id)}">×</button></div>`).join('');
+    list.innerHTML=linked.map(e=>`<div class="char-link-row" data-link="${E(e.id)}"><span>[Year ${e.year}] ${E(e.name)}</span><button class="char-link-row__rm" data-rm="${E(e.id)}" type="button" aria-label="Unlink event ${E(e.name)}">×</button></div>`).join('');
     list.querySelectorAll('[data-rm]').forEach(b=>b.addEventListener('click',()=>{
       const id=b.dataset.rm;
       const remaining=(linkIds||[]).filter(x=>x!==id);
@@ -13291,7 +13291,7 @@ function bindEventListeners(){
     const n=State.get();
     const row=document.createElement('div');row.className='affected-stat-row';
     const statKeys=Object.keys(n.stats);
-    row.innerHTML=`<select class="form-select">${statKeys.map(k=>`<option value="${Utils.escHtml(k)}">${Utils.escHtml(n.stats[k].displayName)}</option>`).join('')}</select><button class="affected-stat-row__rm">×</button>`;
+    row.innerHTML=`<select class="form-select">${statKeys.map(k=>`<option value="${Utils.escHtml(k)}">${Utils.escHtml(n.stats[k].displayName)}</option>`).join('')}</select><button class="affected-stat-row__rm" type="button" aria-label="Remove this affected stat">×</button>`;
     document.getElementById('affected-stats-rows')?.appendChild(row);
     row.querySelector('.affected-stat-row__rm').addEventListener('click',()=>row.remove());
   });
