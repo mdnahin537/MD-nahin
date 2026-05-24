@@ -11244,7 +11244,7 @@ const Threads={
     }
     ctr.innerHTML=html;
     ctr.querySelectorAll('[data-thread-hook-panel]').forEach(el=>{
-      el.addEventListener('click',()=>{
+      const activate=()=>{
         if(typeof SHSPanels!=='undefined'){
           SHSPanels.openPanel('hooks');
           requestAnimationFrame(()=>{
@@ -11252,7 +11252,10 @@ const Threads={
             target?.closest('.sc-hook-item')?.scrollIntoView({behavior:'smooth',block:'nearest'});
           });
         }
-      });
+      };
+      el.addEventListener('click',activate);
+      // A3-3: role=button hook items must respond to Enter/Space.
+      el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();activate();}});
     });
     document.getElementById('threads-pick-btn')?.addEventListener('click',()=>{
       this._pickRandomThread(openHooks,chars);
