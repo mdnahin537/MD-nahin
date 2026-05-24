@@ -6604,11 +6604,16 @@ const Render={
     const dnP=bd.down;
     html+=`<div class="nation-card__breakdown">${upP?`<div class="nation-card__breakdown-line"><span class="breakdown-up">Held up by</span> ${Utils.escHtml(upP)}</div>`:''}${dnP?`<div class="nation-card__breakdown-line"><span class="breakdown-down">Dragged down by</span> ${Utils.escHtml(dnP)}</div>`:''}</div>`;
     ctr.innerHTML=html;
-    ctr.querySelectorAll('[data-sc]').forEach(row=>row.addEventListener('click',()=>{
-      const key=row.dataset.sc;const stat=State.get().stats[key];if(!stat)return;
-      Interact.expandDomain(stat.category.toLowerCase());
-      setTimeout(()=>{const sl=document.getElementById(`sl-${key}`);if(sl)sl.focus();},300);
-    }));
+    ctr.querySelectorAll('[data-sc]').forEach(row=>{
+      const activate=()=>{
+        const key=row.dataset.sc;const stat=State.get().stats[key];if(!stat)return;
+        Interact.expandDomain(stat.category.toLowerCase());
+        setTimeout(()=>{const sl=document.getElementById(`sl-${key}`);if(sl)sl.focus();},300);
+      };
+      row.addEventListener('click',activate);
+      // A3-2: role=button rows must respond to Enter/Space for keyboard users.
+      row.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();activate();}});
+    });
   },
   pressurePoints(){
     const n=State.get();const ctr=document.getElementById('pressure-points');if(!ctr)return;
