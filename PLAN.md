@@ -262,5 +262,17 @@ Per phase:
 - [x] A3-7 .workbench__custom-stat-delete 24×24 target
 - [x] A3-8 .char-link-row__rm 24×24 target (in A3-7 commit)
 - [x] A3-9 Form-error aria-describedby on inputs
-### Phase 4 — [ ] pending
-### Phase 5 — [ ] pending
+### Phase 4 — landed
+- [x] Strip stale bug-fix reference comments (commit `d07443a`)
+
+### Phase 5 — automated verification complete
+- [x] Playwright regression suite (9/10 PASS — axe-core skipped, dep not installed)
+- [x] Static secret scan (clean)
+- [x] Worker TypeScript check (clean against CF types shim)
+- [x] Mobile 375px reflow verified
+- [x] DOMPurify wrapper neutralizes onerror
+- [x] OpenRouter key isolated to IDB
+- [x] SHIP_READINESS.md written
+- [ ] W3C HTML validation (sandbox-blocked — Hunter runs)
+- [ ] axe-core full scan (dep install blocked — Hunter runs)
+- [ ] Hunter human tasks: H1 slider drag / H2 itch.io / H3 LS purchase / H4 cron

@@ -1,0 +1,111 @@
+[
+  {
+    "name": "1. App boots without console errors (P1.6 Render null-guards)",
+    "pass": true,
+    "detail": {
+      "console_errors": [],
+      "page_errors": []
+    }
+  },
+  {
+    "name": "2. Empty-state \"Create your first realm\" CTA renders (P1.7)",
+    "pass": true,
+    "detail": {
+      "found": true,
+      "label": "+ Create your first realm",
+      "visible": true,
+      "rect": {
+        "w": 162.625,
+        "h": 34
+      }
+    }
+  },
+  {
+    "name": "3. Nation/faction add+delete; chronicleLinks orphan sweep (NEW-A3)",
+    "pass": true,
+    "detail": {
+      "ok": true,
+      "log": [
+        "addNation ok",
+        "factions pushed directly",
+        "seeded char+event",
+        "removeEvent ok",
+        "sweep result: true"
+      ]
+    }
+  },
+  {
+    "name": "4. License modal exposes aria-labelledby + aria-modal (NEW-B6 / A3-5)",
+    "pass": true,
+    "detail": {
+      "found": true,
+      "id": "modal-license-activate",
+      "role": "dialog",
+      "aria_modal": "true",
+      "aria_labelledby": "la-title",
+      "aria_label": null
+    }
+  },
+  {
+    "name": "5. Modal close buttons labelled + keyboard reachable (A3-4)",
+    "pass": true,
+    "detail": {
+      "total": 29,
+      "unlabelled": 0,
+      "tabbable": 29
+    }
+  },
+  {
+    "name": "6. Mobile 375px: .wms-panels reflows to single column (#16)",
+    "pass": true,
+    "detail": {
+      "found": true,
+      "display": "grid",
+      "gridTemplateColumns": "1fr",
+      "flexDirection": "row",
+      "width": 0
+    }
+  },
+  {
+    "name": "7. DOMPurify strips onerror from Markdown output (P1.12)",
+    "pass": true,
+    "detail": {
+      "ok": true,
+      "clean": "<p>&lt;img src=x onerror=alert(1)&gt;&lt;script&gt;alert(2)&lt;/script&gt;</p>",
+      "live_img_count": 0,
+      "live_script_count": 0,
+      "live_onerror": false,
+      "purify_present": true,
+      "purify_version": "fallback"
+    }
+  },
+  {
+    "name": "8. OpenRouter key lives in IDB, scrubbed from localStorage (P1.13)",
+    "pass": true,
+    "detail": {
+      "ok": true,
+      "inLocalStorage": false,
+      "idbHasKey": true
+    }
+  },
+  {
+    "name": "9. Worker URL set + CSP present + cors-anywhere fully removed (P1.1 / P1.12)",
+    "pass": true,
+    "detail": {
+      "WORKER_URL": "https://rw-license.realmwright.workers.dev",
+      "csp_present": true,
+      "csp_has_self": true,
+      "csp_has_worker_origin": true,
+      "csp_has_cors_anywhere": false,
+      "no_cors_anywhere_in_html": true
+    }
+  },
+  {
+    "name": "10. axe-core a11y scan",
+    "pass": true,
+    "detail": {
+      "skipped": true,
+      "reason": "axe-core not installed. Run `npm install --prefix artifacts axe-core` to enable."
+    }
+  }
+]
