@@ -5,6 +5,8 @@
 >
 > **Method:** for each row → grep the target → read that region fresh → fill Status + Evidence. NEVER judge from memory. If no line can be cited → ❌.
 >
+> **STATUS: RESOLVED.** Every row was audited against the full bundle (frontend + Worker). See `AUDIT-RESULTS.md` for the filled instrument with file:line evidence, and `AUDIT-REPORT.md` for the prose findings. This file is retained as the original instrument.
+>
 > **Status legend:** ✅ done · ⚠️ partial · ❌ missing · 🟡 changed-from-plan · 🔵 needs-live-verification (backend/network) · ⬜ not-yet-checked
 > **Severity (for bugs):** BLOCKER · HIGH · MED · LOW
 > **Priority (for features, from plan's buyer-impact ranking):** P0 wedge/conversion-gate · P1 core · P2 polish · P3 nice-to-have
