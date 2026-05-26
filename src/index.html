@@ -1027,6 +1027,43 @@ body.theme-manuscript .sc-panel__title{font-family:'Cormorant Garamond',serif;
 body.theme-manuscript .sc-panel{transition:transform 200ms var(--ease-out),opacity 200ms var(--ease-out)}
 body.theme-manuscript .wms-nav__item.is-active{animation:none}
 
+/* ── PHASE 4 PARITY SWEEP (manuscript) ──────────────────────────────────────
+   Override the remaining UNSCOPED base .wms-* rules that hardcode ember's
+   'Cinzel' display font and warm-gold rgba(255,185,100,…) glows/tints, so they
+   do not leak the ember look onto vellum. var(--ember-color) rules already
+   re-skin via the token swap and are intentionally left alone. */
+/* Cinzel → serif voice (Cormorant for titles, Source Serif for chrome labels). */
+body.theme-manuscript .wms-stab-state,
+body.theme-manuscript .wms-sl-name,
+body.theme-manuscript .wms-advanced-toggle,
+body.theme-manuscript .wms-ars-tab,
+body.theme-manuscript .wms-chr-lbl,
+body.theme-manuscript .wms-paste-btn{font-family:'Source Serif 4',serif}
+body.theme-manuscript .wms-fc-name,
+body.theme-manuscript .wms-char-name,
+body.theme-manuscript .wms-ae-title,
+body.theme-manuscript .plot-thread-item__title,
+body.theme-manuscript .plot-thread-panel-hook__title,
+body.theme-manuscript .plot-seed-section__name,
+body.theme-manuscript .threads-oracle-pick__label{font-family:'Cormorant Garamond',serif}
+/* Warm-gold glows/tints → ink-on-vellum hairlines (no ember bloom on parchment). */
+body.theme-manuscript .wms-sl-track,
+body.theme-manuscript .wms-chr-track{background:var(--color-border-hairline)}
+body.theme-manuscript .wms-sl-fill{box-shadow:none}
+body.theme-manuscript .wms-sl-input::-webkit-slider-thumb{box-shadow:none}
+body.theme-manuscript .wms-ars-title{text-shadow:none}
+body.theme-manuscript .wms-inscribe:hover{box-shadow:none;background:rgba(138,106,31,0.08)}
+body.theme-manuscript .wms-paste-btn{border-color:var(--color-border-default)}
+/* Stability orb — the dark sphere + ember glow is ember-only; on vellum it reads
+   as a black blob. Manuscript's anchor is the drop-initial (spec §4.1), so render
+   the orb as a quiet vellum disc with a hairline gold ring. */
+body.theme-manuscript .wms-orb-wrap{
+  background:var(--color-parchment-pale);
+  border:1px solid var(--color-gold-pale);
+  box-shadow:inset 0 0 0 1px rgba(138,106,31,0.08)}
+body.theme-manuscript .wms-stab-num{color:var(--color-gold-deep);font-family:'Cormorant Garamond',serif}
+body.theme-manuscript .wms-stab-desc{font-family:'Source Serif 4',serif}
+
 /*
 ==============================================================================
 SECTION 3.6X: MODERN SKIN — "The Command Console" (spec §4.3)
@@ -1101,6 +1138,32 @@ body.theme-modern .sc-panel{box-shadow:-8px 0 28px rgba(0,0,0,0.4);
   transition:transform 200ms var(--ease-out),opacity 200ms var(--ease-out)}
 body.theme-modern .sc-panel__title{font-family:var(--font-display);
   font-weight:600;color:var(--color-gold)}
+
+/* ── PHASE 4 PARITY SWEEP (modern) ──────────────────────────────────────────
+   Override the remaining UNSCOPED base .wms-* rules that hardcode ember's
+   'Cinzel' display font and warm-gold rgba(255,185,100,…) glows/tints. Geometry
+   replaces ornament (spec §4.3): mono for chrome labels, Fraunces for titles,
+   cold hairlines instead of warm glows. var(--ember-color) rules re-skin via the
+   token swap to teal and are left alone. */
+/* Cinzel → mono chrome labels / Fraunces titles. */
+body.theme-modern .wms-advanced-toggle,
+body.theme-modern .wms-ars-tab,
+body.theme-modern .wms-chr-lbl,
+body.theme-modern .wms-paste-btn{font-family:var(--font-mono);letter-spacing:.16em}
+body.theme-modern .wms-fc-name,
+body.theme-modern .wms-char-name,
+body.theme-modern .wms-ae-title,
+body.theme-modern .plot-thread-item__title,
+body.theme-modern .plot-thread-panel-hook__title,
+body.theme-modern .plot-seed-section__name,
+body.theme-modern .threads-oracle-pick__label{font-family:var(--font-display);font-weight:600}
+/* Warm-gold glows/tints → cold graphite hairlines, no bloom (functional only). */
+body.theme-modern .wms-sl-track,
+body.theme-modern .wms-chr-track{background:var(--color-border-hairline)}
+body.theme-modern .wms-sl-fill{box-shadow:none}
+body.theme-modern .wms-sl-input::-webkit-slider-thumb{box-shadow:none}
+body.theme-modern .wms-ars-title{text-shadow:none}
+body.theme-modern .wms-inscribe:hover{box-shadow:none;background:rgba(94,200,216,0.08)}
 /* Reduced-motion already handled globally via .force-reduced-motion; modern's
    only motion is the slide/opacity above, which that kill-switch covers. */
 
