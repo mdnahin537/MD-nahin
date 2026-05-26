@@ -5814,6 +5814,9 @@ const State={
     }catch(e){}
   },
   undo(){
+    // Bug A: abort any in-flight Copilot stream BEFORE replacing State.data, so its
+    // finalize bails instead of writing a stale message into the reverted state.
+    if(typeof Copilot!=='undefined'&&Copilot._sending)Copilot.cancel({discard:true});
     if(!this._undoStack.length)return false;
     try{
       this._redoStack.push(JSON.stringify(this.data));
@@ -5828,6 +5831,8 @@ const State={
     }catch(e){this._suppressUndo=false;return false;}
   },
   redo(){
+    // Bug A: abort any in-flight Copilot stream before replacing State.data (see undo).
+    if(typeof Copilot!=='undefined'&&Copilot._sending)Copilot.cancel({discard:true});
     if(!this._redoStack.length)return false;
     try{
       this._undoStack.push(JSON.stringify(this.data));
@@ -5982,6 +5987,9 @@ const State={
     return this.data.nations.find(n=>n.id===id)||null;
   },
   switchNation(nid){
+    // Bug A: abort any in-flight Copilot stream before switching the active nation, so
+    // its finalize doesn't write into / re-render the nation we just switched away from.
+    if(typeof Copilot!=='undefined'&&Copilot._sending)Copilot.cancel({discard:true});
     this.data.meta.activeNationId=nid;
     this._touchMeta();
     // Reset per-nation render UI flags so view state from the previous nation doesn't leak
@@ -8800,6 +8808,7 @@ const Copilot={
   // ─── WIRE INTEGRATION (OpenRouter) ───
   // Internal state for in-flight requests
   _sending:false,
+  _aborted:false, // Bug A: set by cancel({discard:true}) when undo/redo/switchNation interrupts a stream.
   _abortController:null,
   _streamingNationId:null,
   _streamingMsgEl:null,
@@ -8967,6 +8976,7 @@ Without a CANON block, your response is conversational only — no simulation ef
     const toolsEnabled=provider!=='ollama'&&!!settings.copilotKey;
     // Lock UI
     this._sending=true;
+    this._aborted=false; // Bug A: fresh turn — clear any prior cancel flag.
     this._streamingNationId=n.id;
     this._isGenerating=true;
     const sendBtn=document.getElementById('copilot-send');
@@ -9134,6 +9144,11 @@ Without a CANON block, your response is conversational only — no simulation ef
         showToast(msg,[],6000);
       }
     }finally{
+      // Bug A: if cancel() fired (undo/redo/switchNation mid-stream), State.data has
+      // already been replaced/switched out from under us. Bail on ALL state writes —
+      // writing the now-stale assistant message back would resurrect the conversation
+      // turn that undo just removed (the torn-write). Only the UI-unlock below runs.
+      if(!this._aborted){
       // Finalize the streaming message — and attach the system+lastUser context
       // for the Show-Context toggle (Phase 5C).
       const targetNation=State.data.nations.find(x=>x.id===this._streamingNationId);
@@ -9196,7 +9211,8 @@ Without a CANON block, your response is conversational only — no simulation ef
           }
         }catch(e){/* parse failures are non-fatal */}
       }
-      // Unlock UI
+      } // end if(!this._aborted) — Bug A state-write guard
+      // Unlock UI (always runs, even on a cancelled/torn stream)
       this._sending=false;
       this._isGenerating=false;
       this._abortController=null;
@@ -9233,8 +9249,15 @@ Without a CANON block, your response is conversational only — no simulation ef
       ctr.scrollTop=ctr.scrollHeight;
     }
   },
-  // Cancel an in-flight request
-  cancel(){
+  // Cancel an in-flight request.
+  //  - Plain Stop (no opts): abort the fetch; finalize still writes the partial
+  //    "_[Stopped]_" message back into the (unchanged) active nation.
+  //  - discard:true (Bug A — undo/redo/switchNation mid-stream): the caller is about
+  //    to replace/switch State.data, so set _aborted to make finalize bail on ALL
+  //    state writes. Otherwise finalize re-resolves by _streamingNationId and
+  //    resurrects the assistant turn that undo just removed (the torn-write race).
+  cancel(opts){
+    if(opts&&opts.discard)this._aborted=true;
     if(this._abortController){
       this._abortController.abort();
     }
