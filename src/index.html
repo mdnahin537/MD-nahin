@@ -2594,6 +2594,10 @@ SECTION 7: MOTION & STATE STYLES
 /* Relationship Web Panel */
 #panel-web{width:100%;max-width:none;overflow:hidden}
 .web-panel-inner{height:100%;display:flex;flex-direction:column}
+/* Visually-hidden utility — content read by screen readers but not painted.
+   Theme-agnostic (no color), so safe to apply once for all three themes. */
+.sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;
+  overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .web-svg-container{flex:1;position:relative;overflow:hidden;background:#06080d;min-height:400px}
 .web-svg-container svg{width:100%;height:100%;display:block}
 .web-toolbar{
@@ -13016,6 +13020,39 @@ const RelationshipWeb = {
     });
 
     svg.innerHTML=edgeSvg+nodeSvg+labelSvg;
+
+    // ── Accessibility (spec §5.4): the SVG is a graphic, so expose it as an
+    // image with a summary, plus a visually-hidden text equivalent listing
+    // every relationship so non-visual users get the full content. Applied
+    // once here; inherited by all three themes. ──────────────────────────────
+    const typeName={character:'character',faction:'faction',location:'location'};
+    const relWord={member:'is a member of',controls:'controls',based:'is based in'};
+    const nodeById=id=>this._nodes.find(x=>x.id===id);
+    const counts={character:0,faction:0,location:0};
+    this._nodes.forEach(n=>{if(counts[n.type]!=null)counts[n.type]++;});
+    const summary=`Relationship web: ${this._nodes.length} entities `+
+      `(${counts.character} characters, ${counts.faction} factions, ${counts.location} locations) `+
+      `and ${this._edges.length} relationship${this._edges.length!==1?'s':''}.`;
+    svg.setAttribute('role','img');
+    svg.setAttribute('aria-label',summary);
+    if(ctr){
+      let alt=document.getElementById('web-a11y-text');
+      if(!alt){
+        alt=document.createElement('div');
+        alt.id='web-a11y-text';
+        alt.className='sr-only';
+        ctr.appendChild(alt);
+      }
+      const items=this._edges.map(e=>{
+        const a=nodeById(e.s), b=nodeById(e.t);
+        if(!a||!b)return '';
+        return `<li>${Utils.escHtml(a.label)} (${typeName[a.type]||a.type}) `+
+          `${relWord[e.type]||'is related to'} `+
+          `${Utils.escHtml(b.label)} (${typeName[b.type]||b.type}).</li>`;
+      }).filter(Boolean).join('');
+      alt.innerHTML=`<p>${Utils.escHtml(summary)}</p>`+
+        (items?`<ul>${items}</ul>`:'<p>No relationships to list.</p>');
+    }
 
     // Re-bind node interactions
     svg.querySelectorAll('.web-node').forEach(el=>{
