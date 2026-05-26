@@ -6677,9 +6677,8 @@ const UI={
 // ─── RENDER MODULE ───
 const Render={
   all(){this.identityStrip();this.workbench();this.nationCard();this.pressurePoints();this.recentPulse();this.arsenal();this.chronicleBand();this.nationSwitcher();
-    // Render WorldShell when in Ember theme
-    const _theme=State.data?.meta?.settings?.theme||'ember';
-    if(_theme==='ember'&&typeof WorldShell!=='undefined'){const _nat=State.get();if(_nat)WorldShell.render(_nat);}
+    // Render WorldShell whenever the shell layout is active (all themes — Architecture A)
+    if(typeof WorldShell!=='undefined'&&localStorage.getItem('rw_legacy_layout')!=='1'){const _nat=State.get();if(_nat)WorldShell.render(_nat);}
   },
   identityStrip(){
     const n=State.get();
@@ -13272,9 +13271,8 @@ function dispatchRender(e){
     if(SHSPanels._open==='web')SHSPanels.renderWeb();
     if(SHSPanels._open==='threads')SHSPanels.renderThreads();
   }
-  // Also update WorldShell for any stat/chronicle/character change in ember mode
-  const _theme=State.data?.meta?.settings?.theme||'ember';
-  if(_theme==='ember'&&typeof WorldShell!=='undefined'){const _nat=State.get();if(_nat)WorldShell.render(_nat);}
+  // Also update WorldShell for any stat/chronicle/character change while the shell is active (all themes)
+  if(typeof WorldShell!=='undefined'&&localStorage.getItem('rw_legacy_layout')!=='1'){const _nat=State.get();if(_nat)WorldShell.render(_nat);}
 }
 
 function bindEventListeners(){
