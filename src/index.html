@@ -4980,7 +4980,7 @@ const MobileGate={
 const _escDiv=document.createElement('div');
 const Utils={
   uuid(){return crypto.randomUUID();},
-  escHtml(s){_escDiv.textContent=s;return _escDiv.innerHTML},
+  escHtml(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/`/g,'&#96;')},
   now(){return new Date().toISOString()},
   slugify(s){return s.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'')},
   clamp(v,a,b){return Math.max(a,Math.min(b,v))},
