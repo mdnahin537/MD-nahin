@@ -4994,6 +4994,17 @@ const Utils={
     navigator.clipboard.writeText(text).then(()=>showToast('Copied to clipboard.')).catch(fallback);
   },
 };
+// Boundary-validation for untrusted numeric/enum inputs (import JSON, AI tool
+// args, manual forms). Every external write of statValue/eventWeight/year/
+// eventType must pass through here so out-of-range or bogus data is clamped
+// or normalized before it touches State.
+const CLAMP={
+  EVENT_TYPES:['Political','Military','Economic','Cultural','Social','Diplomatic','Natural'],
+  statValue(v,stat){const n=Number(v);return Number.isFinite(n)?Utils.clamp(n,stat.min??0,stat.max??100):(stat.default??stat.min??0);},
+  eventWeight(w){const n=Number(w);return Number.isFinite(n)?Utils.clamp(Math.round(n),-30,30):0;},
+  year(y,fallback){if(y==null||y==='')return fallback;const n=Math.floor(Number(y));return Number.isFinite(n)?Utils.clamp(n,1,99999):fallback;},
+  eventType(t){return CLAMP.EVENT_TYPES.includes(t)?t:'Political';},
+};
 // Inline Markdown renderer. Escapes HTML first (XSS-safe), then tokenizes
 // bold/italic/headers/lists/inline+block code. Defensive: falls back to
 // plain-text-with-<br> on any parse error.
@@ -5476,7 +5487,7 @@ function buildNationFromSeed(seed){
     stats:{},
     factions:(seed.factions||[]).map(f=>({...f,id:f.id||Utils.uuid()})),
     laws:seed.laws||[],
-    chronicle:(seed.chronicle||[]).map(e=>({...e,id:e.id||Utils.uuid(),createdAt:e.createdAt||Utils.now(),source:e.source||'manual'})),
+    chronicle:(seed.chronicle||[]).map(e=>({...e,id:e.id||Utils.uuid(),createdAt:e.createdAt||Utils.now(),source:e.source||'manual',weight:CLAMP.eventWeight(e.weight),year:CLAMP.year(e.year,seed.currentYear),type:CLAMP.eventType(e.type)})),
     // Preserve characters and artifacts from imports (was hardcoded empty, silently destroying data on re-import)
     characters:(seed.characters||[]).map(c=>({...c,id:c.id||Utils.uuid(),createdAt:c.createdAt||Utils.now(),chronicleLinks:Array.isArray(c.chronicleLinks)?c.chronicleLinks.slice():[]})),
     artifacts:(seed.artifacts||[]).map(a=>({...a,id:a.id||Utils.uuid()})),
@@ -5515,7 +5526,7 @@ function buildNationFromSeed(seed){
     if(fullFormat&&isFullStat(seedStats[c.key])){value=seedStats[c.key].value;}
     else if(seedStats[c.key]!=null&&typeof seedStats[c.key]==='number'){value=seedStats[c.key];}
     n.stats[c.key]={
-      key:c.key,displayName:c.displayName,value,
+      key:c.key,displayName:c.displayName,value:CLAMP.statValue(value,c),
       min:c.min,max:c.max,weight:c.weight,category:c.category,
       description:STAT_DESC[c.key]||'',isCore:true,isCustom:false,
       thresholds:JSON.parse(JSON.stringify(c.thresholds||[]))
@@ -6678,7 +6689,7 @@ const Compute={
         const dup=n.chronicle.find(e=>e.name===t.eventName&&e.year>=n.currentYear-5);
         if(dup)return;
         const desc=t.eventDesc.replace(/{year}/g,n.currentYear).replace(/{nation}/g,n.name);
-        const ev={id:Utils.uuid(),name:t.eventName,type:t.eventType,weight:t.eventWeight,description:desc,year:n.currentYear,visibility:'public',relatedStats:[key],source:'threshold',createdAt:Utils.now()};
+        const ev={id:Utils.uuid(),name:t.eventName,type:t.eventType,weight:t.eventWeight,description:desc,year:Math.floor(n.currentYear),visibility:'public',relatedStats:[key],source:'threshold',createdAt:Utils.now()};
         n.chronicle.push(ev);
         document.dispatchEvent(new CustomEvent('sc:eventAdded',{detail:{eid:ev.id,nid,isThreshold:true}}));
         document.dispatchEvent(new CustomEvent('sc:changed',{detail:{fields:['chronicle'],nid}}));
@@ -7398,7 +7409,7 @@ const Parse={
           unmatched.push(c.statName);
         }
       }
-      else if(c.type==='event'){const ev={id:Utils.uuid(),name:c.name,type:c.evType||'Political',weight:c.weight||0,description:c.description||'',year:n.currentYear,visibility:c.visibility||'public',relatedStats:[],source:'ai-canon',createdAt:Utils.now()};n.chronicle.push(ev);touched.add('chronicle');}
+      else if(c.type==='event'){const ev={id:Utils.uuid(),name:c.name,type:CLAMP.eventType(c.evType),weight:CLAMP.eventWeight(c.weight),description:c.description||'',year:CLAMP.year(n.currentYear,n.currentYear),visibility:c.visibility||'public',relatedStats:[],source:'ai-canon',createdAt:Utils.now()};n.chronicle.push(ev);touched.add('chronicle');}
       else if(c.type==='faction'){
         // Deduplicate: skip if a faction with the same name (case-insensitive) already exists
         const dupe=n.factions.find(f=>f.name.toLowerCase()===c.name.toLowerCase());
@@ -8647,7 +8658,9 @@ const Copilot={
   _buildProposal(name,args,n){
     if(name==='add_chronicle_entry'){
       if(!args.name||!args.description||!args.type)return {error:'Missing required fields: name, description, type.'};
-      return {kind:'chronicle',data:{name:args.name,description:args.description,type:args.type,weight:typeof args.weight==='number'?args.weight:0,visibility:args.visibility||'public'},summary:`Add chronicle: ${args.name}`};
+      if(!CLAMP.EVENT_TYPES.includes(args.type))return {error:`Invalid type '${args.type}'. Must be one of: ${CLAMP.EVENT_TYPES.join(', ')}.`};
+      if(args.weight!=null&&(!Number.isFinite(Number(args.weight))||Number(args.weight)<-30||Number(args.weight)>30))return {error:`weight out of range: must be an integer from -30 to 30 (got ${args.weight}).`};
+      return {kind:'chronicle',data:{name:args.name,description:args.description,type:CLAMP.eventType(args.type),weight:CLAMP.eventWeight(args.weight),visibility:args.visibility||'public'},summary:`Add chronicle: ${args.name}`};
     }
     if(name==='add_npc'){
       if(!args.name||!args.role)return {error:'Missing required fields: name, role.'};
@@ -10647,7 +10660,8 @@ const SHSPanels={
         // 365.25 averages in the leap day so a 1-year advance lands exactly on the next integer
         // year over the Julian cycle. Good enough for in-fiction time; avoids drift on long campaigns.
         const yearDelta=advanceDays/365.25;
-        n.currentYear=Math.round(((n.currentYear||0)+yearDelta)*100)/100;
+        // Clamp to the valid [1,99999] band but preserve the fractional part (D4) — CLAMP.year floors, so bound manually here.
+        n.currentYear=Utils.clamp(Math.round(((n.currentYear||0)+yearDelta)*100)/100,1,99999);
         // If the result is a whole number, keep it as integer (avoids Year 1247.25 display)
         if(Number.isInteger(n.currentYear*1))n.currentYear=Math.round(n.currentYear);
         State._touch(n.id);State.persist();
@@ -12754,7 +12768,7 @@ const RealmSettings={
     const nameVal=get('rs-name').trim();
     if(nameVal)n.name=nameVal;
     n.era=get('rs-era').trim();
-    const yr=parseInt(get('rs-year'),10);if(!isNaN(yr))n.currentYear=yr;
+    const yr=get('rs-year');if(yr!==''&&!isNaN(parseInt(yr,10)))n.currentYear=CLAMP.year(yr,n.currentYear);
     n.government=get('rs-gov').trim();
     n.archetype=document.getElementById('rs-arch')?.value||n.archetype;
     n.leader=get('rs-leader').trim();
@@ -13622,10 +13636,10 @@ function bindEventListeners(){
     const n=State.get();
     const ev={
       name,
-      type:document.getElementById('ev-type')?.value||'Political',
+      type:CLAMP.eventType(document.getElementById('ev-type')?.value),
       visibility:document.getElementById('ev-vis')?.value||'public',
-      year:(()=>{const y=parseInt(document.getElementById('ev-year')?.value,10);return Number.isFinite(y)?Math.max(1,Math.min(99999,y)):n.currentYear;})(),
-      weight:parseInt(document.getElementById('ev-weight')?.value,10)||0,
+      year:CLAMP.year(document.getElementById('ev-year')?.value,n.currentYear),
+      weight:CLAMP.eventWeight(document.getElementById('ev-weight')?.value),
       description:document.getElementById('ev-desc')?.value.trim()||'',
       relatedStats:_collectAffectedStats(),
       happenedAtLocationId:document.getElementById('ev-location')?.value||null,
