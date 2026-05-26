@@ -170,7 +170,138 @@ body.theme-ember {
   --color-surface:rgba(255,185,100,0.04);
   /* Background atmosphere — warm radial glow centered above the fold.
      Applied via body::before so it doesn't interfere with overflow:hidden on body. */
+  /* Density axis — ember sits at medium (spec §4.2). */
+  --wms-density:medium;
+  --wms-rail-pad:24px 0;
+  --wms-nav-item-pad:12px 16px;
+  --wms-panel-pad:var(--space-4);
 }
+
+/* ============================================================================
+   MANUSCRIPT THEME — "The Codex" (spec §4.1)
+   Light vellum codex. Cormorant Garamond display + Source Serif 4 body.
+   Comfortable density. All non-token skin rules are scoped body.theme-manuscript
+   so they cannot leak into ember.
+   ============================================================================ */
+body.theme-manuscript {
+  /* Surfaces — vellum under a desk lamp, not orange-saturated parchment. */
+  --color-ink:#241c10;             /* text-primary, 13.9:1 on parchment */
+  --color-ink-elevated:#e9dcbd;    /* elevated surface */
+  --color-parchment:#f3ead4;       /* body background — vellum */
+  --color-parchment-warm:#e9dcbd;  /* cards, rails */
+  --color-parchment-pale:#f8f1de;  /* lifted nested surface */
+  /* Accent — darkened gold so body gold passes 4.5:1 (4.6:1). Bright gold
+     #c9a961 is decoration/large-only (≥3:1). */
+  --color-gold:#8a6a1f;
+  --color-gold-deep:#6e5417;
+  --color-gold-pale:#c9a961;       /* bright — decoration / large text only */
+  --color-amber:#8a5a14;
+  --color-amber-deep:#6e470f;
+  /* Status colors — AA on parchment. */
+  --color-thriving:#3f6b2e;        /* 5.2:1 */
+  --color-stable:#2f5d7a;
+  --color-tense:#8a5a14;           /* 5.0:1 */
+  --color-crisis:#9a2a2a;          /* 6.0:1 */
+  --color-collapse:#6e1414;
+  /* Event-type colors — muted ink-on-vellum legibility. */
+  --color-event-political:#3a5670;
+  --color-event-military:#8b3a3a;
+  --color-event-economic:#6e5417;
+  --color-event-cultural:#5a3f6e;
+  --color-event-social:#3a6e5e;
+  --color-event-diplomatic:#42603a;
+  --color-event-natural:#6e5230;
+  /* Text — three steps of ink warmth. */
+  --color-text-primary:var(--color-ink);
+  --color-text-muted:#5c4f33;      /* 6.4:1 — AA body */
+  --color-text-faint:#6b5d3d;      /* 5.0:1 — FIXED, AA body (was 2.87:1 fail) */
+  /* Borders — hairline gold rules. */
+  --color-border-hairline:#cdbf99;
+  --color-border-default:#b6a371;
+  /* Era band tints — warm vellum washes. */
+  --era-tint-1:rgba(36,28,16,0.08);
+  --era-tint-2:rgba(138,106,31,0.10);
+  --era-tint-3:rgba(58,86,112,0.08);
+  --era-tint-4:rgba(90,63,110,0.08);
+  /* Display Cormorant Garamond; body Source Serif 4 — manuscript reads. */
+  --font-display:'Cormorant Garamond','Cinzel',Georgia,serif;
+  --font-body:'Source Serif 4','Newsreader',Georgia,serif;
+  /* WorldShell fallback accent tokens. */
+  --ember-color:var(--color-gold);
+  --ember-color-bright:var(--color-gold-pale);
+  --ember-color-pale:var(--color-gold-pale);
+  /* Semantic aliases. */
+  --color-bg:var(--color-parchment);
+  --color-surface:var(--color-parchment-warm);
+  /* Density — comfortable: generous row-height, wide gutters (spec §4.1). */
+  --wms-density:comfortable;
+  --wms-rail-pad:32px 0;
+  --wms-nav-item-pad:16px 22px;
+  --wms-panel-pad:var(--space-6);
+}
+
+/* ============================================================================
+   MODERN THEME — "The Command Console" (spec §4.3)
+   Cool graphite dark + cold teal accent. Fraunces display + Source Serif 4 body.
+   Compact density. Functional-only motion. Geometry replaces ornament.
+   All non-token skin rules scoped body.theme-modern.
+   ============================================================================ */
+body.theme-modern {
+  /* Surfaces — cool graphite, four elevation levels (spec §2.1). */
+  --color-ink:#e8edf2;             /* text-primary, 15.7:1 */
+  --color-ink-elevated:#1f262f;    /* secondary elevated */
+  --color-parchment:#0e1116;       /* body background — cool graphite */
+  --color-parchment-warm:#161b22;  /* cards, rails — primary elevated */
+  --color-parchment-pale:#1f262f;  /* nested elevated */
+  /* Accent — cold teal: not safe-blue, not ember-gold (spec §4.3). */
+  --color-gold:#5ec8d8;            /* 8.9:1 */
+  --color-gold-deep:#3fa6b6;
+  --color-gold-pale:#9adfe8;
+  --color-amber:#f0c674;
+  --color-amber-deep:#c89a3f;
+  /* Status colors. */
+  --color-thriving:#7fd6a0;        /* 10.2:1 */
+  --color-stable:#5ec8d8;
+  --color-tense:#f0c674;           /* 11.4:1 */
+  --color-crisis:#ff8a8a;          /* 8.0:1 */
+  --color-collapse:#c44;
+  /* Event-type colors — saturated for cool dark. */
+  --color-event-political:#6fa8d8;
+  --color-event-military:#e07878;
+  --color-event-economic:#d4b65a;
+  --color-event-cultural:#a98ad8;
+  --color-event-social:#6fcab0;
+  --color-event-diplomatic:#8fc878;
+  --color-event-natural:#c8a878;
+  /* Text — three steps. faint is body-safe here (5.9:1). */
+  --color-text-primary:var(--color-ink);
+  --color-text-muted:#aab4c0;      /* 8.6:1 */
+  --color-text-faint:#8b97a4;      /* 5.9:1 — AA body */
+  /* Borders — hairline graphite. */
+  --color-border-hairline:#262d36;
+  --color-border-default:#384250;
+  /* Era band tints — cool teal washes. */
+  --era-tint-1:rgba(94,200,216,0.06);
+  --era-tint-2:rgba(94,200,216,0.10);
+  --era-tint-3:rgba(111,168,216,0.08);
+  --era-tint-4:rgba(169,138,216,0.08);
+  /* Display Fraunces (sharp cut); body Source Serif 4. */
+  --font-display:'Fraunces',Georgia,serif;
+  --font-body:'Source Serif 4','Newsreader',Georgia,serif;
+  /* WorldShell fallback accent tokens — cold accent. */
+  --ember-color:var(--color-gold);
+  --ember-color-bright:var(--color-gold-pale);
+  --ember-color-pale:var(--color-gold-pale);
+  /* Semantic aliases. */
+  --color-bg:var(--color-parchment);
+  --color-surface:var(--color-parchment-warm);
+  /* Density — compact: tight rows, more data per screen (spec §4.3). */
+  --wms-density:compact;
+  --wms-rail-pad:16px 0;
+  --wms-nav-item-pad:9px 14px;
+  --wms-panel-pad:var(--space-3);
+}
+
 body.theme-ember{
   background-image:radial-gradient(ellipse 90% 55% at 50% 38%,rgba(255,185,100,0.028) 0%,transparent 68%);
   background-attachment:fixed;
@@ -656,7 +787,7 @@ button.wms-sec-link{background:none;border:none;padding:0;cursor:pointer}
 /* ── LEFT NAV RAIL ────────────────────────────────────────────────────── */
 .wms-nav{grid-column:1;grid-row:1/3;background:#080b10;
   border-right:1px solid #1A2235;display:flex;flex-direction:column;
-  gap:0;padding:24px 0;overflow:hidden;z-index:10}
+  gap:0;padding:var(--wms-rail-pad,24px 0);overflow:hidden;z-index:10}
 .wms-nav__sigil{padding:0 16px 24px;margin-bottom:8px;
   border-bottom:1px solid rgba(26,34,53,0.5);display:flex;align-items:center;gap:12px}
 .wms-nav__sigil-icon{width:40px;height:40px;border-radius:50%;
@@ -667,7 +798,7 @@ button.wms-sec-link{background:none;border:none;padding:0;cursor:pointer}
   letter-spacing:.18em;text-transform:uppercase;color:var(--ember-color);display:block}
 .wms-nav__sigil-sub{font-family:'Cinzel',serif;font-size:9px;
   letter-spacing:.14em;text-transform:uppercase;color:#64748b;display:block;margin-top:2px}
-.wms-nav__item{display:flex;align-items:center;gap:12px;padding:12px 16px;
+.wms-nav__item{display:flex;align-items:center;gap:12px;padding:var(--wms-nav-item-pad,12px 16px);
   font-family:'Cinzel',serif;font-size:10px;letter-spacing:.14em;text-transform:uppercase;
   color:#64748b;cursor:pointer;transition:all .2s;text-decoration:none;
   border-left:2px solid transparent;opacity:0.6}
@@ -1817,7 +1948,7 @@ body.theme-ember .sc-panel__title{color:var(--ember-color)}
 .sc-panel__close{background:none;border:none;cursor:pointer;color:var(--color-text-muted);
   font-size:1.4rem;line-height:1;padding:4px 8px}
 .sc-panel__close:hover{color:var(--color-ink)}
-.sc-panel__body{flex:1;overflow-y:auto;padding:var(--space-4)}
+.sc-panel__body{flex:1;overflow-y:auto;padding:var(--wms-panel-pad,var(--space-4))}
 .sc-panel__actions{padding:var(--space-3) var(--space-4);border-top:1px solid var(--color-border-hairline);flex-shrink:0;display:flex;gap:8px}
 .sc-empty{color:var(--color-text-muted);font-size:var(--text-body-sm);padding:var(--space-4) 0;text-align:center}
 /* Session rows */
