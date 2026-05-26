@@ -13944,17 +13944,22 @@ function applyTheme(){
   document.body.classList.add(`theme-${theme}`);
   // Re-render chronicle band so era tints (read from CSS variables at draw time) refresh
   if(typeof Render!=='undefined'&&Render.chronicleBand)Render.chronicleBand();
-  // World Shell visibility — ember shows WMS and hides old main-row+chronicle-band.
-  // Other themes show the old layout and hide WMS.
-  const isEmber=theme==='ember';
+  // World Mode Shell visibility — Architecture A: all three production themes
+  // (ember, manuscript, modern) share the ONE shell; they differ only by skin.
+  // The legacy .main-row/.chronicle-band layout is retired as a user-facing
+  // theme and is reachable only behind the rw_legacy_layout debug flag, or as a
+  // safety fallback when WorldShell is undefined (the shell can't render).
+  const shellReady=typeof WorldShell!=='undefined';
+  const forceLegacy=localStorage.getItem('rw_legacy_layout')==='1';
+  const useShell=shellReady&&!forceLegacy;
   const wms=document.getElementById('world-mode-shell');
   const mainRow=document.querySelector('.main-row');
   const chronBand=document.querySelector('.chronicle-band');
-  if(wms)wms.style.display=isEmber?'grid':'none';
-  if(mainRow)mainRow.style.display=isEmber?'none':'';
-  if(chronBand)chronBand.style.display=isEmber?'none':'';
-  // Render world shell immediately when switching to ember
-  if(isEmber&&typeof WorldShell!=='undefined'){const nat=State.get();if(nat)WorldShell.render(nat);}
+  if(wms)wms.style.display=useShell?'grid':'none';
+  if(mainRow)mainRow.style.display=useShell?'none':'';
+  if(chronBand)chronBand.style.display=useShell?'none':'';
+  // Render world shell immediately when it is the active layout.
+  if(useShell){const nat=State.get();if(nat)WorldShell.render(nat);}
 }
 
 function _collectAffectedStats(){
