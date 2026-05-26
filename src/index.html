@@ -1029,6 +1029,83 @@ body.theme-manuscript .wms-nav__item.is-active{animation:none}
 
 /*
 ==============================================================================
+SECTION 3.6X: MODERN SKIN — "The Command Console" (spec §4.3)
+------------------------------------------------------------------------------
+The fusion: ember's dark elevation + manuscript's editorial discipline, stripped
+of period ornament. Cool graphite surfaces, single cold teal accent, sharp 2px
+geometry, compact density, functional-only motion (160–240ms slide/opacity, no
+glow/orbit/particle). Every rule scoped body.theme-modern — cannot reach ember.
+==============================================================================
+*/
+/* Nav rail — cool graphite, hairline dividers, grotesque-clean labels.
+   Keep dark but recolor from ember's warm void to cold graphite. */
+body.theme-modern .wms-nav{background:#0b0e13;
+  border-right:1px solid var(--color-border-hairline)}
+body.theme-modern .wms-nav__sigil{border-bottom:1px solid var(--color-border-hairline)}
+body.theme-modern .wms-nav__sigil-icon{border:1px solid var(--color-gold);
+  border-radius:2px;background:rgba(94,200,216,0.08)}
+body.theme-modern .wms-nav__sigil-icon .material-symbols-outlined{color:var(--color-gold)}
+body.theme-modern .wms-nav__sigil-title{font-family:var(--font-mono);
+  font-size:10px;letter-spacing:.16em;color:var(--color-gold)}
+body.theme-modern .wms-nav__sigil-sub{font-family:var(--font-mono);
+  font-size:9px;letter-spacing:.10em;color:var(--color-text-faint)}
+body.theme-modern .wms-nav__item{font-family:var(--font-mono);
+  font-size:10px;letter-spacing:.10em;color:var(--color-text-faint);opacity:1;
+  border-left:2px solid transparent;transition:color 160ms,background 160ms,border-color 160ms}
+body.theme-modern .wms-nav__item:hover{color:var(--color-text-primary);
+  background:rgba(94,200,216,0.06)}
+body.theme-modern .wms-nav__item.is-active{background:rgba(94,200,216,0.10);
+  color:var(--color-gold);border-left-color:var(--color-gold);animation:none}
+/* Center stage — flat graphite, no glow on hover. */
+body.theme-modern .wms-cp{background:var(--color-parchment)}
+/* Console stability anchor — replace the glowing orb with a large monospaced
+   numeral over a thin accent underline (spec §4.3 dominant anchor). */
+body.theme-modern .wms-orb-wrap{width:auto;height:auto;border-radius:0;
+  background:none;box-shadow:none;border:none;padding:8px 4px 14px;
+  flex-direction:column;border-bottom:1px solid var(--color-gold)}
+body.theme-modern .wms-orb-wrap .ember-orbit__outer,
+body.theme-modern .wms-orb-wrap .ember-orbit__inner{display:none}
+body.theme-modern .wms-stab-num{font-family:var(--font-mono);font-weight:600;
+  font-size:120px;color:var(--color-text-primary);letter-spacing:-.04em;
+  filter:none;text-shadow:none}
+body.theme-modern .wms-stab-label{font-family:var(--font-mono);letter-spacing:.30em}
+body.theme-modern .wms-stab-state{font-family:var(--font-mono);font-size:10px;
+  letter-spacing:.26em;color:var(--color-thriving)}
+body.theme-modern .wms-stab-desc{font-family:'Source Serif 4',serif;font-style:normal}
+/* Cards — 2px-radius sharp geometry, hairline graphite, no glow/transform. */
+body.theme-modern .wms-pc,body.theme-modern .wms-fc{
+  background:var(--color-parchment-warm);border:1px solid var(--color-border-hairline);
+  border-radius:2px;box-shadow:none;transition:border-color 160ms,background 160ms}
+body.theme-modern .wms-pc:hover,body.theme-modern .wms-fc:hover{
+  transform:none;border-color:var(--color-gold);background:var(--color-ink-elevated);
+  box-shadow:none}
+body.theme-modern .wms-pc-tag--crit,body.theme-modern .wms-pc-tag--tense,
+body.theme-modern .wms-pc-tag--oppo{box-shadow:none}  /* no edge glow */
+/* Typography — Fraunces display, Source Serif 4 long-form, mono chrome/labels. */
+body.theme-modern .wms-nation-title{font-family:var(--font-display);
+  font-weight:600;text-transform:none;letter-spacing:-.01em}
+body.theme-modern .wms-nation-title:hover{text-decoration-color:var(--color-gold)}
+body.theme-modern .wms-pc-text{font-family:'Source Serif 4',serif;font-weight:400}
+body.theme-modern .wms-sec-label{font-family:var(--font-mono);
+  letter-spacing:.20em;color:var(--color-text-muted)}
+body.theme-modern .wms-sec-link{font-family:var(--font-mono);
+  letter-spacing:.12em;color:var(--color-gold)}
+body.theme-modern .wms-sl-name{font-family:var(--font-mono)}
+/* Dividers — hairline graphite, no gems (geometry replaces ornament §4.3). */
+body.theme-modern .ember-divider::before,
+body.theme-modern .ember-divider::after{content:'';flex:1;height:1px;
+  background:var(--color-border-hairline)}
+body.theme-modern .ember-divider__gem{display:none}
+/* Feature drawers — flat graphite; functional slide only. */
+body.theme-modern .sc-panel{box-shadow:-8px 0 28px rgba(0,0,0,0.4);
+  transition:transform 200ms var(--ease-out),opacity 200ms var(--ease-out)}
+body.theme-modern .sc-panel__title{font-family:var(--font-display);
+  font-weight:600;color:var(--color-gold)}
+/* Reduced-motion already handled globally via .force-reduced-motion; modern's
+   only motion is the slide/opacity above, which that kill-switch covers. */
+
+/*
+==============================================================================
 SECTION 3.7: EMBER MODAL SYSTEM + COPILOT PANEL
 ------------------------------------------------------------------------------
 All selectors scoped under body.theme-ember. Zero impact on Manuscript/Modern.
