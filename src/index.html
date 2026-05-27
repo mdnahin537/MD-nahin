@@ -13580,7 +13580,8 @@ function bindEventListeners(){
   // Escape key + Ctrl+Z / Ctrl+Shift+Z
   document.addEventListener('keydown',e=>{
     if(e.key==='Escape'){
-      if(typeof Copilot!=='undefined'&&Copilot.isOpen())Copilot.close();
+      if(typeof SHSPanels!=='undefined'&&SHSPanels._open)SHSPanels.closeAll();
+      else if(typeof Copilot!=='undefined'&&Copilot.isOpen())Copilot.close();
       else if(document.getElementById('detail-panel')?.classList.contains('is-open'))
         document.getElementById('detail-panel').classList.remove('is-open');
       else Modals.closeAll();
