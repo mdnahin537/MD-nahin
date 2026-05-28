@@ -6775,6 +6775,25 @@ const Render={
   all(){this.identityStrip();this.workbench();this.nationCard();this.pressurePoints();this.recentPulse();this.arsenal();this.chronicleBand();this.nationSwitcher();
     // Render WorldShell whenever the shell layout is active (all themes — Architecture A)
     if(typeof WorldShell!=='undefined'&&localStorage.getItem('rw_legacy_layout')!=='1'){const _nat=State.get();if(_nat)WorldShell.render(_nat);}
+    this.refreshOpenPanels();
+  },
+  // Re-render whichever SHS panel is open so it reflects current state. With a
+  // fields list, only refresh when the open panel cares about a changed field
+  // (the dispatchRender hot path); with no fields, refresh unconditionally
+  // (the Render.all full-refresh path, e.g. undo/import).
+  refreshOpenPanels(fields){
+    if(typeof SHSPanels==='undefined')return;
+    const open=SHSPanels._open;
+    if(!open)return;
+    const want=f=>!fields||fields.includes(f);
+    if(open==='sessions'&&want('session'))SHSPanels.renderSessions();
+    else if(open==='hooks'&&want('hook'))SHSPanels.renderHooks();
+    else if(open==='secrets'&&want('secret'))SHSPanels.renderSecrets();
+    else if(open==='locations'&&want('location'))SHSPanels.renderLocations();
+    else if(open==='bestiary'&&want('bestiary'))SHSPanels.renderBestiary();
+    else if(open==='relations'&&want('relation'))SHSPanels.renderRelations();
+    else if(open==='web'&&(want('character')||want('faction')||want('location')||want('relation')))SHSPanels.renderWeb();
+    else if(open==='threads')SHSPanels.renderThreads();
   },
   identityStrip(){
     const n=State.get();
@@ -13466,7 +13485,14 @@ function rebuildPreserving(el, html){
 function dispatchRender(e){
   const {fields}=e.detail||{};
   if(!fields)return Render.all();
-  if(fields.includes('nation')){Render.all();return;}
+  if(fields.includes('nation')){
+    // Active nation changed — open SHS panels and the detail panel are
+    // per-nation, so they'd show the previous realm's data. Close them before
+    // the full re-render for consistent behavior across switch and delete paths.
+    if(typeof SHSPanels!=='undefined')SHSPanels.closeAll();
+    document.getElementById('detail-panel')?.classList.remove('is-open');
+    Render.all();return;
+  }
   Render.identityStrip();
   if(fields.includes('stat')||fields.includes('chronicle')){
     Render.nationCard();Render.pressurePoints();Render.recentPulse();
@@ -13474,17 +13500,8 @@ function dispatchRender(e){
   }
   if(fields.includes('customStat'))Render.workbench();
   if(fields.includes('character')){Render.workbenchCharacters();Render.nationCard();}
-  // previously had no branch for them. Open panels now refresh reactively (e.g. after undo).
-  if(typeof SHSPanels!=='undefined'){
-    if(fields.includes('session')&&SHSPanels._open==='sessions')SHSPanels.renderSessions();
-    if(fields.includes('hook')&&SHSPanels._open==='hooks')SHSPanels.renderHooks();
-    if(fields.includes('secret')&&SHSPanels._open==='secrets')SHSPanels.renderSecrets();
-    if(fields.includes('location')&&SHSPanels._open==='locations')SHSPanels.renderLocations();
-    if(fields.includes('bestiary')&&SHSPanels._open==='bestiary')SHSPanels.renderBestiary();
-    if(fields.includes('relation')&&SHSPanels._open==='relations')SHSPanels.renderRelations();
-    if(SHSPanels._open==='web'&&(fields.includes('character')||fields.includes('faction')||fields.includes('location')||fields.includes('relation')))SHSPanels.renderWeb();
-    if(SHSPanels._open==='threads')SHSPanels.renderThreads();
-  }
+  // Open panels refresh reactively (e.g. after undo), field-gated for efficiency.
+  Render.refreshOpenPanels(fields);
   // Also update WorldShell for any stat/chronicle/character change while the shell is active (all themes)
   if(typeof WorldShell!=='undefined'&&localStorage.getItem('rw_legacy_layout')!=='1'){const _nat=State.get();if(_nat)WorldShell.render(_nat);}
 }
