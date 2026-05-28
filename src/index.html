@@ -8433,8 +8433,18 @@ const Copilot={
     };
     const r=rates[model];
     if(!r)return '— ¢ per message';
-    // 2000 input + 600 output, prices are per million tokens
-    const cents=((2000/1e6)*r[0]+(600/1e6)*r[1])*100;
+    // Estimate input tokens from the context the next message would actually send
+    // (frozen system + world state, ~4 chars/token) plus a short user turn. Falls
+    // back to a standard-scope figure when no realm is active. Prices per million.
+    let inTok=2000;
+    try{
+      const n=State.get();
+      if(n&&typeof this.buildContext==='function'){
+        const sysLen=typeof this.buildSystemPrompt==='function'?this.buildSystemPrompt(this.isConfigured()).length:0;
+        inTok=Math.round((sysLen+this.buildContext(n).length)/4)+400;
+      }
+    }catch(e){/* keep the fallback estimate */}
+    const cents=((inTok/1e6)*r[0]+(600/1e6)*r[1])*100;
     if(cents<0.5)return `≈ ${cents.toFixed(2)}¢ per message`;
     if(cents<10)return `≈ ${cents.toFixed(1)}¢ per message`;
     return `≈ ${Math.round(cents)}¢ per message`;
@@ -9022,15 +9032,29 @@ Without a CANON block, your response is conversational only — no simulation ef
     this.renderMessages();
     // Build messages array for the API: system prompt + world context + history
     const context=this.buildContext(n);
-    const systemPrompt=this.buildSystemPrompt(toolsEnabled)+'\n\n# Current World State\n'+context;
+    const frozenSystem=this.buildSystemPrompt(toolsEnabled);
+    const worldState='\n\n# Current World State\n'+context;
+    const systemPrompt=frozenSystem+worldState; // kept whole for the context inspector (_sentContext)
     // Convert past conversation (excluding the empty placeholder we just added) to API format.
     // Skip prior tool / tool-result messages; just send user/assistant turns.
     const history=n.copilotConversation
       .slice(0,-1)
       .filter(m=>(m.role==='user'||m.role==='assistant'||(m.role==='system'&&m._summarized)))
       .map(m=>({role:m.role,content:m.content}));
+    // Prompt caching: on OpenRouter Anthropic models, split the system message so the
+    // frozen instruction + tool-protocol prefix becomes a cacheable block and only the
+    // volatile world-state sits past the cache breakpoint — the frozen prefix then hits
+    // the cache on every subsequent turn. Other providers (Ollama, non-Anthropic
+    // OpenRouter models) don't honor cache_control, so they get the plain string.
+    const cacheable=provider!=='ollama'&&/^anthropic\//.test(model);
+    const systemMessage=cacheable
+      ?{role:'system',content:[
+          {type:'text',text:frozenSystem,cache_control:{type:'ephemeral'}},
+          {type:'text',text:worldState},
+        ]}
+      :{role:'system',content:systemPrompt};
     let messages=[
-      {role:'system',content:systemPrompt},
+      systemMessage,
       ...history,
     ];
     // Set up abort controller for cancellation
