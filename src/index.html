@@ -12737,7 +12737,7 @@ const Relations={
         </div>
       </div>`;
     });
-    el.innerHTML=html;
+    rebuildPreserving(el,html);
 
     el.querySelectorAll('[data-rel-set]').forEach(b=>{
       b.addEventListener('click',()=>{
@@ -13431,6 +13431,36 @@ const GlobalSearch = {
     overlay?.addEventListener('click',()=>this.close());
   },
 };
+
+// Swap a container's innerHTML without eating the caret. Re-renders fired by
+// sc:changed land while a user may be typing in a panel field; this captures
+// the focused element (by id, else by its first data-* attribute), its text
+// selection, and the container scroll, then restores them after the swap.
+function rebuildPreserving(el, html){
+  const active=document.activeElement;
+  let sel=null;
+  if(active && el.contains(active)){
+    let selector=null;
+    if(active.id)selector='#'+CSS.escape(active.id);
+    else for(const a of active.attributes){
+      if(a.name.startsWith('data-')){selector=active.tagName.toLowerCase()+'['+a.name+'="'+CSS.escape(a.value)+'"]';break;}
+    }
+    if(selector){
+      sel={selector,start:null,end:null};
+      try{sel.start=active.selectionStart;sel.end=active.selectionEnd;}catch(e){/* field has no text selection */}
+    }
+  }
+  const scroll=el.scrollTop;
+  el.innerHTML=html;
+  el.scrollTop=scroll;
+  if(sel){
+    const next=el.querySelector(sel.selector);
+    if(next){
+      next.focus();
+      if(sel.start!=null){try{next.setSelectionRange(sel.start,sel.end);}catch(e){/* not restorable */}}
+    }
+  }
+}
 
 // ─── BOOTSTRAP & EVENT LISTENERS ───
 function dispatchRender(e){
