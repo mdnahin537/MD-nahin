@@ -62,8 +62,69 @@ Tone:
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+## ORCHESTRATION BRAIN — READ FIRST, EVERY TASK
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The main agent's job is PLAN → DELEGATE → REVIEW. Not to do all the work itself.
+On every task, run this decision before acting:
+
+  1. Worth doing at all? If not, push back (ruthless advisor).
+  2. How complex / how expensive if wrong?
+       Trivial (rename, format, lookup)        → do it inline, no subagent, no skill.
+       Standard (clear feature, normal bug)     → Sonnet 4.6 subagent if big enough to be worth it.
+       Complex (architecture, security, ambig.) → Opus 4.8 subagent.
+  3. Is there a matching skill, AND is it worth the tokens?
+       Yes → if a subagent does the work, tell it: "Read .claude/skills/<name>/SKILL.md and follow it."
+             That loads the heavy skill body in the SUBAGENT's context, not mine.
+       No  → work from prompt.
+  4. Only the main agent keeps the skill LIST (cheap). It must NEVER load a heavy skill
+     body for work it's delegating — that bloats the planner for nothing.
+
+MODEL CAPABILITY (subagents spawn with `model:` set explicitly):
+  Opus 4.8   (claude-opus-4-8)            → architecture, security, plan/code review,
+                                            hard debugging, anything where wrong = expensive.
+  Sonnet 4.6 (claude-sonnet-4-6)          → feature builds, standard bugs, research, writing.
+                                            DEFAULT subagent model (set in settings.json).
+  Haiku 4.5  (claude-haiku-4-5-20251001)  → renames, formatting, file ops, simple lookups only.
+
+RULE: skill only when the payoff justifies the tokens. Subagent only when isolation
+or model-fit justifies the overhead. When in doubt and the task is small — just do it.
+
+TWO TIERS OF SKILLS:
+  Planning skills (office-hours, plan-*, autoplan)        → main agent may run these (output is the plan).
+  Execution skills (cso, review, investigate, health, …)  → prefer a subagent; keep the body out of main.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+## PERMISSIONS — FLOW, DON'T NAG
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Hunter always allows prompts and rarely understands them, so prompts are noise.
+settings.json is now tuned to: auto-allow ALL normal work (git incl. push, npm, files,
+builds, scripts). It interrupts ONLY for the genuinely catastrophic and irreversible:
+force-push, `git reset --hard`, `rm -rf`, `sudo`, recursive chmod, disk ops.
+
+When a prompt DOES fire, it is — by design — worth reading. Explain it in plain English,
+one sentence, WHY it could hurt, before Hunter decides. Never expose .env / secrets / keys
+(hard-denied at the file level). The plan is the checkpoint; per-command prompts are not.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ## WHAT YOU HAVE — INSTALLED STACK
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+REALITY CHECK (2026-05) — what is ACTUALLY active vs aspirational:
+  ✅ ACTIVE: gStack skills (~32 on mobile/web, more on desktop). Auto-installed every
+     session by scripts/install-skills.sh, wired to the SessionStart hook. These FIRE.
+     Built-in skills (review, code-review, simplify, autopilot, bugfix, deep-research,
+     security-review, init, update-config, …) are always available.
+  ⚠️ NOT INSTALLED on web: the "plugins" and "MCP servers" listed below were never
+     installed in this ephemeral cloud container (plugins/MCPs don't persist on web).
+     Do NOT assume they exist or route to them. To make them real, install at the
+     Claude Code web ENVIRONMENT level (see scripts/) — not per-repo.
+  📱 MOBILE: browser/iOS/deploy skills (qa, browse, scrape, ios-*, canary…) are
+     EXCLUDED on the cloud container (Chrome download is blocked, no device). They
+     appear only on desktop. So on mobile there is nothing to fire by accident.
 
 OFFICIAL PLUGINS (Anthropic marketplace `claude-plugins-official`):
   superpowers       → Structured build methodology. Plan before code. TDD default.
@@ -217,9 +278,9 @@ AUTOMATIC MODEL RULES:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 When Hunter says "build UI" / "make a component" / "design a page"
-  → Activate frontend-design plugin
-  → Load ui-ux-pro-max design intelligence
-  → After generation: run baseline-ui → fixing-accessibility → fixing-motion-performance
+  → /design-consultation (gStack) to set the system, then /design-html or /design-shotgun
+  → /design-review (gStack) to catch AI-slop and spacing issues
+  → (frontend-design / ui-ux-pro-max plugins are NOT installed on web — don't route to them)
 
 When Hunter says "I have an idea" / "I want to build X"
   → Run /office-hours first
@@ -227,15 +288,15 @@ When Hunter says "I have an idea" / "I want to build X"
   → Surface halal check if the domain is ambiguous
 
 When Hunter says "review" / "check my code" / "is this ready"
-  → Activate code-review plugin
-  → Run /review (gStack)
-  → Run /cso if auth or payments involved
+  → /code-review (built-in) for the diff, or /review (gStack) pre-landing
+  → /cso (gStack) if auth or payments involved → prefer a subagent for this
 
 When Hunter says "test this" / "does this work" / "open the browser"
-  → Use /qa (gStack — opens real browser with Playwright)
+  → DESKTOP only: /qa (gStack — real browser). On MOBILE these skills are excluded,
+    so say so and offer to reason about it or wait until he's on desktop.
 
 When Hunter says "debug this" / "why is this broken"
-  → Use /investigate — no fixes until root cause is found
+  → /investigate (gStack) or /bugfix (built-in) — no fixes until root cause is found
 
 When Hunter says "deploy"
   → /ship → /land-and-deploy → /canary
