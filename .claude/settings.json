@@ -97,6 +97,7 @@
     "ask": [
       "Bash(git push*--force*)",
       "Bash(git push*-f *)",
+      "Bash(git push* :*)",
       "Bash(git push*:*)",
       "Bash(git reset --hard*)",
       "Bash(git clean -fd*)",
@@ -139,7 +140,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash $CLAUDE_PROJECT_DIR/scripts/install-skills.sh",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-$(git -C /home/user/MD-nahin rev-parse --show-toplevel)}/scripts/install-skills.sh\"",
             "async": true,
             "asyncTimeout": 180000
           }
