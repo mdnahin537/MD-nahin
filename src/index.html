@@ -12957,15 +12957,21 @@ const RelationshipWeb = {
 
     const nodeIds=new Set(rawNodes.map(n=>n.id));
 
-    // Place nodes in a circle initially
+    // Reuse the positions of nodes that survive a rebuild so an unrelated edit
+    // doesn't re-randomize a graph the user has already arranged. Only brand-new
+    // nodes get a fresh circle slot.
+    const prevPos={};
+    (this._nodes||[]).forEach(p=>{prevPos[p.id]={x:p.x,y:p.y};});
+    const hadNodes=!!(this._nodes&&this._nodes.length);
     const cx=this._svgW/2, cy=this._svgH/2;
     const r=Math.min(this._svgW,this._svgH)*0.35;
     rawNodes.forEach((n,i)=>{
+      const prev=prevPos[n.id];
       const angle=(2*Math.PI*i/rawNodes.length)-Math.PI/2;
       nodes.push({
         ...n,
-        x: cx+r*Math.cos(angle)+(Math.random()-.5)*40,
-        y: cy+r*Math.sin(angle)+(Math.random()-.5)*40,
+        x: prev?prev.x:cx+r*Math.cos(angle)+(Math.random()-.5)*40,
+        y: prev?prev.y:cy+r*Math.sin(angle)+(Math.random()-.5)*40,
         vx:0, vy:0,
         pinned:false,
       });
@@ -12976,11 +12982,14 @@ const RelationshipWeb = {
       if(nodeIds.has(e.s)&&nodeIds.has(e.t))edges.push(e);
     });
 
+    // When every node already had a position, the layout is settled — skip the
+    // re-sim so positions stay put. Only run the force pass when nodes were added.
+    const allPreserved=hadNodes&&nodes.every(n=>prevPos[n.id]);
     this._nodes=nodes;
     this._edges=edges;
-    this._selected=null;
-    this._transform={x:0,y:0,scale:1};
-    this._runSim(200);
+    if(!nodeIds.has(this._selected))this._selected=null;
+    if(!hadNodes)this._transform={x:0,y:0,scale:1};
+    this._runSim(allPreserved?0:200);
     this._render();
   },
 
@@ -13433,7 +13442,7 @@ function dispatchRender(e){
     if(fields.includes('location')&&SHSPanels._open==='locations')SHSPanels.renderLocations();
     if(fields.includes('bestiary')&&SHSPanels._open==='bestiary')SHSPanels.renderBestiary();
     if(fields.includes('relation')&&SHSPanels._open==='relations')SHSPanels.renderRelations();
-    if(SHSPanels._open==='web')SHSPanels.renderWeb();
+    if(SHSPanels._open==='web'&&(fields.includes('character')||fields.includes('faction')||fields.includes('location')||fields.includes('relation')))SHSPanels.renderWeb();
     if(SHSPanels._open==='threads')SHSPanels.renderThreads();
   }
   // Also update WorldShell for any stat/chronicle/character change while the shell is active (all themes)
