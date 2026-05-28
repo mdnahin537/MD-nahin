@@ -147,7 +147,7 @@ body.theme-ember {
   /* Text — three steps of warmth. Primary inherits from --color-ink. */
   --color-text-primary:var(--color-ink);
   --color-text-muted:#c0b898;
-  --color-text-faint:#7a7058;
+  --color-text-faint:#94856a;
   /* Borders translate to ember-tinted hairlines on void */
   --color-border-hairline:#1A2235;
   --color-border-default:rgba(160,142,124,0.30);
@@ -797,10 +797,10 @@ button.wms-sec-link{background:none;border:none;padding:0;cursor:pointer}
 .wms-nav__sigil-title{font-family:'Cinzel',serif;font-size:10px;
   letter-spacing:.18em;text-transform:uppercase;color:var(--ember-color);display:block}
 .wms-nav__sigil-sub{font-family:'Cinzel',serif;font-size:9px;
-  letter-spacing:.14em;text-transform:uppercase;color:#64748b;display:block;margin-top:2px}
+  letter-spacing:.14em;text-transform:uppercase;color:#8794a3;display:block;margin-top:2px}
 .wms-nav__item{display:flex;align-items:center;gap:12px;padding:var(--wms-nav-item-pad,12px 16px);
   font-family:'Cinzel',serif;font-size:10px;letter-spacing:.14em;text-transform:uppercase;
-  color:#64748b;cursor:pointer;transition:all .2s;text-decoration:none;
+  color:#8794a3;cursor:pointer;transition:all .2s;text-decoration:none;
   border-left:2px solid transparent;opacity:0.6}
 .wms-nav__item:hover{opacity:1;color:rgba(254,215,170,1);background:#151b26}
 .wms-nav__item.is-active{background:#1A2235;color:var(--ember-color);
@@ -2609,7 +2609,7 @@ SECTION 7: MOTION & STATE STYLES
 .web-legend{
   display:flex;gap:16px;padding:8px 16px;
   border-top:1px solid rgba(255,185,100,0.1);
-  font-size:10px;color:#64748b;letter-spacing:.08em;
+  font-size:10px;color:#8794a3;letter-spacing:.08em;
   background:#06080d;flex-wrap:wrap;
 }
 .web-legend-item{display:flex;align-items:center;gap:5px}
@@ -2640,7 +2640,7 @@ SECTION 7: MOTION & STATE STYLES
   padding:12px 16px;
   background:rgba(255,185,100,0.05);
   border-bottom:1px solid rgba(255,185,100,0.1);
-  font-size:11px;color:#64748b;font-style:italic;
+  font-size:11px;color:#8794a3;font-style:italic;
 }
 
 /* Global Search Modal */
@@ -2671,7 +2671,7 @@ SECTION 7: MOTION & STATE STYLES
   padding:14px 18px;
   border-bottom:1px solid rgba(255,185,100,0.15);
 }
-.search-input-wrap .material-symbols-outlined{color:#64748b;font-size:20px;flex-shrink:0}
+.search-input-wrap .material-symbols-outlined{color:#8794a3;font-size:20px;flex-shrink:0}
 #search-query{
   flex:1;background:transparent;border:none;outline:none;
   color:#e2e8f0;font-size:15px;
@@ -2698,7 +2698,7 @@ SECTION 7: MOTION & STATE STYLES
   transition:background .1s;
 }
 .search-result-item:hover,.search-result-item.is-highlighted{background:#111827}
-.search-result-icon{font-size:16px;color:#64748b;flex-shrink:0}
+.search-result-icon{font-size:16px;color:#8794a3;flex-shrink:0}
 .search-result-name{font-size:13px;color:#e2e8f0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .search-result-meta{font-size:10px;color:#475569;white-space:nowrap}
 .search-empty{padding:32px 18px;text-align:center;color:#334155;font-size:13px}
@@ -3770,7 +3770,7 @@ SECTION 8: DOM STRUCTURE
   </div>
   <div class="web-panel-inner">
     <div class="web-toolbar">
-      <label style="font-size:11px;color:#64748b;margin-right:4px">Show:</label>
+      <label style="font-size:11px;color:#8794a3;margin-right:4px">Show:</label>
       <label style="font-size:11px;color:#94a3b8;display:flex;align-items:center;gap:4px;cursor:pointer">
         <input type="checkbox" id="web-show-chars" checked> Characters
       </label>
@@ -13103,7 +13103,7 @@ const RelationshipWeb = {
 
     this._nodes.forEach(n=>{
       const nx=(n.x*ts+tx).toFixed(1), ny=(n.y*ts+ty).toFixed(1);
-      const color=nodeColors[n.type]||'#64748b';
+      const color=nodeColors[n.type]||'#8794a3';
       const dimmed=sel&&sel!==n.id&&!this._edges.some(e=>(e.s===sel&&e.t===n.id)||(e.t===sel&&e.s===n.id));
       const op=dimmed?0.15:0.9;
       const sz=12;
@@ -13208,7 +13208,7 @@ const RelationshipWeb = {
     } else if(n.type==='location'&&n.data){
       extra=`<p>Type: ${E(n.data.type||'—')}</p>`;
     }
-    detail.innerHTML=`<h4>${E(n.label)}</h4><p style="color:#64748b;font-size:10px;margin-bottom:6px">${E(typeLabel)} · ${connected} connection${connected!==1?'s':''}</p>${extra}`;
+    detail.innerHTML=`<h4>${E(n.label)}</h4><p style="color:#8794a3;font-size:10px;margin-bottom:6px">${E(typeLabel)} · ${connected} connection${connected!==1?'s':''}</p>${extra}`;
     detail.style.display='block';
   },
 
@@ -15298,7 +15298,7 @@ window.__rwClearDevTheme=function(){localStorage.removeItem('rw_dev_theme');loca
       <textarea class="form-textarea" id="decipher-input" rows="10" placeholder="Paste here — session notes, stream-of-consciousness worldbuilding, rough transcript, anything..."></textarea>
     </div>
     <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px">
-      <label style="font-size:11px;color:#64748b">Focus on:</label>
+      <label style="font-size:11px;color:#8794a3">Focus on:</label>
       <div class="char-status-group" id="decipher-targets" role="group" aria-label="Decipher target">
         <button type="button" class="char-status-pill is-selected" data-target="all">Everything</button>
         <button type="button" class="char-status-pill" data-target="characters">Characters</button>
@@ -15308,7 +15308,7 @@ window.__rwClearDevTheme=function(){localStorage.removeItem('rw_dev_theme');loca
     </div>
     <div style="display:flex;align-items:center;gap:12px">
       <button class="btn btn--primary" id="decipher-go" type="button">⌘ Decipher</button>
-      <span id="decipher-status" style="font-size:11px;color:#64748b"></span>
+      <span id="decipher-status" style="font-size:11px;color:#8794a3"></span>
     </div>
   </div>
 </div>
