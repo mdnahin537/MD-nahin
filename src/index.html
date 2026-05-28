@@ -5903,8 +5903,13 @@ const State={
     this.pushUndo();
     n.stats[key].value=newVal;
     this._touch(nid);
-    if(!skipThreshold)Compute.checkThresholds(nid,key,old,newVal);
-    document.dispatchEvent(new CustomEvent('sc:changed',{detail:{fields:['stat'],nid}}));
+    const fields=['stat'];
+    if(!skipThreshold){
+      const r=Compute.checkThresholds(nid,key,old,newVal)||{};
+      if(r.chronicle)fields.push('chronicle');
+      if(r.front)fields.push('front');
+    }
+    document.dispatchEvent(new CustomEvent('sc:changed',{detail:{fields,nid}}));
     this.persist();
   },
   addEvent(nid,ev){
@@ -6424,7 +6429,8 @@ const State={
       showToast('Front resolved: '+f.name+'. Chronicle event added.'); // B2+B4: was Toast.show with escHtml
     }
     this._touch(nid);
-    document.dispatchEvent(new CustomEvent('sc:changed',{detail:{fields:['front'],nid}}));
+    // silent: caller (checkThresholds) folds 'front' into one union sc:changed.
+    if(!opts.silent)document.dispatchEvent(new CustomEvent('sc:changed',{detail:{fields:['front'],nid}}));
     this.persist();
   },
 
@@ -6686,7 +6692,10 @@ const Compute={
   },
   checkThresholds(nid,key,oldVal,newVal){
     const n=State.data.nations.find(n=>n.id===nid);
-    if(!n)return;
+    if(!n)return{};
+    // Accumulate what changed and let the caller (setStat) emit a single union
+    // sc:changed, instead of firing one render storm per crossed threshold.
+    let chronicleChanged=false, frontChanged=false;
     const stat=n.stats[key];
     if(stat?.thresholds?.length){
       stat.thresholds.forEach(t=>{
@@ -6700,7 +6709,7 @@ const Compute={
         const ev={id:Utils.uuid(),name:t.eventName,type:t.eventType,weight:t.eventWeight,description:desc,year:Math.floor(n.currentYear),visibility:'public',relatedStats:[key],source:'threshold',createdAt:Utils.now()};
         n.chronicle.push(ev);
         document.dispatchEvent(new CustomEvent('sc:eventAdded',{detail:{eid:ev.id,nid,isThreshold:true}}));
-        document.dispatchEvent(new CustomEvent('sc:changed',{detail:{fields:['chronicle'],nid}}));
+        chronicleChanged=true;
       });
     }
     // Front optional stat triggers — runs regardless of whether stat has thresholds
@@ -6711,8 +6720,9 @@ const Compute={
       const crossed=t.direction==='below'
         ?(oldVal>=t.threshold&&newVal<t.threshold)
         :(oldVal<=t.threshold&&newVal>t.threshold);
-      if(crossed)State.tickFront(nid,f.id,1,{by:'stat-trigger'});
+      if(crossed){State.tickFront(nid,f.id,1,{by:'stat-trigger',silent:true});frontChanged=true;}
     });
+    return{chronicle:chronicleChanged,front:frontChanged};
   },
 };
 // Fill-and-Copy variable resolver
