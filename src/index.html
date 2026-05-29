@@ -4955,11 +4955,14 @@ const MobileGate={
     overlay.innerHTML=`<div class="mobile-gate__ornament" aria-hidden="true">◆</div><div class="mobile-gate__wordmark">RealmWright</div><div class="mobile-gate__tagline">World-building command centre</div><div class="mobile-gate__card ember-ornate"><h2 class="mobile-gate__headline">Built for larger screens</h2><p class="mobile-gate__body">RealmWright's strategic layout — war room, chronicle timeline, and faction grid — needs <strong>768 px or wider</strong> to render correctly. On a phone, panels will overlap and interactions will break.</p><div class="mobile-gate__cta"><button class="btn btn--secondary" id="mobile-gate-continue-btn" aria-label="Continue on this device anyway">Continue anyway</button></div></div><p class="mobile-gate__footnote">Rotate to landscape · use a tablet · or open on desktop</p>`;
     document.body.appendChild(overlay);
     document.body.classList.add('mobile-gate-open');
-    document.getElementById('mobile-gate-continue-btn')?.addEventListener('click',()=>this.hide(true));
+    const btn=document.getElementById('mobile-gate-continue-btn');
+    btn?.addEventListener('click',()=>this.hide(true));
+    if(typeof FocusTrap!=='undefined')FocusTrap.activate(overlay,document.activeElement);
+    btn?.focus();
   },
   hide(persist=false){
     const overlay=document.getElementById(this._overlayId);
-    if(overlay)overlay.remove();
+    if(overlay){if(typeof FocusTrap!=='undefined')FocusTrap.release(overlay);overlay.remove();}
     document.body.classList.remove('mobile-gate-open');
     if(persist)localStorage.setItem('rw_mobile_dismissed','1');
   },
@@ -7467,15 +7470,47 @@ const Parse={
   },
 };
 // ─── MODALS MODULE ───
+// Shared focus management for overlay surfaces. Tab-cycles within the
+// container and restores focus to the opener on release. Deliberately does
+// NOT use `inert`/aria-hidden on the background — a cleanup miss there could
+// lock the whole UI, whereas a stray Tab handler is harmless.
+const FocusTrap={
+  _selector:'a[href],button:not(:disabled),textarea:not(:disabled),input:not(:disabled),select:not(:disabled),[tabindex]:not([tabindex="-1"])',
+  activate(container,opener){
+    if(!container||container._rwTrap)return;
+    const trap={opener:opener||document.activeElement,handler:null};
+    trap.handler=e=>{
+      if(e.key!=='Tab')return;
+      const f=Array.from(container.querySelectorAll(this._selector)).filter(el=>el.offsetParent!==null||el===document.activeElement);
+      if(!f.length)return;
+      const first=f[0],last=f[f.length-1];
+      if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+      else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+    };
+    container.addEventListener('keydown',trap.handler);
+    container._rwTrap=trap;
+  },
+  release(container){
+    if(!container||!container._rwTrap)return;
+    const trap=container._rwTrap;
+    container.removeEventListener('keydown',trap.handler);
+    container._rwTrap=null;
+    if(trap.opener&&typeof trap.opener.focus==='function'&&document.contains(trap.opener)){
+      try{trap.opener.focus();}catch(_){}
+    }
+  }
+};
 const Modals={
   _current:null,
   open(id){
+    const opener=document.activeElement;
     this.closeAll();
     const modal=document.getElementById(`modal-${id}`);
     const bg=document.getElementById('modal-backdrop');
     if(!modal||!bg)return;
     bg.classList.add('is-open');
     modal.classList.add('is-open');
+    FocusTrap.activate(modal,opener);
     this._current=id;
     document.body.style.overflow='hidden';
     document.dispatchEvent(new CustomEvent('sc:modal-open',{detail:id}));
@@ -7848,13 +7883,14 @@ const Modals={
     const modal=document.getElementById(`modal-${id}`);
     const bg=document.getElementById('modal-backdrop');
     if(!modal)return;
+    FocusTrap.release(modal);
     modal.classList.remove('is-visible');
     if(bg)bg.classList.remove('is-visible');
     document.body.style.overflow='';
     setTimeout(()=>{modal.classList.remove('is-open');if(this._current===id){if(bg)bg.classList.remove('is-open');this._current=null;}},240);
   },
   closeAll(){
-    document.querySelectorAll('.modal.is-open').forEach(m=>m.classList.remove('is-open','is-visible'));
+    document.querySelectorAll('.modal.is-open').forEach(m=>{FocusTrap.release(m);m.classList.remove('is-open','is-visible');});
     const bg=document.getElementById('modal-backdrop');if(bg)bg.classList.remove('is-open','is-visible');
     document.body.style.overflow='';
     this._current=null;
