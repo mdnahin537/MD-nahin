@@ -70,6 +70,21 @@ for skill_dir in "$GSTACK_DIR"/*/; do
   linked=$((linked + 1))
 done
 
+# ── Step 5: link OpenClaw-specific skills (nested under openclaw/skills/) ────
+# These are unique skills not in the top-level gStack dirs — only 4 of them.
+OPENCLAW_SKILLS_DIR="$GSTACK_DIR/openclaw/skills"
+if [ -d "$OPENCLAW_SKILLS_DIR" ]; then
+  for skill_dir in "$OPENCLAW_SKILLS_DIR"/*/; do
+    [ ! -f "$skill_dir/SKILL.md" ] && continue
+    name=$(basename "$skill_dir")
+    target="$SKILLS_DIR/$name"
+    [ -e "$target" ] && continue
+    mkdir -p "$target"
+    ln -sf "$skill_dir/SKILL.md" "$target/SKILL.md"
+    linked=$((linked + 1))
+  done
+fi
+
 total=$(find "$SKILLS_DIR" -maxdepth 1 -mindepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')
 log "Ready. $linked new, $total skills available.$([ "$IS_CLOUD" -eq 1 ] && echo ' (mobile: browser/iOS skills excluded)')"
 exit 0

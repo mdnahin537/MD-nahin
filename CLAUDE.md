@@ -115,8 +115,8 @@ one sentence, WHY it could hurt, before Hunter decides. Never expose .env / secr
 
 REALITY CHECK (2026-05) — what is ACTUALLY active vs aspirational:
   ✅ ACTIVE: gStack skills (33 on mobile/web, 53 total including desktop-only).
+     Plus 4 OpenClaw-specific skills (always on). 18 Claude Code built-ins always on.
      Auto-installed every session by scripts/install-skills.sh via SessionStart hook.
-     Claude Code built-in skills (9 always-on) listed below — these never need install.
   ⚠️ NOT INSTALLED on web: plugins and MCP servers listed below were never installed
      in this ephemeral cloud container. Do NOT route to them. Install at Claude Code
      web ENVIRONMENT level (see scripts/) — not per-repo.
@@ -150,6 +150,7 @@ COMMUNITY PLUGINS:
                       can drain session quota in <10 messages. Watch /context.
 
 GSTACK TEAM SYSTEM (Garry Tan, YC CEO — 53 skills total, 33 on mobile)
+  Plus 4 OpenClaw-specific skills (see OPENCLAW SKILLS below).
   Auto-installed via scripts/install-skills.sh every session.
 
   ── PLANNING (main agent may run these; output is the plan) ──────────────────
@@ -221,6 +222,14 @@ GSTACK TEAM SYSTEM (Garry Tan, YC CEO — 53 skills total, 33 on mobile)
   /ios-qa               → QA test iOS app.
   /ios-sync             → Sync iOS project files.
 
+OPENCLAW SKILLS (4 unique, nested under openclaw/skills/ — auto-linked by install script):
+  /gstack-openclaw-office-hours  → YC office hours partner. Brainstorm / evaluate idea
+                                   before any code is written. Harder questions than
+                                   /office-hours for startups.
+  /gstack-openclaw-ceo-review    → Challenge a plan, poke holes, think bigger on scope.
+  /gstack-openclaw-investigate   → Debug / root-cause with iron-law discipline.
+  /gstack-openclaw-retro         → Weekly retro with per-person contributions + growth.
+
 CLAUDE CODE BUILT-IN SKILLS (18 always-available, never need install):
   /autopilot            → End-to-end task runner. Plans, builds, reviews, opens PR.
   /bugfix               → Reproduce-first bug fixer. Repro → root cause → fix → PR.
@@ -252,11 +261,13 @@ MCP SERVERS (in scripts/setup-mcps.sh):
   brave-search      → Real-time web search (needs BRAVE_API_KEY)
   github            → GitHub API access (needs token; also a plugin)
 
-DESIGN POLISH PIPELINE (run after any page generation):
-  Step 1: /frontend-design        → Generate the page
-  Step 2: npx ui-skills add baseline-ui          → Fix spacing, typography, states
-  Step 3: npx ui-skills add fixing-accessibility → Keyboard nav, labels, focus
-  Step 4: npx ui-skills add fixing-motion-performance → Reduced-motion, animation budgets
+DESIGN POLISH PIPELINE (web/mobile — using installed skills only):
+  Step 1: /design-consultation    → Define the design system
+  Step 2: /design-html            → Generate production HTML/CSS
+  Step 3: /design-review          → Visual QA: catch AI slop, spacing, hierarchy issues
+  NOTE: frontend-design plugin (Anthropic) + ui-ux-pro-max (community) are REAL but
+  NOT INSTALLED on web. They only work on desktop with `claude plugin add`. On web,
+  the gStack design skills above are the full pipeline.
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
