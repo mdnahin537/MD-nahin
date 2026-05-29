@@ -261,13 +261,20 @@ MCP SERVERS (in scripts/setup-mcps.sh):
   brave-search      → Real-time web search (needs BRAVE_API_KEY)
   github            → GitHub API access (needs token; also a plugin)
 
-DESIGN POLISH PIPELINE (web/mobile — using installed skills only):
-  Step 1: /design-consultation    → Define the design system
+DESIGN POLISH PIPELINE (web/mobile — all installed, all working):
+  Step 0: frontend-design         → Anthropic's anti-AI-slop framework. Forces a BOLD
+                                     aesthetic commitment (purpose/tone/constraints/
+                                     differentiation) BEFORE any code. Pure markdown,
+                                     auto-fetched by install-skills.sh. NOT a browser
+                                     skill — works everywhere.
+  Step 1: /design-consultation    → Define the full design system (DESIGN.md)
   Step 2: /design-html            → Generate production HTML/CSS
   Step 3: /design-review          → Visual QA: catch AI slop, spacing, hierarchy issues
-  NOTE: frontend-design plugin (Anthropic) + ui-ux-pro-max (community) are REAL but
-  NOT INSTALLED on web. They only work on desktop with `claude plugin add`. On web,
-  the gStack design skills above are the full pipeline.
+
+  ui-ux-pro-max (community, nextlevelbuilder) — NOT installed yet. It's a Python-backed
+  design database: 50+ styles, 161 palettes, 57 font pairings, 99 UX rules, 25 chart
+  types across 10 stacks. Works on mobile (needs Python, which is present) — but it
+  pulls in a third-party codebase. Install only if Hunter explicitly wants it.
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -350,7 +357,8 @@ When Hunter says "spec this out" / "write a ticket" / "turn this into an issue" 
   → /spec (gStack) — 5-phase process, turns vague intent into precise executable spec
 
 When Hunter says "build UI" / "make a component" / "design a page" / "make it look good"
-  → /design-consultation (gStack) to define the system first
+  → frontend-design (Anthropic) FIRST — commit to a bold aesthetic before any code
+  → /design-consultation (gStack) to define the full system if it's a new project
   → Then /design-html or /design-shotgun for generation
   → /design-review (gStack) afterwards to catch AI-slop and spacing issues
 

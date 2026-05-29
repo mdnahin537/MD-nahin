@@ -85,6 +85,21 @@ if [ -d "$OPENCLAW_SKILLS_DIR" ]; then
   done
 fi
 
+# ── Step 6: Anthropic's frontend-design skill (pure markdown, works everywhere)
+# This is NOT a browser skill — it's a single SKILL.md design-thinking framework.
+# It was misclassified as desktop-only before. Fetch it directly (no plugin needed).
+FD_DIR="$SKILLS_DIR/frontend-design"
+FD_URL="https://raw.githubusercontent.com/anthropics/claude-code/main/plugins/frontend-design/skills/frontend-design/SKILL.md"
+if [ ! -f "$FD_DIR/SKILL.md" ]; then
+  mkdir -p "$FD_DIR"
+  if curl -fsSL "$FD_URL" -o "$FD_DIR/SKILL.md" 2>/dev/null; then
+    linked=$((linked + 1))
+  else
+    rmdir "$FD_DIR" 2>/dev/null || true
+    log "frontend-design fetch failed (network?) — skipping, non-blocking"
+  fi
+fi
+
 total=$(find "$SKILLS_DIR" -maxdepth 1 -mindepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')
 log "Ready. $linked new, $total skills available.$([ "$IS_CLOUD" -eq 1 ] && echo ' (mobile: browser/iOS skills excluded)')"
 exit 0
