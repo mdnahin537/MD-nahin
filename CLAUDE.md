@@ -117,11 +117,22 @@ REALITY CHECK (2026-05) — what is ACTUALLY active vs aspirational:
   ✅ ACTIVE: gStack skills (33 on mobile/web, 53 total including desktop-only).
      Plus 4 OpenClaw-specific skills (always on). 18 Claude Code built-ins always on.
      Auto-installed every session by scripts/install-skills.sh via SessionStart hook.
+  ✅ ACTIVE: frontend-design (Anthropic), ui-ux-pro-max (community, 7 sub-skills).
+     Both fetched and linked by install-skills.sh. Works on mobile.
   ⚠️ NOT INSTALLED on web: plugins and MCP servers listed below were never installed
      in this ephemeral cloud container. Do NOT route to them. Install at Claude Code
      web ENVIRONMENT level (see scripts/) — not per-repo.
   📱 MOBILE: 20 browser/iOS/deploy skills excluded (Chrome/device not available).
      They appear on DESKTOP only. On mobile, tell user these skills are unavailable.
+
+CROSS-REPO SETUP (paste once into Claude Code web → Environments → Setup Commands):
+  The command below runs once when a new environment starts. It makes the full skill
+  stack available in ANY repo — not just MD-nahin.
+
+  bash <(curl -fsSL https://raw.githubusercontent.com/mdnahin537/MD-nahin/main/scripts/install-skills.sh)
+
+  After pasting: open a new environment or click "Rebuild". Done — skills follow you
+  everywhere. The script is idempotent and self-protecting (never kills the session).
 
 OFFICIAL PLUGINS (Anthropic marketplace `claude-plugins-official`):
   superpowers       → Structured build methodology. Plan before code. TDD default.
