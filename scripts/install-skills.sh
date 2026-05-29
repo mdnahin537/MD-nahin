@@ -100,6 +100,28 @@ if [ ! -f "$FD_DIR/SKILL.md" ]; then
   fi
 fi
 
+# ── Step 7: ui-ux-pro-max (community design intelligence) ────────────────────
+# Audited 2026-05: MIT, no telemetry, no unknown endpoints. Core design-system +
+# ui-styling are pure-stdlib Python, fully offline. The image-gen sub-skills
+# (design/brand) read .env and call Google Gemini — OPT-IN only, need a key.
+# We install by symlinking the self-contained sub-skill dirs (the npm CLI is just
+# a file-copier; we skip it to avoid any phone-home).
+UUPM_REPO="$SKILLS_DIR/ui-ux-pro-max-repo"
+UUPM_URL="https://github.com/nextlevelbuilder/ui-ux-pro-max-skill.git"
+if [ ! -d "$UUPM_REPO/.git" ]; then
+  git clone --depth 1 --single-branch "$UUPM_URL" "$UUPM_REPO" >/dev/null 2>&1 \
+    || log "ui-ux-pro-max clone failed (network?) — skipping, non-blocking"
+fi
+if [ -d "$UUPM_REPO/.claude/skills" ]; then
+  for sk in design-system ui-styling design brand slides banner-design ui-ux-pro-max; do
+    src="$UUPM_REPO/.claude/skills/$sk"
+    [ -f "$src/SKILL.md" ] || continue
+    [ -e "$SKILLS_DIR/$sk" ] && continue
+    ln -sfn "$src" "$SKILLS_DIR/$sk"
+    linked=$((linked + 1))
+  done
+fi
+
 total=$(find "$SKILLS_DIR" -maxdepth 1 -mindepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')
 log "Ready. $linked new, $total skills available.$([ "$IS_CLOUD" -eq 1 ] && echo ' (mobile: browser/iOS skills excluded)')"
 exit 0

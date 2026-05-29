@@ -271,10 +271,21 @@ DESIGN POLISH PIPELINE (web/mobile — all installed, all working):
   Step 2: /design-html            → Generate production HTML/CSS
   Step 3: /design-review          → Visual QA: catch AI slop, spacing, hierarchy issues
 
-  ui-ux-pro-max (community, nextlevelbuilder) — NOT installed yet. It's a Python-backed
-  design database: 50+ styles, 161 palettes, 57 font pairings, 99 UX rules, 25 chart
-  types across 10 stacks. Works on mobile (needs Python, which is present) — but it
-  pulls in a third-party codebase. Install only if Hunter explicitly wants it.
+  ui-ux-pro-max (community, nextlevelbuilder) — INSTALLED (audited 2026-05, MIT).
+  7 sub-skills auto-linked by install-skills.sh from ui-ux-pro-max-repo:
+    /design-system   → AI design-system generator: 67 styles, 161 palettes,
+                       57 font pairings, 99 UX rules. Pure stdlib Python, OFFLINE.
+    /ui-styling      → Tailwind/shadcn config generation. Offline (+ shadcn subprocess).
+    /design          → Logo / icon / brand-image generation. ⚠️ OPT-IN: reads .env,
+                       needs GEMINI_API_KEY, calls Google Gemini. Never run silently.
+    /brand           → Brand image assets. ⚠️ Same Gemini/.env caveat as /design.
+    /slides          → Slide/deck design references.
+    /banner-design   → Banner layout references.
+    /ui-ux-pro-max   → Orchestrator entry point for the above.
+  SECURITY NOTE: audit found no telemetry, no unknown endpoints. Only benign network
+  targets (Google Fonts, Pexels, Gemini API). The /design + /brand image generators
+  read .env to find a Gemini key — treat them as opt-in, never invoke without Hunter
+  asking. The offline core (/design-system, /ui-styling) is the everyday workhorse.
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
