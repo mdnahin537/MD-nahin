@@ -114,17 +114,14 @@ one sentence, WHY it could hurt, before Hunter decides. Never expose .env / secr
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 REALITY CHECK (2026-05) — what is ACTUALLY active vs aspirational:
-  ✅ ACTIVE: gStack skills (~32 on mobile/web, more on desktop). Auto-installed every
-     session by scripts/install-skills.sh, wired to the SessionStart hook. These FIRE.
-     Built-in skills (review, code-review, simplify, autopilot, bugfix, deep-research,
-     security-review, init, update-config, …) are always available.
-  ⚠️ NOT INSTALLED on web: the "plugins" and "MCP servers" listed below were never
-     installed in this ephemeral cloud container (plugins/MCPs don't persist on web).
-     Do NOT assume they exist or route to them. To make them real, install at the
-     Claude Code web ENVIRONMENT level (see scripts/) — not per-repo.
-  📱 MOBILE: browser/iOS/deploy skills (qa, browse, scrape, ios-*, canary…) are
-     EXCLUDED on the cloud container (Chrome download is blocked, no device). They
-     appear only on desktop. So on mobile there is nothing to fire by accident.
+  ✅ ACTIVE: gStack skills (33 on mobile/web, 53 total including desktop-only).
+     Auto-installed every session by scripts/install-skills.sh via SessionStart hook.
+     Claude Code built-in skills (9 always-on) listed below — these never need install.
+  ⚠️ NOT INSTALLED on web: plugins and MCP servers listed below were never installed
+     in this ephemeral cloud container. Do NOT route to them. Install at Claude Code
+     web ENVIRONMENT level (see scripts/) — not per-repo.
+  📱 MOBILE: 20 browser/iOS/deploy skills excluded (Chrome/device not available).
+     They appear on DESKTOP only. On mobile, tell user these skills are unavailable.
 
 OFFICIAL PLUGINS (Anthropic marketplace `claude-plugins-official`):
   superpowers       → Structured build methodology. Plan before code. TDD default.
@@ -152,41 +149,97 @@ COMMUNITY PLUGINS:
                       WARNING: Monitors token usage. On Pro plan, heavy use
                       can drain session quota in <10 messages. Watch /context.
 
-GSTACK TEAM SYSTEM (Garry Tan, YC CEO — 23+ specialist slash commands):
+GSTACK TEAM SYSTEM (Garry Tan, YC CEO — 53 skills total, 33 on mobile)
+  Auto-installed via scripts/install-skills.sh every session.
+
+  ── PLANNING (main agent may run these; output is the plan) ──────────────────
   /office-hours         → Describe an idea. Writes a design doc. Start here.
-  /autoplan             → Chains CEO + design + engineering reviews automatically.
+  /autoplan             → Chains CEO + design + eng + DX reviews automatically.
   /plan-ceo-review      → Product strategist challenges your scope.
   /plan-eng-review      → Staff engineer locks the architecture.
   /plan-design-review   → Designer rates each dimension 0-10.
   /plan-devex-review    → Evaluates developer experience and friction.
+  /plan-tune            → Self-tunes question sensitivity + dev psychographic.
+  /spec                 → Turns vague intent into a precise 5-phase spec/ticket.
+
+  ── DESIGN (prefer subagent) ─────────────────────────────────────────────────
   /design-consultation  → Builds a complete design system from scratch.
   /design-shotgun       → Generates multiple design variants. You pick.
   /design-html          → Production HTML/CSS generation.
   /design-review        → Live-site visual audit + fix loop.
+
+  ── CODE QUALITY & SECURITY (prefer subagent) ────────────────────────────────
   /review               → Pre-landing PR review. Catches prod bugs CI misses.
-  /qa                   → Opens real browser. Tests your actual app. Finds bugs.
-  /qa-only              → Same methodology as /qa but report-only.
   /cso                  → Security officer. OWASP Top 10 + STRIDE audit.
-  /investigate          → Systematic root-cause debugging. No fixes without investigation.
+  /investigate          → Root-cause debugging. No fixes without investigation.
   /codex                → Independent OpenAI Codex review of your code.
+  /health               → Code quality dashboard (types, lint, tests, dead code).
+  /devex-review         → Live developer experience audit.
+
+  ── SHIPPING (prefer subagent) ───────────────────────────────────────────────
   /ship                 → Runs tests, review, push, opens PR.
-  /land-and-deploy      → Merges PR, monitors CI and production health.
-  /canary               → Post-deploy monitoring loop.
   /retro                → Weekly retrospective with commit analysis.
+  /landing-report       → Read-only ship queue dashboard.
+
+  ── DOCUMENTATION ────────────────────────────────────────────────────────────
+  /document-generate    → Generate missing docs for a feature/module/project.
+  /document-release     → Post-ship documentation update.
+  /make-pdf             → Convert markdown to PDF.
+
+  ── SAFETY GUARDRAILS ────────────────────────────────────────────────────────
   /careful              → Warns before any destructive command.
   /freeze               → Locks edits to one directory only.
   /guard                → Activates /careful + /freeze together.
   /unfreeze             → Removes directory edit restrictions.
-  /browse               → Headless browser inside session (use this, not raw MCP).
-  /scrape               → Pull data from a web page.
-  /skillify             → Converts successful scrapes into reusable skills.
-  /benchmark            → Detects performance regressions.
-  /benchmark-models     → Cross-model test: Claude vs GPT vs Gemini on same prompt.
+
+  ── LEARNING & CONTEXT ───────────────────────────────────────────────────────
   /learn                → Manages cross-session learning.
-  /health               → Code quality dashboard (types, lint, tests, dead code).
   /context-save         → Save working context across workspaces.
   /context-restore      → Resume from saved context.
   /gstack-upgrade       → Self-update to latest gStack version.
+  /skillify             → Converts successful scrapes into reusable skills.
+
+  ── DESKTOP ONLY (excluded on mobile — Chrome/device required) ───────────────
+  /qa                   → Opens real browser. Tests your actual app. Finds bugs.
+  /qa-only              → Same as /qa but report-only, no fixes.
+  /browse               → Headless browser inside session.
+  /scrape               → Pull data from a web page.
+  /benchmark            → Detects performance regressions.
+  /benchmark-models     → Cross-model test: Claude vs GPT vs Gemini.
+  /land-and-deploy      → Merges PR, monitors CI and production health.
+  /canary               → Post-deploy monitoring loop.
+  /pair-agent           → Pair programming agent.
+  /connect-chrome       → Connect to existing Chrome instance.
+  /open-gstack-browser  → Open gStack's managed browser.
+  /setup-browser-cookies → Set up browser authentication cookies.
+  /setup-deploy         → Configure deployment pipeline.
+  /setup-gbrain         → Set up gBrain memory system.
+  /sync-gbrain          → Sync gBrain memory.
+  /ios-clean            → Clean iOS build artifacts.
+  /ios-design-review    → Review iOS app design.
+  /ios-fix              → Fix iOS-specific bugs.
+  /ios-qa               → QA test iOS app.
+  /ios-sync             → Sync iOS project files.
+
+CLAUDE CODE BUILT-IN SKILLS (18 always-available, never need install):
+  /autopilot            → End-to-end task runner. Plans, builds, reviews, opens PR.
+  /bugfix               → Reproduce-first bug fixer. Repro → root cause → fix → PR.
+  /code-review          → Review current diff for bugs + cleanups at given effort.
+  /simplify             → Clean and simplify changed code (no bug hunting).
+  /deep-research        → Multi-source fact-checked research report.
+  /investigate          → Root-cause investigation report (no fix, report only).
+  /docs                 → Generate or update documentation for a feature/API.
+  /dashboard            → Build a dashboard or metrics page.
+  /run                  → Launch and drive the app to verify a change works.
+  /verify               → Verify a code change works in the real running app.
+  /security-review      → Security audit of the codebase.
+  /claude-api           → Build/debug Claude API + Anthropic SDK apps.
+  /update-config        → Configure Claude Code settings.json and hooks.
+  /fewer-permission-prompts → Auto-expand settings.json allow list from transcripts.
+  /loop                 → Run a skill or prompt on a recurring interval.
+  /init                 → Initialize project for Claude Code.
+  /keybindings-help     → Customize keyboard shortcuts in ~/.claude/keybindings.json.
+  /session-start-hook   → Help create SessionStart hooks for ephemeral environments.
 
 MCP SERVERS (in scripts/setup-mcps.sh):
   context7          → Live library documentation (also a plugin)
@@ -277,77 +330,88 @@ AUTOMATIC MODEL RULES:
 ## SKILL AND PLUGIN ROUTING — AUTO-TRIGGER RULES
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-When Hunter says "build UI" / "make a component" / "design a page"
-  → /design-consultation (gStack) to set the system, then /design-html or /design-shotgun
-  → /design-review (gStack) to catch AI-slop and spacing issues
-  → (frontend-design / ui-ux-pro-max plugins are NOT installed on web — don't route to them)
-
-When Hunter says "I have an idea" / "I want to build X"
-  → Run /office-hours first
-  → Then /autoplan to chain CEO + design + eng reviews
+When Hunter says "I have an idea" / "I want to build X" / "what should I build"
+  → /office-hours first (idea → design doc)
+  → Then /autoplan to chain CEO + design + eng + DX reviews automatically
   → Surface halal check if the domain is ambiguous
 
-When Hunter says "review" / "check my code" / "is this ready"
-  → /code-review (built-in) for the diff, or /review (gStack) pre-landing
-  → /cso (gStack) if auth or payments involved → prefer a subagent for this
+When Hunter says "spec this out" / "write a ticket" / "turn this into an issue" / "make this a backlog item"
+  → /spec (gStack) — 5-phase process, turns vague intent into precise executable spec
 
-When Hunter says "test this" / "does this work" / "open the browser"
-  → DESKTOP only: /qa (gStack — real browser). On MOBILE these skills are excluded,
-    so say so and offer to reason about it or wait until he's on desktop.
+When Hunter says "build UI" / "make a component" / "design a page" / "make it look good"
+  → /design-consultation (gStack) to define the system first
+  → Then /design-html or /design-shotgun for generation
+  → /design-review (gStack) afterwards to catch AI-slop and spacing issues
 
-When Hunter says "debug this" / "why is this broken"
-  → /investigate (gStack) or /bugfix (built-in) — no fixes until root cause is found
+When Hunter says "review" / "check my code" / "is this ready" / "pre-PR check"
+  → /review (gStack) pre-landing — catches prod bugs CI misses
+  → /code-review (built-in) for inline diff review
+  → /cso (gStack) if auth or payments touched — use subagent for this
 
-When Hunter says "deploy"
-  → /ship → /land-and-deploy → /canary
-  → Vercel plugin handles the actual deploy
+When Hunter says "security check" / "audit this" / "check for vulnerabilities"
+  → /cso (gStack) — OWASP Top 10 + STRIDE — run via subagent
+  → /security-review (built-in) for a lighter pass
+
+When Hunter says "test this" / "does this work" / "open the browser" / "verify this"
+  → /verify (built-in) to confirm change works in the running app
+  → DESKTOP only: /qa (gStack — real browser). On MOBILE say: "browser skills unavailable
+    on mobile — I can reason about it or test when you're on desktop."
+
+When Hunter says "debug this" / "why is this broken" / "root cause"
+  → /investigate (gStack or built-in) — no fixes until root cause found
+  → /bugfix (built-in) if you need to go straight to fix
+
+When Hunter says "write docs" / "document this" / "generate documentation"
+  → /document-generate (gStack) for new docs
+  → /document-release (gStack) after shipping — update existing docs
+  → /docs (built-in) for lightweight doc generation
+
+When Hunter says "create a PDF" / "export to PDF" / "I need a PDF"
+  → /make-pdf (gStack) — converts markdown to PDF
+
+When Hunter says "check developer experience" / "is this easy to use" / "DX audit"
+  → /devex-review (gStack) — live developer experience audit
+
+When Hunter says "ship this" / "deploy" / "push and PR"
+  → /ship (gStack) — tests, review, push, opens PR
+  → On desktop: /land-and-deploy → /canary for full deploy + monitoring
+  → On mobile: /ship only (land-and-deploy/canary are desktop-only)
+
+When Hunter says "loop until done" / "keep going" / "don't stop" / "babysit this"
+  → /autopilot (built-in) — end-to-end task runner, plans + builds + reviews + PR
+  → /loop (built-in) for recurring interval tasks
+
+When Hunter says "simplify this" / "clean this up" / "refactor"
+  → /simplify (built-in) — cleans and simplifies without hunting bugs
+
+When Hunter says "research [topic]" / "find information on [X]"
+  → /deep-research (built-in) — multi-source fact-checked report
+  → On DESKTOP: /scrape (gStack) or /browse (gStack) for specific sites
 
 When Hunter says "I need a database" / "set up storage"
-  → Activate Supabase plugin (PostgreSQL)
+  → Supabase plugin (NOT installed on web) — build schema manually for now
   → Never store user data in flat files
-
-When Hunter says "check the docs for [library]"
-  → Activate context7 — say "use context7 for [library]" explicitly
-
-When Hunter says "research [topic]" / "find information on [X]" / "scrape [site]"
-  → Use firecrawl MCP for scraping
-  → Use /scrape (gStack) for one-shot data pulls
-
-When Hunter says "security check" / "this touches auth or payments"
-  → Run /cso (OWASP + STRIDE)
-  → security-guidance plugin scans automatically on every file save
 
 When Hunter says "build a Make.com / n8n / Zapier automation"
   → Generate JSON blueprint only, following the 5-level build method
   → Never execute — Hunter pastes and connects accounts himself
   → Document trigger → filter → action chain clearly
 
-When Hunter says "build an OpenClaw skill"
-  → Follow openclaw-skill-builder protocol
+When Hunter says "check the docs for [library]" / "what version does X use"
+  → context7 MCP (NOT installed on web) — fallback: WebFetch the official docs directly
 
-When Hunter says "loop until done" / "keep going" / "don't stop"
-  → Activate ralph-loop plugin (iterates until task is truly complete)
+When Hunter says "retro" / "what did we do this week" / "weekly review"
+  → /retro (gStack) — retrospective with commit analysis
 
-When Hunter says "simplify this" / "clean this up"
-  → Use code-simplifier approach via superpowers plugin
+When Hunter says "save my context" / "I'll continue this later"
+  → /context-save (gStack) → /context-restore to resume
 
-When Hunter says "I need a Word doc / proposal / report"
-  → Activate docx skill if available, else generate .md and convert
-
-When Hunter says "make a presentation / pitch deck / slides"
-  → Activate pptx skill if available
-
-When Hunter says "build a spreadsheet / tracker / financial model"
-  → Activate xlsx skill if available
-
-When Hunter says "create a PDF" / "fill a form"
-  → Use /make-pdf (gStack) for markdown → PDF
-  → Activate pdf skill if available for forms
+When Hunter says "how is code health" / "code quality check"
+  → /health (gStack) — types, lint, tests, dead code dashboard
 
 Before ANY git commit or client delivery:
-  → security-guidance plugin scans automatically (hook is active)
-  → Run /review (gStack)
-  → /cso if auth or payments touched
+  → /review (gStack) pre-landing check
+  → /cso (gStack subagent) if auth or payments touched
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
