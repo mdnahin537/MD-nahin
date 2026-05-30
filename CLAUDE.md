@@ -125,14 +125,22 @@ REALITY CHECK (2026-05) — what is ACTUALLY active vs aspirational:
   📱 MOBILE: 20 browser/iOS/deploy skills excluded (Chrome/device not available).
      They appear on DESKTOP only. On mobile, tell user these skills are unavailable.
 
-CROSS-REPO SETUP (paste once into Claude Code web → Environments → Setup Commands):
-  The command below runs once when a new environment starts. It makes the full skill
-  stack available in ANY repo — not just MD-nahin.
+CROSS-REPO SETUP (paste once into Claude Code web → Environments → "Setup script" field):
+  The command below runs when a new environment first boots, then Anthropic snapshots
+  the filesystem and reuses it — so skills persist to disk across every repo and every
+  session WITHOUT re-running. It makes the full skill stack available in ANY repo, not
+  just MD-nahin. raw.githubusercontent.com is on the default Trusted network allowlist,
+  so no network-access changes are needed.
 
   bash <(curl -fsSL https://raw.githubusercontent.com/mdnahin537/MD-nahin/main/scripts/install-skills.sh)
 
-  After pasting: open a new environment or click "Rebuild". Done — skills follow you
-  everywhere. The script is idempotent and self-protecting (never kills the session).
+  CACHING CAVEAT: the setup script does NOT re-run every session — it runs once, then
+  the cached snapshot is reused. It only re-runs when you EDIT the script text in the
+  field, change allowed network hosts, or after ~7 days of cache expiry. So if you push
+  an update to install-skills.sh on GitHub, force a refresh by re-saving the field (add
+  then remove a space) or clicking Rebuild. The script is idempotent and self-protecting.
+
+  Ref: https://code.claude.com/docs/en/claude-code-on-the-web#setup-scripts
 
 OFFICIAL PLUGINS (Anthropic marketplace `claude-plugins-official`):
   superpowers       → Structured build methodology. Plan before code. TDD default.
