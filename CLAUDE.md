@@ -114,14 +114,22 @@ one sentence, WHY it could hurt, before Hunter decides. Never expose .env / secr
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 REALITY CHECK (2026-05) — what is ACTUALLY active vs aspirational:
-  ✅ ACTIVE: gStack (34 mobile / 54 total with desktop). OpenClaw (4). Built-ins (18).
-     ui-ux-pro-max (7). frontend-design (1). All vendored in repo — zero network risk.
-     Auto-installed every session by scripts/install-skills.sh via SessionStart hook.
+  ✅ ACTIVE: gStack (33 mobile / 53 total with desktop). OpenClaw (4). ui-ux-pro-max (7).
+     frontend-design (1). Built-ins (18). OpenClaw + ui-ux-pro-max + frontend-design are
+     VENDORED in the repo (vendor/skills/) — copied locally each session, zero network risk.
+     gStack is cloned (it carries runtime machinery); install via scripts/install-skills.sh.
 
-  VERIFIED SKILL COUNTS (run scripts/install-skills.sh to confirm):
-    Mobile/web  → 46 installed + 18 built-ins = ~64 total
-    Desktop     → 46 installed + 20 desktop-only + 18 built-ins = ~84 total
-    The 20 desktop-only skills (browser/iOS) are blocked on mobile — Chrome required.
+  VERIFIED SKILL COUNTS (audited 2026-05-31 against disk — re-verify with the script):
+    Add-on skills installed on mobile → 45  (33 gStack + 4 OpenClaw + 7 ui-ux-pro-max + 1 frontend-design)
+    Claude Code built-ins             → 18  (always present, never installed)
+    Mobile total                      → ~63 distinct  (a few names overlap: /review,
+                                          /investigate, /session-start-hook exist as both
+                                          a gStack AND a built-in skill)
+    Desktop total                     → ~83  (mobile + 20 desktop-only browser/iOS skills)
+
+    NOTE: install-skills.sh logs "46 skills available" — that counts session-start-hook
+    (a built-in) sitting on disk alongside the 45 add-ons. 45 add-ons + 18 built-ins is
+    the honest figure. The 20 desktop-only skills are blocked on mobile (Chrome/device).
 
   ⚠️ NOT INSTALLED on web: plugins and MCP servers listed below were never installed
      in this ephemeral cloud container. Do NOT route to them. Install at Claude Code
@@ -288,14 +296,14 @@ DESIGN POLISH PIPELINE (web/mobile — all installed, all working):
   Step 0: frontend-design         → Anthropic's anti-AI-slop framework. Forces a BOLD
                                      aesthetic commitment (purpose/tone/constraints/
                                      differentiation) BEFORE any code. Pure markdown,
-                                     auto-fetched by install-skills.sh. NOT a browser
-                                     skill — works everywhere.
+                                     VENDORED in repo (vendor/skills/) — copied locally
+                                     each session, zero network. NOT a browser skill.
   Step 1: /design-consultation    → Define the full design system (DESIGN.md)
   Step 2: /design-html            → Generate production HTML/CSS
   Step 3: /design-review          → Visual QA: catch AI slop, spacing, hierarchy issues
 
-  ui-ux-pro-max (community, nextlevelbuilder) — INSTALLED (audited 2026-05, MIT).
-  7 sub-skills auto-linked by install-skills.sh from ui-ux-pro-max-repo:
+  ui-ux-pro-max (community, nextlevelbuilder) — VENDORED (audited 2026-05, MIT).
+  7 sub-skills copied into vendor/skills/ by install-skills.sh (no live clone):
     /design-system   → AI design-system generator: 67 styles, 161 palettes,
                        57 font pairings, 99 UX rules. Pure stdlib Python, OFFLINE.
     /ui-styling      → Tailwind/shadcn config generation. Offline (+ shadcn subprocess).
