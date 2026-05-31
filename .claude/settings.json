@@ -140,9 +140,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"${CLAUDE_PROJECT_DIR:-$(git -C /home/user/MD-nahin rev-parse --show-toplevel)}/scripts/install-skills.sh\"",
-            "async": true,
-            "asyncTimeout": 180000
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-$(git -C /home/user/MD-nahin rev-parse --show-toplevel)}/scripts/install-skills.sh\""
           }
         ]
       },
@@ -154,7 +152,7 @@
             "command": "bash",
             "args": [
               "-c",
-              "echo '' && echo '══════════════════════════════════════' && echo '  Hunter Studio — Claude Code Active' && echo '  Model: opusplan  |  Effort: xhigh' && echo '  Skills auto-installing in background…' && echo '══════════════════════════════════════' && echo ''"
+              "echo '' && echo '══════════════════════════════════════' && echo '  Hunter Studio — Claude Code Active' && echo '  Model: opusplan  |  Effort: xhigh' && echo '  Skills: loaded from disk (48 available)' && echo '══════════════════════════════════════' && echo ''"
             ],
             "async": true
           }
