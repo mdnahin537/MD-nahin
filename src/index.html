@@ -49,7 +49,7 @@ SECTION 2: EMBEDDED FONTS
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Cinzel+Decorative:wght@400;700;900&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,700;1,9..144,400&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600&family=Cinzel+Decorative:wght@400;700;900&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,700;1,9..144,400&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&family=Spectral:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
 <style>
 /*
@@ -175,6 +175,74 @@ body.theme-ember {
   --wms-rail-pad:24px 0;
   --wms-nav-item-pad:12px 16px;
   --wms-panel-pad:var(--space-4);
+}
+
+/* ============================================================================
+   MANUSCRIPT THEME — "The Cartographer's Table"
+   A GM's working desk: deep oxidized-green felt under a desk lamp, warm ivory
+   chart paper for content, a single signal-red survey accent, drafting-mono
+   chrome. Distinct from Ember (warm gold on void) and Modern (cool teal on
+   graphite). Comfortable density — chart-paper margins, not console density.
+   All non-token skin rules are scoped body.theme-manuscript so they cannot
+   leak into ember or modern.
+   ============================================================================ */
+body.theme-manuscript {
+  /* Surfaces — oxidized green-black felt, four elevation levels.
+     parchment = body felt; warm = elevated felt/rails; pale = chart paper. */
+  --color-ink:#e8dfc4;             /* text-primary, 13.8:1 on parchment */
+  --color-ink-elevated:#1a2620;    /* secondary elevated felt */
+  --color-parchment:#0e1612;       /* body background — deep green-black felt */
+  --color-parchment-warm:#152019;  /* cards, rails — primary elevated felt */
+  --color-parchment-pale:#e8dfc4;  /* chart paper — used selectively for content stages */
+  /* Accent — cartographer cream-gold, surveyor's brass; NOT ember's warm orange. */
+  --color-gold:#e0c879;            /* 11.1:1 — body-safe */
+  --color-gold-deep:#b8a052;
+  --color-gold-pale:#f0dc9a;
+  --color-amber:#e0c879;
+  --color-amber-deep:#b8a052;
+  /* Status colors — survey conventions: green=stable, brass=tense, ink-red=crisis. */
+  --color-thriving:#7fb37a;        /* 7.6:1 */
+  --color-stable:#a8d4c9;          /* 11.3:1 — teal-lichen */
+  --color-tense:#f0c674;           /* 11.4:1 */
+  --color-crisis:#d96b5a;          /* 5.4:1 — surveyor's danger-zone red ink */
+  --color-collapse:#9a2a2a;
+  /* Event-type colors — saturated for legibility on dark felt. */
+  --color-event-political:#6fa8d8;
+  --color-event-military:#d96b5a;
+  --color-event-economic:#e0c879;
+  --color-event-cultural:#b89dd6;
+  --color-event-social:#7fb3a8;
+  --color-event-diplomatic:#8fc878;
+  --color-event-natural:#c8a878;
+  /* Text — three steps. faint is body-safe (4.8:1). */
+  --color-text-primary:var(--color-ink);
+  --color-text-muted:#b5ab8c;      /* 8.0:1 */
+  --color-text-faint:#8a8270;      /* 4.8:1 — AA body */
+  /* Borders — surveyor's hairline rules. */
+  --color-border-hairline:#2a3530;
+  --color-border-default:#3d4a3a;
+  /* Era band tints — felt washes. */
+  --era-tint-1:rgba(224,200,121,0.06);
+  --era-tint-2:rgba(217,107,90,0.08);
+  --era-tint-3:rgba(127,179,168,0.08);
+  --era-tint-4:rgba(184,157,214,0.06);
+  /* Typography — Spectral for display heads (broad-nib drafting voice), Inter
+     for body (clean readability on dark felt), JetBrains Mono for surveyor
+     chrome (coordinates, section labels, status pills). */
+  --font-display:'Spectral','Fraunces',Georgia,serif;
+  --font-body:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+  /* WorldShell fallback accent tokens. */
+  --ember-color:var(--color-gold);
+  --ember-color-bright:var(--color-gold-pale);
+  --ember-color-pale:var(--color-gold-pale);
+  /* Semantic aliases. */
+  --color-bg:var(--color-parchment);
+  --color-surface:var(--color-parchment-warm);
+  /* Density — comfortable: chart-paper margins, generous gutters. */
+  --wms-density:comfortable;
+  --wms-rail-pad:28px 0;
+  --wms-nav-item-pad:14px 20px;
+  --wms-panel-pad:var(--space-5);
 }
 
 /* ============================================================================
@@ -888,6 +956,143 @@ body.theme-ember .wms-particles{position:absolute;left:0;right:0;
 /* Reduce motion — kill WorldShell ambient animations */
 .force-reduced-motion .wms-stab-num,.force-reduced-motion .wms-cn-dot--now,
 .force-reduced-motion .wms-chr-fill{animation:none!important;transition:none!important}
+
+/*
+==============================================================================
+SECTION 3.6M: MANUSCRIPT SKIN — "The Cartographer's Table"
+------------------------------------------------------------------------------
+Deep oxidized-green felt + warm ivory chart-paper content surfaces + signal-red
+survey ink accent + Spectral display / Inter body / JetBrains Mono chrome.
+Comfortable density, drafting-table restraint. Coverage parity with Modern:
+nav rail, sigil, nav items, center stage (.wms-cp), .wms-pc/.wms-fc cards,
+nation title anchor, section labels, stability orb, sliders, dividers,
+.sc-panel drawer, modals. Every rule scoped body.theme-manuscript — cannot
+leak to ember or modern.
+==============================================================================
+*/
+/* Nav rail — felt blotter; mono labels in surveyor's voice. */
+body.theme-manuscript .wms-nav{background:#0a110d;
+  border-right:1px solid var(--color-border-hairline)}
+body.theme-manuscript .wms-nav__sigil{border-bottom:1px solid var(--color-border-hairline)}
+body.theme-manuscript .wms-nav__sigil-icon{border:1px solid var(--color-gold);
+  background:rgba(224,200,121,0.06)}
+body.theme-manuscript .wms-nav__sigil-icon .material-symbols-outlined{color:var(--color-gold)}
+body.theme-manuscript .wms-nav__sigil-title{font-family:var(--font-mono);
+  font-weight:500;font-size:11px;letter-spacing:.20em;text-transform:uppercase;color:var(--color-gold)}
+body.theme-manuscript .wms-nav__sigil-sub{font-family:var(--font-mono);
+  font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--color-text-faint)}
+body.theme-manuscript .wms-nav__item{font-family:var(--font-mono);
+  font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-text-muted);
+  opacity:1;transition:color .2s,background .2s,border-color .2s}
+body.theme-manuscript .wms-nav__item:hover{color:var(--color-ink);
+  background:rgba(224,200,121,0.06)}
+body.theme-manuscript .wms-nav__item.is-active{background:rgba(224,200,121,0.10);
+  color:var(--color-gold);border-left-color:var(--color-gold);animation:none}
+/* Center stage — chart paper laid over the felt. The signature move. */
+body.theme-manuscript .wms-cp{background:var(--color-parchment-pale);
+  color:#1a2620;
+  box-shadow:0 1px 0 rgba(0,0,0,0.30),inset 0 0 0 1px rgba(110,84,23,0.10)}
+body.theme-manuscript .wms-cp *{color:inherit}
+body.theme-manuscript .wms-pc,body.theme-manuscript .wms-fc{
+  background:#f0e7cc;border:1px solid rgba(110,84,23,0.18);
+  box-shadow:none;transition:border-color .2s,transform .2s}
+body.theme-manuscript .wms-pc:hover,body.theme-manuscript .wms-fc:hover{
+  transform:none;border-color:var(--color-gold-deep);background:#f4ecd2;box-shadow:none}
+body.theme-manuscript .wms-pc-tag--crit,body.theme-manuscript .wms-pc-tag--tense,
+body.theme-manuscript .wms-pc-tag--oppo{box-shadow:none}
+body.theme-manuscript .wms-pc-text{font-family:var(--font-body);font-weight:400;color:#1a2620}
+/* Dominant anchor — realm name as a hand-lettered chart title with a brass underline. */
+body.theme-manuscript .wms-nation-title{font-family:var(--font-display);
+  font-weight:600;text-transform:none;letter-spacing:.005em;color:#1a2620;
+  padding-bottom:10px;position:relative}
+body.theme-manuscript .wms-nation-title::after{content:'';position:absolute;
+  left:0;right:0;bottom:0;height:1px;
+  background:linear-gradient(to right,var(--color-gold-deep) 0%,var(--color-gold-deep) 40%,transparent 90%)}
+body.theme-manuscript .wms-nation-title:hover{text-decoration-color:var(--color-gold-deep)}
+/* Section labels — coordinates voice: mono, spaced. Links — Inter, brass. */
+body.theme-manuscript .wms-sec-label{font-family:var(--font-mono);
+  font-weight:500;letter-spacing:.20em;text-transform:uppercase;color:#5c4f33;font-size:10px}
+body.theme-manuscript .wms-sec-link{font-family:var(--font-body);
+  text-transform:none;letter-spacing:.01em;color:#6e5417}
+body.theme-manuscript .wms-stab-label{font-family:var(--font-mono);font-weight:500;
+  letter-spacing:.24em;text-transform:uppercase;color:var(--color-text-muted)}
+/* Stability orb — quiet brass-ringed disc on felt, not a glowing ember sphere. */
+body.theme-manuscript .wms-orb-wrap{
+  background:rgba(224,200,121,0.04);
+  border:1px solid rgba(224,200,121,0.30);
+  box-shadow:inset 0 0 0 1px rgba(224,200,121,0.08)}
+body.theme-manuscript .wms-orb-wrap .ember-orbit__outer,
+body.theme-manuscript .wms-orb-wrap .ember-orbit__inner{display:none}
+body.theme-manuscript .wms-stab-num{color:var(--color-gold);font-family:var(--font-display);
+  font-weight:700;animation:none}
+body.theme-manuscript .wms-stab-state{font-family:var(--font-mono);font-size:10px;
+  letter-spacing:.24em;text-transform:uppercase}
+body.theme-manuscript .wms-stab-desc{font-family:var(--font-body);font-style:normal;color:var(--color-text-muted)}
+/* Divider — single brass rule, no gem. */
+body.theme-manuscript .ember-divider::before,
+body.theme-manuscript .ember-divider::after{content:'';flex:1;height:1px;
+  background:rgba(224,200,121,0.20)}
+body.theme-manuscript .ember-divider__gem{display:none}
+/* Sliders + chronicle — felt tracks, brass fills, no glow. */
+body.theme-manuscript .wms-sl-name,body.theme-manuscript .wms-advanced-toggle,
+body.theme-manuscript .wms-ars-tab,body.theme-manuscript .wms-chr-lbl,
+body.theme-manuscript .wms-paste-btn{font-family:var(--font-mono);letter-spacing:.16em;text-transform:uppercase}
+body.theme-manuscript .wms-fc-name,body.theme-manuscript .wms-char-name,
+body.theme-manuscript .wms-ae-title,body.theme-manuscript .plot-thread-item__title,
+body.theme-manuscript .plot-thread-panel-hook__title,body.theme-manuscript .plot-seed-section__name,
+body.theme-manuscript .threads-oracle-pick__label{font-family:var(--font-display);font-weight:600}
+body.theme-manuscript .wms-sl-track,
+body.theme-manuscript .wms-chr-track{background:var(--color-border-hairline)}
+body.theme-manuscript .wms-sl-fill{box-shadow:none}
+body.theme-manuscript .wms-sl-input::-webkit-slider-thumb{box-shadow:none}
+body.theme-manuscript .wms-ars-title{text-shadow:none;font-family:var(--font-display)}
+body.theme-manuscript .wms-inscribe:hover{box-shadow:none;background:rgba(224,200,121,0.08)}
+body.theme-manuscript .wms-paste-btn{border-color:var(--color-border-default)}
+/* Feature drawers — chart paper slid in from the right. */
+body.theme-manuscript .sc-panel{background:var(--color-parchment-pale);
+  color:#1a2620;
+  box-shadow:-8px 0 28px rgba(0,0,0,0.40);
+  border-left:1px solid var(--color-gold-deep);
+  transition:transform 200ms var(--ease-out),opacity 200ms var(--ease-out)}
+body.theme-manuscript .sc-panel *{color:inherit}
+body.theme-manuscript .sc-panel__title{font-family:var(--font-display);
+  font-weight:700;color:#6e5417}
+/* Identity strip — felt top bar so the chart paper reads against it. Uses
+   #0a110d, the deepest felt, so wordmark + actions read at 13:1+. */
+body.theme-manuscript .identity-strip{
+  background:#0a110d;
+  border-bottom:1px solid var(--color-border-hairline);
+  padding:0 26px;height:60px;gap:24px}
+body.theme-manuscript .identity-strip__wordmark{
+  font-family:var(--font-display);font-weight:600;font-size:20px;
+  letter-spacing:.04em;color:var(--color-gold)}
+body.theme-manuscript .identity-strip__wordmark .ornament{display:none}
+body.theme-manuscript .identity-strip__nation-switcher-btn{
+  font-family:var(--font-display);font-weight:500;font-size:14px;letter-spacing:.02em;
+  color:var(--color-ink);border-bottom:1px solid transparent;padding:4px 8px}
+body.theme-manuscript .identity-strip__nation-switcher-btn:hover{border-bottom-color:var(--color-gold)}
+body.theme-manuscript .identity-strip__stability{display:none}
+body.theme-manuscript .identity-strip__actions{margin-left:auto}
+body.theme-manuscript .identity-strip__settings-btn{color:var(--color-text-muted)}
+body.theme-manuscript .identity-strip__settings-btn:hover{color:var(--color-gold)}
+body.theme-manuscript .identity-strip__export-btn{
+  font-family:var(--font-mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--color-text-muted);border-bottom:1px solid transparent}
+body.theme-manuscript .identity-strip__export-btn:hover{color:var(--color-gold);border-bottom-color:var(--color-gold)}
+/* Modal + nation card chrome — chart paper to match the drawers. */
+body.theme-manuscript .modal{background:var(--color-parchment-pale);color:#1a2620;
+  border:1px solid var(--color-gold-deep);box-shadow:0 12px 40px rgba(0,0,0,0.50)}
+body.theme-manuscript .modal *{color:inherit}
+body.theme-manuscript .modal__title{font-family:var(--font-display);font-weight:700;color:#6e5417}
+body.theme-manuscript .nation-card{background:var(--color-parchment-pale);color:#1a2620;
+  border:1px solid rgba(110,84,23,0.18)}
+/* Scrollbar — surveyor thin brass on felt. */
+body.theme-manuscript::-webkit-scrollbar{width:3px;height:3px}
+body.theme-manuscript::-webkit-scrollbar-track{background:#0a110d}
+body.theme-manuscript::-webkit-scrollbar-thumb{background:rgba(224,200,121,0.18);border-radius:2px}
+body.theme-manuscript::-webkit-scrollbar-thumb:hover{background:rgba(224,200,121,0.42)}
+/* Reduced-motion already handled globally; manuscript has no looping animations
+   beyond the existing ones killed by .force-reduced-motion. */
 
 /*
 ==============================================================================
@@ -3140,11 +3345,12 @@ SECTION 8: DOM STRUCTURE
       <div class="settings-row">
         <div>
           <div class="settings-label">Theme</div>
-          <div class="settings-desc">Ember (warm ceremonial) or Modern (cool command console).</div>
+          <div class="settings-desc">Ember (warm ceremonial), Manuscript (the cartographer's table — felt + chart paper for GMs), or Modern (cool command console).</div>
         </div>
       </div>
       <div class="char-status-group" id="theme-picker-group" role="group" aria-label="Choose theme" style="margin:0 0 var(--space-3)">
         <button type="button" class="char-status-pill is-selected" data-theme-choice="ember" aria-pressed="true">Ember</button>
+        <button type="button" class="char-status-pill" data-theme-choice="manuscript" aria-pressed="false">Manuscript</button>
         <button type="button" class="char-status-pill" data-theme-choice="modern" aria-pressed="false">Modern</button>
       </div>
       <div class="settings-row">
@@ -13955,11 +14161,11 @@ function bindEventListeners(){
     applyMotionPref();
   });
 
-  // Theme picker — Ember / Modern. Persists to settings and applies live.
+  // Theme picker — Ember / Manuscript / Modern. Persists to settings and applies live.
   document.getElementById('theme-picker-group')?.addEventListener('click',e=>{
     const pill=e.target.closest('[data-theme-choice]');if(!pill)return;
     const choice=pill.dataset.themeChoice;
-    if(!['ember','modern'].includes(choice))return;
+    if(!['ember','manuscript','modern'].includes(choice))return;
     // A user-chosen theme clears any lingering dev override so the choice sticks.
     try{localStorage.removeItem('rw_dev_theme');}catch(_){}
     State.setSetting('theme',choice);
@@ -14210,12 +14416,12 @@ function applyTheme(){
   // Dev-theme flag takes precedence over user settings. Normal users never see this.
   const devTheme=localStorage.getItem('rw_dev_theme');
   const theme=devTheme||(State.data?.meta?.settings?.theme||'ember');
-  document.body.classList.remove('theme-modern','theme-ember');
+  document.body.classList.remove('theme-manuscript','theme-modern','theme-ember');
   document.body.classList.add(`theme-${theme}`);
   // Re-render chronicle band so era tints (read from CSS variables at draw time) refresh
   if(typeof Render!=='undefined'&&Render.chronicleBand)Render.chronicleBand();
-  // World Mode Shell visibility — Architecture A: all production themes
-  // (ember, modern) share the ONE shell; they differ only by skin.
+  // World Mode Shell visibility — Architecture A: all three production themes
+  // (ember, manuscript, modern) share the ONE shell; they differ only by skin.
   // The legacy .main-row/.chronicle-band layout is retired as a user-facing
   // theme and is reachable only behind the rw_legacy_layout debug flag, or as a
   // safety fallback when WorldShell is undefined (the shell can't render).
@@ -14971,9 +15177,9 @@ window.addEventListener('beforeunload',function(e){
   }
 });
 
-// Developer theme override. Usage in console: __rwSetTheme('modern')
+// Developer theme override. Usage in console: __rwSetTheme('manuscript')
 window.__rwSetTheme=function(t){
-  if(!['ember','modern'].includes(t)){console.warn('RealmWright: theme must be ember or modern');return;}
+  if(!['ember','manuscript','modern'].includes(t)){console.warn('RealmWright: theme must be ember, manuscript, or modern');return;}
   localStorage.setItem('rw_dev_theme',t);
   location.reload();
 };
