@@ -1856,6 +1856,40 @@ SECTION 6: COMPONENT STYLES
   border-bottom:.5px solid var(--color-gold-pale);transition:background var(--duration-instant)}
 .export-dropdown__item:hover{background:var(--color-parchment)}
 .export-dropdown__item:last-child{border-bottom:none}
+/* Mode picker dropdown — anchored to #switch-mode-btn. Three options: Tonight,
+   Campaign (WorldShell + GM Mode on), World (WorldShell + GM Mode off). */
+.mode-dropdown{position:absolute;top:calc(100% + 8px);right:0;width:280px;
+  background:var(--color-parchment-warm);border:1px solid var(--color-gold);
+  border-radius:var(--radius-md);box-shadow:var(--shadow-modal);z-index:var(--z-modal);display:none}
+.mode-dropdown.is-open{display:block}
+.mode-dropdown__item{display:flex;align-items:flex-start;gap:var(--space-3);width:100%;
+  padding:var(--space-3) var(--space-4);background:none;border:none;text-align:left;cursor:pointer;
+  border-bottom:.5px solid var(--color-gold-pale);transition:background var(--duration-instant);
+  font-family:var(--font-body);color:var(--color-ink)}
+.mode-dropdown__item:hover{background:var(--color-parchment)}
+.mode-dropdown__item:last-child{border-bottom:none}
+.mode-dropdown__item[aria-current="true"]{background:rgba(201,169,97,.10)}
+.mode-dropdown__mark{font-size:18px;line-height:1;flex-shrink:0;margin-top:2px}
+.mode-dropdown__text{display:flex;flex-direction:column;gap:2px;min-width:0}
+.mode-dropdown__name{font-family:var(--font-display);font-weight:600;font-size:var(--text-body);color:var(--color-ink)}
+.mode-dropdown__desc{font-size:var(--text-label-sm);color:var(--color-text-muted);line-height:1.3}
+body.theme-ember .mode-dropdown{background:#0a0705;border-color:rgba(255,185,100,0.40)}
+body.theme-ember .mode-dropdown__item{color:var(--color-ink);border-bottom-color:rgba(255,185,100,0.18)}
+body.theme-ember .mode-dropdown__item:hover{background:rgba(255,185,100,0.06)}
+body.theme-ember .mode-dropdown__item[aria-current="true"]{background:rgba(255,185,100,0.10)}
+body.theme-ember .mode-dropdown__name{color:var(--ember-color)}
+body.theme-ember .mode-dropdown__desc{color:var(--color-text-muted)}
+body.theme-modern .mode-dropdown{background:#161b22;border-color:rgba(94,200,216,0.40)}
+body.theme-modern .mode-dropdown__item{color:var(--color-ink);border-bottom-color:#262d36}
+body.theme-modern .mode-dropdown__item:hover{background:rgba(94,200,216,0.08)}
+body.theme-modern .mode-dropdown__item[aria-current="true"]{background:rgba(94,200,216,0.12)}
+body.theme-modern .mode-dropdown__name{color:var(--color-gold)}
+body.theme-manuscript .mode-dropdown{background:#152019;border-color:rgba(224,200,121,0.40)}
+body.theme-manuscript .mode-dropdown__item{color:var(--color-ink);border-bottom-color:#2a3530}
+body.theme-manuscript .mode-dropdown__item:hover{background:rgba(224,200,121,0.08)}
+body.theme-manuscript .mode-dropdown__item[aria-current="true"]{background:rgba(224,200,121,0.12)}
+body.theme-manuscript .mode-dropdown__name{color:var(--color-gold)}
+body.theme-manuscript .mode-dropdown__desc{color:var(--color-text-muted)}
 /* Workbench */
 .workbench__domain{border-bottom:.5px solid var(--color-gold-pale);flex-shrink:0}
 .workbench__domain-header{display:flex;align-items:center;justify-content:space-between;
@@ -2868,7 +2902,23 @@ SECTION 8: DOM STRUCTURE
           <div class="export-dropdown__item" id="export-session-prep-btn">⌘ Generate GM Session Prep (PDF)</div>
         </div>
       </div>
-      <button class="identity-strip__settings-btn" id="switch-mode-btn" title="Switch mode (Tonight / Campaign / World)" style="font-size:var(--text-label-sm);width:auto;padding:0 10px;border:1px solid var(--color-border-hairline);border-radius:4px;margin-right:6px" aria-label="Switch mode">⚡ Mode</button>
+      <div style="position:relative">
+        <button class="identity-strip__settings-btn" id="switch-mode-btn" title="Switch mode (Tonight / Campaign / World)" style="font-size:var(--text-label-sm);width:auto;padding:0 10px;border:1px solid var(--color-border-hairline);border-radius:4px;margin-right:6px" aria-haspopup="menu" aria-expanded="false" aria-label="Switch mode">⚡ Mode</button>
+        <div class="mode-dropdown" id="mode-dropdown" role="menu" aria-label="Choose mode">
+          <button type="button" class="mode-dropdown__item" data-mode="tonight" role="menuitem">
+            <span class="mode-dropdown__mark">🔥</span>
+            <span class="mode-dropdown__text"><span class="mode-dropdown__name">Tonight</span><span class="mode-dropdown__desc">One-line in, session-ready prep out.</span></span>
+          </button>
+          <button type="button" class="mode-dropdown__item" data-mode="campaign" role="menuitem">
+            <span class="mode-dropdown__mark">🎲</span>
+            <span class="mode-dropdown__text"><span class="mode-dropdown__name">Campaign</span><span class="mode-dropdown__desc">World dashboard + GM toolbar for active play.</span></span>
+          </button>
+          <button type="button" class="mode-dropdown__item" data-mode="world" role="menuitem">
+            <span class="mode-dropdown__mark">🌍</span>
+            <span class="mode-dropdown__text"><span class="mode-dropdown__name">World</span><span class="mode-dropdown__desc">Quiet worldbuilding — no GM tools.</span></span>
+          </button>
+        </div>
+      </div>
       <button class="identity-strip__settings-btn" id="settings-btn" title="Settings">⚙</button>
     </div>
   </header>
@@ -13662,6 +13712,53 @@ function bindEventListeners(){
   if(expBtn&&expDD){
     expBtn.addEventListener('click',e=>{e.stopPropagation();expDD.classList.toggle('is-open');});
     document.addEventListener('click',()=>expDD.classList.remove('is-open'));
+  }
+  // Mode picker dropdown — Tonight / Campaign / World. Persists choice to
+  // State.data.meta.preferredMode. Campaign = WorldShell with GM Mode on;
+  // World = WorldShell with GM Mode off; Tonight = the Tonight overlay.
+  const modeBtn=document.getElementById('switch-mode-btn');
+  const modeDD=document.getElementById('mode-dropdown');
+  function syncModeDropdownUI(){
+    const cur=State.data?.meta?.preferredMode||(isGMMode()?'campaign':'world');
+    modeDD?.querySelectorAll('[data-mode]').forEach(it=>{
+      it.setAttribute('aria-current',it.dataset.mode===cur?'true':'false');
+    });
+  }
+  if(modeBtn&&modeDD){
+    modeBtn.addEventListener('click',e=>{
+      e.stopPropagation();
+      const open=!modeDD.classList.contains('is-open');
+      modeDD.classList.toggle('is-open',open);
+      modeBtn.setAttribute('aria-expanded',open?'true':'false');
+      if(open)syncModeDropdownUI();
+    });
+    document.addEventListener('click',()=>{
+      modeDD.classList.remove('is-open');
+      modeBtn.setAttribute('aria-expanded','false');
+    });
+    modeDD.addEventListener('click',e=>e.stopPropagation());
+    modeDD.querySelectorAll('[data-mode]').forEach(item=>{
+      item.addEventListener('click',()=>{
+        const mode=item.dataset.mode;
+        State.data.meta.preferredMode=mode;
+        State.persist();
+        modeDD.classList.remove('is-open');
+        modeBtn.setAttribute('aria-expanded','false');
+        if(mode==='tonight'){
+          if(typeof Tonight!=='undefined')Tonight.open();
+        }else{
+          // Campaign + World both live in WorldShell. Close Tonight if open.
+          if(typeof Tonight!=='undefined')Tonight.close();
+          const wantGM=(mode==='campaign');
+          if(State.data.meta.settings.gmMode!==wantGM){
+            State.setSetting('gmMode',wantGM);
+            if(typeof GMMode!=='undefined')GMMode.apply();
+          }
+          const label=mode==='campaign'?'Campaign mode — GM toolbar enabled.':'World mode — quiet worldbuilding.';
+          showToast(label,[],2200);
+        }
+      });
+    });
   }
   document.getElementById('export-json-btn')?.addEventListener('click',()=>{expDD.classList.remove('is-open');exportJSON('single');});
   document.getElementById('export-pdf-btn')?.addEventListener('click',()=>{expDD.classList.remove('is-open');Modals.open('export-opts');});
