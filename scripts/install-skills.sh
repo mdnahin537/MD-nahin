@@ -28,11 +28,25 @@ CLOUD_EXCLUDE="browse|qa|qa-only|scrape|connect-chrome|open-gstack-browser|setup
 
 log() { echo "[skills] $1"; }
 
+# Retry a command up to 4x with exponential backoff (2s,4s,8s). Ephemeral cloud
+# containers have flaky first-boot networking; one failed fetch must NOT silently
+# drop a whole batch of skills. This is the fix for inconsistent skill counts
+# between sessions — every network op below now retries instead of giving up.
+retry() {
+  local n=0 max=4 delay=2
+  until "$@"; do
+    n=$((n + 1))
+    [ "$n" -ge "$max" ] && return 1
+    sleep "$delay"; delay=$((delay * 2))
+  done
+  return 0
+}
+
 # ── Step 1: clone gStack if missing ──────────────────────────────────────────
 if [ ! -d "$GSTACK_DIR/.git" ] && [ ! -f "$GSTACK_DIR/VERSION" ]; then
   log "Cloning gStack..."
-  git clone --depth 1 --single-branch "$GSTACK_REPO" "$GSTACK_DIR" >/dev/null 2>&1 \
-    || { log "Clone failed (network?). Skills unchanged."; exit 0; }
+  retry git clone --depth 1 --single-branch "$GSTACK_REPO" "$GSTACK_DIR" >/dev/null 2>&1 \
+    || { log "Clone failed after retries (network?). Skills unchanged."; exit 0; }
 fi
 
 # ── Step 2: deps + generate SKILL.md files (needs bun) ───────────────────────
@@ -92,11 +106,11 @@ FD_DIR="$SKILLS_DIR/frontend-design"
 FD_URL="https://raw.githubusercontent.com/anthropics/claude-code/main/plugins/frontend-design/skills/frontend-design/SKILL.md"
 if [ ! -f "$FD_DIR/SKILL.md" ]; then
   mkdir -p "$FD_DIR"
-  if curl -fsSL "$FD_URL" -o "$FD_DIR/SKILL.md" 2>/dev/null; then
+  if retry curl -fsSL "$FD_URL" -o "$FD_DIR/SKILL.md" 2>/dev/null; then
     linked=$((linked + 1))
   else
     rmdir "$FD_DIR" 2>/dev/null || true
-    log "frontend-design fetch failed (network?) — skipping, non-blocking"
+    log "frontend-design fetch failed after retries (network?) — skipping, non-blocking"
   fi
 fi
 
@@ -109,8 +123,8 @@ fi
 UUPM_REPO="$SKILLS_DIR/ui-ux-pro-max-repo"
 UUPM_URL="https://github.com/nextlevelbuilder/ui-ux-pro-max-skill.git"
 if [ ! -d "$UUPM_REPO/.git" ]; then
-  git clone --depth 1 --single-branch "$UUPM_URL" "$UUPM_REPO" >/dev/null 2>&1 \
-    || log "ui-ux-pro-max clone failed (network?) — skipping, non-blocking"
+  retry git clone --depth 1 --single-branch "$UUPM_URL" "$UUPM_REPO" >/dev/null 2>&1 \
+    || log "ui-ux-pro-max clone failed after retries (network?) — skipping, non-blocking"
 fi
 if [ -d "$UUPM_REPO/.claude/skills" ]; then
   for sk in design-system ui-styling design brand slides banner-design ui-ux-pro-max; do
@@ -122,6 +136,15 @@ if [ -d "$UUPM_REPO/.claude/skills" ]; then
   done
 fi
 
-total=$(find "$SKILLS_DIR" -maxdepth 1 -mindepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')
+# Count real skills: every entry with a reachable SKILL.md, excluding the two
+# helper clones (gstack/, ui-ux-pro-max-repo/). Symlinked skill dirs count too —
+# the old `find -type d` silently skipped them, undercounting by 7 and causing
+# the confusing "41 vs 48" mismatch between the log and reality.
+total=0
+for d in "$SKILLS_DIR"/*/; do
+  name=$(basename "$d")
+  case "$name" in gstack|ui-ux-pro-max-repo) continue ;; esac
+  [ -f "$d/SKILL.md" ] && total=$((total + 1))
+done
 log "Ready. $linked new, $total skills available.$([ "$IS_CLOUD" -eq 1 ] && echo ' (mobile: browser/iOS skills excluded)')"
 exit 0
