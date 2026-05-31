@@ -178,69 +178,6 @@ body.theme-ember {
 }
 
 /* ============================================================================
-   MANUSCRIPT THEME — "The Codex" (spec §4.1)
-   Light vellum codex. Cormorant Garamond display + Source Serif 4 body.
-   Comfortable density. All non-token skin rules are scoped body.theme-manuscript
-   so they cannot leak into ember.
-   ============================================================================ */
-body.theme-manuscript {
-  /* Surfaces — vellum under a desk lamp, not orange-saturated parchment. */
-  --color-ink:#241c10;             /* text-primary, 13.9:1 on parchment */
-  --color-ink-elevated:#e9dcbd;    /* elevated surface */
-  --color-parchment:#f3ead4;       /* body background — vellum */
-  --color-parchment-warm:#e9dcbd;  /* cards, rails */
-  --color-parchment-pale:#f8f1de;  /* lifted nested surface */
-  /* Accent — darkened gold so body gold passes 4.5:1 (4.6:1). Bright gold
-     #c9a961 is decoration/large-only (≥3:1). */
-  --color-gold:#8a6a1f;
-  --color-gold-deep:#6e5417;
-  --color-gold-pale:#c9a961;       /* bright — decoration / large text only */
-  --color-amber:#8a5a14;
-  --color-amber-deep:#6e470f;
-  /* Status colors — AA on parchment. */
-  --color-thriving:#3f6b2e;        /* 5.2:1 */
-  --color-stable:#2f5d7a;
-  --color-tense:#8a5a14;           /* 5.0:1 */
-  --color-crisis:#9a2a2a;          /* 6.0:1 */
-  --color-collapse:#6e1414;
-  /* Event-type colors — muted ink-on-vellum legibility. */
-  --color-event-political:#3a5670;
-  --color-event-military:#8b3a3a;
-  --color-event-economic:#6e5417;
-  --color-event-cultural:#5a3f6e;
-  --color-event-social:#3a6e5e;
-  --color-event-diplomatic:#42603a;
-  --color-event-natural:#6e5230;
-  /* Text — three steps of ink warmth. */
-  --color-text-primary:var(--color-ink);
-  --color-text-muted:#5c4f33;      /* 6.4:1 — AA body */
-  --color-text-faint:#6b5d3d;      /* 5.0:1 — FIXED, AA body (was 2.87:1 fail) */
-  /* Borders — hairline gold rules. */
-  --color-border-hairline:#cdbf99;
-  --color-border-default:#b6a371;
-  /* Era band tints — warm vellum washes. */
-  --era-tint-1:rgba(36,28,16,0.08);
-  --era-tint-2:rgba(138,106,31,0.10);
-  --era-tint-3:rgba(58,86,112,0.08);
-  --era-tint-4:rgba(90,63,110,0.08);
-  /* Display Cormorant Garamond; body Source Serif 4 — manuscript reads. */
-  --font-display:'Cormorant Garamond','Cinzel',Georgia,serif;
-  --font-body:'Source Serif 4','Newsreader',Georgia,serif;
-  /* WorldShell fallback accent tokens. */
-  --ember-color:var(--color-gold);
-  --ember-color-bright:var(--color-gold-pale);
-  --ember-color-pale:var(--color-gold-pale);
-  /* Semantic aliases. */
-  --color-bg:var(--color-parchment);
-  --color-surface:var(--color-parchment-warm);
-  /* Density — comfortable: generous row-height, wide gutters (spec §4.1). */
-  --wms-density:comfortable;
-  --wms-rail-pad:32px 0;
-  --wms-nav-item-pad:16px 22px;
-  --wms-panel-pad:var(--space-6);
-}
-
-/* ============================================================================
    MODERN THEME — "The Command Console" (spec §4.3)
    Cool graphite dark + cold teal accent. Fraunces display + Source Serif 4 body.
    Compact density. Functional-only motion. Geometry replaces ornament.
@@ -954,122 +891,10 @@ body.theme-ember .wms-particles{position:absolute;left:0;right:0;
 
 /*
 ==============================================================================
-SECTION 3.6M: MANUSCRIPT SKIN — "The Codex" (spec §4.1)
-------------------------------------------------------------------------------
-Light vellum codex. Every rule is scoped body.theme-manuscript so it cannot
-reach ember. Most surfaces re-skin automatically via the token block; this
-section overrides only the surfaces that carry hardcoded ember-flavored values
-(the dark nav rail, dark nav-item colors, ember glow/gem ornament) and adds the
-single decorated drop-initial anchor.
-==============================================================================
-*/
-/* Nav rail — light vellum instead of void; serif labels (spec §4.1 density). */
-body.theme-manuscript .wms-nav{background:var(--color-parchment-warm);
-  border-right:1px solid var(--color-border-hairline)}
-body.theme-manuscript .wms-nav__sigil{border-bottom:1px solid var(--color-border-hairline)}
-body.theme-manuscript .wms-nav__sigil-icon{border:1px solid var(--color-gold);
-  background:rgba(138,106,31,0.06)}
-body.theme-manuscript .wms-nav__sigil-icon .material-symbols-outlined{color:var(--color-gold)}
-body.theme-manuscript .wms-nav__sigil-title{font-family:'Cormorant Garamond',serif;
-  font-weight:700;font-size:13px;letter-spacing:.12em;color:var(--color-gold)}
-body.theme-manuscript .wms-nav__sigil-sub{font-family:'Source Serif 4',serif;
-  font-size:10px;letter-spacing:.06em;text-transform:none;color:var(--color-text-muted)}
-body.theme-manuscript .wms-nav__item{font-family:'Source Serif 4',serif;
-  font-size:13px;letter-spacing:.02em;text-transform:none;color:var(--color-text-muted);
-  opacity:1;transition:color .2s,background .2s,border-color .2s}
-body.theme-manuscript .wms-nav__item:hover{color:var(--color-ink);
-  background:rgba(138,106,31,0.07)}
-body.theme-manuscript .wms-nav__item.is-active{background:rgba(138,106,31,0.10);
-  color:var(--color-gold-deep);border-left-color:var(--color-gold);
-  animation:none}  /* near-silent: no breathing */
-/* Center stage — lifted vellum; no glow on hover, ink-only emphasis. */
-body.theme-manuscript .wms-cp{background:var(--color-parchment-pale)}
-body.theme-manuscript .wms-pc,body.theme-manuscript .wms-fc{
-  background:var(--color-parchment-warm);border:1px solid var(--color-border-hairline);
-  box-shadow:none;transition:border-color .2s,transform .2s}
-body.theme-manuscript .wms-pc:hover,body.theme-manuscript .wms-fc:hover{
-  transform:none;border-color:var(--color-gold);background:var(--color-parchment-warm);
-  box-shadow:none}
-body.theme-manuscript .wms-pc-tag--crit,body.theme-manuscript .wms-pc-tag--tense,
-body.theme-manuscript .wms-pc-tag--oppo{box-shadow:none}  /* drop the ember glow on edges */
-body.theme-manuscript .wms-pc-text{font-family:'Source Serif 4',serif;font-weight:400}
-/* Dominant anchor — decorated drop-initial on the realm name + illuminated rule.
-   Achieved via ::first-letter, no markup change (spec §4.1). */
-body.theme-manuscript .wms-nation-title{font-family:'Cormorant Garamond',serif;
-  font-weight:700;text-transform:none;letter-spacing:.01em;
-  padding-bottom:14px;position:relative}
-body.theme-manuscript .wms-nation-title::first-letter{
-  font-size:1.9em;line-height:.8;color:var(--color-gold-deep);
-  padding-right:.06em;font-weight:700}
-/* Single horizontal illuminated rule beneath the title, with a center lozenge. */
-body.theme-manuscript .wms-nation-title::after{content:'';position:absolute;
-  left:0;right:0;bottom:0;height:1px;
-  background:linear-gradient(to right,var(--color-gold),transparent 70%)}
-body.theme-manuscript .wms-nation-title:hover{text-decoration-color:var(--color-gold)}
-/* Section labels and links — serif, quiet. */
-body.theme-manuscript .wms-sec-label{font-family:'Cormorant Garamond',serif;
-  font-weight:700;letter-spacing:.14em;color:var(--color-text-muted)}
-body.theme-manuscript .wms-sec-link{font-family:'Source Serif 4',serif;
-  text-transform:none;letter-spacing:.02em;color:var(--color-gold-deep)}
-body.theme-manuscript .wms-stab-label{font-family:'Cormorant Garamond',serif;font-weight:700}
-/* Gem divider re-skin — hairline gold rule with center lozenge (reuse pattern). */
-body.theme-manuscript .ember-divider::before,
-body.theme-manuscript .ember-divider::after{content:'';flex:1;height:1px}
-body.theme-manuscript .ember-divider::before{background:linear-gradient(to right,transparent,var(--color-gold-pale))}
-body.theme-manuscript .ember-divider::after{background:linear-gradient(to left,transparent,var(--color-gold-pale))}
-body.theme-manuscript .ember-divider__gem{width:5px;height:5px;background:var(--color-gold);
-  transform:rotate(45deg);opacity:.6;flex-shrink:0;margin:0 8px}
-/* Feature drawers — light surfaces inherit from tokens; soften the shadow. */
-body.theme-manuscript .sc-panel{box-shadow:-8px 0 28px rgba(36,28,16,0.10)}
-body.theme-manuscript .sc-panel__title{font-family:'Cormorant Garamond',serif;
-  font-weight:700;color:var(--color-gold-deep)}
-/* Near-silent motion — ink-fade only on panel open (spec §4.1). */
-body.theme-manuscript .sc-panel{transition:transform 200ms var(--ease-out),opacity 200ms var(--ease-out)}
-body.theme-manuscript .wms-nav__item.is-active{animation:none}
-
-/* ── PHASE 4 PARITY SWEEP (manuscript) ──────────────────────────────────────
-   Override the remaining UNSCOPED base .wms-* rules that hardcode ember's
-   'Cinzel' display font and warm-gold rgba(255,185,100,…) glows/tints, so they
-   do not leak the ember look onto vellum. var(--ember-color) rules already
-   re-skin via the token swap and are intentionally left alone. */
-/* Cinzel → serif voice (Cormorant for titles, Source Serif for chrome labels). */
-body.theme-manuscript .wms-stab-state,
-body.theme-manuscript .wms-sl-name,
-body.theme-manuscript .wms-advanced-toggle,
-body.theme-manuscript .wms-ars-tab,
-body.theme-manuscript .wms-chr-lbl,
-body.theme-manuscript .wms-paste-btn{font-family:'Source Serif 4',serif}
-body.theme-manuscript .wms-fc-name,
-body.theme-manuscript .wms-char-name,
-body.theme-manuscript .wms-ae-title,
-body.theme-manuscript .plot-thread-item__title,
-body.theme-manuscript .plot-thread-panel-hook__title,
-body.theme-manuscript .plot-seed-section__name,
-body.theme-manuscript .threads-oracle-pick__label{font-family:'Cormorant Garamond',serif}
-/* Warm-gold glows/tints → ink-on-vellum hairlines (no ember bloom on parchment). */
-body.theme-manuscript .wms-sl-track,
-body.theme-manuscript .wms-chr-track{background:var(--color-border-hairline)}
-body.theme-manuscript .wms-sl-fill{box-shadow:none}
-body.theme-manuscript .wms-sl-input::-webkit-slider-thumb{box-shadow:none}
-body.theme-manuscript .wms-ars-title{text-shadow:none}
-body.theme-manuscript .wms-inscribe:hover{box-shadow:none;background:rgba(138,106,31,0.08)}
-body.theme-manuscript .wms-paste-btn{border-color:var(--color-border-default)}
-/* Stability orb — the dark sphere + ember glow is ember-only; on vellum it reads
-   as a black blob. Manuscript's anchor is the drop-initial (spec §4.1), so render
-   the orb as a quiet vellum disc with a hairline gold ring. */
-body.theme-manuscript .wms-orb-wrap{
-  background:var(--color-parchment-pale);
-  border:1px solid var(--color-gold-pale);
-  box-shadow:inset 0 0 0 1px rgba(138,106,31,0.08)}
-body.theme-manuscript .wms-stab-num{color:var(--color-gold-deep);font-family:'Cormorant Garamond',serif}
-body.theme-manuscript .wms-stab-desc{font-family:'Source Serif 4',serif}
-
-/*
-==============================================================================
 SECTION 3.6X: MODERN SKIN — "The Command Console" (spec §4.3)
 ------------------------------------------------------------------------------
-The fusion: ember's dark elevation + manuscript's editorial discipline, stripped
-of period ornament. Cool graphite surfaces, single cold teal accent, sharp 2px
+Editorial discipline on ember's dark elevation chassis, stripped of period
+ornament. Cool graphite surfaces, single cold teal accent, sharp 2px
 geometry, compact density, functional-only motion (160–240ms slide/opacity, no
 glow/orbit/particle). Every rule scoped body.theme-modern — cannot reach ember.
 ==============================================================================
@@ -3315,12 +3140,11 @@ SECTION 8: DOM STRUCTURE
       <div class="settings-row">
         <div>
           <div class="settings-label">Theme</div>
-          <div class="settings-desc">Ember (warm ceremonial), Manuscript (light vellum codex), or Modern (cool command console).</div>
+          <div class="settings-desc">Ember (warm ceremonial) or Modern (cool command console).</div>
         </div>
       </div>
       <div class="char-status-group" id="theme-picker-group" role="group" aria-label="Choose theme" style="margin:0 0 var(--space-3)">
         <button type="button" class="char-status-pill is-selected" data-theme-choice="ember" aria-pressed="true">Ember</button>
-        <button type="button" class="char-status-pill" data-theme-choice="manuscript" aria-pressed="false">Manuscript</button>
         <button type="button" class="char-status-pill" data-theme-choice="modern" aria-pressed="false">Modern</button>
       </div>
       <div class="settings-row">
@@ -5112,7 +4936,7 @@ const Variants={
 function storageAvailable(){try{localStorage.setItem('__t__','x');localStorage.removeItem('__t__');return true;}catch(e){return false;}}
 // Terminology helper — single source of truth for GM-mode label swaps.
 // Use Term('nation') etc. anywhere a user-facing label needs to flex.
-// Keys must exist in both maps. Defaults (manuscript / political-fiction framing) are the keys themselves.
+// Keys must exist in both maps. Defaults (political-fiction framing) are the keys themselves.
 const TERM_GM_MAP={
   nation:'realm',
   nations:'realms',
@@ -14131,11 +13955,11 @@ function bindEventListeners(){
     applyMotionPref();
   });
 
-  // Theme picker — Ember / Manuscript / Modern. Persists to settings and applies live.
+  // Theme picker — Ember / Modern. Persists to settings and applies live.
   document.getElementById('theme-picker-group')?.addEventListener('click',e=>{
     const pill=e.target.closest('[data-theme-choice]');if(!pill)return;
     const choice=pill.dataset.themeChoice;
-    if(!['ember','manuscript','modern'].includes(choice))return;
+    if(!['ember','modern'].includes(choice))return;
     // A user-chosen theme clears any lingering dev override so the choice sticks.
     try{localStorage.removeItem('rw_dev_theme');}catch(_){}
     State.setSetting('theme',choice);
@@ -14386,12 +14210,12 @@ function applyTheme(){
   // Dev-theme flag takes precedence over user settings. Normal users never see this.
   const devTheme=localStorage.getItem('rw_dev_theme');
   const theme=devTheme||(State.data?.meta?.settings?.theme||'ember');
-  document.body.classList.remove('theme-manuscript','theme-modern','theme-ember');
+  document.body.classList.remove('theme-modern','theme-ember');
   document.body.classList.add(`theme-${theme}`);
   // Re-render chronicle band so era tints (read from CSS variables at draw time) refresh
   if(typeof Render!=='undefined'&&Render.chronicleBand)Render.chronicleBand();
-  // World Mode Shell visibility — Architecture A: all three production themes
-  // (ember, manuscript, modern) share the ONE shell; they differ only by skin.
+  // World Mode Shell visibility — Architecture A: all production themes
+  // (ember, modern) share the ONE shell; they differ only by skin.
   // The legacy .main-row/.chronicle-band layout is retired as a user-facing
   // theme and is reachable only behind the rw_legacy_layout debug flag, or as a
   // safety fallback when WorldShell is undefined (the shell can't render).
@@ -15147,9 +14971,9 @@ window.addEventListener('beforeunload',function(e){
   }
 });
 
-// Developer theme override. Usage in console: __rwSetTheme('manuscript')
+// Developer theme override. Usage in console: __rwSetTheme('modern')
 window.__rwSetTheme=function(t){
-  if(!['ember','manuscript','modern'].includes(t)){console.warn('RealmWright: theme must be ember, manuscript, or modern');return;}
+  if(!['ember','modern'].includes(t)){console.warn('RealmWright: theme must be ember or modern');return;}
   localStorage.setItem('rw_dev_theme',t);
   location.reload();
 };
