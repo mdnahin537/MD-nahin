@@ -114,11 +114,15 @@ one sentence, WHY it could hurt, before Hunter decides. Never expose .env / secr
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 REALITY CHECK (2026-05) — what is ACTUALLY active vs aspirational:
-  ✅ ACTIVE: gStack skills (33 on mobile/web, 53 total including desktop-only).
-     Plus 4 OpenClaw-specific skills (always on). 18 Claude Code built-ins always on.
+  ✅ ACTIVE: gStack (34 mobile / 54 total with desktop). OpenClaw (4). Built-ins (18).
+     ui-ux-pro-max (7). frontend-design (1). All vendored in repo — zero network risk.
      Auto-installed every session by scripts/install-skills.sh via SessionStart hook.
-  ✅ ACTIVE: frontend-design (Anthropic), ui-ux-pro-max (community, 7 sub-skills).
-     Both fetched and linked by install-skills.sh. Works on mobile.
+
+  VERIFIED SKILL COUNTS (run scripts/install-skills.sh to confirm):
+    Mobile/web  → 46 installed + 18 built-ins = ~64 total
+    Desktop     → 46 installed + 20 desktop-only + 18 built-ins = ~84 total
+    The 20 desktop-only skills (browser/iOS) are blocked on mobile — Chrome required.
+
   ⚠️ NOT INSTALLED on web: plugins and MCP servers listed below were never installed
      in this ephemeral cloud container. Do NOT route to them. Install at Claude Code
      web ENVIRONMENT level (see scripts/) — not per-repo.
