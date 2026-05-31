@@ -2362,20 +2362,46 @@ body.theme-ember .sc-panel__title{color:var(--ember-color)}
 .gm-badge:hover{opacity:.85}
 body.gm-mode .gm-badge{display:inline-flex}
 body.gm-mode .identity-strip__wordmark{color:var(--color-gold-pale)}
-.gm-toolbar{display:none;background:rgba(13,27,42,.92);border-bottom:0.5px solid var(--color-gold);
+/* GM toolbar — colors are theme-scoped below so text passes AA against each
+   theme's actual top-bar background. The base only defines geometry. */
+.gm-toolbar{display:none;background:#0d1b2a;border-bottom:0.5px solid var(--color-gold);
   padding:var(--space-2) var(--space-6);align-items:center;gap:var(--space-3);flex-shrink:0}
 body.gm-mode .gm-toolbar{display:flex}
 .gm-toolbar__label{font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;
-  color:rgba(244,232,208,.5);text-transform:uppercase;margin-right:var(--space-2)}
+  color:#d8c994;text-transform:uppercase;margin-right:var(--space-2)}
 .gm-toolbar__btn{background:transparent;border:0.5px solid var(--color-gold-pale);
-  color:var(--color-parchment);padding:6px 14px;border-radius:var(--radius-sm);
+  color:#f4e8d0;padding:6px 14px;border-radius:var(--radius-sm);
   cursor:pointer;font-family:var(--font-body);font-size:var(--text-label-sm);
   display:flex;align-items:center;gap:var(--space-1);transition:all var(--duration-instant)}
-.gm-toolbar__btn:hover{background:rgba(201,169,97,.15);border-color:var(--color-gold)}
+.gm-toolbar__btn:hover{background:rgba(201,169,97,.18);border-color:var(--color-gold);color:#fff}
 .gm-toolbar__btn:disabled{opacity:.4;cursor:not-allowed}
 .gm-toolbar__btn-mark{color:var(--color-gold);font-size:1em}
 .gm-toolbar__spacer{flex:1}
-.gm-toolbar__hint{font-size:var(--text-label-sm);color:rgba(244,232,208,.4);font-style:italic}
+.gm-toolbar__hint{font-size:var(--text-label-sm);color:#b8a771;font-style:italic}
+/* Ember GM toolbar — sits on void; warm ember palette. Contrast against #020305:
+   text #ffddb9 = 16.0:1, label #d8b97c = 11.4:1, hint #b89761 = 7.7:1, all AA+. */
+body.theme-ember .gm-toolbar{background:#020305;border-bottom-color:rgba(255,185,100,0.42)}
+body.theme-ember .gm-toolbar__label{color:#d8b97c}
+body.theme-ember .gm-toolbar__btn{color:#ffddb9;border-color:rgba(255,185,100,0.32)}
+body.theme-ember .gm-toolbar__btn:hover{background:rgba(255,185,100,0.10);border-color:var(--color-gold);color:#fff5e0}
+body.theme-ember .gm-toolbar__btn-mark{color:var(--color-gold)}
+body.theme-ember .gm-toolbar__hint{color:rgba(255,221,185,0.55)}
+/* Modern GM toolbar — sits on graphite. Contrast against #161b22:
+   text #e8edf2 = 14.7:1, label #aab4c0 = 8.2:1, accent #5ec8d8 = 8.8:1. */
+body.theme-modern .gm-toolbar{background:#161b22;border-bottom-color:rgba(94,200,216,0.32)}
+body.theme-modern .gm-toolbar__label{color:#aab4c0}
+body.theme-modern .gm-toolbar__btn{color:#e8edf2;border-color:#384250}
+body.theme-modern .gm-toolbar__btn:hover{background:rgba(94,200,216,0.10);border-color:var(--color-gold);color:#fff}
+body.theme-modern .gm-toolbar__btn-mark{color:var(--color-gold)}
+body.theme-modern .gm-toolbar__hint{color:#8b97a4}
+/* Manuscript GM toolbar — sits on felt. Contrast against #0a110d:
+   text #e8dfc4 = 13.8:1, label #b5ab8c = 8.0:1, accent #e0c879 = 11.1:1. */
+body.theme-manuscript .gm-toolbar{background:#0a110d;border-bottom-color:rgba(224,200,121,0.32)}
+body.theme-manuscript .gm-toolbar__label{color:#b5ab8c}
+body.theme-manuscript .gm-toolbar__btn{color:#e8dfc4;border-color:rgba(224,200,121,0.28)}
+body.theme-manuscript .gm-toolbar__btn:hover{background:rgba(224,200,121,0.10);border-color:var(--color-gold);color:#fff8e2}
+body.theme-manuscript .gm-toolbar__btn-mark{color:var(--color-gold)}
+body.theme-manuscript .gm-toolbar__hint{color:#8a8270}
 /* ── ENCOUNTER BUILDER MODAL ─────────────────────────────────────────────── */
 .eb-inputs{display:flex;flex-direction:column;gap:var(--space-5)}
 .eb-field{display:flex;flex-direction:column;gap:var(--space-2)}
