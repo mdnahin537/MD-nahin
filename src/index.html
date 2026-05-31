@@ -107,7 +107,7 @@ SECTION 3: DESIGN TOKENS
   --duration-instant:80ms;--duration-quick:160ms;--duration-default:240ms;
   --duration-slow:400ms;--duration-deliberate:600ms;
 }
-/* v1.0: Manuscript and Modern themes removed — Ember is the only user-facing theme. */
+/* Three user-facing themes: Ember (default), Manuscript, Modern — chosen in Settings. */
 /* Ember theme — void black + ember accent + Cinzel display.
    Inverts the lightness model: dark surfaces, warm cream text, ember orange accent.
    Same engine, same variable contract, new values. Targets the worldbuilding-as-grimoire mood.
@@ -3315,8 +3315,13 @@ SECTION 8: DOM STRUCTURE
       <div class="settings-row">
         <div>
           <div class="settings-label">Theme</div>
-          <div class="settings-desc">Ember (current). Additional themes available via developer settings only.</div>
+          <div class="settings-desc">Ember (warm ceremonial), Manuscript (light vellum codex), or Modern (cool command console).</div>
         </div>
+      </div>
+      <div class="char-status-group" id="theme-picker-group" role="group" aria-label="Choose theme" style="margin:0 0 var(--space-3)">
+        <button type="button" class="char-status-pill is-selected" data-theme-choice="ember" aria-pressed="true">Ember</button>
+        <button type="button" class="char-status-pill" data-theme-choice="manuscript" aria-pressed="false">Manuscript</button>
+        <button type="button" class="char-status-pill" data-theme-choice="modern" aria-pressed="false">Modern</button>
       </div>
       <div class="settings-row">
         <div><div class="settings-label">Respect system motion preference</div><div class="settings-desc">Disables animations when your OS has reduced-motion enabled</div></div>
@@ -13688,7 +13693,7 @@ function bindEventListeners(){
   });
 
   // Settings
-  document.getElementById('settings-btn')?.addEventListener('click',()=>{Modals.open('settings');Copilot._refreshKeySettingsUI&&Copilot._refreshKeySettingsUI();Copilot._probeOllama&&Copilot._probeOllama();const tg=document.getElementById('toggle-gm-mode');if(tg)tg.classList.toggle('is-on',!!State.data?.meta?.settings?.gmMode);});
+  document.getElementById('settings-btn')?.addEventListener('click',()=>{Modals.open('settings');Copilot._refreshKeySettingsUI&&Copilot._refreshKeySettingsUI();Copilot._probeOllama&&Copilot._probeOllama();const tg=document.getElementById('toggle-gm-mode');if(tg)tg.classList.toggle('is-on',!!State.data?.meta?.settings?.gmMode);syncThemePickerUI();});
 
   // Undo button
   document.getElementById('undo-btn')?.addEventListener('click',()=>{
@@ -14126,7 +14131,17 @@ function bindEventListeners(){
     applyMotionPref();
   });
 
-  // Theme is Ember-only for users. Dev can use window.__rwSetTheme('manuscript') in console.
+  // Theme picker — Ember / Manuscript / Modern. Persists to settings and applies live.
+  document.getElementById('theme-picker-group')?.addEventListener('click',e=>{
+    const pill=e.target.closest('[data-theme-choice]');if(!pill)return;
+    const choice=pill.dataset.themeChoice;
+    if(!['ember','manuscript','modern'].includes(choice))return;
+    // A user-chosen theme clears any lingering dev override so the choice sticks.
+    try{localStorage.removeItem('rw_dev_theme');}catch(_){}
+    State.setSetting('theme',choice);
+    syncThemePickerUI(choice);
+    applyTheme();
+  });
 
   // ─── GM MODE WIRING ───
   if(typeof GMMode!=='undefined')GMMode.bind();
@@ -14391,6 +14406,15 @@ function applyTheme(){
   if(chronBand)chronBand.style.display=useShell?'none':'';
   // Render world shell immediately when it is the active layout.
   if(useShell){const nat=State.get();if(nat)WorldShell.render(nat);}
+}
+
+function syncThemePickerUI(active){
+  const theme=active||(State.data?.meta?.settings?.theme||'ember');
+  document.querySelectorAll('#theme-picker-group [data-theme-choice]').forEach(pill=>{
+    const on=pill.dataset.themeChoice===theme;
+    pill.classList.toggle('is-selected',on);
+    pill.setAttribute('aria-pressed',on?'true':'false');
+  });
 }
 
 function _collectAffectedStats(){
@@ -15081,6 +15105,7 @@ async function bootstrap(){
   document.getElementById('toggle-forecasts-setting')?.classList.toggle('is-on',!!settings.showForecasts);
   document.getElementById('toggle-secrets')?.classList.toggle('is-on',!!settings.showSecrets);
   document.getElementById('toggle-motion')?.classList.toggle('is-on',!!settings.respectMotionPref);
+  syncThemePickerUI(settings.theme);
   applyMotionPref();
   applyTheme();
   // Initialize Copilot panel status
@@ -15122,9 +15147,9 @@ window.addEventListener('beforeunload',function(e){
   }
 });
 
-// Developer theme override. Usage in console: __rwSetTheme('ember')
+// Developer theme override. Usage in console: __rwSetTheme('manuscript')
 window.__rwSetTheme=function(t){
-  if(t!=='ember'){console.warn('RealmWright: only "ember" theme is supported in v1.0');return;}
+  if(!['ember','manuscript','modern'].includes(t)){console.warn('RealmWright: theme must be ember, manuscript, or modern');return;}
   localStorage.setItem('rw_dev_theme',t);
   location.reload();
 };
