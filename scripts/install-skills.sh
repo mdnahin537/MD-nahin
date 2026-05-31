@@ -16,6 +16,20 @@ GSTACK_REPO="https://github.com/garrytan/gstack.git"
 
 mkdir -p "$SKILLS_DIR"
 
+# Resolve the vendored-skills dir as an ABSOLUTE path NOW, before any `cd` below
+# changes the working directory. (Step 2 cd's into the gStack clone — if we waited
+# until Step 6 to resolve a relative path, it would resolve against the wrong dir
+# and the vendored skills would silently go missing. That exact bug cost an hour.)
+VENDOR=""
+_sp="${BASH_SOURCE[0]:-}"
+if [ -n "$_sp" ] && [ -f "$_sp" ]; then
+  _sd="$(cd "$(dirname "$_sp")" && pwd)"
+  [ -d "$(dirname "$_sd")/vendor/skills" ] && VENDOR="$(dirname "$_sd")/vendor/skills"
+fi
+if [ -z "$VENDOR" ] && [ -n "${CLAUDE_PROJECT_DIR:-}" ] && [ -d "$CLAUDE_PROJECT_DIR/vendor/skills" ]; then
+  VENDOR="$CLAUDE_PROJECT_DIR/vendor/skills"
+fi
+
 # Device awareness: on the cloud/mobile container, browser + iOS + deploy skills
 # can't work (Chrome download is blocked, no device). Exclude them so they never
 # appear in the menu and can't be fired by accident. On desktop they're included.
@@ -99,51 +113,49 @@ if [ -d "$OPENCLAW_SKILLS_DIR" ]; then
   done
 fi
 
-# ── Step 6: Anthropic's frontend-design skill (pure markdown, works everywhere)
-# This is NOT a browser skill — it's a single SKILL.md design-thinking framework.
-# It was misclassified as desktop-only before. Fetch it directly (no plugin needed).
-FD_DIR="$SKILLS_DIR/frontend-design"
-FD_URL="https://raw.githubusercontent.com/anthropics/claude-code/main/plugins/frontend-design/skills/frontend-design/SKILL.md"
-if [ ! -f "$FD_DIR/SKILL.md" ]; then
-  mkdir -p "$FD_DIR"
-  if retry curl -fsSL "$FD_URL" -o "$FD_DIR/SKILL.md" 2>/dev/null; then
-    linked=$((linked + 1))
-  else
-    rmdir "$FD_DIR" 2>/dev/null || true
-    log "frontend-design fetch failed after retries (network?) — skipping, non-blocking"
+# ── Step 6: copy VENDORED skills from Hunter's own repo ──────────────────────
+# These 12 (frontend-design, the 7 ui-ux-pro-max sub-skills, the 4 OpenClaw
+# skills) used to be fetched over the network every session — two separate clones
+# plus a curl — so a flaky boot would silently drop them and skill counts swung
+# between sessions. They now live as REAL files in the repo under vendor/skills/.
+# The repo is guaranteed present every session (it's what carries this script), so
+# copying from it is 100% reliable with ZERO network. This is the permanent fix
+# for "gStack comes but the others don't": the others now come from a place even
+# more reliable than the gStack clone.
+#
+# VENDOR was resolved at the top (before any cd). If it's still empty, this script
+# was piped in via curl|bash from another repo — fall back to a lightweight clone of
+# Hunter's repo just to grab the vendored skills.
+if [ -z "$VENDOR" ]; then
+  MDREPO="$SKILLS_DIR/md-nahin-vendor"
+  if [ ! -d "$MDREPO/.git" ]; then
+    retry git clone --depth 1 --single-branch \
+      https://github.com/mdnahin537/MD-nahin.git "$MDREPO" >/dev/null 2>&1 || true
   fi
+  [ -d "$MDREPO/vendor/skills" ] && VENDOR="$MDREPO/vendor/skills"
 fi
 
-# ── Step 7: ui-ux-pro-max (community design intelligence) ────────────────────
-# Audited 2026-05: MIT, no telemetry, no unknown endpoints. Core design-system +
-# ui-styling are pure-stdlib Python, fully offline. The image-gen sub-skills
-# (design/brand) read .env and call Google Gemini — OPT-IN only, need a key.
-# We install by symlinking the self-contained sub-skill dirs (the npm CLI is just
-# a file-copier; we skip it to avoid any phone-home).
-UUPM_REPO="$SKILLS_DIR/ui-ux-pro-max-repo"
-UUPM_URL="https://github.com/nextlevelbuilder/ui-ux-pro-max-skill.git"
-if [ ! -d "$UUPM_REPO/.git" ]; then
-  retry git clone --depth 1 --single-branch "$UUPM_URL" "$UUPM_REPO" >/dev/null 2>&1 \
-    || log "ui-ux-pro-max clone failed after retries (network?) — skipping, non-blocking"
-fi
-if [ -d "$UUPM_REPO/.claude/skills" ]; then
-  for sk in design-system ui-styling design brand slides banner-design ui-ux-pro-max; do
-    src="$UUPM_REPO/.claude/skills/$sk"
+if [ -n "$VENDOR" ] && [ -d "$VENDOR" ]; then
+  for src in "$VENDOR"/*/; do
+    name=$(basename "$src")
     [ -f "$src/SKILL.md" ] || continue
-    [ -e "$SKILLS_DIR/$sk" ] && continue
-    ln -sfn "$src" "$SKILLS_DIR/$sk"
+    [ "$IS_CLOUD" -eq 1 ] && echo "$name" | grep -qE "^($CLOUD_EXCLUDE)$" && continue
+    target="$SKILLS_DIR/$name"
+    [ -e "$target" ] && continue
+    cp -r "$src" "$target"
     linked=$((linked + 1))
   done
+else
+  log "vendored skills dir not found — design/OpenClaw skills unavailable this session"
 fi
 
-# Count real skills: every entry with a reachable SKILL.md, excluding the two
-# helper clones (gstack/, ui-ux-pro-max-repo/). Symlinked skill dirs count too —
-# the old `find -type d` silently skipped them, undercounting by 7 and causing
-# the confusing "41 vs 48" mismatch between the log and reality.
+# Count real skills: every entry with a reachable SKILL.md, excluding helper clones.
+# Symlinked skill dirs count too — the old `find -type d` silently skipped them,
+# undercounting by 7 and causing the confusing "41 vs 48" mismatch in the logs.
 total=0
 for d in "$SKILLS_DIR"/*/; do
   name=$(basename "$d")
-  case "$name" in gstack|ui-ux-pro-max-repo) continue ;; esac
+  case "$name" in gstack|ui-ux-pro-max-repo|md-nahin-vendor) continue ;; esac
   [ -f "$d/SKILL.md" ] && total=$((total + 1))
 done
 log "Ready. $linked new, $total skills available.$([ "$IS_CLOUD" -eq 1 ] && echo ' (mobile: browser/iOS skills excluded)')"
