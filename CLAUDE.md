@@ -114,10 +114,23 @@ one sentence, WHY it could hurt, before Hunter decides. Never expose .env / secr
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 REALITY CHECK (2026-05) — what is ACTUALLY active vs aspirational:
-  ✅ ACTIVE: gStack skills (~32 on mobile/web, more on desktop). Auto-installed every
-     session by scripts/install-skills.sh, wired to the SessionStart hook. These FIRE.
+  ✅ ACTIVE: gStack skills (~34 on web). Auto-installed every session by
+     scripts/install-skills.sh, wired to the SessionStart hook. These FIRE.
      Built-in skills (review, code-review, simplify, autopilot, bugfix, deep-research,
      security-review, init, update-config, …) are always available.
+
+  ✅ /mnt/skills/public/ — 8 skills ALWAYS AVAILABLE. NO PLUGIN REQUIRED.
+     These are mounted directly into the cloud container by Anthropic at the
+     environment level. They are NOT plugins. They do NOT need installing.
+     They just exist and I read them directly. Skills:
+       frontend-design, pdf, pdf-reading, pptx, xlsx, docx,
+       file-reading, product-self-knowledge
+
+  ✅ /mnt/skills/examples/ — 23 template skills, also mounted, NO PLUGIN REQUIRED.
+     Same mechanism as public — baked into the container, always readable.
+     Key useful ones: web-artifacts-builder, theme-factory, canvas-design,
+     algorithmic-art, brand-guidelines, mcp-builder, skill-creator, financial-calculator
+
   ⚠️ NOT INSTALLED on web: the "plugins" and "MCP servers" listed below were never
      installed in this ephemeral cloud container (plugins/MCPs don't persist on web).
      Do NOT assume they exist or route to them. To make them real, install at the
