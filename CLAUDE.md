@@ -131,39 +131,9 @@ REALITY CHECK (2026-05) — what is ACTUALLY active vs aspirational:
      Key useful ones: web-artifacts-builder, theme-factory, canvas-design,
      algorithmic-art, brand-guidelines, mcp-builder, skill-creator, financial-calculator
 
-  ⚠️ NOT INSTALLED on web: the "plugins" and "MCP servers" listed below were never
-     installed in this ephemeral cloud container (plugins/MCPs don't persist on web).
-     Do NOT assume they exist or route to them. To make them real, install at the
-     Claude Code web ENVIRONMENT level (see scripts/) — not per-repo.
   📱 MOBILE: browser/iOS/deploy skills (qa, browse, scrape, ios-*, canary…) are
      EXCLUDED on the cloud container (Chrome download is blocked, no device). They
      appear only on desktop. So on mobile there is nothing to fire by accident.
-
-OFFICIAL PLUGINS (Anthropic marketplace `claude-plugins-official`):
-  superpowers       → Structured build methodology. Plan before code. TDD default.
-  frontend-design   → Production-grade UI. Kills generic AI slop aesthetics.
-  feature-dev       → 7-phase structured feature development workflow.
-  code-review       → Multi-agent PR review with confidence scoring.
-  security-guidance → Scans every file edit for vulnerabilities before saving.
-  ralph-loop        → Iterates autonomously until task is truly complete.
-  context7          → Pulls live, version-accurate library docs into session.
-  github            → Read PRs, issues, code search inside session.
-  figma             → Read Figma files directly. Two-way Code↔Canvas.
-  vercel            → One-command deployment.
-  supabase          → Database setup, queries, migrations.
-  playwright        → Real browser testing. Claude controls live Chrome.
-  typescript-lsp    → Real-time TypeScript type checking as Claude writes.
-  pyright-lsp       → Real-time Python type checking.
-
-COMMUNITY PLUGINS:
-  ui-ux-pro-max     → Design intelligence. Generates complete design systems.
-                      Auto-activates on any UI/UX request.
-                      Source: nextlevelbuilder/ui-ux-pro-max-skill
-  claude-mem        → Persistent memory across sessions via SQLite + Chroma.
-                      Captures tool usage, compresses with AI, injects on session start.
-                      Source: thedotmack/claude-mem
-                      WARNING: Monitors token usage. On Pro plan, heavy use
-                      can drain session quota in <10 messages. Watch /context.
 
 GSTACK TEAM SYSTEM (Garry Tan, YC CEO — 23+ specialist slash commands):
   /office-hours         → Describe an idea. Writes a design doc. Start here.
@@ -201,17 +171,6 @@ GSTACK TEAM SYSTEM (Garry Tan, YC CEO — 23+ specialist slash commands):
   /context-restore      → Resume from saved context.
   /gstack-upgrade       → Self-update to latest gStack version.
 
-MCP SERVERS (in scripts/setup-mcps.sh):
-  context7          → Live library documentation (also a plugin)
-  firecrawl         → Web research, scraping, competitor analysis
-  playwright        → Live browser control (also a plugin)
-  chrome-devtools   → Browser console, network, error inspection
-  filesystem        → Local files beyond project directory
-  sequential-thinking → Multi-step reasoning chains
-  fetch             → Web page content retrieval
-  brave-search      → Real-time web search (needs BRAVE_API_KEY)
-  github            → GitHub API access (needs token; also a plugin)
-
 DESIGN SKILLS — FULL INVENTORY (all confirmed on disk, all usable):
   gStack (34 skills, ~/.claude/skills/):
     /design-consultation  → Build complete design system from scratch. START HERE.
@@ -234,8 +193,7 @@ DESIGN POLISH PIPELINE (run after any page generation):
   Step 1: /frontend-design (/mnt/skills/public)   → Generate the page
   Step 2: /design-review (gStack)                 → Visual audit, fix AI slop
   Step 3: /theme-factory if needed                → Apply consistent theme
-  Step 4: npx ui-skills add baseline-ui           → Fix spacing, typography, states
-  Step 5: npx ui-skills add fixing-accessibility  → Keyboard nav, labels, focus
+  Step 4: /design-review (gStack)                 → Catch remaining issues, fix spacing
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -306,7 +264,7 @@ AUTOMATIC MODEL RULES:
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-## SKILL AND PLUGIN ROUTING — AUTO-TRIGGER RULES
+## SKILL ROUTING — AUTO-TRIGGER RULES
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 When Hunter says "build UI" / "make a component" / "design a page" / "make it look good"
@@ -344,22 +302,17 @@ When Hunter says "debug this" / "why is this broken"
 
 When Hunter says "deploy"
   → /ship → /land-and-deploy → /canary
-  → Vercel plugin handles the actual deploy
 
 When Hunter says "I need a database" / "set up storage"
-  → Activate Supabase plugin (PostgreSQL)
+  → Use Supabase (PostgreSQL) — set up manually via their dashboard
   → Never store user data in flat files
 
-When Hunter says "check the docs for [library]"
-  → Activate context7 — say "use context7 for [library]" explicitly
-
 When Hunter says "research [topic]" / "find information on [X]" / "scrape [site]"
-  → Use firecrawl MCP for scraping
   → Use /scrape (gStack) for one-shot data pulls
+  → Use /deep-research (built-in) for multi-source research
 
 When Hunter says "security check" / "this touches auth or payments"
   → Run /cso (OWASP + STRIDE)
-  → security-guidance plugin scans automatically on every file save
 
 When Hunter says "build a Make.com / n8n / Zapier automation"
   → Generate JSON blueprint only, following the 5-level build method
@@ -370,26 +323,26 @@ When Hunter says "build an OpenClaw skill"
   → Follow openclaw-skill-builder protocol
 
 When Hunter says "loop until done" / "keep going" / "don't stop"
-  → Activate ralph-loop plugin (iterates until task is truly complete)
+  → Use /loop (built-in) to run tasks on repeat
 
 When Hunter says "simplify this" / "clean this up"
-  → Use code-simplifier approach via superpowers plugin
+  → Use /simplify (built-in)
 
 When Hunter says "I need a Word doc / proposal / report"
-  → Activate docx skill if available, else generate .md and convert
+  → Use /docx (/mnt/skills/public) — generates .docx directly
 
 When Hunter says "make a presentation / pitch deck / slides"
-  → Activate pptx skill if available
+  → Use /pptx (/mnt/skills/public) — generates .pptx directly
 
 When Hunter says "build a spreadsheet / tracker / financial model"
-  → Activate xlsx skill if available
+  → Use /xlsx (/mnt/skills/public) — generates .xlsx directly
+  → Use /financial-calculator (/mnt/skills/examples) for calculator tools
 
-When Hunter says "create a PDF" / "fill a form"
+When Hunter says "create a PDF"
   → Use /make-pdf (gStack) for markdown → PDF
-  → Activate pdf skill if available for forms
+  → Use /pdf (/mnt/skills/public) for PDF generation
 
 Before ANY git commit or client delivery:
-  → security-guidance plugin scans automatically (hook is active)
   → Run /review (gStack)
   → /cso if auth or payments touched
 
@@ -479,8 +432,6 @@ claude update        # update to latest version
 # Inside Claude Code session
 /model opusplan       # Opus plans, Sonnet executes
 /effort xhigh         # default reasoning depth for serious work
-/plugin               # open plugin manager
-/reload-plugins       # apply plugin changes without restart
 /config               # open settings menu
 /help                 # all slash commands
 ```
