@@ -5,6 +5,19 @@
 
 ---
 
+## ⚠️ v2.1 VERIFIED CORRECTIONS — read this BEFORE anything below
+Independent Opus audit + manual spot-check (2026-06-01) found the plan below was built on a **false foundation.** These corrections override any stale claim further down:
+
+1. **THE SECURITY "PHASE 0" IS ALREADY BUILT.** A prior session already executed the review. Verified DONE in code: #1 escHtml quote-escape (`:5267`), #2 CLAMP + all 9 boundaries (`:5285`…`:14373`), #3 single mutation pipeline w/ double-undo guard (`:9134-9146`, comment cites "Fix #3"), #5 cache split (`:9402-9408`), Bug A torn-write guard (`:9203/9371/9604`), and #4 render-preserve substantially done (`rebuildPreserving :14021`, `refreshOpenPanels :7104`). **Delete Phase 0 — it's shipped.** Only loose ends: #4 web field-gate verification + the output-token cost estimate still a 600 constant (`:8801`).
+2. **AI surface count is ~18, not 5** (see findings file). But one was a PHANTOM: **`generateHooks` does NOT exist** — only a guarded fallback at `:5204`. Remove "hooks generator" from every list. Hooks come from conversational `send()`.
+3. **`importFromText` (`:9791`) is the ONE exception to the shared-brain thesis** — it builds its own systemPrompt, no `buildContext`. It will NOT benefit from the F1 upgrade. Must be explicitly excepted in `buildSystemPrompt(surface)`.
+4. **THE REAL TOP COST LEVER:** caching exists on EXACTLY ONE surface (streaming `send()` `:9405`). The other **17 generators** all go through `_apiFetch` (`:9675`) with **zero `cache_control`** → every handout/creature/glossary/secrets/etc. re-sends the full uncached prefix at full rate. Wiring `cache_control` into `_apiFetch` for Anthropic models is the biggest unaddressed cost win and is NOT in the plan below.
+5. **Stale specifics:** actual tiers are low **10** / med **30** / high 50 / full ∞ (`:9217`), NOT 5/20/50. `DEMO_MESSAGE_LIMIT` is **already 5** (`:4404`); the real cap is the Cloudflare **Worker's per-IP KV (out of this repo)** — the "bump 3→5" item is wrong-layer. quickNPC/stakes are invoked from **GMMode**, not Tonight.
+
+**Net effect on the plan:** Phase 0 deleted. The real work is F1 (genuinely not done) → caching `_apiFetch` (new top item) → F8/F7 across ~18 surfaces → F3 Live Mode (greenfield) → Arsenal curation. Everything else is thinner than the plan claims because the security base is already in.
+
+---
+
 ## 0. Why v1 was wrong (so we don't repeat it)
 
 - v1 + the reviewer said "five separate AI pipelines, fatal drift." **False.** There is already ONE shared brain: `Copilot.buildContext(nation)` at `:9213`. **14 call sites** already use it — including all three Tonight prompts (`:10021, :10088, :10139`), Arsenal (`:4687` via `_buildContext`→`Copilot.buildContext`), and every generator (hooks/NPC/stakes/glossary/names).
