@@ -165,6 +165,11 @@ body.theme-ember {
   --ember-color-pale:#ffddb9;
   --ember-glow:rgba(255,185,100,0.40);
   --ember-glow-soft:rgba(255,185,100,0.10);
+  /* Ambient Living Layer — warm drifting embers/motes over a faint amber glow. */
+  --amb-particle:255,185,100;          /* rgb triplet for canvas motes */
+  --amb-particle-alpha:0.5;
+  --amb-glow:radial-gradient(ellipse 70% 50% at 50% 30%,rgba(255,185,100,0.05),transparent 70%);
+  --amb-vignette:radial-gradient(ellipse 120% 120% at 50% 50%,transparent 60%,rgba(20,8,0,0.18));
   /* Semantic aliases — dark values for Ember's inverted lightness model */
   --color-bg:#120c07;
   --color-surface:rgba(255,185,100,0.04);
@@ -230,6 +235,13 @@ body.theme-manuscript {
   --color-border-default:#B7C3CC;
   /* Coordinate-grid rule line — very faint cool grey graph paper. */
   --ms-grid:#D7DEE3;
+  /* Ambient Living Layer — "dust in daylight": faint cool motes + a soft paper
+     haze. Particles are a dark cool tone (light motes vanish on light paper),
+     kept whisper-low so body ink always wins. */
+  --amb-particle:31,81,112;
+  --amb-particle-alpha:0.16;
+  --amb-glow:radial-gradient(ellipse 90% 70% at 50% 18%,rgba(31,81,112,0.025),transparent 74%);
+  --amb-vignette:radial-gradient(ellipse 130% 130% at 50% 50%,transparent 66%,rgba(70,86,106,0.07));
   /* Era band tints — pale cool washes over chart paper. */
   --era-tint-1:rgba(31,81,112,0.06);
   --era-tint-2:rgba(178,58,34,0.07);
@@ -299,6 +311,11 @@ body.theme-modern {
   --era-tint-2:rgba(94,200,216,0.10);
   --era-tint-3:rgba(111,168,216,0.08);
   --era-tint-4:rgba(169,138,216,0.08);
+  /* Ambient Living Layer — cool slow drift + faint teal grid haze (cold). */
+  --amb-particle:94,200,216;
+  --amb-particle-alpha:0.32;
+  --amb-glow:radial-gradient(ellipse 80% 60% at 50% 20%,rgba(94,200,216,0.04),transparent 72%);
+  --amb-vignette:radial-gradient(ellipse 120% 120% at 50% 50%,transparent 58%,rgba(6,10,16,0.20));
   /* Display Fraunces (sharp cut); body Source Serif 4. */
   --font-display:'Fraunces',Georgia,serif;
   --font-body:'Source Serif 4','Newsreader',Georgia,serif;
@@ -1126,6 +1143,35 @@ body.theme-manuscript::-webkit-scrollbar-thumb:hover{background:rgba(31,81,112,0
 
 /*
 ==============================================================================
+SECTION 3.6A: AMBIENT LIVING LAYER — persistent atmosphere over the workspace
+------------------------------------------------------------------------------
+A single fixed full-viewport overlay (#ambient-layer) appended once by JS. It is
+pointer-events:none and sits at z-index 400 — above content/sticky chrome, below
+toasts (500) and modals (1000) so it never occludes UI. Themed entirely via the
+per-theme --amb-* custom properties (warm embers / cool drift / daylight dust).
+Two cheap layers: an animated gradient glow+vignette base (this CSS) plus an
+optional throttled canvas mote field (the JS module). Animate transform/opacity
+only; will-change is applied to the overlay/canvas, never children.
+==============================================================================
+*/
+#ambient-layer{position:fixed;inset:0;pointer-events:none;z-index:400;
+  opacity:0;transition:opacity 600ms ease;will-change:opacity}
+#ambient-layer.is-on{opacity:1}
+/* Base glow + vignette wash — themed; the glow breathes very slowly. */
+#ambient-layer .amb-glow{position:absolute;inset:0;background:var(--amb-glow,none);
+  animation:amb-breathe 22s ease-in-out infinite;will-change:transform,opacity}
+#ambient-layer .amb-vignette{position:absolute;inset:0;background:var(--amb-vignette,none)}
+#ambient-layer canvas{position:absolute;inset:0;width:100%;height:100%;will-change:transform}
+@keyframes amb-breathe{0%,100%{opacity:0.85;transform:scale(1)}50%{opacity:1;transform:scale(1.03)}}
+/* Reduced-motion: no drift, no breathing — static faint vignette only. JS also
+   skips the canvas loop, so this is belt-and-suspenders for the CSS glow. */
+@media (prefers-reduced-motion:reduce){
+  #ambient-layer .amb-glow{animation:none}
+}
+.force-reduced-motion #ambient-layer .amb-glow{animation:none}
+
+/*
+==============================================================================
 SECTION 3.6X: MODERN SKIN — "The Command Console" (spec §4.3)
 ------------------------------------------------------------------------------
 Editorial discipline on ember's dark elevation chassis, stripped of period
@@ -1903,6 +1949,14 @@ SECTION 6: COMPONENT STYLES
 .mode-dropdown__text{display:flex;flex-direction:column;gap:2px;min-width:0}
 .mode-dropdown__name{font-family:var(--font-display);font-weight:600;font-size:var(--text-body);color:var(--color-ink)}
 .mode-dropdown__desc{font-size:var(--text-label-sm);color:var(--color-text-muted);line-height:1.3}
+/* Atmosphere toggle row — separated from the mode choices, with a pill switch. */
+.mode-dropdown__item--toggle{border-top:1px solid var(--color-border-default);align-items:center}
+.mode-dropdown__switch{margin-left:auto;flex-shrink:0;width:32px;height:18px;border-radius:9px;
+  background:var(--color-border-default);position:relative;transition:background .2s}
+.mode-dropdown__switch::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;
+  border-radius:50%;background:var(--color-parchment);transition:transform .2s}
+.mode-dropdown__item--toggle[aria-checked="true"] .mode-dropdown__switch{background:var(--ember-color,var(--color-gold))}
+.mode-dropdown__item--toggle[aria-checked="true"] .mode-dropdown__switch::after{transform:translateX(14px)}
 body.theme-ember .mode-dropdown{background:#0a0705;border-color:rgba(255,185,100,0.40)}
 body.theme-ember .mode-dropdown__item{color:var(--color-ink);border-bottom-color:rgba(255,185,100,0.18)}
 body.theme-ember .mode-dropdown__item:hover{background:rgba(255,185,100,0.06)}
@@ -2972,6 +3026,11 @@ SECTION 8: DOM STRUCTURE
           <button type="button" class="mode-dropdown__item" data-mode="world" role="menuitem">
             <span class="mode-dropdown__mark">🌍</span>
             <span class="mode-dropdown__text"><span class="mode-dropdown__name">World</span><span class="mode-dropdown__desc">Quiet worldbuilding — no GM tools.</span></span>
+          </button>
+          <button type="button" class="mode-dropdown__item mode-dropdown__item--toggle" id="ambient-toggle-item" role="menuitemcheckbox" aria-checked="false">
+            <span class="mode-dropdown__mark">✦</span>
+            <span class="mode-dropdown__text"><span class="mode-dropdown__name">Atmosphere</span><span class="mode-dropdown__desc">A living, persistent ambience over the workspace.</span></span>
+            <span class="mode-dropdown__switch" aria-hidden="true"></span>
           </button>
         </div>
       </div>
@@ -4274,7 +4333,7 @@ const IDB_KEY_FINGERPRINT='rw_device_fp';
 const IDB_KEY_DEVICE_TOKEN='rw_device_token'; // server-issued opaque UUID (Phase 1a P1.3)
 
 const SCHEMA_VERSION='2.4.2';
-const DEFAULT_SETTINGS={theme:'ember',respectMotionPref:true,showForecasts:false,showSecrets:false,onboardingComplete:false,copilotProvider:'openrouter',copilotModel:'anthropic/claude-sonnet-latest',copilotKey:null,ollamaUrl:'http://localhost:11434',ollamaModel:'llama3.1',copilotScope:'standard',copilotAutoApply:false,gmMode:false};
+const DEFAULT_SETTINGS={theme:'ember',respectMotionPref:true,showForecasts:false,showSecrets:false,onboardingComplete:false,copilotProvider:'openrouter',copilotModel:'anthropic/claude-sonnet-latest',copilotKey:null,ollamaUrl:'http://localhost:11434',ollamaModel:'llama3.1',copilotScope:'standard',copilotAutoApply:false,gmMode:false,ambient:false};
 const ERA_GAP={Ancient:100,Classical:75,Medieval:50,Renaissance:75,Industrial:25,Modern:15,'Near-Future':10,'Far-Future':5,'Post-Collapse':30};
 const ERA_NAMES={Political:'The Reform Years',Military:'The Long War',Economic:'The Trade Awakening',Cultural:'The Silent Century',Social:"The Generation's Turning",Diplomatic:'The Quiet Borders',Natural:'The Lean Years'};
 const STAT_DESC={legitimacy:"The degree to which citizens accept the regime's right to rule.",corruption:"The degree to which officials serve themselves over the state. Drags stability hard.",opposition:"Organized strength of groups actively working against the current regime.",food_production:"The nation's ability to feed its population. Foundational.",trade:"Commercial activity and market health.",raw_materials:"Availability of physical inputs: metals, timber, stone, fuel.",manpower:"Human capital available for labor, defense, and public works.",knowledge:"Educational and institutional sophistication of the nation.",cohesion:"The degree to which citizens share identity, interest, and purpose.",urbanization:"The proportion of population in cities."};
@@ -13793,6 +13852,9 @@ function bindEventListeners(){
       modeBtn.setAttribute('aria-expanded','false');
     });
     modeDD.addEventListener('click',e=>e.stopPropagation());
+    document.getElementById('ambient-toggle-item')?.addEventListener('click',()=>{
+      if(typeof Ambient!=='undefined')Ambient.set(!State.data.meta.settings.ambient);
+    });
     modeDD.querySelectorAll('[data-mode]').forEach(item=>{
       item.addEventListener('click',()=>{
         const mode=item.dataset.mode;
@@ -14312,6 +14374,7 @@ function bindEventListeners(){
     State.setSetting('respectMotionPref',v);
     document.getElementById('toggle-motion')?.classList.toggle('is-on',v);
     applyMotionPref();
+    if(typeof Ambient!=='undefined')Ambient.apply();
   });
 
   // Theme picker — Ember / Manuscript / Modern. Persists to settings and applies live.
@@ -14324,6 +14387,7 @@ function bindEventListeners(){
     State.setSetting('theme',choice);
     syncThemePickerUI(choice);
     applyTheme();
+    if(typeof Ambient!=='undefined'&&Ambient.on)Ambient.apply();
   });
 
   // ─── GM MODE WIRING ───
@@ -14564,6 +14628,78 @@ function applyMotionPref(){
   if(pref&&mq.matches){document.documentElement.classList.add('force-reduced-motion');}
   else{document.documentElement.classList.remove('force-reduced-motion');}
 }
+
+// ─── AMBIENT LIVING LAYER ────────────────────────────────────────────────────
+// Persistent themed atmosphere over the workspace. CSS gradient/vignette base
+// (always cheap) + an optional canvas mote field throttled to ~18fps. Honors
+// reduced-motion (static only, no canvas), pauses when the tab is hidden, and
+// is pointer-events:none under toasts/modals so it never blocks UI.
+const Ambient={
+  el:null,canvas:null,ctx:null,parts:[],raf:0,last:0,on:false,
+  _reduced(){return document.documentElement.classList.contains('force-reduced-motion')
+    ||window.matchMedia('(prefers-reduced-motion:reduce)').matches;},
+  _build(){
+    if(this.el)return;
+    const el=document.createElement('div');el.id='ambient-layer';el.setAttribute('aria-hidden','true');
+    el.innerHTML='<div class="amb-glow"></div><div class="amb-vignette"></div>';
+    const cv=document.createElement('canvas');el.appendChild(cv);
+    document.body.appendChild(el);
+    this.el=el;this.canvas=cv;this.ctx=cv.getContext('2d');
+    document.addEventListener('visibilitychange',()=>{
+      if(document.hidden)this._stop();else if(this.on&&!this._reduced())this._start();
+    });
+    window.addEventListener('resize',Utils.debounce(()=>{if(this.on)this._size();},200));
+  },
+  _size(){
+    const dpr=Math.min(window.devicePixelRatio||1,2);
+    const w=window.innerWidth,h=window.innerHeight;
+    this.canvas.width=w*dpr;this.canvas.height=h*dpr;
+    this.ctx.setTransform(dpr,0,0,dpr,0,0);
+    this._seed(w,h);
+  },
+  _seed(w,h){
+    const n=Math.min(50,Math.round((w*h)/30000)); // cap 50; scale to viewport
+    this.parts=Array.from({length:n},()=>({
+      x:Math.random()*w,y:Math.random()*h,r:0.6+Math.random()*1.8,
+      vx:(Math.random()-0.5)*0.10,vy:-(0.05+Math.random()*0.18),
+      a:0.3+Math.random()*0.7}));
+  },
+  _start(){if(this.raf||this._reduced())return;this.last=0;this.raf=requestAnimationFrame(this._tick.bind(this));},
+  _stop(){if(this.raf){cancelAnimationFrame(this.raf);this.raf=0;}},
+  _tick(ts){
+    this.raf=requestAnimationFrame(this._tick.bind(this));
+    if(ts-this.last<55)return; // ~18fps gate — cheap, no flicker
+    this.last=ts;
+    const w=window.innerWidth,h=window.innerHeight,ctx=this.ctx;
+    ctx.clearRect(0,0,w,h);
+    const rgb=getComputedStyle(this.el).getPropertyValue('--amb-particle').trim()||'255,185,100';
+    const base=parseFloat(getComputedStyle(this.el).getPropertyValue('--amb-particle-alpha'))||0.4;
+    for(const p of this.parts){
+      p.x+=p.vx;p.y+=p.vy;
+      if(p.y<-4){p.y=h+4;p.x=Math.random()*w;}
+      if(p.x<-4)p.x=w+4;else if(p.x>w+4)p.x=-4;
+      ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,6.283);
+      ctx.fillStyle=`rgba(${rgb},${(base*p.a).toFixed(3)})`;ctx.fill();
+    }
+  },
+  set(on){
+    State.setSetting('ambient',!!on);
+    this.apply();
+    const item=document.getElementById('ambient-toggle-item');
+    if(item)item.setAttribute('aria-checked',on?'true':'false');
+  },
+  apply(){
+    const want=!!State.data?.meta?.settings?.ambient;
+    this.on=want;
+    const item=document.getElementById('ambient-toggle-item');
+    if(item)item.setAttribute('aria-checked',want?'true':'false');
+    if(!want){this._stop();if(this.el)this.el.classList.remove('is-on');return;}
+    this._build();
+    this.el.classList.add('is-on');
+    if(this._reduced()){this._stop();if(this.ctx)this.ctx.clearRect(0,0,this.canvas.width,this.canvas.height);return;}
+    this._size();this._start();
+  }
+};
 
 function applyTheme(){
   // Dev-theme flag takes precedence over user settings. Normal users never see this.
@@ -15291,6 +15427,7 @@ async function bootstrap(){
   syncThemePickerUI(settings.theme);
   applyMotionPref();
   applyTheme();
+  if(typeof Ambient!=='undefined')Ambient.apply();
   // Initialize Copilot panel status
   if(typeof Copilot!=='undefined')Copilot.updateStatus();
   // Apply GM mode if enabled
