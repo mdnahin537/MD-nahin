@@ -178,59 +178,68 @@ body.theme-ember {
 }
 
 /* ============================================================================
-   MANUSCRIPT THEME — "The Cartographer's Table"
-   A GM's working desk: deep oxidized-green felt under a desk lamp, warm ivory
-   chart paper for content, a single signal-red survey accent, drafting-mono
-   chrome. Distinct from Ember (warm gold on void) and Modern (cool teal on
-   graphite). Comfortable density — chart-paper margins, not console density.
+   MANUSCRIPT THEME — "The Cartographer's Chart Table" (LIGHT)
+   A draughtsman's survey chart laid on a working table in daylight. COOL paper
+   (faint blue-grey, never cream), drafting-blue ink for structure, a sparing
+   survey-red for active markers, near-black cool ink for body. The ONLY light
+   theme — instantly distinct from Ember (warm gold on void) and Modern (cool
+   teal on graphite), both dark. High-class, precise, technical — not antique.
    All non-token skin rules are scoped body.theme-manuscript so they cannot
    leak into ember or modern.
+   CONTRAST DISCIPLINE (matching Modern's documented floors), measured WCAG:
+     body ink #182230 on paper #ECEFF2  = 13.89:1  (AAA)
+     muted   #46566A on paper #ECEFF2   =  6.50:1  (AA, well over 4.5)
+     faint   #5C6B7E on paper #ECEFF2   =  4.71:1  (AA body)
+     blue    #1F5170 on paper #ECEFF2   =  7.37:1  (AAA — link/structure text)
+     red     #B23A22 on paper #ECEFF2   =  5.17:1  (AA — survey-mark text)
    ============================================================================ */
 body.theme-manuscript {
-  /* Surfaces — oxidized green-black felt, four elevation levels.
-     parchment = body felt; warm = elevated felt/rails; pale = chart paper. */
-  --color-ink:#e8dfc4;             /* text-primary, 13.8:1 on parchment */
-  --color-ink-elevated:#1a2620;    /* secondary elevated felt */
-  --color-parchment:#0e1612;       /* body background — deep green-black felt */
-  --color-parchment-warm:#152019;  /* cards, rails — primary elevated felt */
-  --color-parchment-pale:#e8dfc4;  /* chart paper — used selectively for content stages */
-  /* Accent — cartographer cream-gold, surveyor's brass; NOT ember's warm orange. */
-  --color-gold:#e0c879;            /* 11.1:1 — body-safe */
-  --color-gold-deep:#b8a052;
-  --color-gold-pale:#f0dc9a;
-  --color-amber:#e0c879;
-  --color-amber-deep:#b8a052;
-  /* Status colors — survey conventions: green=stable, brass=tense, ink-red=crisis. */
-  --color-thriving:#7fb37a;        /* 7.6:1 */
-  --color-stable:#a8d4c9;          /* 11.3:1 — teal-lichen */
-  --color-tense:#f0c674;           /* 11.4:1 */
-  --color-crisis:#d96b5a;          /* 5.4:1 — surveyor's danger-zone red ink */
-  --color-collapse:#9a2a2a;
-  /* Event-type colors — saturated for legibility on dark felt. */
-  --color-event-political:#6fa8d8;
-  --color-event-military:#d96b5a;
-  --color-event-economic:#e0c879;
-  --color-event-cultural:#b89dd6;
-  --color-event-social:#7fb3a8;
-  --color-event-diplomatic:#8fc878;
-  --color-event-natural:#c8a878;
-  /* Text — three steps. faint is body-safe (4.8:1). */
+  /* Surfaces — cool chart paper, light-up elevation. parchment = table paper;
+     warm = nested fields (lighter still); pale = elevated panels/chart sheets. */
+  --color-ink:#182230;             /* text-primary, 13.89:1 on paper */
+  --color-ink-elevated:#F6F8FA;    /* elevated panel sheet — lighter than base */
+  --color-parchment:#ECEFF2;       /* body background — cool off-white chart paper */
+  --color-parchment-warm:#F2F4F6;  /* nested fields/rails — faintly raised */
+  --color-parchment-pale:#F6F8FA;  /* elevated panels/modals/drawers — whitest sheet */
+  /* Accent — confident draughting blue (structure/links/active), not safe-blue. */
+  --color-gold:#1F5170;            /* 7.37:1 — body-safe drafting ink */
+  --color-gold-deep:#163B53;       /* darker rule/border ink */
+  --color-gold-pale:#2E6488;       /* lighter hover/active blue */
+  --color-amber:#B23A22;           /* survey-red signal — sparing markers only */
+  --color-amber-deep:#8F2C18;
+  /* Status colors — survey conventions read on light paper (all >= 4.5:1). */
+  --color-thriving:#2F7A4E;        /* 4.9:1 — survey green */
+  --color-stable:#1F5170;          /* 7.37:1 — drafting blue */
+  --color-tense:#9A6A12;           /* 4.9:1 — ochre caution */
+  --color-crisis:#B23A22;          /* 5.17:1 — survey red */
+  --color-collapse:#8F2C18;
+  /* Event-type colors — darkened for legibility on light paper. */
+  --color-event-political:#2E6488;
+  --color-event-military:#B23A22;
+  --color-event-economic:#9A6A12;
+  --color-event-cultural:#6A4C9C;
+  --color-event-social:#2F7A6E;
+  --color-event-diplomatic:#3E7A2E;
+  --color-event-natural:#7A5A2E;
+  /* Text — three steps, all documented above. */
   --color-text-primary:var(--color-ink);
-  --color-text-muted:#b5ab8c;      /* 8.0:1 */
-  --color-text-faint:#8a8270;      /* 4.8:1 — AA body */
-  /* Borders — surveyor's hairline rules. */
-  --color-border-hairline:#2a3530;
-  --color-border-default:#3d4a3a;
-  /* Era band tints — felt washes. */
-  --era-tint-1:rgba(224,200,121,0.06);
-  --era-tint-2:rgba(217,107,90,0.08);
-  --era-tint-3:rgba(127,179,168,0.08);
-  --era-tint-4:rgba(184,157,214,0.06);
-  /* Typography — Spectral for display heads (broad-nib drafting voice), Inter
-     for body (clean readability on dark felt), JetBrains Mono for surveyor
-     chrome (coordinates, section labels, status pills). */
-  --font-display:'Spectral','Fraunces',Georgia,serif;
-  --font-body:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+  --color-text-muted:#46566A;      /* 6.50:1 */
+  --color-text-faint:#5C6B7E;      /* 4.71:1 — AA body */
+  /* Borders — cool drafting rules. */
+  --color-border-hairline:#CDD6DC;
+  --color-border-default:#B7C3CC;
+  /* Coordinate-grid rule line — very faint cool grey graph paper. */
+  --ms-grid:#D7DEE3;
+  /* Era band tints — pale cool washes over chart paper. */
+  --era-tint-1:rgba(31,81,112,0.06);
+  --era-tint-2:rgba(178,58,34,0.07);
+  --era-tint-3:rgba(47,122,78,0.06);
+  --era-tint-4:rgba(106,76,156,0.06);
+  /* Typography — Fraunces (high-contrast serif, copperplate/cartographic
+     authority) for display; Spectral (screen-optimized serif) for body; both
+     already loaded. JetBrains Mono for coordinate/survey chrome. No new font. */
+  --font-display:'Fraunces',Georgia,'Times New Roman',serif;
+  --font-body:'Spectral','Source Serif 4',Georgia,serif;
   /* WorldShell fallback accent tokens. */
   --ember-color:var(--color-gold);
   --ember-color-bright:var(--color-gold-pale);
@@ -959,23 +968,34 @@ body.theme-ember .wms-particles{position:absolute;left:0;right:0;
 
 /*
 ==============================================================================
-SECTION 3.6M: MANUSCRIPT SKIN — "The Cartographer's Table"
+SECTION 3.6M: MANUSCRIPT SKIN — "The Cartographer's Chart Table" (LIGHT)
 ------------------------------------------------------------------------------
-Deep oxidized-green felt + warm ivory chart-paper content surfaces + signal-red
-survey ink accent + Spectral display / Inter body / JetBrains Mono chrome.
-Comfortable density, drafting-table restraint. Coverage parity with Modern:
+Cool chart paper, drafting-blue ink for structure/links, sparing survey-red for
+active markers, near-black cool ink body. Fraunces display / Spectral body /
+JetBrains Mono survey chrome. Signature moves: a faint coordinate-grid rule on
+panel/stage surfaces, crosshair registration marks in modal corners, and
+ink-blue hairline rules under section headers. Coverage parity with Modern:
 nav rail, sigil, nav items, center stage (.wms-cp), .wms-pc/.wms-fc cards,
 nation title anchor, section labels, stability orb, sliders, dividers,
-.sc-panel drawer, modals. Every rule scoped body.theme-manuscript — cannot
-leak to ember or modern.
+.sc-panel drawer, modals, identity strip. Every rule scoped
+body.theme-manuscript — cannot leak to ember or modern.
+A light theme is harder than dark: each surface below is re-grounded on paper so
+text/icons/borders stay legible (no rule assumes a dark backdrop).
 ==============================================================================
 */
-/* Nav rail — felt blotter; mono labels in surveyor's voice. */
-body.theme-manuscript .wms-nav{background:#0a110d;
-  border-right:1px solid var(--color-border-hairline)}
+/* Coordinate-grid rule — reusable faint graph-paper backing for paper surfaces.
+   2px-thin cool lines on 26px pitch; whisper-low contrast so text wins. */
+body.theme-manuscript .wms-cp,body.theme-manuscript .sc-panel,
+body.theme-manuscript .modal{
+  background-image:linear-gradient(var(--ms-grid) 1px,transparent 1px),
+                   linear-gradient(90deg,var(--ms-grid) 1px,transparent 1px);
+  background-size:26px 26px;background-position:-1px -1px}
+/* Nav rail — pale chart-margin sheet; mono labels in surveyor's voice. */
+body.theme-manuscript .wms-nav{background:var(--color-parchment-warm);
+  border-right:1px solid var(--color-border-default)}
 body.theme-manuscript .wms-nav__sigil{border-bottom:1px solid var(--color-border-hairline)}
 body.theme-manuscript .wms-nav__sigil-icon{border:1px solid var(--color-gold);
-  background:rgba(224,200,121,0.06)}
+  background:rgba(31,81,112,0.06)}
 body.theme-manuscript .wms-nav__sigil-icon .material-symbols-outlined{color:var(--color-gold)}
 body.theme-manuscript .wms-nav__sigil-title{font-family:var(--font-mono);
   font-weight:500;font-size:11px;letter-spacing:.20em;text-transform:uppercase;color:var(--color-gold)}
@@ -983,57 +1003,60 @@ body.theme-manuscript .wms-nav__sigil-sub{font-family:var(--font-mono);
   font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--color-text-faint)}
 body.theme-manuscript .wms-nav__item{font-family:var(--font-mono);
   font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-text-muted);
-  opacity:1;transition:color .2s,background .2s,border-color .2s}
+  opacity:1;border-left:2px solid transparent;transition:color .2s,background .2s,border-color .2s}
 body.theme-manuscript .wms-nav__item:hover{color:var(--color-ink);
-  background:rgba(224,200,121,0.06)}
-body.theme-manuscript .wms-nav__item.is-active{background:rgba(224,200,121,0.10);
+  background:rgba(31,81,112,0.06)}
+body.theme-manuscript .wms-nav__item.is-active{background:rgba(31,81,112,0.10);
   color:var(--color-gold);border-left-color:var(--color-gold);animation:none}
-/* Center stage — chart paper laid over the felt. The signature move. */
-body.theme-manuscript .wms-cp{background:var(--color-parchment-pale);
-  color:#1a2620;
-  box-shadow:0 1px 0 rgba(0,0,0,0.30),inset 0 0 0 1px rgba(110,84,23,0.10)}
+/* Center stage — the chart sheet itself, gridded. */
+body.theme-manuscript .wms-cp{background-color:var(--color-parchment);
+  color:var(--color-ink);
+  box-shadow:inset 0 0 0 1px var(--color-border-hairline)}
 body.theme-manuscript .wms-cp *{color:inherit}
 body.theme-manuscript .wms-pc,body.theme-manuscript .wms-fc{
-  background:#f0e7cc;border:1px solid rgba(110,84,23,0.18);
-  box-shadow:none;transition:border-color .2s,transform .2s}
+  background:var(--color-parchment-pale);border:1px solid var(--color-border-default);
+  box-shadow:none;transition:border-color .2s,box-shadow .2s}
 body.theme-manuscript .wms-pc:hover,body.theme-manuscript .wms-fc:hover{
-  transform:none;border-color:var(--color-gold-deep);background:#f4ecd2;box-shadow:none}
+  transform:none;border-color:var(--color-gold);
+  box-shadow:inset 0 0 0 1px rgba(31,81,112,0.12)}
 body.theme-manuscript .wms-pc-tag--crit,body.theme-manuscript .wms-pc-tag--tense,
 body.theme-manuscript .wms-pc-tag--oppo{box-shadow:none}
-body.theme-manuscript .wms-pc-text{font-family:var(--font-body);font-weight:400;color:#1a2620}
-/* Dominant anchor — realm name as a hand-lettered chart title with a brass underline. */
+body.theme-manuscript .wms-pc-text{font-family:var(--font-body);font-weight:400;color:var(--color-ink)}
+/* Dominant anchor — realm name as a chart cartouche title with a drafting-ink underline. */
 body.theme-manuscript .wms-nation-title{font-family:var(--font-display);
-  font-weight:600;text-transform:none;letter-spacing:.005em;color:#1a2620;
+  font-weight:600;text-transform:none;letter-spacing:.005em;color:var(--color-ink);
   padding-bottom:10px;position:relative}
 body.theme-manuscript .wms-nation-title::after{content:'';position:absolute;
   left:0;right:0;bottom:0;height:1px;
-  background:linear-gradient(to right,var(--color-gold-deep) 0%,var(--color-gold-deep) 40%,transparent 90%)}
-body.theme-manuscript .wms-nation-title:hover{text-decoration-color:var(--color-gold-deep)}
-/* Section labels — coordinates voice: mono, spaced. Links — Inter, brass. */
+  background:linear-gradient(to right,var(--color-gold) 0%,var(--color-gold) 40%,transparent 90%)}
+body.theme-manuscript .wms-nation-title:hover{text-decoration-color:var(--color-gold)}
+/* Section labels — coordinate voice: mono, spaced, with an ink-blue hairline
+   rule underneath (signature). Links — Spectral, drafting blue. */
 body.theme-manuscript .wms-sec-label{font-family:var(--font-mono);
-  font-weight:500;letter-spacing:.20em;text-transform:uppercase;color:#5c4f33;font-size:10px}
+  font-weight:500;letter-spacing:.20em;text-transform:uppercase;color:var(--color-text-muted);
+  font-size:10px;padding-bottom:5px;border-bottom:1px solid rgba(31,81,112,0.28)}
 body.theme-manuscript .wms-sec-link{font-family:var(--font-body);
-  text-transform:none;letter-spacing:.01em;color:#6e5417}
+  text-transform:none;letter-spacing:.01em;color:var(--color-gold)}
 body.theme-manuscript .wms-stab-label{font-family:var(--font-mono);font-weight:500;
   letter-spacing:.24em;text-transform:uppercase;color:var(--color-text-muted)}
-/* Stability orb — quiet brass-ringed disc on felt, not a glowing ember sphere. */
+/* Stability anchor — registration-ring disc on paper, not a glowing sphere. */
 body.theme-manuscript .wms-orb-wrap{
-  background:rgba(224,200,121,0.04);
-  border:1px solid rgba(224,200,121,0.30);
-  box-shadow:inset 0 0 0 1px rgba(224,200,121,0.08)}
+  background:var(--color-parchment-pale);
+  border:1px solid var(--color-gold);
+  box-shadow:inset 0 0 0 4px var(--color-parchment),inset 0 0 0 5px rgba(31,81,112,0.18)}
 body.theme-manuscript .wms-orb-wrap .ember-orbit__outer,
 body.theme-manuscript .wms-orb-wrap .ember-orbit__inner{display:none}
 body.theme-manuscript .wms-stab-num{color:var(--color-gold);font-family:var(--font-display);
-  font-weight:700;animation:none}
+  font-weight:700;animation:none;filter:none;text-shadow:none}
 body.theme-manuscript .wms-stab-state{font-family:var(--font-mono);font-size:10px;
   letter-spacing:.24em;text-transform:uppercase}
 body.theme-manuscript .wms-stab-desc{font-family:var(--font-body);font-style:normal;color:var(--color-text-muted)}
-/* Divider — single brass rule, no gem. */
+/* Divider — single drafting-ink rule, no gem. */
 body.theme-manuscript .ember-divider::before,
 body.theme-manuscript .ember-divider::after{content:'';flex:1;height:1px;
-  background:rgba(224,200,121,0.20)}
+  background:rgba(31,81,112,0.22)}
 body.theme-manuscript .ember-divider__gem{display:none}
-/* Sliders + chronicle — felt tracks, brass fills, no glow. */
+/* Sliders + chronicle — cool tracks, drafting-ink fills, no glow. */
 body.theme-manuscript .wms-sl-name,body.theme-manuscript .wms-advanced-toggle,
 body.theme-manuscript .wms-ars-tab,body.theme-manuscript .wms-chr-lbl,
 body.theme-manuscript .wms-paste-btn{font-family:var(--font-mono);letter-spacing:.16em;text-transform:uppercase}
@@ -1042,26 +1065,26 @@ body.theme-manuscript .wms-ae-title,body.theme-manuscript .plot-thread-item__tit
 body.theme-manuscript .plot-thread-panel-hook__title,body.theme-manuscript .plot-seed-section__name,
 body.theme-manuscript .threads-oracle-pick__label{font-family:var(--font-display);font-weight:600}
 body.theme-manuscript .wms-sl-track,
-body.theme-manuscript .wms-chr-track{background:var(--color-border-hairline)}
+body.theme-manuscript .wms-chr-track{background:var(--color-border-default)}
 body.theme-manuscript .wms-sl-fill{box-shadow:none}
 body.theme-manuscript .wms-sl-input::-webkit-slider-thumb{box-shadow:none}
 body.theme-manuscript .wms-ars-title{text-shadow:none;font-family:var(--font-display)}
-body.theme-manuscript .wms-inscribe:hover{box-shadow:none;background:rgba(224,200,121,0.08)}
+body.theme-manuscript .wms-inscribe:hover{box-shadow:none;background:rgba(31,81,112,0.08)}
 body.theme-manuscript .wms-paste-btn{border-color:var(--color-border-default)}
-/* Feature drawers — chart paper slid in from the right. */
-body.theme-manuscript .sc-panel{background:var(--color-parchment-pale);
-  color:#1a2620;
-  box-shadow:-8px 0 28px rgba(0,0,0,0.40);
-  border-left:1px solid var(--color-gold-deep);
+/* Feature drawers — a fresh chart sheet slid in from the right. */
+body.theme-manuscript .sc-panel{background-color:var(--color-parchment-pale);
+  color:var(--color-ink);
+  box-shadow:-8px 0 28px rgba(24,34,48,0.12);
+  border-left:1px solid var(--color-gold);
   transition:transform 200ms var(--ease-out),opacity 200ms var(--ease-out)}
 body.theme-manuscript .sc-panel *{color:inherit}
 body.theme-manuscript .sc-panel__title{font-family:var(--font-display);
-  font-weight:700;color:#6e5417}
-/* Identity strip — felt top bar so the chart paper reads against it. Uses
-   #0a110d, the deepest felt, so wordmark + actions read at 13:1+. */
+  font-weight:700;color:var(--color-gold)}
+/* Identity strip — a pale paper rail with a drafting-ink baseline so the chart
+   sheet reads against it; wordmark + actions read at 7:1+ on the pale rail. */
 body.theme-manuscript .identity-strip{
-  background:#0a110d;
-  border-bottom:1px solid var(--color-border-hairline);
+  background:var(--color-parchment-warm);
+  border-bottom:1px solid var(--color-gold);
   padding:0 26px;height:60px;gap:24px}
 body.theme-manuscript .identity-strip__wordmark{
   font-family:var(--font-display);font-weight:600;font-size:20px;
@@ -1079,18 +1102,25 @@ body.theme-manuscript .identity-strip__export-btn{
   font-family:var(--font-mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;
   color:var(--color-text-muted);border-bottom:1px solid transparent}
 body.theme-manuscript .identity-strip__export-btn:hover{color:var(--color-gold);border-bottom-color:var(--color-gold)}
-/* Modal + nation card chrome — chart paper to match the drawers. */
-body.theme-manuscript .modal{background:var(--color-parchment-pale);color:#1a2620;
-  border:1px solid var(--color-gold-deep);box-shadow:0 12px 40px rgba(0,0,0,0.50)}
+/* Modal + nation card chrome — gridded chart sheet with crosshair registration
+   marks in the corners (signature). The crosshairs sit on the modal frame. */
+body.theme-manuscript .modal{background-color:var(--color-parchment-pale);color:var(--color-ink);
+  border:1px solid var(--color-gold);box-shadow:0 12px 40px rgba(24,34,48,0.22);position:relative}
 body.theme-manuscript .modal *{color:inherit}
-body.theme-manuscript .modal__title{font-family:var(--font-display);font-weight:700;color:#6e5417}
-body.theme-manuscript .nation-card{background:var(--color-parchment-pale);color:#1a2620;
-  border:1px solid rgba(110,84,23,0.18)}
-/* Scrollbar — surveyor thin brass on felt. */
+body.theme-manuscript .modal::before,body.theme-manuscript .modal::after{
+  content:'';position:absolute;width:12px;height:12px;pointer-events:none;z-index:11;
+  background:linear-gradient(var(--color-gold),var(--color-gold)) center/100% 1px no-repeat,
+            linear-gradient(var(--color-gold),var(--color-gold)) center/1px 100% no-repeat;opacity:.55}
+body.theme-manuscript .modal::before{top:7px;left:7px}
+body.theme-manuscript .modal::after{bottom:7px;right:7px}
+body.theme-manuscript .modal__title{font-family:var(--font-display);font-weight:700;color:var(--color-gold)}
+body.theme-manuscript .nation-card{background:var(--color-parchment-pale);color:var(--color-ink);
+  border:1px solid var(--color-border-default)}
+/* Scrollbar — surveyor thin drafting-ink on paper. */
 body.theme-manuscript::-webkit-scrollbar{width:3px;height:3px}
-body.theme-manuscript::-webkit-scrollbar-track{background:#0a110d}
-body.theme-manuscript::-webkit-scrollbar-thumb{background:rgba(224,200,121,0.18);border-radius:2px}
-body.theme-manuscript::-webkit-scrollbar-thumb:hover{background:rgba(224,200,121,0.42)}
+body.theme-manuscript::-webkit-scrollbar-track{background:var(--color-parchment-warm)}
+body.theme-manuscript::-webkit-scrollbar-thumb{background:rgba(31,81,112,0.28);border-radius:2px}
+body.theme-manuscript::-webkit-scrollbar-thumb:hover{background:rgba(31,81,112,0.55)}
 /* Reduced-motion already handled globally; manuscript has no looping animations
    beyond the existing ones killed by .force-reduced-motion. */
 
@@ -1884,10 +1914,10 @@ body.theme-modern .mode-dropdown__item{color:var(--color-ink);border-bottom-colo
 body.theme-modern .mode-dropdown__item:hover{background:rgba(94,200,216,0.08)}
 body.theme-modern .mode-dropdown__item[aria-current="true"]{background:rgba(94,200,216,0.12)}
 body.theme-modern .mode-dropdown__name{color:var(--color-gold)}
-body.theme-manuscript .mode-dropdown{background:#152019;border-color:rgba(224,200,121,0.40)}
-body.theme-manuscript .mode-dropdown__item{color:var(--color-ink);border-bottom-color:#2a3530}
-body.theme-manuscript .mode-dropdown__item:hover{background:rgba(224,200,121,0.08)}
-body.theme-manuscript .mode-dropdown__item[aria-current="true"]{background:rgba(224,200,121,0.12)}
+body.theme-manuscript .mode-dropdown{background:var(--color-parchment-pale);border-color:var(--color-gold)}
+body.theme-manuscript .mode-dropdown__item{color:var(--color-ink);border-bottom-color:var(--color-border-hairline)}
+body.theme-manuscript .mode-dropdown__item:hover{background:rgba(31,81,112,0.08)}
+body.theme-manuscript .mode-dropdown__item[aria-current="true"]{background:rgba(31,81,112,0.12)}
 body.theme-manuscript .mode-dropdown__name{color:var(--color-gold)}
 body.theme-manuscript .mode-dropdown__desc{color:var(--color-text-muted)}
 /* Workbench */
@@ -2396,12 +2426,12 @@ body.theme-modern .gm-toolbar__btn-mark{color:var(--color-gold)}
 body.theme-modern .gm-toolbar__hint{color:#8b97a4}
 /* Manuscript GM toolbar — sits on felt. Contrast against #0a110d:
    text #e8dfc4 = 13.8:1, label #b5ab8c = 8.0:1, accent #e0c879 = 11.1:1. */
-body.theme-manuscript .gm-toolbar{background:#0a110d;border-bottom-color:rgba(224,200,121,0.32)}
-body.theme-manuscript .gm-toolbar__label{color:#b5ab8c}
-body.theme-manuscript .gm-toolbar__btn{color:#e8dfc4;border-color:rgba(224,200,121,0.28)}
-body.theme-manuscript .gm-toolbar__btn:hover{background:rgba(224,200,121,0.10);border-color:var(--color-gold);color:#fff8e2}
+body.theme-manuscript .gm-toolbar{background:var(--color-parchment-warm);border-bottom-color:var(--color-gold)}
+body.theme-manuscript .gm-toolbar__label{color:var(--color-text-muted)}
+body.theme-manuscript .gm-toolbar__btn{color:var(--color-ink);border-color:var(--color-border-default)}
+body.theme-manuscript .gm-toolbar__btn:hover{background:rgba(31,81,112,0.10);border-color:var(--color-gold);color:var(--color-gold)}
 body.theme-manuscript .gm-toolbar__btn-mark{color:var(--color-gold)}
-body.theme-manuscript .gm-toolbar__hint{color:#8a8270}
+body.theme-manuscript .gm-toolbar__hint{color:var(--color-text-faint)}
 /* ── ENCOUNTER BUILDER MODAL ─────────────────────────────────────────────── */
 .eb-inputs{display:flex;flex-direction:column;gap:var(--space-5)}
 .eb-field{display:flex;flex-direction:column;gap:var(--space-2)}
@@ -3421,7 +3451,7 @@ SECTION 8: DOM STRUCTURE
       <div class="settings-row">
         <div>
           <div class="settings-label">Theme</div>
-          <div class="settings-desc">Ember (warm ceremonial), Manuscript (the cartographer's table — felt + chart paper for GMs), or Modern (cool command console).</div>
+          <div class="settings-desc">Ember (warm ceremonial dark), Manuscript (the cartographer's chart table — a light, cool survey-paper workspace), or Modern (cool command console dark).</div>
         </div>
       </div>
       <div class="char-status-group" id="theme-picker-group" role="group" aria-label="Choose theme" style="margin:0 0 var(--space-3)">
