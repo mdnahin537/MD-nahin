@@ -1416,6 +1416,50 @@ body.mobile-gate-open{overflow:hidden}
 .tlog__clear{background:none;border:none;cursor:pointer;font-size:var(--text-label-sm,.75rem);letter-spacing:0.10em;text-transform:uppercase;color:var(--color-text-faint,#7a7058);padding:0;transition:color var(--duration-instant,80ms)}
 .tlog__clear:hover{color:var(--color-crisis,#ffb4ab)}
 
+/* ── F7 · COST METER (top-left, shares ornament area with F3 thinking indicator) ── */
+.rw-cost-meter{position:fixed;top:72px;left:var(--space-4);z-index:90;display:inline-flex;align-items:center;gap:var(--space-2);padding:5px var(--space-3);border-radius:999px;border:0.5px solid var(--color-border-default,rgba(160,142,124,0.30));background:var(--color-bg,#120c07);color:var(--color-text-muted,#c0b898);font-size:var(--text-label-sm,.75rem);letter-spacing:0.04em;cursor:pointer;font-family:var(--font-mono);transition:border-color 80ms,color 80ms,box-shadow 160ms;user-select:none}
+.rw-cost-meter:hover{border-color:var(--ember-color,#ffb964);color:var(--ember-color,#ffb964)}
+.rw-cost-meter__dot{color:var(--ember-color,#ffb964);font-size:9px}
+.rw-cost-meter__usd{color:var(--color-ink,#f4ecd8);letter-spacing:0.02em}
+.rw-cost-meter__calls{color:var(--color-text-faint,#7a7058)}
+.rw-cost-meter.is-warning{border-color:var(--color-amber-deep,#c98e2a);color:var(--color-amber-deep,#c98e2a)}
+.rw-cost-meter.is-warning .rw-cost-meter__usd{color:var(--color-amber-deep,#c98e2a)}
+.rw-cost-meter.is-near-cap{border-color:var(--color-crisis,#c94747);color:var(--color-crisis,#c94747)}
+.rw-cost-meter.is-paused{border-color:var(--color-crisis,#c94747);background:rgba(201,71,71,0.10);color:var(--color-crisis,#c94747)}
+
+/* ── F8 · ACCURACY CHIP (inline next to each AI surface) ── */
+.rw-acc-chip{display:inline-flex;align-items:center;gap:var(--space-2);padding:3px 8px;border-radius:999px;border:0.5px solid var(--color-border-default,rgba(160,142,124,0.30));background:transparent;color:var(--color-text-muted,#c0b898);font-size:var(--text-label-sm,.7rem);font-family:var(--font-mono);letter-spacing:0.02em;cursor:pointer;line-height:1.4;max-width:100%;transition:border-color 80ms,color 80ms}
+.rw-acc-chip:hover{border-color:var(--ember-color,#ffb964);color:var(--color-ink,#f4ecd8)}
+.rw-acc-chip__dot{font-size:8px;flex-shrink:0}
+.rw-acc-chip__main{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.rw-acc-chip__tier{text-transform:uppercase;letter-spacing:0.08em;font-size:9px;padding:1px 5px;border-radius:3px;background:rgba(255,185,100,0.08);color:var(--color-text-faint,#7a7058);flex-shrink:0}
+.rw-acc-chip--ok .rw-acc-chip__dot{color:#9ce8a3}
+.rw-acc-chip--warn{border-color:rgba(201,142,42,0.50)}
+.rw-acc-chip--warn .rw-acc-chip__dot{color:var(--color-amber-deep,#c98e2a)}
+.rw-acc-chip--hot{border-color:rgba(201,71,71,0.50);color:var(--color-crisis,#c94747)}
+.rw-acc-chip--hot .rw-acc-chip__dot{color:var(--color-crisis,#c94747)}
+
+/* Tier picker popover (opens from chip click). */
+.rw-tier-popover{display:flex;flex-direction:column;min-width:120px;border:0.5px solid var(--color-border-default,rgba(160,142,124,0.30));border-radius:4px;background:var(--color-bg,#120c07);box-shadow:0 8px 32px rgba(13,27,42,0.40);overflow:hidden;animation:tlog-slide-up 160ms cubic-bezier(0.16,1,0.3,1) both}
+.rw-tier-popover__item{padding:7px 12px;background:none;border:0;border-bottom:0.5px solid var(--color-border-hairline,rgba(160,142,124,0.15));text-align:left;font-family:var(--font-mono);font-size:var(--text-label-sm,.75rem);color:var(--color-text-muted,#c0b898);cursor:pointer;transition:background 80ms,color 80ms;letter-spacing:0.04em}
+.rw-tier-popover__item:last-child{border-bottom:none}
+.rw-tier-popover__item:hover{background:rgba(255,185,100,0.06);color:var(--color-ink,#f4ecd8)}
+.rw-tier-popover__item.is-current{color:var(--ember-color,#ffb964);background:rgba(255,185,100,0.08)}
+
+/* ── F8 · INLINE EFFORT PICKER ── */
+.rw-effort-picker{display:inline-flex;align-items:center;gap:var(--space-2);font-size:var(--text-label-sm,.75rem);color:var(--color-text-muted,#c0b898)}
+.rw-effort-picker.is-compact .rw-effort-picker__label{font-size:9px;letter-spacing:0.10em;text-transform:uppercase;color:var(--color-text-faint,#7a7058)}
+.rw-effort-picker__select{background:var(--color-bg,#120c07);color:var(--color-ink,#f4ecd8);border:0.5px solid var(--color-border-default,rgba(160,142,124,0.30));border-radius:3px;padding:2px 6px;font-size:var(--text-label-sm,.75rem);font-family:var(--font-mono);cursor:pointer}
+.rw-effort-picker__select:focus{outline:none;border-color:var(--ember-color,#ffb964)}
+
+/* Surface meta slot — injected at top of each AI-generator modal body. */
+.rw-surface-meta{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2) var(--space-3);margin:0 0 var(--space-3);border:0.5px dashed var(--color-border-hairline,rgba(160,142,124,0.20));border-radius:4px;background:rgba(255,185,100,0.03)}
+
+/* Reduce-motion respect — drop the chip animations. */
+@media (prefers-reduced-motion:reduce){
+  .rw-tier-popover{animation:none}
+}
+
 /* ── EMPTY STATES ─────────────────────────────────────────────────────────── */
 .empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:var(--space-12) var(--space-8);text-align:center;animation:empty-state-enter var(--duration-slow,400ms) var(--ease-out,cubic-bezier(0.16,1,0.3,1)) both}
 @keyframes empty-state-enter{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
@@ -3362,6 +3406,7 @@ SECTION 8: DOM STRUCTURE
     </div>
     <div class="copilot-panel__compose-meta">
       <span id="copilot-cost-estimate">— ¢ per message</span>
+      <span id="copilot-accuracy-chip" style="margin-left:auto"></span>
       <button class="copilot-panel__clear" id="copilot-clear" style="display:none">Clear conversation</button>
     </div>
   </div>
@@ -3684,6 +3729,26 @@ SECTION 8: DOM STRUCTURE
             </div>
           </div>
         </div>
+      </div>
+    </div>
+    <div class="settings-section"><div class="settings-section__title">Cost guardrails</div>
+      <p style="font-size:var(--text-body-sm);color:var(--color-text-muted);margin-bottom:12px">The meter (top-left) always shows session spend. Both fields below are opt-in — leave blank to disable. Soft warn fires once per session. Hard cap pauses AI until you resume from the meter or raise the limit here.</p>
+      <div class="settings-row">
+        <div style="flex:1">
+          <div class="settings-label">Warn at (USD)</div>
+          <div class="settings-desc">One-time toast when session spend crosses this number.</div>
+          <input class="form-input" type="number" min="0" step="0.01" id="cost-warn-input" placeholder="0.50" style="width:120px;margin-top:var(--space-2);font-family:var(--font-mono)">
+        </div>
+        <div style="flex:1">
+          <div class="settings-label">Pause at (USD)</div>
+          <div class="settings-desc">Hard cap. AI is suspended until you click resume or raise this.</div>
+          <input class="form-input" type="number" min="0" step="0.01" id="cost-cap-input" placeholder="2.00" style="width:120px;margin-top:var(--space-2);font-family:var(--font-mono)">
+        </div>
+      </div>
+      <div style="display:flex;gap:var(--space-2);margin-top:var(--space-3);align-items:center;flex-wrap:wrap">
+        <button class="btn btn--secondary" id="cost-guardrails-save" style="font-size:var(--text-label-sm)">Save guardrails</button>
+        <button class="btn btn--secondary" id="cost-guardrails-clear" style="font-size:var(--text-label-sm)">Clear both</button>
+        <span id="cost-guardrails-status" style="font-size:var(--text-label-sm);color:var(--color-text-muted)"></span>
       </div>
     </div>
     <div class="settings-section">
@@ -4414,7 +4479,16 @@ const SCHEMA_VERSION='2.5.0';
 // survives nation switches and reloads. Self-contained: its own session clocks,
 // distinct from the per-nation `fronts` model that feeds the stability engine.
 function emptyCampaignPrep(){return{stakes:'',notes:'',clocks:[],beats:[],npcs:[],secrets:[]};}
-const DEFAULT_SETTINGS={theme:'ember',respectMotionPref:true,showForecasts:false,showSecrets:false,onboardingComplete:false,copilotProvider:'openrouter',copilotModel:'anthropic/claude-sonnet-latest',copilotKey:null,ollamaUrl:'http://localhost:11434',ollamaModel:'llama3.1',copilotScope:'standard',copilotAutoApply:false,gmMode:false,ambient:false};
+const DEFAULT_SETTINGS={theme:'ember',respectMotionPref:true,showForecasts:false,showSecrets:false,onboardingComplete:false,copilotProvider:'openrouter',copilotModel:'anthropic/claude-sonnet-latest',copilotKey:null,ollamaUrl:'http://localhost:11434',ollamaModel:'llama3.1',copilotScope:'standard',copilotAutoApply:false,gmMode:false,ambient:false,
+// F7 — cost system. Both null = passive meter only. User opt-in turns on warn/cap.
+costWarnUSD:null,costCapUSD:null,
+// F8 — per-surface effort knobs. Each surface owns its own; no shared global tier.
+// Live Mode floors at 'mid' per plan v2 §4. Arsenal/Import are excluded — Arsenal uses
+// per-prompt requires_full overrides, Import builds its own systemPrompt.
+liveMode:false,liveModeTier:'mid',liveModeAcked:false,liveModeCap:{perMin:6,perSession:60},
+tonightTier:'mid',soloTier:'mid',handoutTier:'mid',bestiaryTier:'mid',encounterTier:'mid',
+glossaryTier:'mid',namingTier:'mid',relationsTier:'mid',continuityTier:'mid',decipherTier:'mid',
+secretsTier:'mid',strongstartTier:'mid'};
 const ERA_GAP={Ancient:100,Classical:75,Medieval:50,Renaissance:75,Industrial:25,Modern:15,'Near-Future':10,'Far-Future':5,'Post-Collapse':30};
 const ERA_NAMES={Political:'The Reform Years',Military:'The Long War',Economic:'The Trade Awakening',Cultural:'The Silent Century',Social:"The Generation's Turning",Diplomatic:'The Quiet Borders',Natural:'The Lean Years'};
 const STAT_DESC={legitimacy:"The degree to which citizens accept the regime's right to rule.",corruption:"The degree to which officials serve themselves over the state. Drags stability hard.",opposition:"Organized strength of groups actively working against the current regime.",food_production:"The nation's ability to feed its population. Foundational.",trade:"Commercial activity and market health.",raw_materials:"Availability of physical inputs: metals, timber, stone, fuel.",manpower:"Human capital available for labor, defense, and public works.",knowledge:"Educational and institutional sophistication of the nation.",cohesion:"The degree to which citizens share identity, interest, and purpose.",urbanization:"The proportion of population in cities."};
@@ -4921,7 +4995,8 @@ const Solo={
     const hasKey=Copilot.isConfigured();
     const log=n.oracleLog||[];
 
-    let html=`<div class="solo-section">
+    // F8: Solo surface accuracy chip lives at the top of the panel — where the user is.
+    let html=`<div class="rw-surface-meta"><div class="rw-surface-meta__chip" id="solo-accuracy-chip"></div></div><div class="solo-section">
   <div class="solo-section__heading">Chaos Factor</div>
   <div class="solo-chaos-row">
     <input type="range" class="solo-chaos-slider" id="solo-chaos-slider"
@@ -4991,6 +5066,9 @@ const Solo={
     html+=`</div>`;
 
     ctr.innerHTML=html;
+    // F8: mount accuracy chip for the Solo surface.
+    const _chipEl=ctr.querySelector('#solo-accuracy-chip');
+    if(_chipEl&&typeof AccuracyChip!=='undefined')AccuracyChip.mount(_chipEl,'solo',{});
 
     const slider=ctr.querySelector('#solo-chaos-slider');
     const readout=ctr.querySelector('#solo-chaos-readout');
@@ -5112,9 +5190,13 @@ const TransparencyLog={
     const hh=String(now.getHours()).padStart(2,'0');
     const mm=String(now.getMinutes()).padStart(2,'0');
     const cost=this._calcCost(model,inputTokens,outputTokens);
-    this._entries.unshift({time:`${hh}:${mm}`,label,model,inputTokens,outputTokens,cost});
+    const rec={time:`${hh}:${mm}`,label,model,inputTokens,outputTokens,cost};
+    this._entries.unshift(rec);
     if(this._entries.length>this._MAX)this._entries.length=this._MAX;
     this.render();
+    // F7: broadcast so CostMeter / CostGate update without polling. Buffer is capped,
+    // so the meter keeps its own running session total beyond the rolling window.
+    try{document.dispatchEvent(new CustomEvent('tlog:push',{detail:rec}));}catch(e){}
   },
   _calcCost(model,inTok,outTok){
     const rates=this._RATES[model];
@@ -5184,6 +5266,270 @@ const TransparencyLog={
     const usd=this._fmtUSD(c.usd);
     const model=this._fmtModel(c.model||'unknown');
     return`<div class="ai-cost-stamp">Cost: ~${usd} · ${c.inputTokens} in / ${c.outputTokens} out · ${model}${est}</div>`;
+  },
+};
+
+// ─── F7 · COST METER + COST GATE ─────────────────────────────────────────────
+// Always-visible passive meter (Layer 1: ignore). Subscribes to tlog:push and keeps
+// an authoritative running session sum that survives TransparencyLog's rolling buffer.
+// Click opens the existing TransparencyLog panel. Coordinates the top-left ornament
+// area with F3 Live Mode's thinking indicator (shared mount).
+const CostMeter={
+  _usd:0,_calls:0,_warnFired:false,_mountId:'rw-cost-meter',
+  _fmtUSD(n){return TransparencyLog._fmtUSD(n);},
+  _settings(){return (typeof State!=='undefined'&&State.data?.meta?.settings)||{};},
+  // Where the chip lives — top-left, by the chronicle band ornament. Created lazily
+  // so the meter survives Render.all() wiping the dashboard.
+  _ensureMount(){
+    let el=document.getElementById(this._mountId);
+    if(el)return el;
+    el=document.createElement('button');
+    el.id=this._mountId;
+    el.type='button';
+    el.className='rw-cost-meter';
+    el.setAttribute('aria-label','Session AI spend — click for full call log');
+    el.title='Session AI spend';
+    el.addEventListener('click',()=>{try{TransparencyLog.open();}catch(e){}});
+    document.body.appendChild(el);
+    return el;
+  },
+  render(){
+    const el=this._ensureMount();
+    const s=this._settings();
+    const warn=Number(s.costWarnUSD)||null;
+    const cap=Number(s.costCapUSD)||null;
+    const paused=!!(typeof Copilot!=='undefined'&&Copilot._costPaused);
+    let cls='rw-cost-meter';
+    if(paused)cls+=' is-paused';
+    else if(cap&&this._usd>=cap*0.9)cls+=' is-near-cap';
+    else if(warn&&this._usd>=warn)cls+=' is-warning';
+    el.className=cls;
+    const callTxt=`${this._calls} call${this._calls===1?'':'s'}`;
+    const usdTxt=this._fmtUSD(this._usd);
+    const tail=paused?' · paused':(cap?` / ${this._fmtUSD(cap)}`:'');
+    el.innerHTML=`<span class="rw-cost-meter__dot" aria-hidden="true">◇</span><span class="rw-cost-meter__usd">${usdTxt}</span><span class="rw-cost-meter__calls">· ${callTxt}${tail}</span>`;
+  },
+  // Called for every TransparencyLog.push — adds the call to the session total,
+  // checks the user's opt-in thresholds, and updates the chip.
+  _onTLogPush(rec){
+    if(!rec)return;
+    this._usd+=Number(rec.cost)||0;
+    this._calls++;
+    const s=this._settings();
+    const warn=Number(s.costWarnUSD)||null;
+    const cap=Number(s.costCapUSD)||null;
+    if(warn&&!this._warnFired&&this._usd>=warn){
+      this._warnFired=true;
+      try{showToast(`Session spend reached ${this._fmtUSD(this._usd)} (warn at ${this._fmtUSD(warn)}).`,[
+        {label:'Open log',handler:()=>TransparencyLog.open()},
+        {label:'Adjust',handler:()=>Modals.open('settings')},
+      ],8000);}catch(e){}
+    }
+    if(cap&&this._usd>=cap&&typeof Copilot!=='undefined'&&!Copilot._costPaused){
+      Copilot._costPaused=true;
+      try{showToast(`Cost cap of ${this._fmtUSD(cap)} hit — AI paused.`,[
+        {label:'Resume',handler:()=>{Copilot._costPaused=false;CostMeter.render();showToast('AI resumed for this session.');}},
+        {label:'Adjust',handler:()=>Modals.open('settings')},
+      ],10000);}catch(e){}
+    }
+    this.render();
+  },
+  reset(){this._usd=0;this._calls=0;this._warnFired=false;this.render();},
+  bind(){
+    document.addEventListener('tlog:push',e=>this._onTLogPush(e.detail));
+    this.render();
+  },
+};
+
+// ─── F7 · COST GATE ───────────────────────────────────────────────────────────
+// Preflight check called from every Copilot AI surface. Throws when the user-set
+// hard cap has been hit so callers surface a clean "paused" error instead of
+// silently burning more budget. Wraps _apiFetch + _apiFetchJson + send below
+// without touching the protected source lines (Copilot.send / _apiFetch upgrades
+// land separately from the main agent).
+const CostGate={
+  _ensure(){
+    if(typeof Copilot==='undefined')return;
+    if(Copilot._costGateWired)return;
+    Copilot._costGateWired=true;
+    const orig=Copilot._apiFetch.bind(Copilot);
+    Copilot._apiFetch=function(...args){
+      if(Copilot._costPaused)return Promise.reject(new Error('Cost cap reached. Resume from the cost meter or raise the cap in Settings.'));
+      return orig(...args);
+    };
+    const origJson=Copilot._apiFetchJson.bind(Copilot);
+    Copilot._apiFetchJson=function(...args){
+      if(Copilot._costPaused)return Promise.reject(new Error('Cost cap reached. Resume from the cost meter or raise the cap in Settings.'));
+      return origJson(...args);
+    };
+    const origSend=Copilot.send.bind(Copilot);
+    Copilot.send=function(...args){
+      if(Copilot._costPaused){try{showToast('Cost cap reached. Resume from the meter or raise the cap.');}catch(e){}return;}
+      return origSend(...args);
+    };
+  },
+};
+
+// ─── F8 · PER-SURFACE EFFORT KNOB ─────────────────────────────────────────────
+// Tiers: low/mid/high/max. Maps to Copilot.buildContext's existing low/medium/high/full
+// scale (`buildContext :9215`) so legacy callers and the new knobs share one engine.
+const EffortPicker={
+  TIERS:['low','mid','high','max'],
+  // F1 hasn't landed yet — bridge new tiers onto the existing 4-tier scale until
+  // buildAIContext is the canonical entry. Both pass through buildContext() the same way.
+  toDepth(tier){return tier==='max'?'full':tier==='mid'?'medium':tier||'medium';},
+  fromDepth(depth){return depth==='full'?'max':depth==='medium'?'mid':depth||'mid';},
+  // Renders an inline <select> bound to settings[key]. Used at the point each surface
+  // is invoked — Hunter's locked rule: knob lives where the user already is.
+  render(key,opts={}){
+    const cur=State.data?.meta?.settings?.[key]||'mid';
+    const id=opts.id||`effort-${key}`;
+    const label=opts.label||'Effort';
+    const compact=opts.compact!==false;
+    const sel=this.TIERS.map(t=>`<option value="${t}"${t===cur?' selected':''}>${t[0].toUpperCase()+t.slice(1)}</option>`).join('');
+    return`<label class="rw-effort-picker${compact?' is-compact':''}" for="${id}"><span class="rw-effort-picker__label">${label}</span><select class="rw-effort-picker__select" id="${id}" data-setting-key="${key}">${sel}</select></label>`;
+  },
+  // Wires every rendered picker on the page to State.setSetting. Idempotent.
+  bindAll(){
+    document.querySelectorAll('.rw-effort-picker__select:not([data-bound])').forEach(sel=>{
+      sel.setAttribute('data-bound','1');
+      sel.addEventListener('change',()=>{
+        const k=sel.dataset.settingKey;
+        if(!k)return;
+        State.setSetting(k,sel.value);
+        // Tell any visible accuracy chip to recompute.
+        try{document.dispatchEvent(new CustomEvent('rw:effort-changed',{detail:{key:k,value:sel.value}}));}catch(e){}
+      });
+    });
+  },
+};
+
+// ─── F8 · ACCURACY CHIP ───────────────────────────────────────────────────────
+// One component, every surface. Reads meta from Copilot.buildAIContext (sub#1 F1)
+// when available; falls back to a synthesized estimate from buildContext()'s output
+// length + chronicle slice depth so the chip still renders BEFORE F1 lands.
+// Format: `Sending: 20 of 47 events · realm snapshot · ~1.8k tok`.
+// Color: green ≤2k, amber 2-8k, red >8k. Click → tier picker for the active surface.
+const AccuracyChip={
+  _settingKeyFor(surface){
+    const map={copilot:'copilotContextDepth',live:'liveModeTier',tonight:'tonightTier',
+      solo:'soloTier',handout:'handoutTier',bestiary:'bestiaryTier',encounter:'encounterTier',
+      glossary:'glossaryTier',naming:'namingTier',relations:'relationsTier',
+      continuity:'continuityTier',decipher:'decipherTier',secrets:'secretsTier',
+      strongstart:'strongstartTier'};
+    return map[surface]||null;
+  },
+  _tierFor(surface){
+    const k=this._settingKeyFor(surface);
+    if(!k)return'mid';
+    const v=State.data?.meta?.settings?.[k];
+    // Copilot uses the legacy depth label set. Map to the new tier name space so
+    // the chip can colour-code consistently across all surfaces.
+    if(k==='copilotContextDepth')return EffortPicker.fromDepth(v);
+    return v||'mid';
+  },
+  // Synthesize meta when sub#1's buildAIContext isn't wired yet. Faithful enough
+  // to colour the chip correctly; once F1 lands the real meta is used verbatim.
+  _synthesizeMeta(surface,tier){
+    const n=State.get();if(!n)return{eventsFull:0,eventsLedger:0,eventsTotal:0,approxTokens:0,tier,surface,autoPromoted:false,cacheable:false};
+    const eventsTotal=(n.chronicle||[]).length;
+    const tierCaps={low:10,mid:30,high:50,max:Infinity};
+    const cap=tierCaps[tier]??30;
+    const eventsFull=Math.min(eventsTotal,cap===Infinity?eventsTotal:cap);
+    const eventsLedger=Math.max(0,eventsTotal-eventsFull);
+    let approxTokens=0;
+    try{
+      if(typeof Copilot!=='undefined'&&typeof Copilot.buildContext==='function'){
+        // Build at the picked tier — temporarily swap depth so the estimate matches what would be sent.
+        const stash=n.copilotContextDepth;
+        n.copilotContextDepth=EffortPicker.toDepth(tier);
+        const ctx=Copilot.buildContext(n);
+        n.copilotContextDepth=stash;
+        approxTokens=Math.round(ctx.length/4)+400;
+      }
+    }catch(e){}
+    const model=State.data?.meta?.settings?.copilotModel||'';
+    return{eventsFull,eventsLedger,eventsTotal,approxTokens,tier,surface,autoPromoted:false,cacheable:/^anthropic\//.test(model)};
+  },
+  // Pull the authoritative meta from sub#1's contract when present; otherwise synthesize.
+  getMeta(surface,message){
+    const tier=this._tierFor(surface);
+    const n=State.get();
+    if(typeof Copilot!=='undefined'&&typeof Copilot.buildAIContext==='function'&&n){
+      try{
+        const out=Copilot.buildAIContext({nation:n,tier,surface,message:message||null});
+        if(out&&out.meta)return out.meta;
+      }catch(e){}
+    }
+    return this._synthesizeMeta(surface,tier);
+  },
+  _color(tok){return tok<=2000?'ok':tok<=8000?'warn':'hot';},
+  _fmtTok(n){if(n>=1000)return`${(n/1000).toFixed(1)}k`;return String(n);},
+  render(meta){
+    const m=meta||{};
+    const total=m.eventsTotal||0,full=m.eventsFull||0,tok=m.approxTokens||0;
+    const color=this._color(tok);
+    const tier=(m.tier||'mid').toLowerCase();
+    const cacheable=m.cacheable?' · cached':'';
+    const promoted=m.autoPromoted?' · auto-promote':'';
+    return`<button type="button" class="rw-acc-chip rw-acc-chip--${color}" data-surface="${m.surface||''}" aria-label="Context being sent — click to change effort">`+
+      `<span class="rw-acc-chip__dot" aria-hidden="true">●</span>`+
+      `<span class="rw-acc-chip__main">Sending: ${full}${total>full?` of ${total}`:''} event${total===1?'':'s'} · realm snapshot · ~${this._fmtTok(tok)} tok</span>`+
+      `<span class="rw-acc-chip__tier">${tier}${promoted}${cacheable}</span>`+
+      `</button>`;
+  },
+  // Mount inline: containerEl receives the chip + a hidden tier-picker popover. Re-renders
+  // whenever the surface's tier changes or the active nation changes.
+  mount(containerEl,surface,opts={}){
+    if(!containerEl)return;
+    const refresh=()=>{
+      const meta=this.getMeta(surface,opts.getMessage?opts.getMessage():null);
+      containerEl.innerHTML=this.render(meta);
+      const chip=containerEl.querySelector('.rw-acc-chip');
+      if(chip)chip.addEventListener('click',()=>this._openTierPicker(chip,surface,refresh));
+    };
+    containerEl._refreshAccChip=refresh;
+    refresh();
+    document.addEventListener('rw:effort-changed',e=>{
+      if(e.detail?.key===this._settingKeyFor(surface))refresh();
+    });
+    document.addEventListener('sc:changed',e=>{
+      const f=e.detail?.fields||[];
+      if(f.includes('chronicle')||f.includes('nation'))refresh();
+    });
+  },
+  _openTierPicker(anchor,surface,onChange){
+    const key=this._settingKeyFor(surface);
+    if(!key)return;
+    // Reuse any open popover.
+    document.querySelectorAll('.rw-tier-popover').forEach(p=>p.remove());
+    const cur=this._tierFor(surface);
+    const pop=document.createElement('div');
+    pop.className='rw-tier-popover';
+    pop.innerHTML=EffortPicker.TIERS.map(t=>
+      `<button type="button" class="rw-tier-popover__item${t===cur?' is-current':''}" data-tier="${t}">${t[0].toUpperCase()+t.slice(1)}</button>`
+    ).join('');
+    document.body.appendChild(pop);
+    const r=anchor.getBoundingClientRect();
+    pop.style.position='fixed';
+    pop.style.top=`${r.bottom+6}px`;
+    pop.style.left=`${r.left}px`;
+    pop.style.zIndex='1500';
+    const close=()=>{pop.remove();document.removeEventListener('click',outside,true);};
+    const outside=(e)=>{if(!pop.contains(e.target)&&e.target!==anchor)close();};
+    setTimeout(()=>document.addEventListener('click',outside,true),0);
+    pop.querySelectorAll('[data-tier]').forEach(b=>b.addEventListener('click',()=>{
+      const t=b.dataset.tier;
+      // Copilot stores the legacy depth label on the nation, not in settings — keep that.
+      if(key==='copilotContextDepth'){
+        const n=State.get();if(n){n.copilotContextDepth=EffortPicker.toDepth(t);State._touch(n.id);}
+      }else{
+        State.setSetting(key,t);
+      }
+      try{document.dispatchEvent(new CustomEvent('rw:effort-changed',{detail:{key,value:t}}));}catch(e){}
+      onChange&&onChange();
+      close();
+    }));
   },
 };
 
@@ -8953,6 +9299,11 @@ const Copilot={
         }
       }
       if(cost)cost.textContent=this.costEstimateLabel();
+      // F8: mount the accuracy chip for the Copilot surface. Re-mounts safely on each
+      // updateStatus because the chip stores its own refresh closure.
+      const chipEl=document.getElementById('copilot-accuracy-chip');
+      if(chipEl&&typeof AccuracyChip!=='undefined'&&!chipEl._refreshAccChip)AccuracyChip.mount(chipEl,'copilot',{getMessage:()=>document.getElementById('copilot-input')?.value||''});
+      else if(chipEl&&chipEl._refreshAccChip)chipEl._refreshAccChip();
     }else{
       dot?.classList.remove('is-active');
       if(txt)txt.textContent='Not configured — add API key in Settings';
@@ -10855,6 +11206,9 @@ const Tonight={
     if(inp)setTimeout(()=>inp.focus(),100);
     // Reset results view
     this._resetResults();
+    // F8: mount accuracy chip in the Tonight composer row.
+    const chipEl=document.getElementById('tonight-accuracy-chip');
+    if(chipEl&&typeof AccuracyChip!=='undefined')AccuracyChip.mount(chipEl,'tonight',{getMessage:()=>document.getElementById('tonight-input')?.value||''});
   },
 
   close(){
@@ -14241,7 +14595,7 @@ function bindEventListeners(){
   });
 
   // Settings
-  document.getElementById('settings-btn')?.addEventListener('click',()=>{Modals.open('settings');Copilot._refreshKeySettingsUI&&Copilot._refreshKeySettingsUI();Copilot._probeOllama&&Copilot._probeOllama();const tg=document.getElementById('toggle-gm-mode');if(tg)tg.classList.toggle('is-on',!!State.data?.meta?.settings?.gmMode);syncThemePickerUI();});
+  document.getElementById('settings-btn')?.addEventListener('click',()=>{Modals.open('settings');Copilot._refreshKeySettingsUI&&Copilot._refreshKeySettingsUI();Copilot._probeOllama&&Copilot._probeOllama();const tg=document.getElementById('toggle-gm-mode');if(tg)tg.classList.toggle('is-on',!!State.data?.meta?.settings?.gmMode);syncThemePickerUI();const _w=document.getElementById('cost-warn-input');const _c=document.getElementById('cost-cap-input');const _s=State.data?.meta?.settings||{};if(_w)_w.value=_s.costWarnUSD==null?'':String(_s.costWarnUSD);if(_c)_c.value=_s.costCapUSD==null?'':String(_s.costCapUSD);});
 
   // Undo button
   document.getElementById('undo-btn')?.addEventListener('click',()=>{
@@ -14628,6 +14982,45 @@ function bindEventListeners(){
   // Detail panel close
   document.getElementById('detail-panel-close')?.addEventListener('click',()=>{
     document.getElementById('detail-panel')?.classList.remove('is-open');
+  });
+
+  // F7: cost guardrails save/clear. Inputs reflect current values on every settings open.
+  const _refreshCostInputs=()=>{
+    const s=State.data.meta.settings;
+    const w=document.getElementById('cost-warn-input');
+    const c=document.getElementById('cost-cap-input');
+    if(w)w.value=s.costWarnUSD==null?'':String(s.costWarnUSD);
+    if(c)c.value=s.costCapUSD==null?'':String(s.costCapUSD);
+  };
+  _refreshCostInputs();
+  document.getElementById('cost-guardrails-save')?.addEventListener('click',()=>{
+    const w=document.getElementById('cost-warn-input')?.value.trim();
+    const c=document.getElementById('cost-cap-input')?.value.trim();
+    const warn=w===''?null:Math.max(0,Number(w));
+    const cap=c===''?null:Math.max(0,Number(c));
+    if(warn!=null&&!Number.isFinite(warn)){showToast('Warn value must be a number.');return;}
+    if(cap!=null&&!Number.isFinite(cap)){showToast('Cap value must be a number.');return;}
+    State.setSetting('costWarnUSD',warn);
+    State.setSetting('costCapUSD',cap);
+    // Drop the once-per-session warn latch so a freshly-raised threshold can fire again.
+    CostMeter._warnFired=false;
+    // If the user raised the cap past the running spend, lift the pause.
+    if(typeof Copilot!=='undefined'&&Copilot._costPaused&&(cap==null||CostMeter._usd<cap)){
+      Copilot._costPaused=false;
+    }
+    CostMeter.render();
+    const status=document.getElementById('cost-guardrails-status');
+    if(status){status.textContent='Saved.';setTimeout(()=>{status.textContent='';},2000);}
+  });
+  document.getElementById('cost-guardrails-clear')?.addEventListener('click',()=>{
+    State.setSetting('costWarnUSD',null);
+    State.setSetting('costCapUSD',null);
+    if(typeof Copilot!=='undefined')Copilot._costPaused=false;
+    CostMeter._warnFired=false;
+    _refreshCostInputs();
+    CostMeter.render();
+    const status=document.getElementById('cost-guardrails-status');
+    if(status){status.textContent='Cleared.';setTimeout(()=>{status.textContent='';},2000);}
   });
 
   // Settings export all
@@ -15641,6 +16034,38 @@ async function bootstrap(){
   if(typeof FrontDoor!=='undefined')FrontDoor.bind();
   if(typeof Tonight!=='undefined')Tonight.bind();
   if(typeof TransparencyLog!=='undefined')TransparencyLog.bind();
+  if(typeof CostMeter!=='undefined')CostMeter.bind();
+  if(typeof CostGate!=='undefined')CostGate._ensure();
+  // F8: surface→modal map. Each entry mounts an accuracy chip + tier picker into the
+  // modal's body header on open. The knob lives where the user already is.
+  const _MODAL_SURFACE_MAP={
+    'session-prep':'tonight',
+    'strong-start':'strongstart',
+    'decipher':'decipher',
+    'handout':'handout',
+    'encounter':'encounter',
+    'bestiary-entry':'bestiary',
+    'glossary':'glossary',
+    'naming':'naming',
+    'continuity':'continuity',
+  };
+  document.addEventListener('sc:modal-open',e=>{
+    const id=e.detail;
+    const surface=_MODAL_SURFACE_MAP[id];
+    if(!surface)return;
+    const modal=document.getElementById(`modal-${id}`);
+    const body=modal?.querySelector('.modal__body');
+    if(!body)return;
+    let slot=body.querySelector('.rw-surface-meta');
+    if(!slot){
+      slot=document.createElement('div');
+      slot.className='rw-surface-meta';
+      body.insertBefore(slot,body.firstChild);
+    }
+    slot.innerHTML='<div class="rw-surface-meta__chip"></div>';
+    const chipEl=slot.querySelector('.rw-surface-meta__chip');
+    if(typeof AccuracyChip!=='undefined')AccuracyChip.mount(chipEl,surface,{});
+  });
   if(typeof MobileGate!=='undefined'){MobileGate.bind();MobileGate.check();}
   if(typeof SHSPanels!=='undefined')SHSPanels.bind();
   if(typeof Fronts!=='undefined')Fronts.bind();
@@ -15984,6 +16409,7 @@ window.__rwClearDevTheme=function(){localStorage.removeItem('rw_dev_theme');loca
           <button type="button" class="char-status-pill" data-len="medium">Medium</button>
           <button type="button" class="char-status-pill" data-len="long">Long</button>
         </div>
+        <span id="tonight-accuracy-chip" style="margin-left:auto"></span>
       </div>
       <button class="btn btn--primary" id="tonight-generate" type="button" style="margin-top:8px">⚡ Generate Session Pack</button>
       <p class="tonight-mode__note">Generates a world on the fly and prepares tonight's session. Uses ~$0.03–0.08 of API credits.</p>
