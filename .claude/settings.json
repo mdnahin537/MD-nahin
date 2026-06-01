@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+
+  "model": "opusplan",
+  "effortLevel": "xhigh",
+  "alwaysThinkingEnabled": true,
+  "disableAgentView": false,
+  "autoScrollEnabled": true,
+  "showTurnDuration": true,
+  "autoMemoryEnabled": true,
+
+  "env": {
+    "CLAUDE_CODE_SUBAGENT_MODEL": "sonnet"
+  },
+
+  "permissions": {
+    "allow": [
+      "Agent(*)",
+      "Bash(git status)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git branch *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git checkout *)",
+      "Bash(git fetch *)",
+      "Bash(git pull *)",
+      "Bash(ls *)",
+      "Bash(find *)",
+      "Bash(grep *)",
+      "Bash(cat *)",
+      "Bash(echo *)",
+      "Bash(mkdir *)",
+      "Bash(cp *)",
+      "Bash(mv *)",
+      "Bash(npm run *)",
+      "Bash(npx *)",
+      "Bash(node *)",
+      "Bash(python *)",
+      "Bash(pip *)",
+      "Bash(which *)",
+      "Bash(pwd)",
+      "Bash(whoami)",
+      "Bash(date)",
+      "Read(**)"
+    ],
+    "ask": [
+      "Bash(git push *)",
+      "Bash(git reset *)",
+      "Bash(git rebase *)",
+      "Bash(git merge *)",
+      "Bash(rm *)",
+      "Bash(sudo *)",
+      "Bash(chmod *)",
+      "Bash(curl *)",
+      "Bash(wget *)",
+      "Bash(npm install *)",
+      "Bash(pip install *)"
+    ],
+    "deny": [
+      "Read(.env)",
+      "Read(.env.*)",
+      "Read(**/secrets/**)",
+      "Read(**/.ssh/**)",
+      "Read(**/credentials*)"
+    ],
+    "defaultMode": "acceptEdits"
+  },
+
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash",
+            "args": [
+              "-c",
+              "echo '' && echo '══════════════════════════════════════' && echo '  Hunter Studio — Claude Code Active' && echo '  Model: opusplan  |  Effort: xhigh' && echo '══════════════════════════════════════' && echo ''"
+            ],
+            "async": true
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash",
+            "args": ["-c", "echo '[subagent] Task complete'"],
+            "async": true
+          }
+        ]
+      }
+    ]
+  },
+
+  "attribution": {
+    "commit": "Co-authored with Claude Code"
+  }
+}
