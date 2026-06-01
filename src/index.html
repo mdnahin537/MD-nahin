@@ -2684,6 +2684,63 @@ SECTION 7: MOTION & STATE STYLES
 .tonight-npc__role{font-size:var(--text-label-sm);color:var(--ember-color);margin:0 0 8px;font-style:italic}
 .tonight-npc__fact{font-size:var(--text-body-sm);color:var(--color-text-muted);margin:3px 0}
 .tonight-actions{display:flex;gap:12px;margin-top:24px;padding-top:16px;border-top:1px solid var(--color-border-hairline)}
+/* ─── CAMPAIGN MODE — GM session-prep center. Full-screen overlay, themed
+   entirely via existing tokens so it skins for ember/modern/manuscript. ─── */
+.campaign-mode{position:fixed;inset:0;background:var(--color-bg);z-index:8000;overflow-y:auto;display:none}
+.campaign-mode.is-open{display:block}
+.cmp-header{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px 32px;border-bottom:1px solid var(--color-border-hairline);position:sticky;top:0;background:var(--color-bg);z-index:10}
+.cmp-title{font-family:'Cinzel',serif;font-size:var(--text-display-lg);margin:0;color:var(--color-ink)}
+.cmp-title small{font-family:var(--font-body);font-size:var(--text-label-sm);color:var(--color-text-faint);display:block;letter-spacing:.04em;margin-top:2px}
+.cmp-exit{background:transparent;border:1px solid var(--color-border-hairline);border-radius:6px;padding:8px 16px;color:var(--color-text-muted);cursor:pointer;font-size:var(--text-label-sm);transition:border-color .15s,color .15s}
+.cmp-exit:hover{border-color:var(--ember-color);color:var(--ember-color)}
+.cmp-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;max-width:1280px;margin:0 auto;padding:28px 32px 64px}
+.cmp-grid--bottom{grid-template-columns:1fr 1fr}
+@media (max-width:900px){.cmp-grid,.cmp-grid--bottom{grid-template-columns:1fr}}
+.cmp-card{background:var(--color-surface);border:1px solid var(--color-border-hairline);border-radius:10px;padding:18px 18px 20px;min-width:0}
+.cmp-card--primary{border-left:3px solid var(--ember-color)}
+.cmp-card__hd{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 14px;border-bottom:1px solid var(--color-border-hairline);padding-bottom:8px}
+.cmp-card__title{font-family:'Cinzel',serif;font-size:var(--text-label);text-transform:uppercase;letter-spacing:.09em;color:var(--ember-color);margin:0}
+.cmp-add{font-size:11px;padding:4px 10px;border-radius:5px;border:1px solid var(--color-border-hairline);background:transparent;color:var(--color-text-muted);cursor:pointer;font-family:var(--font-body);transition:border-color .15s,color .15s}
+.cmp-add:hover{border-color:var(--ember-color);color:var(--ember-color)}
+.cmp-empty{font-size:var(--text-body-sm);color:var(--color-text-faint);font-style:italic;padding:8px 0}
+.cmp-iconbtn{background:transparent;border:none;color:var(--color-text-faint);cursor:pointer;font-size:13px;line-height:1;padding:2px 5px;border-radius:4px}
+.cmp-iconbtn:hover{color:var(--ember-color);background:rgba(127,127,127,.12)}
+.cmp-iconbtn--danger:hover{color:#d04545}
+/* inline editable text inputs — borderless until focus, blend into card */
+.cmp-input,.cmp-area{width:100%;background:transparent;border:1px solid transparent;border-radius:5px;color:var(--color-ink);font-family:var(--font-body);font-size:var(--text-body-sm);padding:4px 6px;transition:border-color .15s,background .15s}
+.cmp-input:hover,.cmp-area:hover{border-color:var(--color-border-hairline)}
+.cmp-input:focus,.cmp-area:focus{outline:none;border-color:var(--ember-color);background:var(--color-bg)}
+.cmp-area{resize:vertical;line-height:1.5;min-height:38px}
+/* Clocks */
+.cmp-clock{display:grid;grid-template-columns:64px 1fr auto;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--color-border-hairline)}
+.cmp-clock:last-child{border-bottom:none}
+.cmp-clock__svg{width:64px;height:64px;cursor:pointer}
+.cmp-clock__seg{cursor:pointer;transition:fill .12s}
+.cmp-clock__seg--filled{fill:var(--ember-color)}
+.cmp-clock__seg--empty{fill:var(--color-parchment);stroke:var(--color-border-default);stroke-width:.6}
+.cmp-clock__svg:hover .cmp-clock__seg--empty{fill:var(--color-parchment-warm)}
+.cmp-clock__body{min-width:0}
+.cmp-clock__meta{display:flex;align-items:center;gap:8px;font-size:var(--text-label-sm);color:var(--color-text-faint);margin-top:4px}
+.cmp-clock__size{background:transparent;border:1px solid var(--color-border-hairline);border-radius:4px;color:var(--color-text-muted);font-size:11px;padding:1px 4px;font-family:var(--font-body)}
+.cmp-clock__actions{display:flex;flex-direction:column;gap:2px;flex-shrink:0}
+/* Beats / Secrets check rows */
+.cmp-row{display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:1px solid var(--color-border-hairline)}
+.cmp-row:last-child{border-bottom:none}
+.cmp-check{flex-shrink:0;width:18px;height:18px;border:1.5px solid var(--color-border-default);border-radius:4px;background:transparent;cursor:pointer;margin-top:3px;display:flex;align-items:center;justify-content:center;color:var(--ember-color);font-size:12px;line-height:1;padding:0;transition:border-color .15s}
+.cmp-check:hover{border-color:var(--ember-color)}
+.cmp-check[aria-checked="true"]{border-color:var(--ember-color);background:rgba(127,127,127,.10)}
+.cmp-row__body{flex:1;min-width:0}
+.cmp-row.is-done .cmp-row__body,.cmp-row.is-done .cmp-input{color:var(--color-text-faint);text-decoration:line-through}
+.cmp-beat__start{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--ember-color);font-family:'Cinzel',serif;margin-bottom:2px}
+.cmp-row__actions{display:flex;gap:1px;flex-shrink:0;align-items:flex-start}
+/* NPC rows — compact, scannable */
+.cmp-npc{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--color-border-hairline)}
+.cmp-npc:last-child{border-bottom:none}
+.cmp-npc__here{flex-shrink:0;background:transparent;border:none;cursor:pointer;font-size:15px;line-height:1;color:var(--color-text-faint);padding:2px;border-radius:4px}
+.cmp-npc__here[aria-pressed="true"]{color:var(--ember-color)}
+.cmp-npc__fields{display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:6px;min-width:0}
+@media (max-width:560px){.cmp-npc__fields{grid-template-columns:1fr}}
+.cmp-stakes-area{min-height:60px}
 /* ─── FRONTS PANEL ─── */
 .fronts-list{padding:0 0 80px}
 .front-card{background:var(--color-parchment-warm);border:1px solid var(--color-border-hairline);border-radius:8px;padding:16px;margin:12px 16px;display:grid;grid-template-columns:80px 1fr;gap:12px;align-items:start}
@@ -4332,7 +4389,11 @@ const IDB_KEY_DEMO_USES='rw_demo_uses';
 const IDB_KEY_FINGERPRINT='rw_device_fp';
 const IDB_KEY_DEVICE_TOKEN='rw_device_token'; // server-issued opaque UUID (Phase 1a P1.3)
 
-const SCHEMA_VERSION='2.4.2';
+const SCHEMA_VERSION='2.5.0';
+// Empty Campaign prep board. Lives at meta level (one board per save) so it
+// survives nation switches and reloads. Self-contained: its own session clocks,
+// distinct from the per-nation `fronts` model that feeds the stability engine.
+function emptyCampaignPrep(){return{stakes:'',notes:'',clocks:[],beats:[],npcs:[],secrets:[]};}
 const DEFAULT_SETTINGS={theme:'ember',respectMotionPref:true,showForecasts:false,showSecrets:false,onboardingComplete:false,copilotProvider:'openrouter',copilotModel:'anthropic/claude-sonnet-latest',copilotKey:null,ollamaUrl:'http://localhost:11434',ollamaModel:'llama3.1',copilotScope:'standard',copilotAutoApply:false,gmMode:false,ambient:false};
 const ERA_GAP={Ancient:100,Classical:75,Medieval:50,Renaissance:75,Industrial:25,Modern:15,'Near-Future':10,'Far-Future':5,'Post-Collapse':30};
 const ERA_NAMES={Political:'The Reform Years',Military:'The Long War',Economic:'The Trade Awakening',Cultural:'The Silent Century',Social:"The Generation's Turning",Diplomatic:'The Quiet Borders',Natural:'The Lean Years'};
@@ -5756,7 +5817,7 @@ function buildNationFromSeed(seed){
   }
   return n;
 }
-function createDefaultState(){const m=buildNationFromSeed(SEED_NATIONS[0]);return{schemaVersion:SCHEMA_VERSION,meta:{activeNationId:m.id,createdAt:Utils.now(),lastUpdatedAt:Utils.now(),settings:{...DEFAULT_SETTINGS},workflowState:{promptPending:null},firstRunComplete:false,preferredMode:null,snapshots:[],lastSnapshotAt:null},nations:[m]};}
+function createDefaultState(){const m=buildNationFromSeed(SEED_NATIONS[0]);return{schemaVersion:SCHEMA_VERSION,meta:{activeNationId:m.id,createdAt:Utils.now(),lastUpdatedAt:Utils.now(),settings:{...DEFAULT_SETTINGS},workflowState:{promptPending:null},firstRunComplete:false,preferredMode:null,snapshots:[],lastSnapshotAt:null,campaignPrep:emptyCampaignPrep()},nations:[m]};}
 function migrateIfNeeded(d){
   if(!d.schemaVersion)d.schemaVersion='1.2.0';
   // v1.2.0 → v2.0.0: add template, ensure characters/copilot fields, settings expansion
@@ -5878,6 +5939,18 @@ function migrateIfNeeded(d){
       if(!n.copilotContextDepth)n.copilotContextDepth='medium';
     });
     d.schemaVersion='2.4.2';
+  }
+  // v2.4.2 → v2.5.0: Campaign prep board (GM session-prep center) at meta level.
+  if(d.schemaVersion==='2.4.2'){
+    d.meta=d.meta||{};
+    const cp=d.meta.campaignPrep||{};
+    // Merge a guaranteed-complete shape so older saves with partial data don't break.
+    d.meta.campaignPrep={...emptyCampaignPrep(),...cp};
+    d.meta.campaignPrep.clocks =Array.isArray(cp.clocks) ?cp.clocks :[];
+    d.meta.campaignPrep.beats  =Array.isArray(cp.beats)  ?cp.beats  :[];
+    d.meta.campaignPrep.npcs   =Array.isArray(cp.npcs)   ?cp.npcs   :[];
+    d.meta.campaignPrep.secrets=Array.isArray(cp.secrets)?cp.secrets:[];
+    d.schemaVersion='2.5.0';
   }
   return d;
 }
@@ -6636,6 +6709,30 @@ const State={
     if(!opts.silent)document.dispatchEvent(new CustomEvent('sc:changed',{detail:{fields:['front'],nid}}));
     this.persist();
   },
+
+  // ─── CAMPAIGN PREP BOARD (meta level — one per save) ───
+  cp(){this.data.meta.campaignPrep=this.data.meta.campaignPrep||emptyCampaignPrep();return this.data.meta.campaignPrep;},
+  cpSet(field,value){this.pushUndo();this.cp()[field]=value;this._touchMeta();this.persist();},
+  // Notes/Stakes autosave on a debounce — no undo snapshot per keystroke.
+  cpSetText(field,value){this.cp()[field]=value;this._touchMeta();this.persist();},
+  cpAddClock(){this.pushUndo();this.cp().clocks.push({id:Utils.uuid(),name:'New Threat',size:6,filled:0});this._touchMeta();this.persist();},
+  cpUpdateClock(id,patch){const c=this.cp().clocks.find(x=>x.id===id);if(!c)return;this.pushUndo();Object.assign(c,patch);this._touchMeta();this.persist();},
+  // Click a segment: clicking the currently-last-filled segment unfills it, else fill up to it.
+  cpSetClockSeg(id,seg){const c=this.cp().clocks.find(x=>x.id===id);if(!c)return;this.pushUndo();c.filled=(c.filled===seg)?seg-1:seg;c.filled=Math.min(Math.max(c.filled,0),c.size);this._touchMeta();this.persist();},
+  cpRemoveClock(id){this.pushUndo();const cp=this.cp();cp.clocks=cp.clocks.filter(x=>x.id!==id);this._touchMeta();this.persist();},
+  cpAddBeat(){this.pushUndo();this.cp().beats.push({id:Utils.uuid(),text:'',done:false});this._touchMeta();this.persist();},
+  cpUpdateBeat(id,patch){const b=this.cp().beats.find(x=>x.id===id);if(!b)return;this.pushUndo();Object.assign(b,patch);this._touchMeta();this.persist();},
+  cpToggleBeat(id){const b=this.cp().beats.find(x=>x.id===id);if(!b)return;this.pushUndo();b.done=!b.done;this._touchMeta();this.persist();},
+  cpRemoveBeat(id){this.pushUndo();const cp=this.cp();cp.beats=cp.beats.filter(x=>x.id!==id);this._touchMeta();this.persist();},
+  cpMoveBeat(id,dir){const cp=this.cp();const i=cp.beats.findIndex(x=>x.id===id);if(i<0)return;const j=i+dir;if(j<0||j>=cp.beats.length)return;this.pushUndo();const[b]=cp.beats.splice(i,1);cp.beats.splice(j,0,b);this._touchMeta();this.persist();},
+  cpAddNpc(){this.pushUndo();this.cp().npcs.push({id:Utils.uuid(),name:'',role:'',motivation:'',here:false});this._touchMeta();this.persist();},
+  cpUpdateNpc(id,patch){const npc=this.cp().npcs.find(x=>x.id===id);if(!npc)return;this.pushUndo();Object.assign(npc,patch);this._touchMeta();this.persist();},
+  cpToggleNpc(id){const npc=this.cp().npcs.find(x=>x.id===id);if(!npc)return;this.pushUndo();npc.here=!npc.here;this._touchMeta();this.persist();},
+  cpRemoveNpc(id){this.pushUndo();const cp=this.cp();cp.npcs=cp.npcs.filter(x=>x.id!==id);this._touchMeta();this.persist();},
+  cpAddSecret(){this.pushUndo();this.cp().secrets.push({id:Utils.uuid(),text:'',delivered:false});this._touchMeta();this.persist();},
+  cpUpdateSecret(id,patch){const s=this.cp().secrets.find(x=>x.id===id);if(!s)return;this.pushUndo();Object.assign(s,patch);this._touchMeta();this.persist();},
+  cpToggleSecret(id){const s=this.cp().secrets.find(x=>x.id===id);if(!s)return;this.pushUndo();s.delivered=!s.delivered;this._touchMeta();this.persist();},
+  cpRemoveSecret(id){this.pushUndo();const cp=this.cp();cp.secrets=cp.secrets.filter(x=>x.id!==id);this._touchMeta();this.persist();},
 
   // ─── LOCATIONS ───
   _locationHasCycle(locations,parentId,targetId){
@@ -10525,6 +10622,192 @@ const FrontDoor={
   },
 };
 
+// ─── CAMPAIGN MODE — GM session-prep center ─────────────────────────────────
+// Single-screen prep board persisted at meta.campaignPrep (one per save). All
+// user text is escaped on render (XSS-sensitive). Mutations go through State.cp*.
+const Campaign={
+  _wired:false,
+  _notesTimer:null,
+  open(){
+    const el=document.getElementById('campaign-mode');
+    if(el)el.classList.add('is-open');
+    this.render();
+  },
+  close(){
+    document.getElementById('campaign-mode')?.classList.remove('is-open');
+  },
+  isOpen(){return !!document.getElementById('campaign-mode')?.classList.contains('is-open');},
+  // Clickable progress clock. Each segment carries data-seg (1-based) so a click
+  // fills up to it (or unfills the last segment). Mirrors FrontsPanel.clockSVG geometry.
+  _clockSVG(size,filled){
+    const R=44,r=18,cx=50,cy=50,TAU=2*Math.PI;
+    const polar=(a,rad)=>({x:cx+rad*Math.sin(a),y:cy-rad*Math.cos(a)});
+    const seg=(i,total)=>{
+      const gap=0.04,start=(TAU/total)*i+gap/2,end=(TAU/total)*(i+1)-gap/2;
+      const o0=polar(start,R),o1=polar(end,R),i0=polar(start,r),i1=polar(end,r);
+      const large=((end-start)>Math.PI)?1:0;
+      return `M${o0.x.toFixed(2)},${o0.y.toFixed(2)} A${R},${R} 0 ${large},1 ${o1.x.toFixed(2)},${o1.y.toFixed(2)} L${i1.x.toFixed(2)},${i1.y.toFixed(2)} A${r},${r} 0 ${large},0 ${i0.x.toFixed(2)},${i0.y.toFixed(2)} Z`;
+    };
+    let paths='';
+    for(let i=0;i<size;i++){
+      const cls=i<filled?'cmp-clock__seg cmp-clock__seg--filled':'cmp-clock__seg cmp-clock__seg--empty';
+      paths+=`<path class="${cls}" data-seg="${i+1}" d="${seg(i,size)}"/>`;
+    }
+    return `<svg class="cmp-clock__svg" viewBox="0 0 100 100" role="img" aria-label="Progress clock, ${filled} of ${size} filled">${paths}</svg>`;
+  },
+  render(){
+    if(!this.isOpen())return;
+    const cp=State.cp();
+    const E=Utils.escHtml;
+    // Clocks
+    const clocksEl=document.getElementById('cmp-clocks');
+    if(clocksEl){
+      clocksEl.innerHTML=cp.clocks.length?cp.clocks.map(c=>{
+        const id=E(c.id);
+        return `<div class="cmp-clock" data-clock="${id}">
+          <div class="cmp-clock__svg-wrap" data-clock-svg="${id}">${this._clockSVG(c.size,c.filled)}</div>
+          <div class="cmp-clock__body">
+            <input class="cmp-input" value="${E(c.name)}" data-clock-name="${id}" aria-label="Threat name">
+            <div class="cmp-clock__meta">
+              <span>${c.filled}/${c.size}</span>
+              <select class="cmp-clock__size" data-clock-size="${id}" aria-label="Clock segments">
+                <option value="4"${c.size===4?' selected':''}>4</option>
+                <option value="6"${c.size===6?' selected':''}>6</option>
+                <option value="8"${c.size===8?' selected':''}>8</option>
+              </select>
+            </div>
+          </div>
+          <div class="cmp-clock__actions">
+            <button class="cmp-iconbtn cmp-iconbtn--danger" data-clock-del="${id}" type="button" aria-label="Delete clock" title="Delete">✕</button>
+          </div>
+        </div>`;
+      }).join(''):'<div class="cmp-empty">No clocks yet. Add a threat or faction whose pressure ticks toward catastrophe.</div>';
+    }
+    // Beats — first is the Strong Start
+    const beatsEl=document.getElementById('cmp-beats');
+    if(beatsEl){
+      beatsEl.innerHTML=cp.beats.length?cp.beats.map((b,i)=>{
+        const id=E(b.id);
+        return `<div class="cmp-row${b.done?' is-done':''}" data-beat="${id}">
+          <button class="cmp-check" data-beat-check="${id}" type="button" role="checkbox" aria-checked="${b.done?'true':'false'}" aria-label="Mark beat played">${b.done?'✓':''}</button>
+          <div class="cmp-row__body">
+            ${i===0?'<div class="cmp-beat__start">Strong Start</div>':''}
+            <textarea class="cmp-area" rows="2" data-beat-text="${id}" placeholder="A scene that could happen…" aria-label="Scene beat">${E(b.text)}</textarea>
+          </div>
+          <div class="cmp-row__actions">
+            <button class="cmp-iconbtn" data-beat-up="${id}" type="button" aria-label="Move up" title="Move up">▲</button>
+            <button class="cmp-iconbtn" data-beat-down="${id}" type="button" aria-label="Move down" title="Move down">▼</button>
+            <button class="cmp-iconbtn cmp-iconbtn--danger" data-beat-del="${id}" type="button" aria-label="Delete beat" title="Delete">✕</button>
+          </div>
+        </div>`;
+      }).join(''):'<div class="cmp-empty">No scenes yet. The first beat is your Strong Start — open in the action.</div>';
+    }
+    // NPCs
+    const npcsEl=document.getElementById('cmp-npcs');
+    if(npcsEl){
+      npcsEl.innerHTML=cp.npcs.length?cp.npcs.map(npc=>{
+        const id=E(npc.id);
+        return `<div class="cmp-npc" data-npc="${id}">
+          <button class="cmp-npc__here" data-npc-here="${id}" type="button" aria-pressed="${npc.here?'true':'false'}" aria-label="Toggle appears this session" title="Appears this session">${npc.here?'★':'☆'}</button>
+          <div class="cmp-npc__fields">
+            <input class="cmp-input" value="${E(npc.name)}" data-npc-name="${id}" placeholder="Name" aria-label="NPC name">
+            <input class="cmp-input" value="${E(npc.role)}" data-npc-role="${id}" placeholder="Role" aria-label="NPC role">
+            <input class="cmp-input" value="${E(npc.motivation)}" data-npc-motivation="${id}" placeholder="Wants…" aria-label="NPC motivation">
+          </div>
+          <button class="cmp-iconbtn cmp-iconbtn--danger" data-npc-del="${id}" type="button" aria-label="Delete NPC" title="Delete">✕</button>
+        </div>`;
+      }).join(''):'<div class="cmp-empty">No NPCs yet. Keep these to one line each — scannable in seconds.</div>';
+    }
+    // Secrets
+    const secEl=document.getElementById('cmp-secrets');
+    if(secEl){
+      secEl.innerHTML=cp.secrets.length?cp.secrets.map(s=>{
+        const id=E(s.id);
+        return `<div class="cmp-row${s.delivered?' is-done':''}" data-secret="${id}">
+          <button class="cmp-check" data-secret-check="${id}" type="button" role="checkbox" aria-checked="${s.delivered?'true':'false'}" aria-label="Mark secret delivered">${s.delivered?'✓':''}</button>
+          <div class="cmp-row__body">
+            <textarea class="cmp-area" rows="2" data-secret-text="${id}" placeholder="A revelation the players can uncover…" aria-label="Secret or clue">${E(s.text)}</textarea>
+          </div>
+          <div class="cmp-row__actions">
+            <button class="cmp-iconbtn cmp-iconbtn--danger" data-secret-del="${id}" type="button" aria-label="Delete secret" title="Delete">✕</button>
+          </div>
+        </div>`;
+      }).join(''):'<div class="cmp-empty">No secrets yet. A bank of ~10 revelations keeps you improvising without stalling.</div>';
+    }
+    // Notes + Stakes — set value only when not focused, so a re-render mid-typing
+    // (e.g. an undo elsewhere) doesn't yank the caret.
+    const notes=document.getElementById('cmp-notes');
+    if(notes&&document.activeElement!==notes)notes.value=cp.notes||'';
+    const stakes=document.getElementById('cmp-stakes');
+    if(stakes&&document.activeElement!==stakes)stakes.value=cp.stakes||'';
+  },
+  wire(){
+    if(this._wired)return;
+    const root=document.getElementById('campaign-mode');
+    if(!root)return;
+    this._wired=true;
+    document.getElementById('campaign-exit')?.addEventListener('click',()=>{
+      // Exiting Campaign drops to quiet World mode (GM toolbar off).
+      State.data.meta.preferredMode='world';
+      if(State.data.meta.settings.gmMode){State.setSetting('gmMode',false);if(typeof GMMode!=='undefined')GMMode.apply();}
+      State.persist();
+      this.close();
+    });
+    // Add buttons
+    root.querySelectorAll('[data-cmp-add]').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        const t=btn.dataset.cmpAdd;
+        if(t==='clock')State.cpAddClock();
+        else if(t==='beat')State.cpAddBeat();
+        else if(t==='npc')State.cpAddNpc();
+        else if(t==='secret')State.cpAddSecret();
+        this.render();
+      });
+    });
+    // Delegated clicks for the dynamic lists
+    root.addEventListener('click',e=>{
+      const seg=e.target.closest('.cmp-clock__seg');
+      if(seg){
+        const wrap=seg.closest('[data-clock-svg]');
+        if(wrap){State.cpSetClockSeg(wrap.dataset.clockSvg,parseInt(seg.dataset.seg,10));this.render();}
+        return;
+      }
+      const t=e.target.closest('button');
+      if(!t)return;
+      const d=t.dataset;
+      if(d.clockDel){if(confirm('Delete this clock?')){State.cpRemoveClock(d.clockDel);this.render();}return;}
+      if(d.beatCheck){State.cpToggleBeat(d.beatCheck);this.render();return;}
+      if(d.beatUp){State.cpMoveBeat(d.beatUp,-1);this.render();return;}
+      if(d.beatDown){State.cpMoveBeat(d.beatDown,1);this.render();return;}
+      if(d.beatDel){State.cpRemoveBeat(d.beatDel);this.render();return;}
+      if(d.npcHere){State.cpToggleNpc(d.npcHere);this.render();return;}
+      if(d.npcDel){State.cpRemoveNpc(d.npcDel);this.render();return;}
+      if(d.secretCheck){State.cpToggleSecret(d.secretCheck);this.render();return;}
+      if(d.secretDel){State.cpRemoveSecret(d.secretDel);this.render();return;}
+    });
+    // Delegated text commits on change/blur for inline inputs + textareas
+    root.addEventListener('change',e=>{
+      const d=e.target.dataset||{};
+      if(d.clockName!=null&&d.clockName!=='')State.cpUpdateClock(d.clockName,{name:e.target.value});
+      else if(d.clockSize){State.cpUpdateClock(d.clockSize,{size:parseInt(e.target.value,10)});
+        // re-clamp filled if the new size is smaller, then redraw
+        const c=State.cp().clocks.find(x=>x.id===d.clockSize);if(c&&c.filled>c.size)State.cpUpdateClock(d.clockSize,{filled:c.size});this.render();}
+      else if(d.beatText)State.cpUpdateBeat(d.beatText,{text:e.target.value});
+      else if(d.secretText)State.cpUpdateSecret(d.secretText,{text:e.target.value});
+      else if(d.npcName!=null&&d.npcName!=='')State.cpUpdateNpc(d.npcName,{name:e.target.value});
+      else if(d.npcRole)State.cpUpdateNpc(d.npcRole,{role:e.target.value});
+      else if(d.npcMotivation)State.cpUpdateNpc(d.npcMotivation,{motivation:e.target.value});
+    });
+    // Notes + Stakes — debounced autosave on every keystroke
+    const autosave=(field,el)=>{
+      clearTimeout(this._notesTimer);
+      this._notesTimer=setTimeout(()=>State.cpSetText(field,el.value),400);
+    };
+    document.getElementById('cmp-notes')?.addEventListener('input',e=>autosave('notes',e.target));
+    document.getElementById('cmp-stakes')?.addEventListener('input',e=>autosave('stakes',e.target));
+  },
+};
+
 // ─── TONIGHT MODULE ──────────────────────────────────────────────────────────
 const Tonight={
   // Stored results for "Save secrets" (activated in Delivery C)
@@ -13862,18 +14145,18 @@ function bindEventListeners(){
         State.persist();
         modeDD.classList.remove('is-open');
         modeBtn.setAttribute('aria-expanded','false');
+        if(typeof Tonight!=='undefined')Tonight.close();
         if(mode==='tonight'){
+          if(typeof Campaign!=='undefined')Campaign.close();
           if(typeof Tonight!=='undefined')Tonight.open();
+        }else if(mode==='campaign'){
+          // Campaign opens the full-screen session-prep center, GM toolbar on.
+          if(State.data.meta.settings.gmMode!==true){State.setSetting('gmMode',true);if(typeof GMMode!=='undefined')GMMode.apply();}
+          if(typeof Campaign!=='undefined')Campaign.open();
         }else{
-          // Campaign + World both live in WorldShell. Close Tonight if open.
-          if(typeof Tonight!=='undefined')Tonight.close();
-          const wantGM=(mode==='campaign');
-          if(State.data.meta.settings.gmMode!==wantGM){
-            State.setSetting('gmMode',wantGM);
-            if(typeof GMMode!=='undefined')GMMode.apply();
-          }
-          const label=mode==='campaign'?'Campaign mode — GM toolbar enabled.':'World mode — quiet worldbuilding.';
-          showToast(label,[],2200);
+          // World — quiet worldbuilding on the dashboard.
+          if(typeof Campaign!=='undefined')Campaign.close();
+          showToast('World mode — quiet worldbuilding.',[],2200);
         }
       });
     });
@@ -15687,6 +15970,44 @@ window.__rwClearDevTheme=function(){localStorage.removeItem('rw_dev_theme');loca
       <div class="tonight-mode__spinner" id="tonight-spinner"></div>
     </div>
     <div class="tonight-results" id="tonight-results"></div>
+  </div>
+</div>
+
+<!-- ─── CAMPAIGN MODE — GM session-prep center (single-screen prep board) ─── -->
+<div class="campaign-mode" id="campaign-mode" role="main" aria-label="Campaign session-prep center">
+  <header class="cmp-header">
+    <h1 class="cmp-title">🎲 Campaign<small>Session-prep center — set the table, then run it.</small></h1>
+    <button class="cmp-exit" id="campaign-exit" type="button" aria-label="Return to world dashboard">← World</button>
+  </header>
+  <div class="cmp-grid">
+    <section class="cmp-card cmp-card--primary" aria-label="Fronts and Clocks">
+      <div class="cmp-card__hd"><h2 class="cmp-card__title">Fronts &amp; Clocks</h2><button class="cmp-add" data-cmp-add="clock" type="button">+ Clock</button></div>
+      <div id="cmp-clocks"></div>
+    </section>
+    <section class="cmp-card cmp-card--primary" aria-label="Scene Beats">
+      <div class="cmp-card__hd"><h2 class="cmp-card__title">Scene Beats</h2><button class="cmp-add" data-cmp-add="beat" type="button">+ Beat</button></div>
+      <div id="cmp-beats"></div>
+    </section>
+  </div>
+  <div class="cmp-grid">
+    <section class="cmp-card" aria-label="NPC quick reference">
+      <div class="cmp-card__hd"><h2 class="cmp-card__title">NPCs &middot; ★ here tonight</h2><button class="cmp-add" data-cmp-add="npc" type="button">+ NPC</button></div>
+      <div id="cmp-npcs"></div>
+    </section>
+    <section class="cmp-card" aria-label="Secrets and clues">
+      <div class="cmp-card__hd"><h2 class="cmp-card__title">Secrets &amp; Clues</h2><button class="cmp-add" data-cmp-add="secret" type="button">+ Secret</button></div>
+      <div id="cmp-secrets"></div>
+    </section>
+  </div>
+  <div class="cmp-grid cmp-grid--bottom">
+    <section class="cmp-card" aria-label="Live session notes">
+      <div class="cmp-card__hd"><h2 class="cmp-card__title">Live Session Notes</h2></div>
+      <textarea class="cmp-area" id="cmp-notes" rows="6" placeholder="Jot what happens at the table — autosaves." aria-label="Live session notes"></textarea>
+    </section>
+    <section class="cmp-card" aria-label="Stakes">
+      <div class="cmp-card__hd"><h2 class="cmp-card__title">Stakes</h2></div>
+      <textarea class="cmp-area cmp-stakes-area" id="cmp-stakes" rows="3" placeholder="What happens if the players do nothing?" aria-label="Stakes if players do nothing"></textarea>
+    </section>
   </div>
 </div>
 
