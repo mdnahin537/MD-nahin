@@ -199,11 +199,30 @@ MCP SERVERS (in scripts/setup-mcps.sh):
   brave-search      → Real-time web search (needs BRAVE_API_KEY)
   github            → GitHub API access (needs token; also a plugin)
 
+DESIGN SKILLS — FULL INVENTORY (all confirmed on disk, all usable):
+  gStack (34 skills, ~/.claude/skills/):
+    /design-consultation  → Build complete design system from scratch. START HERE.
+    /design-html          → Production HTML/CSS generation
+    /design-shotgun       → Generate multiple variants, pick best
+    /design-review        → Live visual audit + fix loop (needs browser — desktop only)
+    /plan-design-review   → Rates design plan 0-10 on each dimension
+
+  /mnt/skills/public/ (always available on web):
+    /frontend-design      → Production-grade web UI. Avoids AI slop. USE THIS for pages/components.
+
+  /mnt/skills/examples/ (always available on web):
+    /web-artifacts-builder → React + Tailwind + shadcn/ui multi-component artifacts
+    /theme-factory         → 10 pre-set themes (colors + fonts) for slides, docs, HTML
+    /canvas-design         → Poster/art/static design → outputs .png + .pdf
+    /algorithmic-art       → Generative art with p5.js → outputs .html + .js
+    /brand-guidelines      → Brand color + typography system
+
 DESIGN POLISH PIPELINE (run after any page generation):
-  Step 1: /frontend-design        → Generate the page
-  Step 2: npx ui-skills add baseline-ui          → Fix spacing, typography, states
-  Step 3: npx ui-skills add fixing-accessibility → Keyboard nav, labels, focus
-  Step 4: npx ui-skills add fixing-motion-performance → Reduced-motion, animation budgets
+  Step 1: /frontend-design (/mnt/skills/public)   → Generate the page
+  Step 2: /design-review (gStack)                 → Visual audit, fix AI slop
+  Step 3: /theme-factory if needed                → Apply consistent theme
+  Step 4: npx ui-skills add baseline-ui           → Fix spacing, typography, states
+  Step 5: npx ui-skills add fixing-accessibility  → Keyboard nav, labels, focus
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -277,10 +296,22 @@ AUTOMATIC MODEL RULES:
 ## SKILL AND PLUGIN ROUTING — AUTO-TRIGGER RULES
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-When Hunter says "build UI" / "make a component" / "design a page"
-  → /design-consultation (gStack) to set the system, then /design-html or /design-shotgun
-  → /design-review (gStack) to catch AI-slop and spacing issues
-  → (frontend-design / ui-ux-pro-max plugins are NOT installed on web — don't route to them)
+When Hunter says "build UI" / "make a component" / "design a page" / "make it look good"
+  → /design-consultation (gStack) first — sets the design system
+  → /frontend-design (/mnt/skills/public) — production-grade UI, kills AI slop aesthetics
+  → /design-html or /design-shotgun (gStack) — HTML generation or multi-variant picking
+  → /web-artifacts-builder (/mnt/skills/examples) — React + Tailwind + shadcn/ui complex artifacts
+  → /design-review (gStack) — live visual audit + fix loop after building
+
+When Hunter says "make a poster" / "create art" / "visual design" / "static design piece"
+  → /canvas-design (/mnt/skills/examples) — outputs .png and .pdf, full design philosophy
+  → /algorithmic-art (/mnt/skills/examples) — generative art with p5.js (interactive)
+
+When Hunter says "apply a theme" / "style this" / "pick colors and fonts"
+  → /theme-factory (/mnt/skills/examples) — 10 pre-set themes, applies to slides/docs/HTML
+
+When Hunter says "brand guidelines" / "brand colors" / "brand styling"
+  → /brand-guidelines (/mnt/skills/examples) — applies brand color + typography system
 
 When Hunter says "I have an idea" / "I want to build X"
   → Run /office-hours first
