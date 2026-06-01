@@ -117,8 +117,7 @@ one sentence, WHY it could hurt, before Hunter decides. Never expose .env / secr
 📱 MOBILE / WEB — Works right now, zero setup
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  ✅ gStack skills (34 skills) + Superpowers skills (14 skills) — at ~/.claude/skills/
-     Auto-installed every session via SessionStart hook. Always fire.
+  ✅ ~/.claude/skills/ — 57 skills total. Auto-installed every session via SessionStart hook.
 
      gStack (34): autoplan, careful, codex, context-restore, context-save, cso,
      design-consultation, design-html, design-review, design-shotgun, devex-review,
@@ -127,7 +126,7 @@ one sentence, WHY it could hurt, before Hunter decides. Never expose .env / secr
      plan-design-review, plan-devex-review, plan-eng-review, plan-tune, retro, review,
      session-start-hook, ship, skillify, unfreeze
 
-     Superpowers (14) — from github.com/obra/superpowers:
+     Superpowers (14) — github.com/obra/superpowers:
        /brainstorming               → Explore intent before writing any code
        /writing-plans               → Break features into tasks with file paths + tests
        /executing-plans             → Run a written plan with review checkpoints
@@ -142,6 +141,21 @@ one sentence, WHY it could hurt, before Hunter decides. Never expose .env / secr
        /finishing-a-development-branch → Structured merge/PR/cleanup options
        /using-superpowers           → Meta-skill: how to use the framework
        /writing-skills              → Create new reusable skills
+
+     ui-ux-pro-max (7) — github.com/nextlevelbuilder/ui-ux-pro-max-skill:
+       /ui-ux-pro-max    → Full design intelligence: 50+ styles, 161 palettes, 57 font pairs
+       /design           → Design system generation (UI/UX)
+       /design-system    → Build complete component design systems
+       /ui-styling       → Style and polish existing UI components
+       /brand            → Brand identity and guidelines
+       /banner-design    → Banner and hero image design
+       /slides           → Presentation slide design
+
+     Playwright (1) — github.com/lackeyjb/playwright-skill:
+       /playwright-skill → Browser automation: test pages, forms, screenshots, UX flows
+
+     Code Review (1) — github.com/awesome-skills/code-review-skill:
+       /code-review-excellence → Deep code review: 19+ languages, progressive loading
 
   ✅ Built-in Claude Code skills — always available, no location needed:
      review, code-review, simplify, deep-research, security-review,
@@ -180,7 +194,6 @@ one sentence, WHY it could hurt, before Hunter decides. Never expose .env / secr
 
   OFFICIAL PLUGINS (install via: /plugin → Anthropic marketplace):
     feature-dev       → 7-phase structured feature development workflow.
-    code-review       → Multi-agent PR review with confidence scoring.
     security-guidance → Scans every file edit for vulnerabilities before saving.
     ralph-loop        → Iterates autonomously until task is truly complete.
     context7          → Pulls live, version-accurate library docs into session.
@@ -188,14 +201,10 @@ one sentence, WHY it could hurt, before Hunter decides. Never expose .env / secr
     figma             → Read Figma files directly. Two-way Code↔Canvas.
     vercel            → One-command deployment.
     supabase          → Database setup, queries, migrations.
-    playwright        → Real browser testing. Claude controls live Chrome.
     typescript-lsp    → Real-time TypeScript type checking as Claude writes.
     pyright-lsp       → Real-time Python type checking.
 
   COMMUNITY PLUGINS (install via: /plugin → search by name):
-    ui-ux-pro-max     → Design intelligence. Generates complete design systems.
-                        Auto-activates on any UI/UX request.
-                        Source: nextlevelbuilder/ui-ux-pro-max-skill
     claude-mem        → Persistent memory across sessions via SQLite + Chroma.
                         Captures tool usage, compresses with AI, injects on session start.
                         Source: thedotmack/claude-mem
