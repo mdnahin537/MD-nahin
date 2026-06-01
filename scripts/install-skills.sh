@@ -48,7 +48,7 @@ IS_CLOUD=0
 [ "${CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE:-}" = "cloud_default" ] && IS_CLOUD=1
 
 # Skills that are pure machinery, not user-facing, OR can't run on mobile.
-INTERNAL="agents|bin|browser-skills|contrib|docs|extension|hosts|lib|model-overlays|node_modules|scripts|spec|test"
+INTERNAL="agents|bin|browser-skills|contrib|docs|extension|hosts|lib|model-overlays|node_modules|scripts|test"
 CLOUD_EXCLUDE="browse|qa|qa-only|scrape|connect-chrome|open-gstack-browser|setup-browser-cookies|pair-agent|benchmark|benchmark-models|ios-clean|ios-design-review|ios-fix|ios-qa|ios-sync|land-and-deploy|setup-deploy|canary|sync-gbrain|setup-gbrain"
 
 log() { echo "[skills] $1"; }

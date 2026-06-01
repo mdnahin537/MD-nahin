@@ -117,14 +117,14 @@ one sentence, WHY it could hurt, before Hunter decides. Never expose .env / secr
 📱 MOBILE / WEB — Works right now, zero setup
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  ✅ ~/.claude/skills/ — 57 skills total. Auto-installed every session via SessionStart hook.
+  ✅ ~/.claude/skills/ — 58 skills total. Auto-installed every session via SessionStart hook.
 
-     gStack (34): autoplan, careful, codex, context-restore, context-save, cso,
+     gStack (35): autoplan, careful, codex, context-restore, context-save, cso,
      design-consultation, design-html, design-review, design-shotgun, devex-review,
      document-generate, document-release, freeze, gstack, gstack-upgrade, guard, health,
      investigate, landing-report, learn, make-pdf, office-hours, plan-ceo-review,
      plan-design-review, plan-devex-review, plan-eng-review, plan-tune, retro, review,
-     session-start-hook, ship, skillify, unfreeze
+     session-start-hook, ship, skillify, spec, unfreeze
 
      Superpowers (14) — github.com/obra/superpowers:
        /brainstorming               → Explore intent before writing any code
