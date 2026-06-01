@@ -117,8 +117,31 @@ one sentence, WHY it could hurt, before Hunter decides. Never expose .env / secr
 📱 MOBILE / WEB — Works right now, zero setup
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  ✅ gStack skills (34 skills) — at ~/.claude/skills/
+  ✅ gStack skills (34 skills) + Superpowers skills (14 skills) — at ~/.claude/skills/
      Auto-installed every session via SessionStart hook. Always fire.
+
+     gStack (34): autoplan, careful, codex, context-restore, context-save, cso,
+     design-consultation, design-html, design-review, design-shotgun, devex-review,
+     document-generate, document-release, freeze, gstack, gstack-upgrade, guard, health,
+     investigate, landing-report, learn, make-pdf, office-hours, plan-ceo-review,
+     plan-design-review, plan-devex-review, plan-eng-review, plan-tune, retro, review,
+     session-start-hook, ship, skillify, unfreeze
+
+     Superpowers (14) — from github.com/obra/superpowers:
+       /brainstorming               → Explore intent before writing any code
+       /writing-plans               → Break features into tasks with file paths + tests
+       /executing-plans             → Run a written plan with review checkpoints
+       /test-driven-development     → Enforce red/green/refactor TDD cycle
+       /systematic-debugging        → 4-phase root cause process
+       /verification-before-completion → Verify work is actually done before closing
+       /requesting-code-review      → Structured pre-merge review request
+       /receiving-code-review       → Handle review feedback with technical rigor
+       /subagent-driven-development → Dispatch implementation to fresh subagents
+       /dispatching-parallel-agents → Run 2+ independent tasks in parallel
+       /using-git-worktrees         → Parallel branches without stashing
+       /finishing-a-development-branch → Structured merge/PR/cleanup options
+       /using-superpowers           → Meta-skill: how to use the framework
+       /writing-skills              → Create new reusable skills
 
   ✅ Built-in Claude Code skills — always available, no location needed:
      review, code-review, simplify, deep-research, security-review,
@@ -156,8 +179,6 @@ one sentence, WHY it could hurt, before Hunter decides. Never expose .env / secr
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   OFFICIAL PLUGINS (install via: /plugin → Anthropic marketplace):
-    superpowers       → Structured build methodology. Plan before code. TDD default.
-    frontend-design   → Production-grade UI. Kills generic AI slop aesthetics.
     feature-dev       → 7-phase structured feature development workflow.
     code-review       → Multi-agent PR review with confidence scoring.
     security-guidance → Scans every file edit for vulnerabilities before saving.
