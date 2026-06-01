@@ -21,17 +21,22 @@ SKILLS_DIR="$HOME/.claude/skills"
 GSTACK_DIR="$SKILLS_DIR/gstack"
 GSTACK_REPO="https://github.com/garrytan/gstack.git"
 
-# Extra skill repos (name → repo URL → install function)
-SUPERPOWERS_DIR="$SKILLS_DIR/_superpowers_src"
+# Extra skill repos are cloned into a SOURCES dir that lives OUTSIDE the skills
+# directory, so the raw repo checkouts never get picked up as skills themselves.
+# Only the actual skill folders get copied into ~/.claude/skills/.
+SOURCES_DIR="$HOME/.claude/skill-sources"
+mkdir -p "$SOURCES_DIR"
+
+SUPERPOWERS_DIR="$SOURCES_DIR/superpowers"
 SUPERPOWERS_REPO="https://github.com/obra/superpowers.git"
 
-UIUX_DIR="$SKILLS_DIR/_uiux_src"
+UIUX_DIR="$SOURCES_DIR/ui-ux-pro-max"
 UIUX_REPO="https://github.com/nextlevelbuilder/ui-ux-pro-max-skill.git"
 
-PLAYWRIGHT_DIR="$SKILLS_DIR/_playwright_src"
+PLAYWRIGHT_DIR="$SOURCES_DIR/playwright-skill"
 PLAYWRIGHT_REPO="https://github.com/lackeyjb/playwright-skill.git"
 
-CODEREVIEW_DIR="$SKILLS_DIR/_codereview_src"
+CODEREVIEW_DIR="$SOURCES_DIR/code-review-skill"
 CODEREVIEW_REPO="https://github.com/awesome-skills/code-review-skill.git"
 
 mkdir -p "$SKILLS_DIR"
