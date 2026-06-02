@@ -1104,6 +1104,13 @@ body.theme-manuscript .identity-strip__wordmark{
   font-family:var(--font-display);font-weight:600;font-size:20px;
   letter-spacing:.04em;color:var(--color-gold)}
 body.theme-manuscript .identity-strip__wordmark .ornament{display:none}
+/* GM badge — drafting blue pill on parchment. Base bg=gold(=#1F5170) + text=ink
+   would collapse to ~1:1 dark-on-dark; this override mirrors the Ember pattern:
+   tinted background, accent border, accent text. #1F5170 on parchment-warm = 7.4:1 (AAA). */
+body.theme-manuscript .gm-badge{
+  background:rgba(31,81,112,0.08);border:1px solid rgba(31,81,112,0.32);
+  color:var(--color-gold);font-family:var(--font-display);font-style:italic;
+  font-size:10px;letter-spacing:.04em;text-transform:none;padding:4px 10px;margin-left:12px}
 body.theme-manuscript .identity-strip__nation-switcher-btn{
   font-family:var(--font-display);font-weight:500;font-size:14px;letter-spacing:.02em;
   color:var(--color-ink);border-bottom:1px solid transparent;padding:4px 8px}
@@ -2487,7 +2494,12 @@ body.theme-ember .sc-panel__title{color:var(--ember-color)}
   cursor:pointer;border:0.5px solid var(--color-gold-deep);transition:opacity var(--duration-instant)}
 .gm-badge:hover{opacity:.85}
 body.gm-mode .gm-badge{display:inline-flex}
-body.gm-mode .identity-strip__wordmark{color:var(--color-gold-pale)}
+/* Wordmark accent in GM mode — theme-scoped so the colour passes WCAG on the
+   real identity-strip surface of each theme. The previous global rule used
+   gold-pale uniformly, which collapsed to ~1.3:1 light-on-light on Modern. */
+body.theme-ember.gm-mode .identity-strip__wordmark{color:var(--color-gold-pale)}
+body.theme-manuscript.gm-mode .identity-strip__wordmark{color:var(--color-gold-deep)}
+body.theme-modern.gm-mode .identity-strip__wordmark{color:#136074}
 /* ── GM BAR (GM Mode v2) ──────────────────────────────────────────────────
    A modifier bar layered on World mode. 44px collapsed; one group expands
    inline on hover/focus. Geometry + motion live in the base; every colour is
@@ -2586,6 +2598,13 @@ body.theme-modern .identity-strip__status.status--stable{color:#1f6478}
 body.theme-modern .identity-strip__status.status--tense{color:#8a5a14}
 body.theme-modern .identity-strip__status.status--crisis{color:#b23a2a}
 body.theme-modern .identity-strip__status.status--collapse{color:#7a1414}
+/* GM badge — dark teal pill on the light Modern strip. Base bg=gold(=#5ec8d8) +
+   text=ink(=#e8edf2) would collapse to ~2:1 light-on-light; the Modern pattern
+   is dark-text-on-light, so we use dark teal #136074 (~5.8:1 on #e8edf2). */
+body.theme-modern .gm-badge{
+  background:rgba(94,200,216,0.10);border:1px solid rgba(94,200,216,0.45);
+  color:#136074;font-family:var(--font-mono);font-size:9px;letter-spacing:.12em;
+  text-transform:uppercase;padding:4px 10px;margin-left:12px}
 /* Manuscript GM bar — pale paper rail, marginalia feel. On #F2F4F6:
    ink #182230 = 14.9:1, muted #46566A = 7.0:1, drafting-blue #1F5170 = 7.8:1.
    Serif-italic labels read like notes in the margin; an inset rule is the
