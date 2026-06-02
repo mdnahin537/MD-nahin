@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cp /tmp/shot-frontdoor.png plan-notes/frontdoor-render.png)"
+    ]
+  }
+}
