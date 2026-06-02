@@ -9697,10 +9697,21 @@ Without a CANON block, your response is conversational only — no simulation ef
       delete finalExtras.response_format;
       finalExtras.format='json';
     }
+    // Cache the system prefix on Anthropic models so the 17 one-shot generators
+    // stop re-paying for identical world state across calls (sibling of the
+    // streaming path's split at :9402). No-op below Anthropic's min cacheable prefix.
+    const cacheable=provider!=='ollama'&&/^anthropic\//.test(model);
+    let outMessages=messages;
+    if(cacheable&&messages.length&&messages[0]?.role==='system'&&typeof messages[0]?.content==='string'){
+      outMessages=[
+        {role:'system',content:[{type:'text',text:messages[0].content,cache_control:{type:'ephemeral'}}]},
+        ...messages.slice(1),
+      ];
+    }
     const fetchOpts={
       method:'POST',
       headers,
-      body:JSON.stringify({model,messages,...finalExtras}),
+      body:JSON.stringify({model,messages:outMessages,...finalExtras}),
     };
     if(signal)fetchOpts.signal=signal;
     const resp=await fetch(url,fetchOpts);
@@ -9712,7 +9723,19 @@ Without a CANON block, your response is conversational only — no simulation ef
       if(resp.status===429)throw new Error('Rate limited. Wait a moment and try again.');
       throw new Error(errText);
     }
-    return resp.json();
+    const data=await resp.json();
+    // Single logging point for every non-streaming AI call — picks up the
+    // caller-set _pendingLabel so generators are distinguishable in the log.
+    if(typeof TransparencyLog!=='undefined'&&data?.usage){
+      TransparencyLog.push({
+        label:TransparencyLog._pendingLabel||'AI call',
+        model:data.model||model,
+        inputTokens:data.usage.prompt_tokens||0,
+        outputTokens:data.usage.completion_tokens||0,
+      });
+      TransparencyLog._pendingLabel=null;
+    }
+    return data;
   },
   // ─── JSON-MODE FETCH WITH ROBUST PARSE + ONE RETRY ───
   // Wraps _apiFetch for response_format:json_object calls. Strips ```json fences,
@@ -9735,12 +9758,13 @@ Without a CANON block, your response is conversational only — no simulation ef
       }
       return null;
     };
+    const origLabel=(typeof TransparencyLog!=='undefined')?TransparencyLog._pendingLabel:null;
     const data=await this._apiFetch(messages,extras,signal);
-    if(typeof TransparencyLog!=='undefined'&&data?.usage){TransparencyLog.push({label:TransparencyLog._pendingLabel||'AI call',model:data.model||'unknown',inputTokens:data.usage.prompt_tokens||0,outputTokens:data.usage.completion_tokens||0});TransparencyLog._pendingLabel=null;}
     const raw=data?.choices?.[0]?.message?.content||'';
     let parsed=tryParse(raw);
     if(parsed&&typeof parsed==='object')return parsed;
     // Retry once with a strict suffix on the last user message
+    if(typeof TransparencyLog!=='undefined')TransparencyLog._pendingLabel=(origLabel||'AI call')+' (retry)';
     const retryMessages=messages.map((m,i)=>{
       if(i===messages.length-1&&m.role==='user'){
         return {...m,content:(m.content||'')+'\n\nIMPORTANT: Return ONLY a single valid JSON object. No markdown, no commentary, no code fences.'};
@@ -9748,7 +9772,6 @@ Without a CANON block, your response is conversational only — no simulation ef
       return m;
     });
     const data2=await this._apiFetch(retryMessages,extras,signal);
-    if(typeof TransparencyLog!=='undefined'&&data2?.usage){TransparencyLog.push({label:(TransparencyLog._pendingLabel||'AI call')+' (retry)',model:data2.model||'unknown',inputTokens:data2.usage.prompt_tokens||0,outputTokens:data2.usage.completion_tokens||0});TransparencyLog._pendingLabel=null;}
     const raw2=data2?.choices?.[0]?.message?.content||'';
     parsed=tryParse(raw2);
     if(parsed&&typeof parsed==='object')return parsed;
