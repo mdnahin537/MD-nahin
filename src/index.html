@@ -11941,8 +11941,10 @@ const Campaign={
     pop.style.top=`${Math.min(r.bottom+6,window.innerHeight-40)}px`;
     pop.style.left=`${left}px`;
     // F8 AccuracyChip — surface key per section (registered in _settingKeyFor).
+    // NPCs map to the 'campaign-quicknpc' surface (the generator it invokes);
+    // the others share their section name.
     const chipEl=pop.querySelector('[data-acc-chip]');
-    const surfaceKey=`campaign-${section}`;
+    const surfaceKey=section==='npcs'?'campaign-quicknpc':`campaign-${section}`;
     if(chipEl&&typeof AccuracyChip!=='undefined')AccuracyChip.mount(chipEl,surfaceKey,{});
     // Action buttons.
     pop.querySelectorAll('[data-ai-act]').forEach(btn=>{
@@ -12107,13 +12109,157 @@ const LiveMode={
     this._setState('idle');
     this._renderRail();
   },
-  // C4 lands the local-heuristics engine + rail render here. Until then these
-  // remain no-op stubs so the module compiles and the rail stays inert/hidden.
-  markSessionStart(){},
-  _refreshHeuristics(){
-    this._lastHeuristics=[];
+  // C4: ensure a session-start baseline exists so the clock-idle heuristic has a
+  // reference point. Set once; do not reset on every open (that would erase the
+  // "idle since session start" signal mid-session).
+  markSessionStart(){
+    try{const cp=State.cp();if(!cp.sessionStartedAt){cp.sessionStartedAt=Date.now();State.persist();}}catch(e){}
   },
+  // Levenshtein edit distance, capped early for speed. Used for NPC-name typo
+  // detection against character/faction names (≤2 = probable typo).
+  _lev(a,b){
+    a=String(a||'').toLowerCase();b=String(b||'').toLowerCase();
+    if(a===b)return 0;
+    const m=a.length,n=b.length;
+    if(Math.abs(m-n)>2)return 99;
+    if(!m)return n;if(!n)return m;
+    let prev=new Array(n+1);for(let j=0;j<=n;j++)prev[j]=j;
+    for(let i=1;i<=m;i++){
+      const cur=new Array(n+1);cur[0]=i;let rowMin=cur[0];
+      for(let j=1;j<=n;j++){
+        const cost=a[i-1]===b[j-1]?0:1;
+        cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+cost);
+        if(cur[j]<rowMin)rowMin=cur[j];
+      }
+      if(rowMin>2)return 99; // early bail — can't recover to ≤2
+      prev=cur;
+    }
+    return prev[n];
+  },
+  // C4: the local-heuristics engine. Pure, deterministic, no API. Returns
+  // bullets {slot, severity, text, key}. slot ∈ headsup|questions|watchouts.
+  // Dismissed keys (persisted in cp.dismissedHeuristics) are filtered out here.
+  _refreshHeuristics(){
+    const out=[];
+    let cp,n;
+    try{cp=State.cp();n=State.get();}catch(e){this._lastHeuristics=[];return this._lastHeuristics;}
+    if(!cp){this._lastHeuristics=[];return this._lastHeuristics;}
+    const beats=cp.beats||[],npcs=cp.npcs||[],secrets=cp.secrets||[],clocks=cp.clocks||[];
+    const hasSecretBank=secrets.some(s=>s&&(s.text||'').trim());
+    // 1) Beat without a secret-bank entry to draw from → Watch-out.
+    beats.forEach((b,i)=>{
+      if(b&&(b.text||'').trim()&&!hasSecretBank){
+        out.push({slot:'watchouts',severity:'warn',key:`beat-nosecret-${b.id}`,
+          text:`Beat #${i+1} has no secret bank to draw from. Add a revelation it can surface.`});
+      }
+    });
+    // 2) Active character (here=true OR realm character) never appearing in beats → Question.
+    const beatBlob=beats.map(b=>(b.text||'')).join(' ').toLowerCase();
+    const hereNpcs=npcs.filter(x=>x&&x.here&&(x.name||'').trim());
+    hereNpcs.forEach(x=>{
+      const nm=(x.name||'').trim();
+      if(nm&&!beatBlob.includes(nm.toLowerCase())){
+        out.push({slot:'questions',severity:'info',key:`npc-noscene-${x.id}`,
+          text:`${nm} is at the table tonight but hasn't been in a scene. What pulls them in?`});
+      }
+    });
+    // 3) Clock idle since session start → Watch-out (reuse the is-idle check).
+    const start=cp.sessionStartedAt||0;
+    clocks.forEach(c=>{
+      if(c&&c.lastChangedAt&&start&&c.lastChangedAt<start){
+        out.push({slot:'watchouts',severity:'warn',key:`clock-idle-${c.id}`,
+          text:`${(c.name||'A clock').trim()} idle since session start — has this threat moved?`});
+      }
+    });
+    // 4) NPC name within Levenshtein ≤2 of a character/faction name → Question.
+    const refNames=[];
+    if(n&&Array.isArray(n.characters))n.characters.forEach(c=>{if(c&&c.name)refNames.push(c.name);});
+    if(n&&Array.isArray(n.factions))n.factions.forEach(f=>{if(f&&f.name)refNames.push(f.name);});
+    npcs.forEach(x=>{
+      const nm=(x&&x.name||'').trim();
+      if(!nm)return;
+      // Skip exact matches (already a clean reference) and already-linked NPCs.
+      if(x.linkedCharacterId)return;
+      const lower=nm.toLowerCase();
+      for(const ref of refNames){
+        if(!ref)continue;
+        if(ref.toLowerCase()===lower)break; // exact — not a typo
+        const d=this._lev(nm,ref);
+        if(d>=1&&d<=2){
+          out.push({slot:'questions',severity:'info',key:`npc-typo-${x.id}-${ref}`,
+            text:`NPC “${nm}” is one or two letters off “${ref}” — did you mean ${ref}?`});
+          break;
+        }
+      }
+    });
+    // Filter dismissed.
+    const dismissed=new Set(cp.dismissedHeuristics||[]);
+    this._lastHeuristics=out.filter(it=>!dismissed.has(it.key));
+    return this._lastHeuristics;
+  },
+  // C4: render the commentary rail from _lastHeuristics + pinned items. The rail
+  // shows whenever Campaign is open (local-first per §6.7), independent of the AI
+  // path. Three sections: Heads-up / Questions / Watch-outs.
   _renderRail(){
+    const rail=document.getElementById('cmp-rail');
+    if(!rail)return;
+    const root=document.getElementById('campaign-mode');
+    const open=!!(root&&root.classList.contains('is-open'));
+    if(!open){rail.hidden=true;root&&root.classList.remove('has-rail');return;}
+    rail.hidden=false;root&&root.classList.add('has-rail');
+    const E=Utils.escHtml;
+    let cp;try{cp=State.cp();}catch(e){cp={};}
+    const items=this._lastHeuristics||[];
+    const pinned=(cp.liveModePinned||[]);
+    const localOnly=this.isLocalOnly();
+    const sub=localOnly?'local read':'live + local';
+    const slotItems=slot=>items.filter(i=>i.slot===slot);
+    const sevClass=sev=>sev==='error'?'cmp-rail__item--error':sev==='warn'?'cmp-rail__item--warn':'cmp-rail__item--info';
+    const renderItem=it=>`<div class="cmp-rail__item ${sevClass(it.severity)}" data-h-key="${E(it.key)}">
+        <p class="cmp-rail__item-text">${E(it.text)}</p>
+        <div class="cmp-rail__item-actions">
+          <button type="button" class="cmp-rail__act" data-h-dismiss="${E(it.key)}">Dismiss</button>
+          <button type="button" class="cmp-rail__act" data-h-pin="${E(it.key)}">Pin</button>
+        </div>
+      </div>`;
+    const renderPinned=p=>`<div class="cmp-rail__item ${sevClass(p.severity)} is-pinned" data-pin-id="${E(p.id)}">
+        <span class="cmp-rail__pin-badge">★ Pinned</span>
+        <p class="cmp-rail__item-text">${E(p.text||'')}</p>
+        <div class="cmp-rail__item-actions">
+          <button type="button" class="cmp-rail__act" data-h-unpin="${E(p.id)}">Unpin</button>
+        </div>
+      </div>`;
+    const section=(title,list,emptyMsg)=>`<div class="cmp-rail__sec">
+        <h3 class="cmp-rail__sec-hd">${E(title)}</h3>
+        ${list.length?list.map(renderItem).join(''):`<p class="cmp-rail__empty">${E(emptyMsg)}</p>`}
+      </div>`;
+    rail.innerHTML=`<div class="cmp-rail__hd">
+        <span class="cmp-rail__dot" role="status" aria-live="polite" aria-label="Commentary status: ${E(this._state||'idle')}"></span>
+        <h2 class="cmp-rail__title">Commentary</h2>
+        <span class="cmp-rail__sub">${E(sub)}</span>
+      </div>
+      <div class="cmp-rail__body">
+        ${pinned.length?`<div class="cmp-rail__sec"><h3 class="cmp-rail__sec-hd">Pinned</h3>${pinned.map(renderPinned).join('')}</div>`:''}
+        ${section('Heads-up',slotItems('headsup'),'Nothing pressing right now.')}
+        ${section('Questions',slotItems('questions'),'No open questions about your board.')}
+        ${section('Watch-outs',slotItems('watchouts'),'No gaps detected. The board is consistent.')}
+      </div>`;
+    this._wireRail(rail);
+  },
+  _wireRail(rail){
+    if(rail._wired)return;
+    rail._wired=true;
+    rail.addEventListener('click',e=>{
+      const b=e.target.closest('button');if(!b)return;
+      const d=b.dataset;
+      if(d.hDismiss){State.cpDismissHeuristic(d.hDismiss);this._refreshHeuristics();this._renderRail();return;}
+      if(d.hPin){
+        const it=(this._lastHeuristics||[]).find(x=>x.key===d.hPin);
+        if(it){State.cpPinHeuristic({slot:it.slot,text:it.text,severity:it.severity,key:it.key});this._renderRail();}
+        return;
+      }
+      if(d.hUnpin){State.cpUnpinHeuristic(d.hUnpin);this._renderRail();return;}
+    });
   },
   _setState(s){
     this._state=s;
