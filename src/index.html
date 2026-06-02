@@ -499,9 +499,6 @@ body.theme-ember .gm-badge{
   background:rgba(255,185,100,.10);border:1px solid rgba(255,185,100,.32);
   color:var(--ember-color);font-family:'Cinzel',serif;font-size:9px;letter-spacing:.18em;
   text-transform:uppercase;padding:4px 10px;margin-left:12px}
-/* Hide the bolted-on GM toolbar in Ember — its actions live inside the workflow,
-   accessible via the Inscribe button area & the existing identity-strip GM badge. */
-body.theme-ember .gm-toolbar{border-bottom-color:var(--color-gold)}
 
 /* Container — JS sets display:grid|none via applyTheme(). top:60px clears the header strip. */
 .world-mode-shell{display:none;position:absolute;top:60px;left:0;right:0;bottom:0;
@@ -2490,38 +2487,84 @@ body.theme-ember .sc-panel__title{color:var(--ember-color)}
 .gm-badge:hover{opacity:.85}
 body.gm-mode .gm-badge{display:inline-flex}
 body.gm-mode .identity-strip__wordmark{color:var(--color-gold-pale)}
-/* GM toolbar — colors are theme-scoped below so text passes AA against each
-   theme's actual top-bar background. The base only defines geometry. */
-.gm-toolbar{display:none;background:#0d1b2a;border-bottom:0.5px solid var(--color-gold);
-  padding:var(--space-2) var(--space-6);align-items:center;gap:var(--space-3);flex-shrink:0}
-body.gm-mode .gm-toolbar{display:flex}
-.gm-toolbar__label{font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;
-  color:#d8c994;text-transform:uppercase;margin-right:var(--space-2)}
-.gm-toolbar__btn{background:transparent;border:0.5px solid var(--color-gold-pale);
-  color:#f4e8d0;padding:6px 14px;border-radius:var(--radius-sm);
-  cursor:pointer;font-family:var(--font-body);font-size:var(--text-label-sm);
-  display:flex;align-items:center;gap:var(--space-1);transition:all var(--duration-instant)}
-.gm-toolbar__btn:hover{background:rgba(201,169,97,.18);border-color:var(--color-gold);color:#fff}
-.gm-toolbar__btn:disabled{opacity:.4;cursor:not-allowed}
-.gm-toolbar__btn-mark{color:var(--color-gold);font-size:1em}
-.gm-toolbar__spacer{flex:1}
-.gm-toolbar__hint{font-size:var(--text-label-sm);color:#b8a771;font-style:italic}
-/* Ember GM toolbar — sits on void; warm ember palette. Contrast against #020305:
-   text #ffddb9 = 16.0:1, label #d8b97c = 11.4:1, hint #b89761 = 7.7:1, all AA+. */
-body.theme-ember .gm-toolbar{background:#020305;border-bottom-color:rgba(255,185,100,0.42)}
-body.theme-ember .gm-toolbar__label{color:#d8b97c}
-body.theme-ember .gm-toolbar__btn{color:#ffddb9;border-color:rgba(255,185,100,0.32)}
-body.theme-ember .gm-toolbar__btn:hover{background:rgba(255,185,100,0.10);border-color:var(--color-gold);color:#fff5e0}
-body.theme-ember .gm-toolbar__btn-mark{color:var(--color-gold)}
-body.theme-ember .gm-toolbar__hint{color:rgba(255,221,185,0.55)}
-/* Modern GM toolbar — sits on graphite. Contrast against #161b22:
-   text #e8edf2 = 14.7:1, label #aab4c0 = 8.2:1, accent #5ec8d8 = 8.8:1. */
-body.theme-modern .gm-toolbar{background:#161b22;border-bottom-color:rgba(94,200,216,0.32)}
-body.theme-modern .gm-toolbar__label{color:#aab4c0}
-body.theme-modern .gm-toolbar__btn{color:#e8edf2;border-color:#384250}
-body.theme-modern .gm-toolbar__btn:hover{background:rgba(94,200,216,0.10);border-color:var(--color-gold);color:#fff}
-body.theme-modern .gm-toolbar__btn-mark{color:var(--color-gold)}
-body.theme-modern .gm-toolbar__hint{color:#8b97a4}
+/* ── GM BAR (GM Mode v2) ──────────────────────────────────────────────────
+   A modifier bar layered on World mode. 44px collapsed; one group expands
+   inline on hover/focus. Geometry + motion live in the base; every colour is
+   theme-scoped below so text passes WCAG AA on each theme's real surface.
+   --gm-accent / --gm-accent-soft / --gm-line are the per-theme knobs. */
+.gm-bar{--gm-accent:var(--color-gold);--gm-accent-soft:rgba(201,169,97,0.06);--gm-line:rgba(201,169,97,0.18);
+  display:none;position:relative;height:44px;flex-shrink:0;overflow:hidden;
+  align-items:center;gap:var(--space-4);padding:0 var(--space-6);
+  background:linear-gradient(180deg,rgba(13,27,42,0.92) 0%,rgba(8,16,26,0.96) 100%);
+  border-bottom:0.5px solid var(--gm-accent);box-shadow:0 1px 0 0 var(--gm-line);
+  transform:translateY(-6px);opacity:0;
+  transition:transform 220ms cubic-bezier(.2,.7,.2,1),opacity 160ms cubic-bezier(.2,.7,.2,1)}
+body.gm-mode .gm-bar{display:flex}
+body.gm-mode .gm-bar.is-in{transform:translateY(0);opacity:1}
+body.gm-mode .gm-bar.is-out{transform:translateY(-6px);opacity:0}
+/* Single soft atmospheric glow at centre — not loud. */
+.gm-bar__glow{position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse at center,var(--gm-accent-soft) 0%,transparent 60%)}
+.gm-bar__rail{position:relative;display:flex;align-items:center;gap:var(--space-2);min-width:0;flex:1}
+.gm-bar__group{display:flex;align-items:center;border-radius:var(--radius-sm);
+  transition:opacity 160ms ease}
+/* Dim the groups the user isn't pointing at while one is open. */
+body.gm-mode .gm-bar.has-open .gm-bar__group:not(.is-open){opacity:.55}
+.gm-bar__chip{display:flex;align-items:center;gap:var(--space-2);
+  background:transparent;border:0.5px solid transparent;border-radius:var(--radius-sm);
+  padding:5px 10px;cursor:pointer;color:inherit;white-space:nowrap;
+  font-family:var(--font-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  transition:border-color 180ms ease,background-color 180ms ease,color 180ms ease}
+.gm-bar__chip-mark{font-size:13px;line-height:1;opacity:.92}
+.gm-bar__chip-label{line-height:1}
+.gm-bar__group:hover .gm-bar__chip,.gm-bar__group.is-open .gm-bar__chip{border-color:var(--gm-line)}
+/* Tools live collapsed beside their chip; the active group reveals them inline.
+   Expansion is JS-authoritative via .is-open (set on hover, focus, and tap) so
+   ARIA state, the dimming of siblings, and the visible width never desync. */
+.gm-bar__tools{display:flex;align-items:center;gap:4px;overflow:hidden;
+  max-width:0;opacity:0;margin-left:0;
+  transition:max-width 160ms cubic-bezier(.2,.7,.2,1),opacity 80ms ease 40ms,margin-left 160ms ease}
+.gm-bar__group.is-open .gm-bar__tools{max-width:520px;opacity:1;margin-left:6px}
+.gm-bar__tool{background:transparent;border:0.5px solid transparent;border-radius:var(--radius-sm);
+  color:inherit;padding:5px 10px;cursor:pointer;white-space:nowrap;
+  font-family:var(--font-body);font-size:var(--text-label-sm);
+  transition:background-color 120ms ease,border-color 120ms ease,color 120ms ease}
+.gm-bar__tool:disabled{opacity:.4;cursor:not-allowed}
+.gm-bar__hint{flex-shrink:0;margin-left:auto;font-size:var(--text-label-sm);font-style:italic;opacity:.8}
+/* Visible focus rings on every interactive element — never a bare outline:none. */
+.gm-bar__chip:focus-visible,.gm-bar__tool:focus-visible{outline:2px solid var(--gm-accent);outline-offset:2px}
+/* Reduced motion: the bar snaps; no slide, no inline width tween. */
+.force-reduced-motion .gm-bar,.force-reduced-motion .gm-bar__group,
+.force-reduced-motion .gm-bar__chip,.force-reduced-motion .gm-bar__tools,
+.force-reduced-motion .gm-bar__tool{transition:none!important}
+.force-reduced-motion .gm-bar{transform:none}
+@media (prefers-reduced-motion:reduce){
+  .gm-bar,.gm-bar__group,.gm-bar__chip,.gm-bar__tools,.gm-bar__tool{transition:none!important}
+  .gm-bar{transform:none}
+}
+/* Ember GM bar — felt darkness with a warm gold breath. On the #08101a base:
+   chip/tool #ffe0bd = 15.5:1, hint #ffddb9 @ .8 stays AA. */
+body.theme-ember .gm-bar{--gm-accent:var(--color-gold);
+  --gm-accent-soft:rgba(255,185,100,0.06);--gm-line:rgba(255,185,100,0.20);
+  background:linear-gradient(180deg,rgba(10,7,5,0.94) 0%,rgba(2,3,5,0.97) 100%);
+  border-bottom-color:rgba(255,185,100,0.42);color:#ffe0bd}
+body.theme-ember .gm-bar__chip{color:#ffd9ad}
+body.theme-ember .gm-bar__chip-mark{color:var(--color-gold)}
+body.theme-ember .gm-bar__group:hover .gm-bar__chip,body.theme-ember .gm-bar__group.is-open .gm-bar__chip,body.theme-ember .gm-bar__group:focus-within .gm-bar__chip{border-color:rgba(255,185,100,0.45);background:rgba(255,185,100,0.05)}
+body.theme-ember .gm-bar__tool{color:#ffe0bd}
+body.theme-ember .gm-bar__tool:hover{background:rgba(255,185,100,0.10);border-color:rgba(255,185,100,0.38);color:#fff5e0}
+body.theme-ember .gm-bar__hint{color:rgba(255,221,185,0.62)}
+/* Modern GM bar — flat graphite with one cyan accent line. On #161b22:
+   text #e8edf2 = 14.7:1, accent #5ec8d8 = 8.8:1. */
+body.theme-modern .gm-bar{--gm-accent:#5ec8d8;
+  --gm-accent-soft:rgba(94,200,216,0.05);--gm-line:rgba(94,200,216,0.22);
+  background:#161b22;border-bottom-color:rgba(94,200,216,0.32);box-shadow:none;color:#e8edf2}
+body.theme-modern .gm-bar__chip{color:#aab4c0;border-color:transparent}
+body.theme-modern .gm-bar__chip-mark{color:#5ec8d8}
+body.theme-modern .gm-bar__group:hover .gm-bar__chip,body.theme-modern .gm-bar__group.is-open .gm-bar__chip,body.theme-modern .gm-bar__group:focus-within .gm-bar__chip{color:#e8edf2;border-color:#384250}
+body.theme-modern .gm-bar__tool{color:#e8edf2;border-color:#384250}
+body.theme-modern .gm-bar__tool:hover{background:rgba(94,200,216,0.10);border-color:#5ec8d8;color:#fff}
+body.theme-modern .gm-bar__hint{color:#8b97a4}
 /* Modern keeps the light top bar (bg = --color-ink = #e8edf2) but every strip
    element inherited light-on-light text. Darken them for legibility on white. */
 body.theme-modern .identity-strip{border-bottom-color:rgba(94,200,216,0.28)}
@@ -2542,14 +2585,21 @@ body.theme-modern .identity-strip__status.status--stable{color:#1f6478}
 body.theme-modern .identity-strip__status.status--tense{color:#8a5a14}
 body.theme-modern .identity-strip__status.status--crisis{color:#b23a2a}
 body.theme-modern .identity-strip__status.status--collapse{color:#7a1414}
-/* Manuscript GM toolbar — pale paper rail. On #F2F4F6: ink #182230 = 14.9:1,
-   muted #46566A = 7.0:1, drafting-blue accent #1F5170 = 7.8:1. */
-body.theme-manuscript .gm-toolbar{background:var(--color-parchment-warm);border-bottom-color:var(--color-gold)}
-body.theme-manuscript .gm-toolbar__label{color:var(--color-text-muted)}
-body.theme-manuscript .gm-toolbar__btn{color:var(--color-ink);border-color:var(--color-border-default)}
-body.theme-manuscript .gm-toolbar__btn:hover{background:rgba(31,81,112,0.10);border-color:var(--color-gold);color:var(--color-gold)}
-body.theme-manuscript .gm-toolbar__btn-mark{color:var(--color-gold)}
-body.theme-manuscript .gm-toolbar__hint{color:var(--color-text-faint)}
+/* Manuscript GM bar — pale paper rail, marginalia feel. On #F2F4F6:
+   ink #182230 = 14.9:1, muted #46566A = 7.0:1, drafting-blue #1F5170 = 7.8:1.
+   Serif-italic labels read like notes in the margin; an inset rule is the
+   bottom edge (the parchment has no shadow of its own). */
+body.theme-manuscript .gm-bar{--gm-accent:var(--color-gold);
+  --gm-accent-soft:rgba(31,81,112,0.04);--gm-line:var(--color-border-default);
+  background:var(--color-parchment-warm);border-bottom-color:var(--color-border-default);
+  box-shadow:inset 0 -1px 0 0 var(--color-border-default);color:var(--color-ink)}
+body.theme-manuscript .gm-bar__chip{color:var(--color-text-muted);
+  font-family:var(--font-display);font-style:italic;text-transform:none;letter-spacing:.01em;font-size:12px}
+body.theme-manuscript .gm-bar__chip-mark{color:var(--color-gold)}
+body.theme-manuscript .gm-bar__group:hover .gm-bar__chip,body.theme-manuscript .gm-bar__group.is-open .gm-bar__chip,body.theme-manuscript .gm-bar__group:focus-within .gm-bar__chip{color:var(--color-ink);border-color:transparent;box-shadow:inset 0 -1px 0 0 var(--color-gold)}
+body.theme-manuscript .gm-bar__tool{color:var(--color-ink)}
+body.theme-manuscript .gm-bar__tool:hover{background:rgba(31,81,112,0.08);border-color:var(--color-border-default);color:var(--color-gold)}
+body.theme-manuscript .gm-bar__hint{color:var(--color-text-faint);font-style:italic}
 /* ── ENCOUNTER BUILDER MODAL ─────────────────────────────────────────────── */
 .eb-inputs{display:flex;flex-direction:column;gap:var(--space-5)}
 .eb-field{display:flex;flex-direction:column;gap:var(--space-2)}
@@ -2577,15 +2627,17 @@ body.theme-manuscript .gm-toolbar__hint{color:var(--color-text-faint)}
 /* Encounter modal pills: inherit standard Ember tinted-outline style from .modal rule above */
 body.theme-ember .eb-select,body.theme-ember .eb-textarea{border-color:rgba(255,185,100,0.18);background:#150f09}
 body.theme-ember .eb-select:focus,body.theme-ember .eb-textarea:focus{outline-color:var(--color-gold)}
-/* When GM mode is on, narrow the chronicle band slightly to fit the toolbar */
-body.gm-mode #app{grid-template-rows:60px 36px 1fr 140px;
-  grid-template-areas:"identity" "gm-toolbar" "main" "chronicle"}
-body.gm-mode .gm-toolbar{grid-area:gm-toolbar}
+/* GM Mode v2: when GM is on, the grid grows a 44px row for the GM bar between
+   the identity strip and main. Toggling GM off removes this override entirely,
+   so the layout snaps back to the clean 3-row grid with zero residue. */
+body.gm-mode #app{grid-template-rows:60px 44px 1fr 140px;
+  grid-template-areas:"identity" "gm-bar" "main" "chronicle"}
+body.gm-mode .gm-bar{grid-area:gm-bar}
 body.gm-mode .main-row{grid-area:main}
 body.gm-mode .chronicle-band{grid-area:chronicle}
-/* P1.9: world-mode-shell sits below identity strip (60px); when the GM
-   toolbar is shown (gm-mode), it also has to clear the 36px toolbar. */
-body.gm-mode .world-mode-shell{top:96px}
+/* world-mode-shell sits below the identity strip (60px); with the GM bar shown
+   it must also clear the 44px bar (60+44=104px). Removed with the override. */
+body.gm-mode .world-mode-shell{top:104px}
 /* Quick NPC card — modal-ish overlay above content */
 .quick-npc-card{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.96);
   z-index:1100;background:var(--color-parchment);border:1px solid var(--color-gold);
@@ -3257,20 +3309,41 @@ SECTION 8: DOM STRUCTURE
       <button class="identity-strip__settings-btn" id="settings-btn" title="Settings">⚙</button>
     </div>
   </header>
-  <div class="gm-toolbar" id="gm-toolbar" role="toolbar" aria-label="Game Master tools">
-    <span class="gm-toolbar__label">GM Tools</span>
-    <button class="gm-toolbar__btn" id="gm-quick-npc-btn" title="Generate a single NPC ready to drop into tonight's session"><span class="gm-toolbar__btn-mark">🎲</span> Quick NPC</button>
-    <button class="gm-toolbar__btn" id="gm-session-prep-btn" title="Open the Session Prep generator"><span class="gm-toolbar__btn-mark">📜</span> Session Prep</button>
-    <button class="gm-toolbar__btn" id="gm-stakes-btn" title="Summary of the dramatic situation, ready to read aloud"><span class="gm-toolbar__btn-mark">⚠</span> What's at stake?</button>
-    <button class="gm-toolbar__btn" id="gm-strong-start-btn" title="Generate an evocative read-aloud paragraph to open tonight's session"><span class="gm-toolbar__btn-mark">🔥</span> Strong Start</button>
-    <button class="gm-toolbar__btn" id="gm-proclamation-btn" title="Generate an in-character royal proclamation as a player handout"><span class="gm-toolbar__btn-mark">📜</span> Proclamation</button>
-    <button class="gm-toolbar__btn" id="gm-news-btn" title="Generate an in-fiction news bulletin or rumor sheet"><span class="gm-toolbar__btn-mark">📰</span> News</button>
-    <button class="gm-toolbar__btn" id="gm-letter-btn" title="Generate an in-character letter from one NPC to another"><span class="gm-toolbar__btn-mark">✉</span> Letter</button>
-    <button class="gm-toolbar__btn" id="gm-glossary-btn" title="Build an alphabetized glossary of world-specific terms for this realm" aria-label="Glossary builder"><span class="gm-toolbar__btn-mark">📚</span> Glossary</button>
-    <button class="gm-toolbar__btn" id="gm-encounter-btn" title="Build a context-aware encounter for tonight's session" aria-label="Open Encounter Builder"><span class="gm-toolbar__btn-mark">⚔</span> Encounter</button>
-    <button class="gm-toolbar__btn" id="gm-names-btn" title="Generate world-consistent names for people, places, titles, or factions" aria-label="Naming generator"><span class="gm-toolbar__btn-mark">🔤</span> Names</button>
-    <span class="gm-toolbar__spacer"></span>
-    <span class="gm-toolbar__hint">Powered by your Copilot</span>
+  <div class="gm-bar" id="gm-bar" role="toolbar" aria-label="Game Master tools" aria-expanded="false">
+    <div class="gm-bar__glow" aria-hidden="true"></div>
+    <div class="gm-bar__rail">
+      <div class="gm-bar__group" data-group="tonight">
+        <button type="button" class="gm-bar__chip" id="gm-chip-tonight" aria-haspopup="true" aria-expanded="false" aria-controls="gm-grp-tonight"><span class="gm-bar__chip-mark" aria-hidden="true">✸</span><span class="gm-bar__chip-label">Start tonight</span></button>
+        <div class="gm-bar__tools" id="gm-grp-tonight" role="group" aria-label="Start tonight">
+          <button type="button" class="gm-bar__tool" id="gm-strong-start-btn" title="Generate an evocative read-aloud paragraph to open tonight's session">Strong Start</button>
+          <button type="button" class="gm-bar__tool" id="gm-session-prep-btn" title="Open the Session Prep generator">Session Prep</button>
+          <button type="button" class="gm-bar__tool" id="gm-stakes-btn" title="Summary of the dramatic situation, ready to read aloud">What's at Stake</button>
+        </div>
+      </div>
+      <div class="gm-bar__group" data-group="people">
+        <button type="button" class="gm-bar__chip" id="gm-chip-people" aria-haspopup="true" aria-expanded="false" aria-controls="gm-grp-people"><span class="gm-bar__chip-mark" aria-hidden="true">◐</span><span class="gm-bar__chip-label">People</span></button>
+        <div class="gm-bar__tools" id="gm-grp-people" role="group" aria-label="People">
+          <button type="button" class="gm-bar__tool" id="gm-quick-npc-btn" title="Generate a single NPC ready to drop into tonight's session">Quick NPC</button>
+          <button type="button" class="gm-bar__tool" id="gm-names-btn" title="Generate world-consistent names for people, places, titles, or factions" aria-label="Naming generator">Names</button>
+        </div>
+      </div>
+      <div class="gm-bar__group" data-group="handouts">
+        <button type="button" class="gm-bar__chip" id="gm-chip-handouts" aria-haspopup="true" aria-expanded="false" aria-controls="gm-grp-handouts"><span class="gm-bar__chip-mark" aria-hidden="true">📜</span><span class="gm-bar__chip-label">Handouts</span></button>
+        <div class="gm-bar__tools" id="gm-grp-handouts" role="group" aria-label="Handouts">
+          <button type="button" class="gm-bar__tool" id="gm-proclamation-btn" title="Generate an in-character royal proclamation as a player handout">Proclamation</button>
+          <button type="button" class="gm-bar__tool" id="gm-news-btn" title="Generate an in-fiction news bulletin or rumor sheet">News</button>
+          <button type="button" class="gm-bar__tool" id="gm-letter-btn" title="Generate an in-character letter from one NPC to another">Letter</button>
+        </div>
+      </div>
+      <div class="gm-bar__group" data-group="reference">
+        <button type="button" class="gm-bar__chip" id="gm-chip-reference" aria-haspopup="true" aria-expanded="false" aria-controls="gm-grp-reference"><span class="gm-bar__chip-mark" aria-hidden="true">✦</span><span class="gm-bar__chip-label">Reference</span></button>
+        <div class="gm-bar__tools" id="gm-grp-reference" role="group" aria-label="Reference">
+          <button type="button" class="gm-bar__tool" id="gm-glossary-btn" title="Build an alphabetized glossary of world-specific terms for this realm" aria-label="Glossary builder">Glossary</button>
+          <button type="button" class="gm-bar__tool" id="gm-encounter-btn" title="Build a context-aware encounter for tonight's session" aria-label="Open Encounter Builder">Encounter</button>
+        </div>
+      </div>
+    </div>
+    <span class="gm-bar__hint">Powered by your Copilot</span>
   </div>
   <div class="main-row">
     <aside class="workbench" aria-label="Workbench">
@@ -13327,19 +13400,111 @@ const SHSPanels={
 
 // ─── GM MODE MODULE ───
 const GMMode={
-  apply(){
+  // GM Mode v2 ephemeral state — session-scoped, never persisted.
+  _state:{expandedGroup:null,exitTimer:null},
+  _reduced(){
+    return document.documentElement.classList.contains('force-reduced-motion')
+      ||(window.matchMedia&&window.matchMedia('(prefers-reduced-motion:reduce)').matches);
+  },
+  apply(opts){
+    const instant=!!(opts&&opts.instant);
     const on=isGMMode();
-    document.body.classList.toggle('gm-mode',on);
+    const body=document.body;
+    const bar=document.getElementById('gm-bar');
+    const wasOn=body.classList.contains('gm-mode');
     // GM Mode v2: reflect state on the canonical toggle — the Mode-picker GM row.
     const mi=document.getElementById('gm-toggle-item');
     if(mi)mi.setAttribute('aria-checked',on?'true':'false');
+    if(bar)clearTimeout(this._state.exitTimer);
+    const reduced=this._reduced()||instant;
+    if(on){
+      // Entrance: mount the bar (CSS shows it via .gm-mode), then on the next
+      // frame add .is-in so the slide-down + fade run. Reduced motion / initial
+      // page load snap straight to the settled state (no slide on first paint).
+      body.classList.add('gm-mode');
+      if(bar){
+        bar.classList.remove('is-out');
+        if(reduced){bar.classList.add('is-in');}
+        else{requestAnimationFrame(()=>requestAnimationFrame(()=>{if(isGMMode())bar.classList.add('is-in');}));}
+      }
+    }else{
+      // Exit: collapse any open group, retract the bar, THEN drop the grid
+      // override so the layout reflows to the clean 3-row grid with no residue.
+      this._collapseGroups();
+      const finish=()=>{body.classList.remove('gm-mode');if(bar){bar.classList.remove('is-in','is-out');}};
+      if(bar&&wasOn&&!reduced){
+        bar.classList.remove('is-in');
+        bar.classList.add('is-out');
+        this._state.exitTimer=setTimeout(finish,230);
+      }else{
+        if(bar)bar.classList.remove('is-in');
+        finish();
+      }
+    }
     // Refresh things that care about terminology — empty-state copy in Copilot panel, banner labels, etc.
     if(typeof Copilot!=='undefined'&&Copilot.isOpen&&Copilot.isOpen()){
       Copilot.renderMessages();
     }
   },
+  // ─── GM bar group interaction (collapse/expand, one-at-a-time, ESC) ───
+  _groups(){return Array.from(document.querySelectorAll('#gm-bar .gm-bar__group'));},
+  _collapseGroups(){
+    const bar=document.getElementById('gm-bar');
+    this._groups().forEach(g=>{
+      g.classList.remove('is-open');
+      g.querySelector('.gm-bar__chip')?.setAttribute('aria-expanded','false');
+    });
+    bar?.classList.remove('has-open');
+    bar?.setAttribute('aria-expanded','false');
+    this._state.expandedGroup=null;
+  },
+  _openGroup(name){
+    const bar=document.getElementById('gm-bar');
+    this._groups().forEach(g=>{
+      const isMatch=g.dataset.group===name;
+      g.classList.toggle('is-open',isMatch);
+      g.querySelector('.gm-bar__chip')?.setAttribute('aria-expanded',isMatch?'true':'false');
+    });
+    bar?.classList.add('has-open');
+    bar?.setAttribute('aria-expanded','true');
+    this._state.expandedGroup=name;
+  },
+  _toggleGroup(name){
+    if(this._state.expandedGroup===name)this._collapseGroups();
+    else this._openGroup(name);
+  },
+  bindBar(){
+    const bar=document.getElementById('gm-bar');
+    if(!bar||bar._gmBound)return;
+    bar._gmBound=true;
+    this._groups().forEach(g=>{
+      const chip=g.querySelector('.gm-bar__chip');
+      // Click/tap a chip toggles its group (explicit, touch-friendly).
+      chip?.addEventListener('click',e=>{e.stopPropagation();this._toggleGroup(g.dataset.group);});
+      // Pointer hover mirrors the chip's open state so ARIA + dimming track CSS.
+      g.addEventListener('mouseenter',()=>this._openGroup(g.dataset.group));
+      g.addEventListener('mouseleave',()=>{if(this._state.expandedGroup===g.dataset.group)this._collapseGroups();});
+      // Keyboard focus opens the group; leaving it via Tab collapses.
+      g.addEventListener('focusin',()=>this._openGroup(g.dataset.group));
+      g.addEventListener('focusout',e=>{if(!g.contains(e.relatedTarget)&&this._state.expandedGroup===g.dataset.group)this._collapseGroups();});
+    });
+    // ESC collapses the active group and returns focus to its chip.
+    bar.addEventListener('keydown',e=>{
+      if(e.key==='Escape'&&this._state.expandedGroup){
+        const open=bar.querySelector('.gm-bar__group.is-open');
+        this._collapseGroups();
+        open?.querySelector('.gm-bar__chip')?.focus();
+        e.stopPropagation();
+      }
+    });
+    // Outside-click collapses any open group.
+    document.addEventListener('click',e=>{if(!bar.contains(e.target))this._collapseGroups();});
+    // After a tool fires, collapse back to the clean bar (its own handler ran first).
+    bar.addEventListener('click',e=>{if(e.target.closest('.gm-bar__tool'))this._collapseGroups();});
+  },
   // Wire the GM toolbar buttons. Called from bindEventListeners.
   bind(){
+    this.bindBar();
     document.getElementById('gm-quick-npc-btn')?.addEventListener('click',()=>this.openQuickNPC());
     document.getElementById('gm-session-prep-btn')?.addEventListener('click',()=>{
       // Reuse the existing Session Prep modal — same flow as the Export menu
@@ -17243,8 +17408,8 @@ async function bootstrap(){
   if(typeof Ambient!=='undefined')Ambient.apply();
   // Initialize Copilot panel status
   if(typeof Copilot!=='undefined')Copilot.updateStatus();
-  // Apply GM mode if enabled
-  if(typeof GMMode!=='undefined')GMMode.apply();
+  // Apply GM mode if enabled (instant: no entrance animation on first paint).
+  if(typeof GMMode!=='undefined')GMMode.apply({instant:true});
   // F3 Live Mode skeleton — subscribes to committed Campaign + world events.
   // Off by default; this just primes listeners so the toggle reacts instantly.
   if(typeof LiveMode!=='undefined')LiveMode.init();
