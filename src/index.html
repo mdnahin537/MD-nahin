@@ -3293,15 +3293,20 @@ SECTION 8: DOM STRUCTURE
           </button>
           <button type="button" class="mode-dropdown__item" data-mode="campaign" role="menuitem">
             <span class="mode-dropdown__mark">🎲</span>
-            <span class="mode-dropdown__text"><span class="mode-dropdown__name">Campaign</span><span class="mode-dropdown__desc">World dashboard + GM toolbar for active play.</span></span>
+            <span class="mode-dropdown__text"><span class="mode-dropdown__name">Campaign</span><span class="mode-dropdown__desc">Full-screen prep board for active play.</span></span>
           </button>
           <button type="button" class="mode-dropdown__item" data-mode="world" role="menuitem">
             <span class="mode-dropdown__mark">🌍</span>
-            <span class="mode-dropdown__text"><span class="mode-dropdown__name">World</span><span class="mode-dropdown__desc">Quiet worldbuilding — no GM tools.</span></span>
+            <span class="mode-dropdown__text"><span class="mode-dropdown__name">World</span><span class="mode-dropdown__desc">The quiet worldbuilding dashboard.</span></span>
           </button>
           <button type="button" class="mode-dropdown__item mode-dropdown__item--toggle" id="ambient-toggle-item" role="menuitemcheckbox" aria-checked="false">
             <span class="mode-dropdown__mark">✦</span>
             <span class="mode-dropdown__text"><span class="mode-dropdown__name">Atmosphere</span><span class="mode-dropdown__desc">A living, persistent ambience over the workspace.</span></span>
+            <span class="mode-dropdown__switch" aria-hidden="true"></span>
+          </button>
+          <button type="button" class="mode-dropdown__item mode-dropdown__item--toggle" id="gm-toggle-item" role="menuitemcheckbox" aria-checked="false">
+            <span class="mode-dropdown__mark">🎲</span>
+            <span class="mode-dropdown__text"><span class="mode-dropdown__name">GM Mode</span><span class="mode-dropdown__desc">An elegant tool bar over World for running tonight's game.</span></span>
             <span class="mode-dropdown__switch" aria-hidden="true"></span>
           </button>
         </div>
@@ -15731,16 +15736,22 @@ function bindEventListeners(){
     expBtn.addEventListener('click',e=>{e.stopPropagation();expDD.classList.toggle('is-open');});
     document.addEventListener('click',()=>expDD.classList.remove('is-open'));
   }
-  // Mode picker dropdown — Tonight / Campaign / World. Persists choice to
-  // State.data.meta.preferredMode. Campaign = WorldShell with GM Mode on;
-  // World = WorldShell with GM Mode off; Tonight = the Tonight overlay.
+  // Mode picker dropdown — Tonight / Campaign / World as primary modes, plus
+  // Atmosphere and GM Mode as independent toggles. Persists the primary choice
+  // to State.data.meta.preferredMode. GM Mode v2: GM is a modifier layered on
+  // World, toggled only here (or the badge) — switching primary mode never
+  // changes it. Tonight = the Tonight overlay; Campaign = full-screen prep board.
   const modeBtn=document.getElementById('switch-mode-btn');
   const modeDD=document.getElementById('mode-dropdown');
   function syncModeDropdownUI(){
-    const cur=State.data?.meta?.preferredMode||(isGMMode()?'campaign':'world');
+    // GM is a modifier, not a primary mode — never let it stand in for the
+    // current radio selection. Fall back to World when no primary is set.
+    const cur=State.data?.meta?.preferredMode||'world';
     modeDD?.querySelectorAll('[data-mode]').forEach(it=>{
       it.setAttribute('aria-current',it.dataset.mode===cur?'true':'false');
     });
+    const gmItem=document.getElementById('gm-toggle-item');
+    if(gmItem)gmItem.setAttribute('aria-checked',isGMMode()?'true':'false');
   }
   if(modeBtn&&modeDD){
     modeBtn.addEventListener('click',e=>{
@@ -15757,6 +15768,22 @@ function bindEventListeners(){
     modeDD.addEventListener('click',e=>e.stopPropagation());
     document.getElementById('ambient-toggle-item')?.addEventListener('click',()=>{
       if(typeof Ambient!=='undefined')Ambient.set(!State.data.meta.settings.ambient);
+    });
+    // GM Mode v2: the single canonical GM toggle. Flips gmMode and animates the
+    // bar in/out. The dropdown stays open ~600ms so the user sees the pill flip,
+    // then auto-closes (outside-click also closes it via the document handler).
+    let gmCloseTimer=null;
+    document.getElementById('gm-toggle-item')?.addEventListener('click',()=>{
+      const v=!State.data.meta.settings.gmMode;
+      State.setSetting('gmMode',v);
+      if(typeof GMMode!=='undefined')GMMode.apply();
+      syncModeDropdownUI();
+      showToast(v?'GM Mode on — your tool bar is live.':'GM Mode off.',[],v?2600:1800);
+      clearTimeout(gmCloseTimer);
+      gmCloseTimer=setTimeout(()=>{
+        modeDD.classList.remove('is-open');
+        modeBtn.setAttribute('aria-expanded','false');
+      },600);
     });
     modeDD.querySelectorAll('[data-mode]').forEach(item=>{
       item.addEventListener('click',()=>{
