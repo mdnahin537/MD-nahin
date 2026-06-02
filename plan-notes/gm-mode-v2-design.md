@@ -1,7 +1,7 @@
 # GM Mode v2 — Design Spec (binding)
 **Owner:** Hunter. **Drafter:** Claude (this session). **Date:** 2026-06-02.
 **Status:** Locked spec. Launch the GM-mode rebuild agent against this once C3+C4 is integrated.
-**Base SHA (will refresh at launch):** TBD post C3+C4.
+**Base SHA (refreshed at launch):** `fa3f20a` (C3+C4 integrated on `claude/kind-johnson-H6UrM`).
 
 ---
 
