@@ -3751,12 +3751,6 @@ SECTION 8: DOM STRUCTURE
         <button class="toggle" id="toggle-forecasts-setting" aria-label="Toggle forecasts"></button>
       </div>
     </div>
-    <div class="settings-section"><div class="settings-section__title">Game Master Mode</div>
-      <div class="settings-row">
-        <div style="flex:1"><div class="settings-label">Enable GM Mode</div><div class="settings-desc">Adds a toolbar with quick session tools (Quick NPC, Session Prep, What's at Stake), and shifts terminology to TTRPG-native ("Realm" instead of "Nation", "Timeline" instead of "Chronicle"). Designed for tabletop Game Masters preparing for play. Requires a Copilot API key for the toolbar buttons to work.</div></div>
-        <button class="toggle" id="toggle-gm-mode" aria-label="Toggle GM Mode"></button>
-      </div>
-    </div>
     <div class="settings-section"><div class="settings-section__title">Copilot</div>
       <!-- B39: Provider picker -->
       <div class="settings-row">
@@ -11700,9 +11694,9 @@ const Campaign={
     if(!root)return;
     this._wired=true;
     document.getElementById('campaign-exit')?.addEventListener('click',()=>{
-      // Exiting Campaign drops to quiet World mode (GM toolbar off).
+      // Exiting Campaign drops to the quiet World dashboard. GM is a modifier
+      // on World now (GM Mode v2) — leave gmMode exactly as the user set it.
       State.data.meta.preferredMode='world';
-      if(State.data.meta.settings.gmMode){State.setSetting('gmMode',false);if(typeof GMMode!=='undefined')GMMode.apply();}
       State.persist();
       this.close();
     });
@@ -13336,8 +13330,9 @@ const GMMode={
   apply(){
     const on=isGMMode();
     document.body.classList.toggle('gm-mode',on);
-    // Sync the toggle UI in Settings if it's mounted
-    const tg=document.getElementById('toggle-gm-mode');if(tg)tg.classList.toggle('is-on',on);
+    // GM Mode v2: reflect state on the canonical toggle — the Mode-picker GM row.
+    const mi=document.getElementById('gm-toggle-item');
+    if(mi)mi.setAttribute('aria-checked',on?'true':'false');
     // Refresh things that care about terminology — empty-state copy in Copilot panel, banner labels, etc.
     if(typeof Copilot!=='undefined'&&Copilot.isOpen&&Copilot.isOpen()){
       Copilot.renderMessages();
@@ -13364,16 +13359,8 @@ const GMMode={
       GMMode.apply();
       showToast('GM Mode disabled.',[],2000);
     });
-    document.getElementById('toggle-gm-mode')?.addEventListener('click',()=>{
-      const v=!State.data.meta.settings.gmMode;
-      State.setSetting('gmMode',v);
-      GMMode.apply();
-      if(v){
-        showToast('GM Mode enabled. Toolbar appears below the wordmark.',[],3500);
-      }else{
-        showToast('GM Mode disabled.',[],2000);
-      }
-    });
+    // GM Mode v2: the canonical toggle lives in the Mode picker (gm-toggle-item),
+    // wired in the mode-dropdown handler. The badge above is the quick-disable.
     // Quick NPC card close
     document.getElementById('quick-npc-close')?.addEventListener('click',()=>this.closeQuickNPC());
     // Stakes re-run
@@ -15614,15 +15601,18 @@ function bindEventListeners(){
         modeDD.classList.remove('is-open');
         modeBtn.setAttribute('aria-expanded','false');
         if(typeof Tonight!=='undefined')Tonight.close();
+        // GM Mode v2: GM is a modifier on World, toggled only by the user
+        // (GM row below / the badge). Switching the primary mode never
+        // changes gmMode — Tonight/Campaign/World preserve GM state.
         if(mode==='tonight'){
           if(typeof Campaign!=='undefined')Campaign.close();
           if(typeof Tonight!=='undefined')Tonight.open();
         }else if(mode==='campaign'){
-          // Campaign opens the full-screen session-prep center, GM toolbar on.
-          if(State.data.meta.settings.gmMode!==true){State.setSetting('gmMode',true);if(typeof GMMode!=='undefined')GMMode.apply();}
+          // Campaign opens the full-screen session-prep center. GM is left
+          // exactly as the user set it; enable it explicitly if you want the bar.
           if(typeof Campaign!=='undefined')Campaign.open();
         }else{
-          // World — quiet worldbuilding on the dashboard.
+          // World — quiet worldbuilding on the dashboard. GM state untouched.
           if(typeof Campaign!=='undefined')Campaign.close();
           showToast('World mode — quiet worldbuilding.',[],2200);
         }
@@ -15689,7 +15679,7 @@ function bindEventListeners(){
   });
 
   // Settings
-  document.getElementById('settings-btn')?.addEventListener('click',()=>{Modals.open('settings');Copilot._refreshKeySettingsUI&&Copilot._refreshKeySettingsUI();Copilot._probeOllama&&Copilot._probeOllama();const tg=document.getElementById('toggle-gm-mode');if(tg)tg.classList.toggle('is-on',!!State.data?.meta?.settings?.gmMode);syncThemePickerUI();const _w=document.getElementById('cost-warn-input');const _c=document.getElementById('cost-cap-input');const _s=State.data?.meta?.settings||{};if(_w)_w.value=_s.costWarnUSD==null?'':String(_s.costWarnUSD);if(_c)_c.value=_s.costCapUSD==null?'':String(_s.costCapUSD);});
+  document.getElementById('settings-btn')?.addEventListener('click',()=>{Modals.open('settings');Copilot._refreshKeySettingsUI&&Copilot._refreshKeySettingsUI();Copilot._probeOllama&&Copilot._probeOllama();syncThemePickerUI();const _w=document.getElementById('cost-warn-input');const _c=document.getElementById('cost-cap-input');const _s=State.data?.meta?.settings||{};if(_w)_w.value=_s.costWarnUSD==null?'':String(_s.costWarnUSD);if(_c)_c.value=_s.costCapUSD==null?'':String(_s.costCapUSD);});
 
   // Undo button
   document.getElementById('undo-btn')?.addEventListener('click',()=>{
