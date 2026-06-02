@@ -17,7 +17,7 @@ Both compile clean — node --check on the concatenated `<script>` bodies passes
 
 - [x] All existing Campaign data loads with no loss after the rebuild. `migrateCampaignPrep` is idempotent and additive-only; called on every `State.cp()` read.
 - [x] Manual entry works without an API key. All C2 upgrades are local-only.
-- [ ] Each section's AI pill opens a popover, calls the right generator, shows the F8 chip, lets user accept/discard. **NOT BUILT — C3.**
+- [x] Each section's AI pill opens a popover, calls the right generator, shows the F8 chip, lets user accept/discard. **DONE — C3.** Per-section `⌘ AI` pills on all six section headers (Stakes/Beats/NPCs/Clocks/Secrets/Notes); each opens a `role="dialog"` popover with AccuracyChip mounted on `campaign-<section>`; 3-variant flows use `Variants.render`, single-output flows insert+close. New generators `Copilot.generateClockSuggestions` + `Copilot.generateBeatSuggestions` route through `buildAIContext`+`_apiFetch`. Also fixed a latent C2 bug: `Campaign.wire()` was never called — now invoked (idempotently) from `open()`.
 - [ ] Live Mode toggle, warning modal, persistent ack flag. Settings keys exist (`liveMode`, `liveModeAcked`, `liveModeCap`) and `State.cpSetLiveOn/Acked` are wired; **toggle UI + warning modal NOT BUILT — C5.**
 - [ ] Triggers fire only on committed meaningful change. **Trigger plumbing IS wired** (LiveMode subscribes to `cp:changed` and `sc:changed`, ignores `trivial:true` keystroke flags, debounces 2500ms, tracks 6/min + 60/session caps). The fire-path stub is in place; **the actual AI call lands in C6.**
 - [ ] Rate cap auto-pauses at 6/min; session cap hard-pauses at 60. **Plumbing wired in `LiveMode._maybeFire`**; needs UI surface (C5).

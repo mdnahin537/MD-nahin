@@ -2863,6 +2863,47 @@ SECTION 7: MOTION & STATE STYLES
 .cmp-md code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:rgba(127,127,127,.12);padding:1px 4px;border-radius:3px;font-size:.92em}
 .cmp-md blockquote{margin:0 0 .55em;padding:.25em .75em;border-left:2px solid var(--color-border-hairline);color:var(--color-text-muted)}
 .cmp-area--md{min-height:120px}
+/* ─── CAMPAIGN MODE v2 C3 — per-section AI pills + popovers ─── */
+.cmp-card__hd-actions{display:flex;align-items:center;gap:6px}
+.cmp-ai-pill{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:4px 10px;border-radius:12px;border:1px solid var(--color-border-hairline);background:transparent;color:var(--ember-color);cursor:pointer;font-family:var(--font-body);letter-spacing:.03em;transition:border-color .15s,background .15s,color .15s}
+.cmp-ai-pill:hover{border-color:var(--ember-color);background:rgba(127,127,127,.08)}
+.cmp-ai-pill[aria-expanded="true"]{border-color:var(--ember-color);background:rgba(127,127,127,.10)}
+.cmp-ai-pop{position:fixed;z-index:8600;min-width:280px;max-width:340px;background:var(--color-surface);border:1px solid var(--color-border-hairline);border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.28);padding:14px;display:flex;flex-direction:column;gap:10px}
+.cmp-ai-pop__title{font-family:'Cinzel',serif;font-size:var(--text-label-sm);text-transform:uppercase;letter-spacing:.08em;color:var(--ember-color);margin:0}
+.cmp-ai-pop__chip{min-height:20px}
+.cmp-ai-pop__actions{display:flex;flex-direction:column;gap:6px}
+.cmp-ai-pop__btn{text-align:left;background:transparent;border:1px solid var(--color-border-hairline);border-radius:7px;padding:8px 10px;color:var(--color-text-primary);font-family:var(--font-body);font-size:12px;cursor:pointer;line-height:1.35;transition:border-color .15s,background .15s,color .15s}
+.cmp-ai-pop__btn:hover:not(:disabled){border-color:var(--ember-color);color:var(--ember-color);background:rgba(127,127,127,.06)}
+.cmp-ai-pop__btn:disabled{opacity:.55;cursor:wait}
+.cmp-ai-pop__hint{font-size:10px;color:var(--color-text-faint);font-style:italic;margin:0}
+.cmp-ai-pop__out{margin-top:2px}
+.cmp-ai-pop__out .variants-grid{grid-template-columns:1fr;gap:8px}
+.cmp-ai-pop__out .variants-card__body{font-size:12px;line-height:1.45;max-height:160px;overflow:auto}
+.cmp-ai-pop__single{font-size:12px;line-height:1.5;color:var(--color-text-primary);border:1px solid var(--color-border-hairline);border-radius:7px;padding:8px 10px;max-height:200px;overflow:auto;white-space:pre-wrap}
+.cmp-ai-pop__row{display:flex;gap:8px;justify-content:flex-end}
+.cmp-ai-pop__err{font-size:11px;color:#d04545;margin:0}
+/* ─── CAMPAIGN MODE v2 C4 — local-heuristics commentary rail ─── */
+.campaign-mode.has-rail .cmp-grid{margin-right:336px}
+.cmp-rail{position:fixed;top:0;right:0;bottom:0;width:320px;background:var(--color-surface);border-left:1px solid var(--color-border-hairline);z-index:8050;display:flex;flex-direction:column;overflow:hidden}
+.cmp-rail__hd{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--color-border-hairline);flex-shrink:0}
+.cmp-rail__dot{width:9px;height:9px;border-radius:50%;background:var(--ember-color);flex-shrink:0;opacity:.85}
+.cmp-rail__title{font-family:'Cinzel',serif;font-size:var(--text-label-sm);text-transform:uppercase;letter-spacing:.08em;color:var(--ember-color);margin:0}
+.cmp-rail__sub{font-size:10px;color:var(--color-text-faint);letter-spacing:.04em;margin-left:auto}
+.cmp-rail__body{flex:1;overflow-y:auto;padding:8px 14px 32px}
+.cmp-rail__sec{margin-top:14px}
+.cmp-rail__sec-hd{font-family:'Cinzel',serif;font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--color-text-faint);margin:0 0 6px;border-bottom:1px solid var(--color-border-hairline);padding-bottom:4px}
+.cmp-rail__empty{font-size:11px;color:var(--color-text-faint);font-style:italic;padding:4px 0}
+.cmp-rail__item{border:1px solid var(--color-border-hairline);border-radius:8px;padding:8px 10px;margin-bottom:8px;background:transparent;border-left-width:3px;border-left-color:var(--color-border-hairline)}
+.cmp-rail__item--info{border-left-color:var(--color-text-faint)}
+.cmp-rail__item--warn{border-left-color:#c08a3a}
+.cmp-rail__item--error{border-left-color:#d04545}
+.cmp-rail__item.is-pinned{background:rgba(127,127,127,.06)}
+.cmp-rail__item-text{font-size:12px;line-height:1.45;color:var(--color-text-primary);margin:0 0 6px}
+.cmp-rail__item-actions{display:flex;gap:8px;justify-content:flex-end}
+.cmp-rail__act{background:transparent;border:none;color:var(--color-text-faint);font-size:10px;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;padding:2px 4px;border-radius:4px;font-family:var(--font-body)}
+.cmp-rail__act:hover{color:var(--ember-color)}
+.cmp-rail__pin-badge{font-size:9px;color:var(--ember-color);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;display:block}
+@media (max-width:980px){.campaign-mode.has-rail .cmp-grid{margin-right:0}.cmp-rail{position:static;width:auto;max-width:100%;border-left:none;border-top:1px solid var(--color-border-hairline)}}
 /* ─── FRONTS PANEL ─── */
 .fronts-list{padding:0 0 80px}
 .front-card{background:var(--color-parchment-warm);border:1px solid var(--color-border-hairline);border-radius:8px;padding:16px;margin:12px 16px;display:grid;grid-template-columns:80px 1fr;gap:12px;align-items:start}
@@ -10839,6 +10880,70 @@ Return ONLY the paragraph as plain text. No preamble, no formatting.`;
       return JSON.parse(clean);
     }catch(e){return{names:[]};}
   },
+  // ─── CAMPAIGN v2 C3 — Clock suggestions (3 variants) ───
+  // Proposes 3 progress clocks seeded from highest-pressure factions / unresolved
+  // hooks. Surface 'campaign-clocks' carries the halal guard in its focus line.
+  // Each variant: {name, size(4/6/8), justification}.
+  async generateClockSuggestions(nation){
+    if(!this.isConfigured())throw new Error('Copilot not configured. Add an API key in Settings.');
+    const n=nation||State.get();
+    if(!n)throw new Error('No active realm.');
+    // Route through the F1 brain: buildAIContext injects the 'campaign-clocks'
+    // focus line (which carries the halal guard) into the system prompt.
+    const tier=(typeof AccuracyChip!=='undefined')?AccuracyChip._tierFor('campaign-clocks'):'mid';
+    const aic=this.buildAIContext({nation:n,tier,surface:'campaign-clocks'});
+    const sys=`${aic.systemPrompt}\n\nPropose three distinct progress clocks for tonight's session, each seeded from the realm's highest-pressure factions or unresolved hooks. A progress clock is a ticking countdown toward a concrete consequence.\n\nReturn exactly 3 distinct variants. Format: JSON {"variants":[{"name":"<short threat name, ≤6 words>","size":6,"justification":"<one sentence on why this pressure is live now and what filling it costs the realm>"}]}. size must be 4, 6, or 8. Each variant must be meaningfully different — a different faction, danger, or timescale. At least one should be uncomfortable, pushing the GM off the obvious threat.`;
+    const user=`# Realm State\n${aic.worldBlock}\n\nPropose three clocks now.`;
+    const data=await this._apiFetch([{role:'system',content:sys},{role:'user',content:user}],{stream:false,max_tokens:800,response_format:{type:'json_object'}});
+    const raw=(data?.choices?.[0]?.message?.content||'').trim();
+    let parsed=null;
+    try{parsed=JSON.parse(raw);}
+    catch(e){
+      let cleaned=raw.replace(/^```(?:json)?\s*/i,'').replace(/\s*```\s*$/,'').trim();
+      const fb=cleaned.indexOf('{'),lb=cleaned.lastIndexOf('}');
+      if(fb>=0&&lb>fb)cleaned=cleaned.slice(fb,lb+1);
+      try{parsed=JSON.parse(cleaned);}catch(e2){parsed=null;}
+    }
+    if(parsed&&Array.isArray(parsed.variants)&&parsed.variants.length){
+      const vs=parsed.variants.filter(v=>v&&typeof v==='object'&&v.name).map(v=>({
+        name:String(v.name).trim(),
+        size:[4,6,8].includes(parseInt(v.size,10))?parseInt(v.size,10):6,
+        justification:String(v.justification||'').trim(),
+      }));
+      if(vs.length)return {variants:vs};
+    }
+    throw new Error('No clocks generated. Try again.');
+  },
+  // ─── CAMPAIGN v2 C3 — Next-beat suggestions (3 variants) ───
+  // Proposes 3 next-beat candidates that follow naturally from the existing beats
+  // and the chronicle's current pressure. position is the index the new beat would
+  // occupy (so the prompt knows what comes before/after).
+  async generateBeatSuggestions(nation,{existingBeats=[],position=null}={}){
+    if(!this.isConfigured())throw new Error('Copilot not configured. Add an API key in Settings.');
+    const n=nation||State.get();
+    if(!n)throw new Error('No active realm.');
+    const tier=(typeof AccuracyChip!=='undefined')?AccuracyChip._tierFor('campaign-beats'):'mid';
+    const aic=this.buildAIContext({nation:n,tier,surface:'campaign-beats'});
+    const beatList=(existingBeats||[]).map((b,i)=>`${i+1}. ${(b&&b.text?String(b.text):'(empty)').trim()}`).join('\n')||'(no beats yet)';
+    const posNote=(typeof position==='number')?`The new beat would slot in at position ${position+1}.`:'The new beat would be appended after the current beats.';
+    const sys=`${aic.systemPrompt}\n\nRead the GM's existing scene beats and the realm's current pressure, then propose three distinct candidates for the NEXT beat — a scene that could happen, escalating naturally from what is already on the board. Each is ≤2 sentences, present-tense, evocative but concrete. Pull from the realm's live tensions.\n\nReturn exactly 3 distinct variants. Format: JSON {"variants":["<beat 1>","<beat 2>","<beat 3>"]}. Each must be meaningfully different in approach — escalate, complicate, or pivot. At least one should be uncomfortable or unexpected.`;
+    const user=`# Realm State\n${aic.worldBlock}\n\n# Existing beats\n${beatList}\n\n${posNote}\n\nPropose three next-beat candidates now.`;
+    const data=await this._apiFetch([{role:'system',content:sys},{role:'user',content:user}],{stream:false,max_tokens:800,response_format:{type:'json_object'}});
+    const raw=(data?.choices?.[0]?.message?.content||'').trim();
+    let parsed=null;
+    try{parsed=JSON.parse(raw);}
+    catch(e){
+      let cleaned=raw.replace(/^```(?:json)?\s*/i,'').replace(/\s*```\s*$/,'').trim();
+      const fb=cleaned.indexOf('{'),lb=cleaned.lastIndexOf('}');
+      if(fb>=0&&lb>fb)cleaned=cleaned.slice(fb,lb+1);
+      try{parsed=JSON.parse(cleaned);}catch(e2){parsed=null;}
+    }
+    if(parsed&&Array.isArray(parsed.variants)&&parsed.variants.length){
+      const vs=parsed.variants.map(v=>typeof v==='string'?v.trim():String(v||'').trim()).filter(Boolean);
+      if(vs.length)return {variants:vs};
+    }
+    throw new Error('No beats generated. Try again.');
+  },
   // ─── CONVERSATION SUMMARIZATION (Phase 5C, 20-turn cap) ───
   // When the visible conversation exceeds 20 turns, fold the oldest 10 into a
   // single PRIOR_CONTEXT system message via a Haiku-tier summarization call.
@@ -11302,9 +11407,18 @@ const Campaign={
   open(){
     const el=document.getElementById('campaign-mode');
     if(el)el.classList.add('is-open');
+    // Idempotent (guarded by _wired): binds the delegated handlers the board needs.
+    this.wire();
     this.render();
+    // C4: mark a fresh session start so clock-idle heuristics have a baseline,
+    // then paint the local-heuristics rail. Rail renders with no API key.
+    if(typeof LiveMode!=='undefined'){
+      try{LiveMode.markSessionStart&&LiveMode.markSessionStart();}catch(e){}
+      this._renderRailFromHeuristics();
+    }
   },
   close(){
+    this._closeAiPop();
     document.getElementById('campaign-mode')?.classList.remove('is-open');
   },
   isOpen(){return !!document.getElementById('campaign-mode')?.classList.contains('is-open');},
@@ -11618,6 +11732,8 @@ const Campaign={
       const t=e.target.closest('button');
       if(!t)return;
       const d=t.dataset;
+      // Per-section AI pill — open its popover (C3).
+      if(d.cmpAi){this._openAiPop(t,d.cmpAi);return;}
       // Smart empty-state seeded actions
       if(d.cmpSeed){
         if(d.cmpSeed==='clock'){State.cpInsertClock({name:d.seedName||'New Threat',size:parseInt(d.seedSize,10)||6});}
@@ -11743,7 +11859,168 @@ const Campaign={
     // ─── Subscribe to data emitters so render stays fresh after cp:changed ───
     document.addEventListener('cp:changed',()=>{
       if(this.isOpen())this.render();
+      // Rail reflects local heuristics live (C4) — refresh whenever cp changes.
+      this._renderRailFromHeuristics();
     });
+  },
+  // ── C3: per-section AI pill popovers ──────────────────────────────────────
+  // Action registry per spec §5. `kind:'variants'` runs a 3-variant flow through
+  // Variants.render; `kind:'single'` inserts the single output and closes; the
+  // NPC "pull" action is a local pick (no API).
+  _aiActionsFor(section){
+    const A=[];
+    if(section==='stakes'){
+      A.push({label:'Read the realm → write Stakes',kind:'single',run:()=>Copilot.generateStakes(),apply:txt=>{State.cpSet('stakes',String(txt||'').trim());}});
+    }else if(section==='beats'){
+      A.push({label:'Strong Start from world',kind:'variants',run:()=>Copilot.generateStrongStart({nation:State.get()}),apply:v=>{State.cpInsertBeat({text:typeof v==='string'?v:String(v||'')},0);}});
+      A.push({label:'Suggest next beat',kind:'variants',run:()=>Copilot.generateBeatSuggestions(State.get(),{existingBeats:State.cp().beats,position:State.cp().beats.length}),apply:v=>{State.cpInsertBeat({text:typeof v==='string'?v:String(v||'')});}});
+    }else if(section==='npcs'){
+      A.push({label:'Pull NPCs for tonight (local)',kind:'local',run:()=>this._pullNpcsLocal()});
+      A.push({label:'Cast a fresh NPC',kind:'variants',run:()=>Copilot.generateQuickNPC(),render:v=>{const o=(v&&typeof v==='object')?v:{};return [o.name,o.role,o.drive||o.hook].filter(Boolean).join(' — ');},apply:v=>{const o=(v&&typeof v==='object')?v:{};State.cpInsertNpc({name:o.name||'',role:o.role||'',motivation:o.drive||o.hook||'',here:true});}});
+    }else if(section==='clocks'){
+      A.push({label:'Suggest clocks from world',kind:'variants',run:()=>Copilot.generateClockSuggestions(State.get()),render:v=>{const o=(v&&typeof v==='object')?v:{};return `${o.name||'Clock'} (${o.size||6}-tick) — ${o.justification||''}`;},apply:v=>{const o=(v&&typeof v==='object')?v:{};State.cpInsertClock({name:o.name||'New Threat',size:[4,6,8].includes(o.size)?o.size:6});}});
+    }else if(section==='secrets'){
+      A.push({label:'Generate 5 secrets',kind:'variants',run:async()=>{const arr=await Copilot.generateSecrets(State.get(),5);return {variants:Array.isArray(arr)?arr:[]};},apply:v=>{State.cpInsertSecret({text:typeof v==='string'?v:String(v||'')});},multi:true});
+    }else if(section==='notes'){
+      // Free-text generation — no dedicated generator; route the GM to the Copilot
+      // panel which answers with full world context, then they paste into Notes.
+      A.push({label:'Summarize the realm in 4 lines',kind:'single',prompt:'notes-summary'});
+      A.push({label:'What did I forget to think about?',kind:'single',prompt:'notes-forgot'});
+    }
+    return A;
+  },
+  _pullNpcsLocal(){
+    // Local pick: up to 3 active characters most relevant to current stakes/beats.
+    const n=State.get?.();if(!n||!Array.isArray(n.characters))return {variants:[]};
+    const cp=State.cp();
+    const taken=new Set(cp.npcs.map(x=>x.linkedCharacterId||(x.name||'').toLowerCase()));
+    const text=((cp.stakes||'')+' '+cp.beats.map(b=>b.text||'').join(' ')).toLowerCase();
+    const scored=[];
+    for(const c of n.characters){
+      if(!c||!c.name)continue;
+      if(taken.has(c.id)||taken.has(c.name.toLowerCase()))continue;
+      let score=0;
+      if(text.includes(c.name.toLowerCase()))score+=5;
+      if((c.status||'').toLowerCase()==='active')score+=2;
+      if(c.factionId)score+=1;
+      scored.push({c,score});
+    }
+    scored.sort((a,b)=>b.score-a.score);
+    return {variants:scored.slice(0,3).map(s=>s.c),localPick:true,
+      render:c=>[c.name,c.role||c.title||''].filter(Boolean).join(' — '),
+      apply:c=>{State.cpInsertNpc({name:c.name||'',role:c.role||c.title||'',linkedCharacterId:c.id,here:true});}};
+  },
+  _closeAiPop(){
+    if(this._aiPop){this._aiPop.remove();this._aiPop=null;}
+    if(this._aiPopAnchor){this._aiPopAnchor.setAttribute('aria-expanded','false');this._aiPopAnchor=null;}
+    if(this._aiPopOutside){document.removeEventListener('click',this._aiPopOutside,true);this._aiPopOutside=null;}
+    if(this._aiPopKey){document.removeEventListener('keydown',this._aiPopKey,true);this._aiPopKey=null;}
+  },
+  _openAiPop(anchor,section){
+    if(this._aiPopAnchor===anchor){this._closeAiPop();return;}
+    this._closeAiPop();
+    const E=Utils.escHtml;
+    const actions=this._aiActionsFor(section);
+    const titleMap={stakes:'Stakes',beats:'Scene Beats',npcs:'NPCs',clocks:'Clocks',secrets:'Secrets',notes:'Notes'};
+    const pop=document.createElement('div');
+    pop.className='cmp-ai-pop';
+    pop.setAttribute('role','dialog');
+    pop.setAttribute('aria-label',`AI actions — ${titleMap[section]||section}`);
+    pop.innerHTML=`<h3 class="cmp-ai-pop__title">⌘ ${E(titleMap[section]||section)} · AI</h3>
+      <div class="cmp-ai-pop__chip" data-acc-chip></div>
+      <div class="cmp-ai-pop__actions">${actions.map((a,i)=>`<button type="button" class="cmp-ai-pop__btn" data-ai-act="${i}">${E(a.label)}</button>`).join('')}</div>
+      <p class="cmp-ai-pop__hint">You always pick or discard. Nothing is written until you accept.</p>
+      <div class="cmp-ai-pop__out" data-ai-out></div>`;
+    document.body.appendChild(pop);
+    this._aiPop=pop;this._aiPopAnchor=anchor;this._aiPopSection=section;
+    anchor.setAttribute('aria-expanded','true');
+    // Position under the anchor, clamped to viewport.
+    const r=anchor.getBoundingClientRect();
+    const w=pop.offsetWidth||300;
+    let left=Math.min(r.left,window.innerWidth-w-12);left=Math.max(12,left);
+    pop.style.top=`${Math.min(r.bottom+6,window.innerHeight-40)}px`;
+    pop.style.left=`${left}px`;
+    // F8 AccuracyChip — surface key per section (registered in _settingKeyFor).
+    const chipEl=pop.querySelector('[data-acc-chip]');
+    const surfaceKey=`campaign-${section}`;
+    if(chipEl&&typeof AccuracyChip!=='undefined')AccuracyChip.mount(chipEl,surfaceKey,{});
+    // Action buttons.
+    pop.querySelectorAll('[data-ai-act]').forEach(btn=>{
+      btn.addEventListener('click',()=>this._runAiAction(actions[parseInt(btn.dataset.aiAct,10)],pop,btn));
+    });
+    // Dismiss on outside click / Escape. role=dialog focus goes to first button.
+    this._aiPopOutside=ev=>{if(!pop.contains(ev.target)&&ev.target!==anchor)this._closeAiPop();};
+    this._aiPopKey=ev=>{if(ev.key==='Escape'){ev.preventDefault();this._closeAiPop();anchor.focus();}};
+    setTimeout(()=>{document.addEventListener('click',this._aiPopOutside,true);document.addEventListener('keydown',this._aiPopKey,true);},0);
+    pop.querySelector('.cmp-ai-pop__btn')?.focus();
+  },
+  async _runAiAction(action,pop,btn){
+    if(!action)return;
+    const out=pop.querySelector('[data-ai-out]');
+    if(out)out.innerHTML='';
+    // Notes free-text prompts have no dedicated generator — guide the GM to Copilot.
+    if(action.prompt){
+      if(out)out.innerHTML=`<p class="cmp-ai-pop__hint">Open the Copilot panel and ask: <em>${Utils.escHtml(action.label)}</em> — it answers with full world context, then you paste into Notes.</p>`;
+      return;
+    }
+    if(typeof Copilot==='undefined'||!Copilot.isConfigured||!Copilot.isConfigured()){
+      if(out)out.innerHTML=`<p class="cmp-ai-pop__err">Add your API key in Settings to use AI here. Manual entry always works without one.</p>`;
+      return;
+    }
+    btn.disabled=true;const label=btn.textContent;btn.textContent='Working…';
+    try{
+      const res=await action.run();
+      if(action.kind==='single'){
+        const txt=typeof res==='string'?res:(res&&res.variants&&res.variants[0])||'';
+        this._renderSingleOut(out,txt,action);
+      }else{
+        // variants OR local pick. Normalise to an array.
+        let variants=Array.isArray(res)?res:(res&&Array.isArray(res.variants)?res.variants:[]);
+        const renderFn=(res&&res.render)||action.render||null;
+        const applyFn=(res&&res.apply)||action.apply;
+        if(!variants.length){if(out)out.innerHTML=`<p class="cmp-ai-pop__err">Nothing came back. Try again.</p>`;return;}
+        if(res&&res.localPick&&out){out.insertAdjacentHTML('afterbegin',`<p class="cmp-ai-pop__hint">Picked locally from your characters — no API call.</p>`);}
+        this._renderVariantsOut(out,variants,renderFn,applyFn,!!action.multi);
+      }
+    }catch(err){
+      if(out)out.innerHTML=`<p class="cmp-ai-pop__err">${Utils.escHtml(err&&err.message?err.message:'Generation failed. Try again.')}</p>`;
+    }finally{
+      btn.disabled=false;btn.textContent=label;
+    }
+  },
+  _renderSingleOut(out,txt,action){
+    if(!out)return;
+    if(!txt){out.innerHTML=`<p class="cmp-ai-pop__err">Empty result. Try again.</p>`;return;}
+    const E=Utils.escHtml;
+    out.innerHTML=`<div class="cmp-ai-pop__single">${(typeof Markdown!=='undefined')?Markdown.render(txt):E(txt).replace(/\n/g,'<br>')}</div>
+      <div class="cmp-ai-pop__row"><button type="button" class="btn btn--secondary btn--sm" data-ai-discard>Discard</button><button type="button" class="btn btn--primary btn--sm" data-ai-accept>Accept</button></div>`;
+    out.querySelector('[data-ai-discard]')?.addEventListener('click',()=>{out.innerHTML='';});
+    out.querySelector('[data-ai-accept]')?.addEventListener('click',()=>{
+      try{action.apply(txt);}catch(e){}
+      this._closeAiPop();this.render();
+      showToast?showToast('Added.'):0;
+    });
+  },
+  _renderVariantsOut(out,variants,renderFn,applyFn,multi){
+    if(!out)return;
+    const shaped=variants.map(v=>renderFn?renderFn(v):(typeof v==='string'?v:JSON.stringify(v)));
+    Variants.render({variants:shaped,container:out,onPick:(i)=>{
+      try{applyFn(variants[i]);}catch(e){}
+      if(multi){
+        // Multi-insert flows (e.g. 5 secrets) keep the picker open so the GM can add more.
+        this.render();
+        showToast?showToast('Added — pick more or close.'):0;
+      }else{
+        this._closeAiPop();this.render();
+        showToast?showToast('Added.'):0;
+      }
+    }});
+  },
+  // ── C4: render the commentary rail from local heuristics ──────────────────
+  _renderRailFromHeuristics(){
+    if(typeof LiveMode==='undefined')return;
+    LiveMode._refreshHeuristics();
+    LiveMode._renderRail();
   },
 };
 
@@ -11830,13 +12107,13 @@ const LiveMode={
     this._setState('idle');
     this._renderRail();
   },
+  // C4 lands the local-heuristics engine + rail render here. Until then these
+  // remain no-op stubs so the module compiles and the rail stays inert/hidden.
+  markSessionStart(){},
   _refreshHeuristics(){
-    // Heuristics engine lives in C4. Skeleton returns empty array.
     this._lastHeuristics=[];
   },
   _renderRail(){
-    // Rail render lives in C4–C5. Skeleton is a no-op so the file remains
-    // balanced and the module compiles. Real rail mounts into Campaign DOM.
   },
   _setState(s){
     this._state=s;
@@ -17102,34 +17379,35 @@ window.__rwClearDevTheme=function(){localStorage.removeItem('rw_dev_theme');loca
   </header>
   <div class="cmp-grid">
     <section class="cmp-card cmp-card--primary" aria-label="Fronts and Clocks">
-      <div class="cmp-card__hd"><h2 class="cmp-card__title">Fronts &amp; Clocks</h2><button class="cmp-add" data-cmp-add="clock" type="button">+ Clock</button></div>
+      <div class="cmp-card__hd"><h2 class="cmp-card__title">Fronts &amp; Clocks</h2><div class="cmp-card__hd-actions"><button class="cmp-ai-pill" data-cmp-ai="clocks" type="button" aria-haspopup="dialog" aria-expanded="false">⌘ AI</button><button class="cmp-add" data-cmp-add="clock" type="button">+ Clock</button></div></div>
       <div id="cmp-clocks"></div>
     </section>
     <section class="cmp-card cmp-card--primary" aria-label="Scene Beats">
-      <div class="cmp-card__hd"><h2 class="cmp-card__title">Scene Beats</h2><button class="cmp-add" data-cmp-add="beat" type="button">+ Beat</button></div>
+      <div class="cmp-card__hd"><h2 class="cmp-card__title">Scene Beats</h2><div class="cmp-card__hd-actions"><button class="cmp-ai-pill" data-cmp-ai="beats" type="button" aria-haspopup="dialog" aria-expanded="false">⌘ AI</button><button class="cmp-add" data-cmp-add="beat" type="button">+ Beat</button></div></div>
       <div id="cmp-beats"></div>
     </section>
   </div>
   <div class="cmp-grid">
     <section class="cmp-card" aria-label="NPC quick reference">
-      <div class="cmp-card__hd"><h2 class="cmp-card__title">NPCs &middot; ★ here tonight</h2><button class="cmp-add" data-cmp-add="npc" type="button">+ NPC</button></div>
+      <div class="cmp-card__hd"><h2 class="cmp-card__title">NPCs &middot; ★ here tonight</h2><div class="cmp-card__hd-actions"><button class="cmp-ai-pill" data-cmp-ai="npcs" type="button" aria-haspopup="dialog" aria-expanded="false">⌘ AI</button><button class="cmp-add" data-cmp-add="npc" type="button">+ NPC</button></div></div>
       <div id="cmp-npcs"></div>
     </section>
     <section class="cmp-card" aria-label="Secrets and clues">
-      <div class="cmp-card__hd"><h2 class="cmp-card__title">Secrets &amp; Clues</h2><button class="cmp-add" data-cmp-add="secret" type="button">+ Secret</button></div>
+      <div class="cmp-card__hd"><h2 class="cmp-card__title">Secrets &amp; Clues</h2><div class="cmp-card__hd-actions"><button class="cmp-ai-pill" data-cmp-ai="secrets" type="button" aria-haspopup="dialog" aria-expanded="false">⌘ AI</button><button class="cmp-add" data-cmp-add="secret" type="button">+ Secret</button></div></div>
       <div id="cmp-secrets"></div>
     </section>
   </div>
   <div class="cmp-grid cmp-grid--bottom">
     <section class="cmp-card" aria-label="Live session notes">
-      <div class="cmp-card__hd"><h2 class="cmp-card__title">Live Session Notes</h2></div>
+      <div class="cmp-card__hd"><h2 class="cmp-card__title">Live Session Notes</h2><div class="cmp-card__hd-actions"><button class="cmp-ai-pill" data-cmp-ai="notes" type="button" aria-haspopup="dialog" aria-expanded="false">⌘ AI</button></div></div>
       <div id="cmp-notes-md" class="cmp-md-host" aria-label="Live session notes (markdown — click to edit)"></div>
     </section>
     <section class="cmp-card" aria-label="Stakes">
-      <div class="cmp-card__hd"><h2 class="cmp-card__title">Stakes</h2></div>
+      <div class="cmp-card__hd"><h2 class="cmp-card__title">Stakes</h2><div class="cmp-card__hd-actions"><button class="cmp-ai-pill" data-cmp-ai="stakes" type="button" aria-haspopup="dialog" aria-expanded="false">⌘ AI</button></div></div>
       <div id="cmp-stakes-md" class="cmp-md-host" aria-label="Stakes (markdown — click to edit)"></div>
     </section>
   </div>
+  <aside class="cmp-rail" id="cmp-rail" role="complementary" aria-label="Live commentary — heads-up, questions, watch-outs" hidden></aside>
 </div>
 
 <!-- ─── NOTES DECIPHER MODAL ─── -->
