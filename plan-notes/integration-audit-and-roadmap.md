@@ -47,11 +47,23 @@
 
 ---
 
-## D. GM MODE (Hunter: "what about the GM mode I asked about — did you do anything?")
+## D. GM MODE — decoded from prior session + specs (Hunter: "go find it, don't make me repeat")
 
-**Built today** (`GMMode` `:12389`): a toolbar (toggle in Settings, badge below wordmark) with **4 AI tools** — Quick NPC, Session Prep, What's at Stake, Strong Start. Quick NPC + Strong Start have **3-variant pickers** (`url-2-spec.md:115` asked for exactly this). All route through `Copilot.generate*` → the F1 brain. **So yes — a GM mode exists and is AI-powered.**
+Hunter's verbatim grievances: *"GM mode is not in the mode setting and when it turns off the place it stays — I don't like it."* Cross-referenced against `PLAN.md:106-111` (P1.9 grid override) and `url-1-spec.md:142` (W2-T07 — the resolved decision).
 
-**What the specs asked for that may NOT be fully done** (`url-1-spec.md:142` W2-T07): one consolidated **"GM Tools" panel** surfacing **9** actions — Strong Start, Quick NPC, What's at Stake, Session Prep, **Proclamation, News, Letter, Glossary, Names**. Today the last five live scattered in other panels (Handouts/Glossary/Naming), not in the GM toolbar. So the GM surface is *partial*: 4 of 9 tools consolidated.
+**Three concrete problems to fix:**
+1. **Wrong toggle location.** GM Mode is a Settings toggle (`toggle-gm-mode` `:12421`). It should be a first-class item in the **Mode picker** (alongside Tonight/Campaign/World) since it's a session-running surface, not a preference.
+2. **Layout doesn't clean up on toggle-off.** `body.gm-mode #app` adds a 4th grid row (`PLAN.md:108-110`) and `body.gm-mode .world-mode-shell{top:96px;}` shifts the shell (60px identity + 36px toolbar). When GM toggles off, ember theme still has `.gm-toolbar` CSS quirks (review/04-ui.md:177 documents the 36px offset hangover). Visual hole.
+3. **9 tools scattered.** Spec W2-T07's decision: **add a "GM Tools" section in WorldShell left panel** (`wms-lp`), shown only when GM Mode is on. Move 9 actions there: Strong Start, Quick NPC, What's at Stake, Session Prep, **Proclamation, News, Letter, Glossary, Names**. **Delete** the old `.gm-toolbar` DOM + the `display:none !important` rule (~CSS line 335). Today only 4 of 9 are in the GMMode toolbar; the other 5 live scattered in Handouts/Glossary/Naming panels.
+
+**Current GM build (commit 54d25c4):** `GMMode` `:12389` exposes 4 AI tools via toolbar. Toggle in Settings + badge below wordmark. Each tool routes through `Copilot.generate*` → F1 brain. 3-variant pickers on Quick NPC + Strong Start. **Solid foundation, wrong placement.**
+
+**Plan (separate agent task, AFTER Campaign rebuild):**
+- Move GM toggle into the Mode picker popover.
+- Build the WorldShell-left-panel "GM Tools" section (`wms-gm-tools`) per W2-T07.
+- Migrate 5 scattered tools (Proclamation/News/Letter/Glossary/Names) into the panel — they keep their existing generators, just gain a GM-Tools button entry.
+- Kill `.gm-toolbar` DOM + the `display:none` rule.
+- Verify ember/manuscript/modern themes all toggle cleanly with no layout artifact (resolves P1.9 properly).
 
 ---
 
