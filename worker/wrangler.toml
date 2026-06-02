@@ -26,7 +26,7 @@ LS_STORE_ID = ""
 
 # Demo cost fences.
 DEMO_MODEL = "anthropic/claude-3.5-haiku"   # exact OpenRouter slug — verify on openrouter.ai/models
-DEMO_PER_IP_DAILY = "3"
+DEMO_PER_IP_DAILY = "5"
 DEMO_GLOBAL_DAILY = "300"
 DEMO_MAX_TOKENS = "1200"
 RATE_LIMIT_PER_MIN = "30"

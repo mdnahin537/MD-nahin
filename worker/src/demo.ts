@@ -86,7 +86,7 @@ export async function handleDemoGenerate(request: Request, env: DemoEnv): Promis
   }
 
   const day = today();
-  const perIpLimit = parseInt(env.DEMO_PER_IP_DAILY || '3', 10);
+  const perIpLimit = parseInt(env.DEMO_PER_IP_DAILY || '5', 10);
   const globalLimit = parseInt(env.DEMO_GLOBAL_DAILY || '300', 10);
 
   // 2) Global ceiling — read before spending. When hit, push to Sample Mode.
