@@ -2805,6 +2805,64 @@ SECTION 7: MOTION & STATE STYLES
 .cmp-npc__fields{display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:6px;min-width:0}
 @media (max-width:560px){.cmp-npc__fields{grid-template-columns:1fr}}
 .cmp-stakes-area{min-height:60px}
+/* ─── CAMPAIGN MODE v2 — row hover-reveal, drag, link tags, smart empties, MD ─── */
+/* Row actions stay quiet until hover/focus (or touch tap on the row).
+   Keyboard focus reveals them too, so a11y is preserved. */
+.cmp-row__actions{opacity:0;transition:opacity .15s ease;pointer-events:none}
+.cmp-row:hover .cmp-row__actions,
+.cmp-row:focus-within .cmp-row__actions,
+.cmp-row.is-drag-over .cmp-row__actions,
+.cmp-clock:hover .cmp-row__actions--clock,
+.cmp-clock:focus-within .cmp-row__actions--clock,
+.cmp-npc:hover .cmp-row__actions,
+.cmp-npc:focus-within .cmp-row__actions{opacity:1;pointer-events:auto}
+/* Coarse pointers (touch): actions always visible — no hover to rely on. */
+@media (hover:none){.cmp-row__actions{opacity:1;pointer-events:auto}}
+/* Drag handle — only visible on hover/focus, but always-tabbable for keyboard reorder. */
+.cmp-drag{display:inline-flex;align-items:flex-start;color:var(--color-text-faint);font-size:14px;line-height:1;padding:6px 2px 0;cursor:grab;user-select:none;opacity:0;transition:opacity .15s ease}
+.cmp-row--beat:hover .cmp-drag,
+.cmp-row--beat:focus-within .cmp-drag,
+.cmp-row--beat.is-dragging .cmp-drag{opacity:.75}
+.cmp-row--beat.is-dragging{opacity:.55;cursor:grabbing}
+.cmp-row--beat.is-drag-over{border-top:2px solid var(--ember-color)}
+.cmp-row--beat:focus{outline:none;box-shadow:inset 2px 0 0 var(--ember-color);background:rgba(127,127,127,.05)}
+.cmp-row__hint{font-size:10px;letter-spacing:.06em;color:var(--color-text-faint);margin-top:2px;font-style:italic}
+.cmp-input--title{font-weight:600}
+/* Clock idle indicator: a small dimmed badge nudges the GM to tick it. */
+.cmp-clock.is-idle .cmp-clock__when{color:#b07a45}
+.cmp-clock__when{font-size:10px;color:var(--color-text-faint);margin-left:auto;letter-spacing:.05em;font-variant-caps:all-small-caps}
+.cmp-clock__count{font-variant-numeric:tabular-nums}
+/* NPC quick-link tag — surfaces character link when name matches a realm character. */
+.cmp-npc__name-row{display:flex;align-items:center;gap:6px;min-width:0}
+.cmp-npc__link{background:transparent;border:1px dashed var(--color-border-hairline);color:var(--color-text-faint);font-size:10px;letter-spacing:.04em;text-transform:uppercase;padding:2px 6px;border-radius:10px;cursor:pointer;white-space:nowrap;font-family:var(--font-body);transition:border-color .15s,color .15s}
+.cmp-npc__link:hover{border-color:var(--ember-color);color:var(--ember-color)}
+.cmp-npc__link.is-linked{border-style:solid;color:var(--ember-color);border-color:var(--faction-tint,var(--ember-color))}
+.cmp-npc__link.is-linked:hover{background:rgba(127,127,127,.10)}
+/* Secrets — delivered-to block animates in when the secret is checked off. */
+.cmp-secret__delivered{margin-top:6px;padding-top:6px;border-top:1px dashed var(--color-border-hairline);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.cmp-secret__delivered label{flex-shrink:0}
+.cmp-input--ghost{flex:1;min-width:120px;font-size:11px;color:var(--color-text-muted)}
+.cmp-link{background:transparent;border:none;color:var(--ember-color);font-size:10px;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;padding:2px 4px}
+.cmp-link:hover{text-decoration:underline}
+/* Smart empty states — concrete one-click seeded actions, theme-aware. */
+.cmp-empty--smart{padding:14px 12px;border:1px dashed var(--color-border-hairline);border-radius:8px;background:transparent;display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+.cmp-empty--smart p{margin:0;font-size:var(--text-body-sm);color:var(--color-text-muted);font-style:normal}
+.cmp-empty__seeds{display:flex;flex-wrap:wrap;gap:6px}
+.cmp-empty__seed{background:transparent;border:1px solid var(--color-border-hairline);border-radius:6px;padding:6px 10px;color:var(--color-text-primary);font-family:var(--font-body);font-size:12px;cursor:pointer;text-align:left;line-height:1.35;transition:border-color .15s,background .15s,color .15s}
+.cmp-empty__seed:hover{border-color:var(--ember-color);color:var(--ember-color);background:rgba(127,127,127,.06)}
+.cmp-empty__seed-role{color:var(--color-text-faint);font-size:11px;margin-left:4px}
+/* Markdown read-mode + click-to-edit for Notes / Stakes. */
+.cmp-md-host{min-height:60px}
+.cmp-md{font-size:var(--text-body-sm);line-height:1.55;color:var(--color-text-primary);padding:8px 10px;border-radius:6px;border:1px solid transparent;cursor:text;min-height:60px}
+.cmp-md:hover{border-color:var(--color-border-hairline);background:rgba(127,127,127,.04)}
+.cmp-md:focus{outline:none;border-color:var(--ember-color)}
+.cmp-md--empty{color:var(--color-text-faint);font-style:italic}
+.cmp-md p{margin:0 0 .55em}.cmp-md p:last-child{margin-bottom:0}
+.cmp-md ul,.cmp-md ol{margin:0 0 .55em 1.25em;padding:0}
+.cmp-md h1,.cmp-md h2,.cmp-md h3{font-family:'Cinzel',serif;font-size:var(--text-label-md);margin:0 0 .35em;color:var(--ember-color)}
+.cmp-md code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:rgba(127,127,127,.12);padding:1px 4px;border-radius:3px;font-size:.92em}
+.cmp-md blockquote{margin:0 0 .55em;padding:.25em .75em;border-left:2px solid var(--color-border-hairline);color:var(--color-text-muted)}
+.cmp-area--md{min-height:120px}
 /* ─── FRONTS PANEL ─── */
 .fronts-list{padding:0 0 80px}
 .front-card{background:var(--color-parchment-warm);border:1px solid var(--color-border-hairline);border-radius:8px;padding:16px;margin:12px 16px;display:grid;grid-template-columns:80px 1fr;gap:12px;align-items:start}
@@ -4478,7 +4536,53 @@ const SCHEMA_VERSION='2.5.0';
 // Empty Campaign prep board. Lives at meta level (one board per save) so it
 // survives nation switches and reloads. Self-contained: its own session clocks,
 // distinct from the per-nation `fronts` model that feeds the stability engine.
-function emptyCampaignPrep(){return{stakes:'',notes:'',clocks:[],beats:[],npcs:[],secrets:[]};}
+// Campaign v2: schema is additive — older saves get fields filled by migrateCampaignPrep.
+function emptyCampaignPrep(){return{
+  stakes:'',notes:'',clocks:[],beats:[],npcs:[],secrets:[],
+  // Live Mode subscription state (per-board so toggling persists with the save).
+  liveModePinned:[],
+  // Locally-authored notes the user explicitly silenced; kept so the rail
+  // doesn't keep re-raising the same flag after dismiss.
+  dismissedHeuristics:[],
+  // Session counter for the per-session rate cap; resets on save reload.
+  sessionCallCount:0,
+  sessionStartedAt:Date.now(),
+  // Cached last commentary so the rail repaints instantly on re-open.
+  lastCommentary:null,
+};}
+// Idempotent, additive-only migration: fill any new field the older payload
+// is missing; never rename, never delete. Safe to call on every read.
+function migrateCampaignPrep(cp){
+  if(!cp||typeof cp!=='object')return emptyCampaignPrep();
+  const def=emptyCampaignPrep();
+  // Top-level scalars + arrays
+  if(typeof cp.stakes!=='string')cp.stakes='';
+  if(typeof cp.notes!=='string')cp.notes='';
+  if(!Array.isArray(cp.clocks))cp.clocks=[];
+  if(!Array.isArray(cp.beats))cp.beats=[];
+  if(!Array.isArray(cp.npcs))cp.npcs=[];
+  if(!Array.isArray(cp.secrets))cp.secrets=[];
+  if(!Array.isArray(cp.liveModePinned))cp.liveModePinned=[];
+  if(!Array.isArray(cp.dismissedHeuristics))cp.dismissedHeuristics=[];
+  if(typeof cp.sessionCallCount!=='number')cp.sessionCallCount=0;
+  if(typeof cp.sessionStartedAt!=='number')cp.sessionStartedAt=Date.now();
+  if(cp.lastCommentary===undefined)cp.lastCommentary=null;
+  // Per-row sub-fields (lossless additive).
+  cp.clocks.forEach(c=>{
+    if(c&&c.lastChangedAt===undefined)c.lastChangedAt=null;
+  });
+  cp.beats.forEach(b=>{
+    if(b&&b.playedAt===undefined)b.playedAt=null;
+  });
+  cp.secrets.forEach(s=>{
+    if(s&&s.deliveredTo===undefined)s.deliveredTo='';
+    if(s&&s.deliveredAt===undefined)s.deliveredAt=null;
+  });
+  cp.npcs.forEach(npc=>{
+    if(npc&&npc.linkedCharacterId===undefined)npc.linkedCharacterId=null;
+  });
+  return cp;
+}
 const DEFAULT_SETTINGS={theme:'ember',respectMotionPref:true,showForecasts:false,showSecrets:false,onboardingComplete:false,copilotProvider:'openrouter',copilotModel:'anthropic/claude-sonnet-latest',copilotKey:null,ollamaUrl:'http://localhost:11434',ollamaModel:'llama3.1',copilotScope:'standard',copilotAutoApply:false,gmMode:false,ambient:false,
 // F7 — cost system. Both null = passive meter only. User opt-in turns on warn/cap.
 costWarnUSD:null,costCapUSD:null,
@@ -4488,7 +4592,10 @@ costWarnUSD:null,costCapUSD:null,
 liveMode:false,liveModeTier:'mid',liveModeAcked:false,liveModeCap:{perMin:6,perSession:60},
 tonightTier:'mid',soloTier:'mid',handoutTier:'mid',bestiaryTier:'mid',encounterTier:'mid',
 glossaryTier:'mid',namingTier:'mid',relationsTier:'mid',continuityTier:'mid',decipherTier:'mid',
-secretsTier:'mid',strongstartTier:'mid'};
+secretsTier:'mid',strongstartTier:'mid',
+// Campaign Mode v2 — each section gets its own knob; default Mid balances cost vs depth.
+campaignStakesTier:'mid',campaignStrongStartTier:'mid',campaignBeatsTier:'mid',
+campaignNpcTier:'mid',campaignClocksTier:'mid',campaignSecretsTier:'mid',campaignNotesTier:'low'};
 const ERA_GAP={Ancient:100,Classical:75,Medieval:50,Renaissance:75,Industrial:25,Modern:15,'Near-Future':10,'Far-Future':5,'Post-Collapse':30};
 const ERA_NAMES={Political:'The Reform Years',Military:'The Long War',Economic:'The Trade Awakening',Cultural:'The Silent Century',Social:"The Generation's Turning",Diplomatic:'The Quiet Borders',Natural:'The Lean Years'};
 const STAT_DESC={legitimacy:"The degree to which citizens accept the regime's right to rule.",corruption:"The degree to which officials serve themselves over the state. Drags stability hard.",opposition:"Organized strength of groups actively working against the current regime.",food_production:"The nation's ability to feed its population. Foundational.",trade:"Commercial activity and market health.",raw_materials:"Availability of physical inputs: metals, timber, stone, fuel.",manpower:"Human capital available for labor, defense, and public works.",knowledge:"Educational and institutional sophistication of the nation.",cohesion:"The degree to which citizens share identity, interest, and purpose.",urbanization:"The proportion of population in cities."};
@@ -5386,7 +5493,12 @@ const AccuracyChip={
       solo:'soloTier',handout:'handoutTier',bestiary:'bestiaryTier',encounter:'encounterTier',
       glossary:'glossaryTier',naming:'namingTier',relations:'relationsTier',
       continuity:'continuityTier',decipher:'decipherTier',secrets:'secretsTier',
-      strongstart:'strongstartTier'};
+      strongstart:'strongstartTier',
+      // Campaign Mode v2 per-section knobs + the Live Mode subscriber.
+      'campaign-stakes':'campaignStakesTier','campaign-strongstart':'campaignStrongStartTier',
+      'campaign-beats':'campaignBeatsTier','campaign-quicknpc':'campaignNpcTier',
+      'campaign-clocks':'campaignClocksTier','campaign-secrets':'campaignSecretsTier',
+      'campaign-notes':'campaignNotesTier','live-mode-campaign':'liveModeTier'};
     return map[surface]||null;
   },
   _tierFor(surface){
@@ -7047,28 +7159,49 @@ const State={
   },
 
   // ─── CAMPAIGN PREP BOARD (meta level — one per save) ───
-  cp(){this.data.meta.campaignPrep=this.data.meta.campaignPrep||emptyCampaignPrep();return this.data.meta.campaignPrep;},
-  cpSet(field,value){this.pushUndo();this.cp()[field]=value;this._touchMeta();this.persist();},
+  cp(){this.data.meta.campaignPrep=migrateCampaignPrep(this.data.meta.campaignPrep||emptyCampaignPrep());return this.data.meta.campaignPrep;},
+  cpSet(field,value){this.pushUndo();this.cp()[field]=value;this._touchMeta();this.persist();this._cpEmit([field]);},
   // Notes/Stakes autosave on a debounce — no undo snapshot per keystroke.
-  cpSetText(field,value){this.cp()[field]=value;this._touchMeta();this.persist();},
-  cpAddClock(){this.pushUndo();this.cp().clocks.push({id:Utils.uuid(),name:'New Threat',size:6,filled:0});this._touchMeta();this.persist();},
-  cpUpdateClock(id,patch){const c=this.cp().clocks.find(x=>x.id===id);if(!c)return;this.pushUndo();Object.assign(c,patch);this._touchMeta();this.persist();},
+  cpSetText(field,value){this.cp()[field]=value;this._touchMeta();this.persist();this._cpEmit([field],{trivial:true});},
+  cpAddClock(){this.pushUndo();this.cp().clocks.push({id:Utils.uuid(),name:'New Threat',size:6,filled:0,lastChangedAt:Date.now()});this._touchMeta();this.persist();this._cpEmit(['clocks']);},
+  cpUpdateClock(id,patch){const c=this.cp().clocks.find(x=>x.id===id);if(!c)return;this.pushUndo();Object.assign(c,patch);c.lastChangedAt=Date.now();this._touchMeta();this.persist();this._cpEmit(['clocks']);},
   // Click a segment: clicking the currently-last-filled segment unfills it, else fill up to it.
-  cpSetClockSeg(id,seg){const c=this.cp().clocks.find(x=>x.id===id);if(!c)return;this.pushUndo();c.filled=(c.filled===seg)?seg-1:seg;c.filled=Math.min(Math.max(c.filled,0),c.size);this._touchMeta();this.persist();},
-  cpRemoveClock(id){this.pushUndo();const cp=this.cp();cp.clocks=cp.clocks.filter(x=>x.id!==id);this._touchMeta();this.persist();},
-  cpAddBeat(){this.pushUndo();this.cp().beats.push({id:Utils.uuid(),text:'',done:false});this._touchMeta();this.persist();},
-  cpUpdateBeat(id,patch){const b=this.cp().beats.find(x=>x.id===id);if(!b)return;this.pushUndo();Object.assign(b,patch);this._touchMeta();this.persist();},
-  cpToggleBeat(id){const b=this.cp().beats.find(x=>x.id===id);if(!b)return;this.pushUndo();b.done=!b.done;this._touchMeta();this.persist();},
-  cpRemoveBeat(id){this.pushUndo();const cp=this.cp();cp.beats=cp.beats.filter(x=>x.id!==id);this._touchMeta();this.persist();},
-  cpMoveBeat(id,dir){const cp=this.cp();const i=cp.beats.findIndex(x=>x.id===id);if(i<0)return;const j=i+dir;if(j<0||j>=cp.beats.length)return;this.pushUndo();const[b]=cp.beats.splice(i,1);cp.beats.splice(j,0,b);this._touchMeta();this.persist();},
-  cpAddNpc(){this.pushUndo();this.cp().npcs.push({id:Utils.uuid(),name:'',role:'',motivation:'',here:false});this._touchMeta();this.persist();},
-  cpUpdateNpc(id,patch){const npc=this.cp().npcs.find(x=>x.id===id);if(!npc)return;this.pushUndo();Object.assign(npc,patch);this._touchMeta();this.persist();},
-  cpToggleNpc(id){const npc=this.cp().npcs.find(x=>x.id===id);if(!npc)return;this.pushUndo();npc.here=!npc.here;this._touchMeta();this.persist();},
-  cpRemoveNpc(id){this.pushUndo();const cp=this.cp();cp.npcs=cp.npcs.filter(x=>x.id!==id);this._touchMeta();this.persist();},
-  cpAddSecret(){this.pushUndo();this.cp().secrets.push({id:Utils.uuid(),text:'',delivered:false});this._touchMeta();this.persist();},
-  cpUpdateSecret(id,patch){const s=this.cp().secrets.find(x=>x.id===id);if(!s)return;this.pushUndo();Object.assign(s,patch);this._touchMeta();this.persist();},
-  cpToggleSecret(id){const s=this.cp().secrets.find(x=>x.id===id);if(!s)return;this.pushUndo();s.delivered=!s.delivered;this._touchMeta();this.persist();},
-  cpRemoveSecret(id){this.pushUndo();const cp=this.cp();cp.secrets=cp.secrets.filter(x=>x.id!==id);this._touchMeta();this.persist();},
+  cpSetClockSeg(id,seg){const c=this.cp().clocks.find(x=>x.id===id);if(!c)return;this.pushUndo();c.filled=(c.filled===seg)?seg-1:seg;c.filled=Math.min(Math.max(c.filled,0),c.size);c.lastChangedAt=Date.now();this._touchMeta();this.persist();this._cpEmit(['clocks']);},
+  cpRemoveClock(id){this.pushUndo();const cp=this.cp();cp.clocks=cp.clocks.filter(x=>x.id!==id);this._touchMeta();this.persist();this._cpEmit(['clocks']);},
+  cpAddBeat(){this.pushUndo();this.cp().beats.push({id:Utils.uuid(),text:'',done:false,playedAt:null});this._touchMeta();this.persist();this._cpEmit(['beats']);},
+  cpUpdateBeat(id,patch){const b=this.cp().beats.find(x=>x.id===id);if(!b)return;this.pushUndo();Object.assign(b,patch);this._touchMeta();this.persist();this._cpEmit(['beats']);},
+  cpToggleBeat(id){const b=this.cp().beats.find(x=>x.id===id);if(!b)return;this.pushUndo();b.done=!b.done;b.playedAt=b.done?Date.now():null;this._touchMeta();this.persist();this._cpEmit(['beats']);},
+  cpRemoveBeat(id){this.pushUndo();const cp=this.cp();cp.beats=cp.beats.filter(x=>x.id!==id);this._touchMeta();this.persist();this._cpEmit(['beats']);},
+  cpMoveBeat(id,dir){const cp=this.cp();const i=cp.beats.findIndex(x=>x.id===id);if(i<0)return;const j=i+dir;if(j<0||j>=cp.beats.length)return;this.pushUndo();const[b]=cp.beats.splice(i,1);cp.beats.splice(j,0,b);this._touchMeta();this.persist();this._cpEmit(['beats']);},
+  // Insert a freshly-built beat at index `at` (default end). Used by AI accept paths.
+  cpInsertBeat(beat,at){const cp=this.cp();const b={id:Utils.uuid(),text:'',done:false,playedAt:null,...(beat||{})};this.pushUndo();const idx=(typeof at==='number'&&at>=0&&at<=cp.beats.length)?at:cp.beats.length;cp.beats.splice(idx,0,b);this._touchMeta();this.persist();this._cpEmit(['beats']);return b.id;},
+  cpAddNpc(){this.pushUndo();this.cp().npcs.push({id:Utils.uuid(),name:'',role:'',motivation:'',here:false,linkedCharacterId:null});this._touchMeta();this.persist();this._cpEmit(['npcs']);},
+  cpUpdateNpc(id,patch){const npc=this.cp().npcs.find(x=>x.id===id);if(!npc)return;this.pushUndo();Object.assign(npc,patch);this._touchMeta();this.persist();this._cpEmit(['npcs']);},
+  cpToggleNpc(id){const npc=this.cp().npcs.find(x=>x.id===id);if(!npc)return;this.pushUndo();npc.here=!npc.here;this._touchMeta();this.persist();this._cpEmit(['npcs']);},
+  cpRemoveNpc(id){this.pushUndo();const cp=this.cp();cp.npcs=cp.npcs.filter(x=>x.id!==id);this._touchMeta();this.persist();this._cpEmit(['npcs']);},
+  cpInsertNpc(npc){const cp=this.cp();const n={id:Utils.uuid(),name:'',role:'',motivation:'',here:false,linkedCharacterId:null,...(npc||{})};this.pushUndo();cp.npcs.push(n);this._touchMeta();this.persist();this._cpEmit(['npcs']);return n.id;},
+  cpAddSecret(){this.pushUndo();this.cp().secrets.push({id:Utils.uuid(),text:'',delivered:false,deliveredTo:'',deliveredAt:null});this._touchMeta();this.persist();this._cpEmit(['secrets']);},
+  cpUpdateSecret(id,patch){const s=this.cp().secrets.find(x=>x.id===id);if(!s)return;this.pushUndo();Object.assign(s,patch);this._touchMeta();this.persist();this._cpEmit(['secrets']);},
+  cpToggleSecret(id){const s=this.cp().secrets.find(x=>x.id===id);if(!s)return;this.pushUndo();s.delivered=!s.delivered;s.deliveredAt=s.delivered?Date.now():null;this._touchMeta();this.persist();this._cpEmit(['secrets']);},
+  cpRemoveSecret(id){this.pushUndo();const cp=this.cp();cp.secrets=cp.secrets.filter(x=>x.id!==id);this._touchMeta();this.persist();this._cpEmit(['secrets']);},
+  cpInsertSecret(secret){const cp=this.cp();const s={id:Utils.uuid(),text:'',delivered:false,deliveredTo:'',deliveredAt:null,...(secret||{})};this.pushUndo();cp.secrets.push(s);this._touchMeta();this.persist();this._cpEmit(['secrets']);return s.id;},
+  cpInsertClock(clock){const cp=this.cp();const c={id:Utils.uuid(),name:'New Threat',size:6,filled:0,lastChangedAt:Date.now(),...(clock||{})};this.pushUndo();cp.clocks.push(c);this._touchMeta();this.persist();this._cpEmit(['clocks']);return c.id;},
+  // ─── CAMPAIGN EVENT EMITTER ───
+  // Single dispatch point so LiveMode + AccuracyChip can react. Marks `trivial`
+  // for keystroke-debounced text autosave so triggers can ignore those.
+  _cpEmit(fields,opts){
+    try{document.dispatchEvent(new CustomEvent('sc:changed',{detail:{fields:['campaign',...(fields||[])],trivial:!!(opts&&opts.trivial)}}));}catch(e){}
+    try{document.dispatchEvent(new CustomEvent('cp:changed',{detail:{fields:fields||[],trivial:!!(opts&&opts.trivial)}}));}catch(e){}
+  },
+  // Live Mode persisted settings — surface getters/setters so the toggle UI is one-liner.
+  cpLiveOn(){return !!this.data.meta.settings.liveMode;},
+  cpLiveAcked(){return !!this.data.meta.settings.liveModeAcked;},
+  cpSetLiveOn(on){this.data.meta.settings.liveMode=!!on;this._touchMeta();this.persist();this._cpEmit(['liveMode']);},
+  cpSetLiveAcked(){this.data.meta.settings.liveModeAcked=true;this._touchMeta();this.persist();},
+  cpPinHeuristic(item){const cp=this.cp();cp.liveModePinned.unshift({...(item||{}),id:Utils.uuid(),pinnedAt:Date.now()});cp.liveModePinned=cp.liveModePinned.slice(0,12);this._touchMeta();this.persist();this._cpEmit(['liveModePinned']);},
+  cpUnpinHeuristic(id){const cp=this.cp();cp.liveModePinned=cp.liveModePinned.filter(x=>x.id!==id);this._touchMeta();this.persist();this._cpEmit(['liveModePinned']);},
+  cpDismissHeuristic(key){const cp=this.cp();if(!cp.dismissedHeuristics.includes(key))cp.dismissedHeuristics.push(key);this._touchMeta();this.persist();this._cpEmit(['dismissedHeuristics'],{trivial:true});},
+  cpSetLastCommentary(c){const cp=this.cp();cp.lastCommentary=c||null;this._touchMeta();this.persist();},
 
   // ─── LOCATIONS ───
   _locationHasCycle(locations,parentId,targetId){
@@ -9757,6 +9890,18 @@ const Copilot={
     secrets:'Focus: generate short single-sentence world facts the players might discover, abstracted from method of discovery.',
     strongstart:'Focus: write three distinct read-aloud strong-start paragraphs that establish scene and one immediate hook each.',
     arsenal:'Focus: respond to a curated Arsenal prompt against the world-state; depth-aware, grounded, no contradictions invented.',
+    // Campaign Mode v2 — per-section surfaces. Each generator routes through
+    // its own focus line so the chip + transparency log show what shipped.
+    'campaign-stakes':'Focus: write a single read-aloud Stakes paragraph (~3–5 sentences) grounded in current tensions; name one or two factions or characters; end on an implied dilemma.',
+    'campaign-strongstart':'Focus: write three distinct read-aloud strong-start paragraphs (60–100 words each); each establishes scene and one immediate hook tied to the realm.',
+    'campaign-beats':'Focus: propose three distinct next-beat candidates that follow naturally from the existing beats and current chronicle pressure; ≤2 sentences each.',
+    'campaign-quicknpc':'Focus: cast three distinct one-line NPC variants tied to current Campaign stakes and active factions; name, role, want, distinctive trait.',
+    'campaign-clocks':'Focus: propose three progress clocks (name, size 4/6/8, one-line justification) seeded from highest-pressure factions or unresolved hooks. Political/social/economic/environmental only — no occult, no divination, no gambling mechanics.',
+    'campaign-secrets':'Focus: generate short single-sentence world-facts the players might discover; one per line; abstracted from method of discovery; political/social/economic/environmental only.',
+    'campaign-notes':'Focus: answer the GM\'s free-form question about the realm in 4 lines or fewer.',
+    // F3 Live Mode commentary surface. Fills three slots: Pressure, Question, Contradiction.
+    // Output is JSON and validated against slot contracts; malformed = fall back to local heuristics.
+    'live-mode-campaign':'Focus: read the Campaign board against the world-state and fill three slots — PressureSlot (3–5 stat-tagged bullets ≤16 words), QuestionSlot (1–3 sharp questions ≤22 words), ContradictionSlot (0–3 severity-tagged flags ≤24 words). Be the quiet co-GM: surface mistakes, ask what the GM might have missed, complement what is working. Political/social/economic/environmental only — no occult, no divination, no gambling mechanics.',
     _default:'',
   },
   // System prompt — accepts a `surface` label so each generator speaks in its own voice.
@@ -11141,12 +11286,19 @@ const FrontDoor={
   },
 };
 
-// ─── CAMPAIGN MODE — GM session-prep center ─────────────────────────────────
-// Single-screen prep board persisted at meta.campaignPrep (one per save). All
-// user text is escaped on render (XSS-sensitive). Mutations go through State.cp*.
+// ─── CAMPAIGN MODE — GM session-prep center (v2) ────────────────────────────
+// Persistent per-save board (clocks, beats, NPCs, secrets, notes, stakes) tightly
+// connected to the world brain. Manual is first-class; AI pills (C3) and the
+// Live Mode commentary rail (C4-C6) layer on top without owning the UX. All
+// user text escaped on render; mutations go through State.cp*.
 const Campaign={
   _wired:false,
   _notesTimer:null,
+  // Currently-edited markdown field id (notes/stakes) — preserved across renders
+  // so a re-render from a sibling commit doesn't yank focus.
+  _editingMd:null,
+  // Drag source for native HTML5 DnD on beats (id of dragged row).
+  _dragId:null,
   open(){
     const el=document.getElementById('campaign-mode');
     if(el)el.classList.add('is-open');
@@ -11156,6 +11308,31 @@ const Campaign={
     document.getElementById('campaign-mode')?.classList.remove('is-open');
   },
   isOpen(){return !!document.getElementById('campaign-mode')?.classList.contains('is-open');},
+  // Render-cycle helper: format a relative "Xm ago" string for played-at hints.
+  _ago(ts){
+    if(!ts)return'';
+    const d=Date.now()-ts;
+    if(d<60000)return'just now';
+    if(d<3600000)return`${Math.floor(d/60000)}m ago`;
+    if(d<86400000)return`${Math.floor(d/3600000)}h ago`;
+    return`${Math.floor(d/86400000)}d ago`;
+  },
+  // Resolve an NPC name against the active realm's characters. Returns the
+  // first case-insensitive match or null. Used for quick-link chips.
+  _matchCharacter(name){
+    if(!name||typeof name!=='string')return null;
+    const n=State.get?.();if(!n||!Array.isArray(n.characters))return null;
+    const needle=name.trim().toLowerCase();
+    if(!needle)return null;
+    return n.characters.find(c=>c&&(c.name||'').toLowerCase()===needle)||null;
+  },
+  _factionColor(c){
+    if(!c)return'';
+    const n=State.get?.();const f=n?.factions?.find(x=>x.id===c.factionId);
+    if(!f)return'';
+    // Use existing event-type color tokens as a reasonable proxy. Falls back to ember.
+    return Utils.typeColor(f.type||'Political')||'';
+  },
   // Clickable progress clock. Each segment carries data-seg (1-based) so a click
   // fills up to it (or unfills the last segment). Mirrors FrontsPanel.clockSVG geometry.
   _clockSVG(size,filled){
@@ -11178,87 +11355,230 @@ const Campaign={
     if(!this.isOpen())return;
     const cp=State.cp();
     const E=Utils.escHtml;
-    // Clocks
+    const n=State.get?.();
+    // ─── Clocks ───
     const clocksEl=document.getElementById('cmp-clocks');
     if(clocksEl){
       clocksEl.innerHTML=cp.clocks.length?cp.clocks.map(c=>{
         const id=E(c.id);
-        return `<div class="cmp-clock" data-clock="${id}">
-          <div class="cmp-clock__svg-wrap" data-clock-svg="${id}">${this._clockSVG(c.size,c.filled)}</div>
+        const idle=this._clockIsIdle(c);
+        return `<div class="cmp-clock${idle?' is-idle':''}" data-clock="${id}">
+          <div class="cmp-clock__svg-wrap" data-clock-svg="${id}" title="${idle?'Idle since session start — has this threat moved?':''}">${this._clockSVG(c.size,c.filled)}</div>
           <div class="cmp-clock__body">
-            <input class="cmp-input" value="${E(c.name)}" data-clock-name="${id}" aria-label="Threat name">
+            <input class="cmp-input cmp-input--title" value="${E(c.name)}" data-clock-name="${id}" aria-label="Threat name" placeholder="Threat name…">
             <div class="cmp-clock__meta">
-              <span>${c.filled}/${c.size}</span>
+              <span class="cmp-clock__count">${c.filled}/${c.size}</span>
               <select class="cmp-clock__size" data-clock-size="${id}" aria-label="Clock segments">
-                <option value="4"${c.size===4?' selected':''}>4</option>
-                <option value="6"${c.size===6?' selected':''}>6</option>
-                <option value="8"${c.size===8?' selected':''}>8</option>
+                <option value="4"${c.size===4?' selected':''}>4 ticks</option>
+                <option value="6"${c.size===6?' selected':''}>6 ticks</option>
+                <option value="8"${c.size===8?' selected':''}>8 ticks</option>
               </select>
+              ${c.lastChangedAt?`<span class="cmp-clock__when" title="Last moved ${E(new Date(c.lastChangedAt).toLocaleString())}">${E(this._ago(c.lastChangedAt))}</span>`:''}
             </div>
           </div>
-          <div class="cmp-clock__actions">
+          <div class="cmp-row__actions cmp-row__actions--clock">
             <button class="cmp-iconbtn cmp-iconbtn--danger" data-clock-del="${id}" type="button" aria-label="Delete clock" title="Delete">✕</button>
           </div>
         </div>`;
-      }).join(''):'<div class="cmp-empty">No clocks yet. Add a threat or faction whose pressure ticks toward catastrophe.</div>';
+      }).join(''):this._emptyClocks();
     }
-    // Beats — first is the Strong Start
+    // ─── Beats — first is Strong Start, drag-to-reorder enabled ───
     const beatsEl=document.getElementById('cmp-beats');
     if(beatsEl){
       beatsEl.innerHTML=cp.beats.length?cp.beats.map((b,i)=>{
         const id=E(b.id);
-        return `<div class="cmp-row${b.done?' is-done':''}" data-beat="${id}">
-          <button class="cmp-check" data-beat-check="${id}" type="button" role="checkbox" aria-checked="${b.done?'true':'false'}" aria-label="Mark beat played">${b.done?'✓':''}</button>
+        const playedHint=b.done&&b.playedAt?`played ${E(this._ago(b.playedAt))}`:'';
+        return `<div class="cmp-row cmp-row--beat${b.done?' is-done':''}" data-beat="${id}" draggable="true" tabindex="0" role="listitem" aria-grabbed="false" aria-label="Beat ${i+1}${i===0?' (Strong Start)':''}">
+          <span class="cmp-drag" aria-hidden="true" title="Drag to reorder — or Alt+↑/↓">⋮⋮</span>
+          <button class="cmp-check" data-beat-check="${id}" type="button" role="checkbox" aria-checked="${b.done?'true':'false'}" aria-label="Mark beat played" title="${playedHint||'Mark played'}">${b.done?'✓':''}</button>
           <div class="cmp-row__body">
             ${i===0?'<div class="cmp-beat__start">Strong Start</div>':''}
             <textarea class="cmp-area" rows="2" data-beat-text="${id}" placeholder="A scene that could happen…" aria-label="Scene beat">${E(b.text)}</textarea>
+            ${playedHint?`<div class="cmp-row__hint">${E(playedHint)}</div>`:''}
           </div>
           <div class="cmp-row__actions">
-            <button class="cmp-iconbtn" data-beat-up="${id}" type="button" aria-label="Move up" title="Move up">▲</button>
-            <button class="cmp-iconbtn" data-beat-down="${id}" type="button" aria-label="Move down" title="Move down">▼</button>
+            <button class="cmp-iconbtn" data-beat-up="${id}" type="button" aria-label="Move up" title="Move up (Alt+↑)">▲</button>
+            <button class="cmp-iconbtn" data-beat-down="${id}" type="button" aria-label="Move down" title="Move down (Alt+↓)">▼</button>
             <button class="cmp-iconbtn cmp-iconbtn--danger" data-beat-del="${id}" type="button" aria-label="Delete beat" title="Delete">✕</button>
           </div>
         </div>`;
-      }).join(''):'<div class="cmp-empty">No scenes yet. The first beat is your Strong Start — open in the action.</div>';
+      }).join(''):this._emptyBeats();
     }
-    // NPCs
+    // ─── NPCs — with character quick-link affordance ───
     const npcsEl=document.getElementById('cmp-npcs');
     if(npcsEl){
       npcsEl.innerHTML=cp.npcs.length?cp.npcs.map(npc=>{
         const id=E(npc.id);
+        const matched=npc.linkedCharacterId?n?.characters?.find(c=>c.id===npc.linkedCharacterId):this._matchCharacter(npc.name);
+        const linkTag=matched?`<button class="cmp-npc__link is-linked" data-npc-open="${E(matched.id)}" type="button" title="Open character: ${E(matched.name)}" style="${matched.factionId?`--faction-tint:${E(this._factionColor(matched))}`:''}">↗ ${E(matched.name)}</button>`:(npc.name?`<button class="cmp-npc__link" data-npc-link-suggest="${id}" type="button" title="Link this NPC to a character in this realm">+ link</button>`:'');
         return `<div class="cmp-npc" data-npc="${id}">
-          <button class="cmp-npc__here" data-npc-here="${id}" type="button" aria-pressed="${npc.here?'true':'false'}" aria-label="Toggle appears this session" title="Appears this session">${npc.here?'★':'☆'}</button>
+          <button class="cmp-npc__here" data-npc-here="${id}" type="button" aria-pressed="${npc.here?'true':'false'}" aria-label="Toggle at the table tonight" title="At the table tonight">${npc.here?'★':'☆'}</button>
           <div class="cmp-npc__fields">
-            <input class="cmp-input" value="${E(npc.name)}" data-npc-name="${id}" placeholder="Name" aria-label="NPC name">
+            <div class="cmp-npc__name-row">
+              <input class="cmp-input cmp-input--title" value="${E(npc.name)}" data-npc-name="${id}" placeholder="Name" aria-label="NPC name">
+              ${linkTag}
+            </div>
             <input class="cmp-input" value="${E(npc.role)}" data-npc-role="${id}" placeholder="Role" aria-label="NPC role">
             <input class="cmp-input" value="${E(npc.motivation)}" data-npc-motivation="${id}" placeholder="Wants…" aria-label="NPC motivation">
           </div>
-          <button class="cmp-iconbtn cmp-iconbtn--danger" data-npc-del="${id}" type="button" aria-label="Delete NPC" title="Delete">✕</button>
+          <div class="cmp-row__actions">
+            <button class="cmp-iconbtn cmp-iconbtn--danger" data-npc-del="${id}" type="button" aria-label="Delete NPC" title="Delete">✕</button>
+          </div>
         </div>`;
-      }).join(''):'<div class="cmp-empty">No NPCs yet. Keep these to one line each — scannable in seconds.</div>';
+      }).join(''):this._emptyNpcs();
     }
-    // Secrets
+    // ─── Secrets — with Delivered-to chronicle seed ───
     const secEl=document.getElementById('cmp-secrets');
     if(secEl){
       secEl.innerHTML=cp.secrets.length?cp.secrets.map(s=>{
         const id=E(s.id);
-        return `<div class="cmp-row${s.delivered?' is-done':''}" data-secret="${id}">
-          <button class="cmp-check" data-secret-check="${id}" type="button" role="checkbox" aria-checked="${s.delivered?'true':'false'}" aria-label="Mark secret delivered">${s.delivered?'✓':''}</button>
+        const deliveredBlock=s.delivered?`<div class="cmp-secret__delivered">
+          <label class="cmp-row__hint" for="cmp-deliv-${id}">Delivered to — how:</label>
+          <input class="cmp-input cmp-input--ghost" id="cmp-deliv-${id}" data-secret-deliveredto="${id}" value="${E(s.deliveredTo||'')}" placeholder="To whom / via what (becomes a chronicle seed)" aria-label="Delivered to / how">
+          ${s.deliveredTo?`<button class="cmp-link" data-secret-log="${id}" type="button" title="Log this revelation to the chronicle">Log to chronicle</button>`:''}
+        </div>`:'';
+        return `<div class="cmp-row cmp-row--secret${s.delivered?' is-done':''}" data-secret="${id}">
+          <button class="cmp-check" data-secret-check="${id}" type="button" role="checkbox" aria-checked="${s.delivered?'true':'false'}" aria-label="Mark secret delivered" title="Mark delivered">${s.delivered?'✓':''}</button>
           <div class="cmp-row__body">
             <textarea class="cmp-area" rows="2" data-secret-text="${id}" placeholder="A revelation the players can uncover…" aria-label="Secret or clue">${E(s.text)}</textarea>
+            ${deliveredBlock}
           </div>
           <div class="cmp-row__actions">
             <button class="cmp-iconbtn cmp-iconbtn--danger" data-secret-del="${id}" type="button" aria-label="Delete secret" title="Delete">✕</button>
           </div>
         </div>`;
-      }).join(''):'<div class="cmp-empty">No secrets yet. A bank of ~10 revelations keeps you improvising without stalling.</div>';
+      }).join(''):this._emptySecrets();
     }
-    // Notes + Stakes — set value only when not focused, so a re-render mid-typing
-    // (e.g. an undo elsewhere) doesn't yank the caret.
-    const notes=document.getElementById('cmp-notes');
-    if(notes&&document.activeElement!==notes)notes.value=cp.notes||'';
-    const stakes=document.getElementById('cmp-stakes');
-    if(stakes&&document.activeElement!==stakes)stakes.value=cp.stakes||'';
+    // ─── Notes & Stakes — markdown read mode + click-to-edit ───
+    this._renderMd('notes',cp.notes||'',document.getElementById('cmp-notes-md'));
+    this._renderMd('stakes',cp.stakes||'',document.getElementById('cmp-stakes-md'));
+  },
+  // Render a markdown field. If currently in edit mode, leave the live textarea alone.
+  _renderMd(field,raw,container){
+    if(!container)return;
+    if(this._editingMd===field)return; // user is typing — don't yank caret
+    const E=Utils.escHtml;
+    if(!raw||!raw.trim()){
+      const placeholder=field==='notes'?'Click to jot what happens at the table — autosaves. Markdown supported.':'Click to write what happens if the players do nothing.';
+      container.innerHTML=`<div class="cmp-md cmp-md--empty" data-md-field="${E(field)}" tabindex="0" role="button" aria-label="Edit ${E(field)}">${E(placeholder)}</div>`;
+      return;
+    }
+    const html=(typeof Markdown!=='undefined')?Markdown.render(raw):E(raw).replace(/\n/g,'<br>');
+    container.innerHTML=`<div class="cmp-md" data-md-field="${E(field)}" tabindex="0" role="button" aria-label="Edit ${E(field)} — click to edit">${html}</div>`;
+  },
+  // Switch a markdown field into edit mode: replace rendered HTML with a textarea, focus.
+  _editMd(field){
+    const container=document.getElementById(`cmp-${field}-md`);if(!container)return;
+    if(this._editingMd===field)return;
+    this._editingMd=field;
+    const raw=(State.cp()[field])||'';
+    const E=Utils.escHtml;
+    const minH=field==='notes'?160:96;
+    container.innerHTML=`<textarea class="cmp-area cmp-area--md" data-md-edit="${E(field)}" style="min-height:${minH}px" aria-label="Edit ${E(field)}">${E(raw)}</textarea>`;
+    const ta=container.querySelector('textarea');
+    if(ta){
+      ta.focus();
+      // Caret at end on first focus
+      try{ta.setSelectionRange(ta.value.length,ta.value.length);}catch(e){}
+      ta.addEventListener('input',()=>{
+        clearTimeout(this._notesTimer);
+        this._notesTimer=setTimeout(()=>State.cpSetText(field,ta.value),400);
+      });
+      const commit=()=>{
+        clearTimeout(this._notesTimer);
+        State.cpSetText(field,ta.value);
+        this._editingMd=null;
+        this._renderMd(field,ta.value,container);
+      };
+      ta.addEventListener('blur',commit);
+      ta.addEventListener('keydown',e=>{
+        if(e.key==='Escape'){e.preventDefault();commit();}
+      });
+    }
+  },
+  // ── Smart empty states — each seeds one realistic action from world context. ──
+  _emptyClocks(){
+    const n=State.get?.();
+    const seed=this._suggestClockSeed(n);
+    if(!seed)return`<div class="cmp-empty">No clocks yet. Add a threat or faction whose pressure ticks toward catastrophe.</div>`;
+    const E=Utils.escHtml;
+    return`<div class="cmp-empty cmp-empty--smart">
+      <p>No clocks yet. A clock turns a slow danger into a visible deadline.</p>
+      <button class="cmp-empty__seed" data-cmp-seed="clock" data-seed-name="${E(seed.name)}" data-seed-size="${seed.size}" type="button">+ Add &ldquo;${E(seed.name)}&rdquo; (${seed.size}-tick)</button>
+    </div>`;
+  },
+  _emptyBeats(){
+    const n=State.get?.();
+    const seed=this._suggestBeatSeed(n);
+    const E=Utils.escHtml;
+    if(!seed)return`<div class="cmp-empty">No scenes yet. The first beat is your Strong Start — open in the action.</div>`;
+    return`<div class="cmp-empty cmp-empty--smart">
+      <p>No scenes yet. The first beat is your Strong Start — open in the action.</p>
+      <button class="cmp-empty__seed" data-cmp-seed="beat" data-seed-text="${E(seed)}" type="button">+ Seed Strong Start from a hook</button>
+    </div>`;
+  },
+  _emptyNpcs(){
+    const n=State.get?.();
+    const seeds=this._suggestNpcSeeds(n);
+    if(!seeds.length)return`<div class="cmp-empty">No NPCs yet. Keep these to one line each — scannable in seconds.</div>`;
+    const E=Utils.escHtml;
+    return`<div class="cmp-empty cmp-empty--smart">
+      <p>No NPCs yet. Pull one from your active characters in two clicks.</p>
+      <div class="cmp-empty__seeds">${seeds.map(s=>`<button class="cmp-empty__seed" data-cmp-seed="npc" data-seed-name="${E(s.name)}" data-seed-role="${E(s.role||'')}" data-seed-cid="${E(s.id||'')}" type="button">+ ${E(s.name)}${s.role?` <span class="cmp-empty__seed-role">${E(s.role)}</span>`:''}</button>`).join('')}</div>
+    </div>`;
+  },
+  _emptySecrets(){
+    const n=State.get?.();
+    const seed=this._suggestSecretSeed(n);
+    if(!seed)return`<div class="cmp-empty">No secrets yet. A bank of ~10 revelations keeps you improvising without stalling.</div>`;
+    const E=Utils.escHtml;
+    return`<div class="cmp-empty cmp-empty--smart">
+      <p>No secrets yet. A bank of ~10 revelations keeps you improvising.</p>
+      <button class="cmp-empty__seed" data-cmp-seed="secret" data-seed-text="${E(seed)}" type="button">+ Seed from your chronicle</button>
+    </div>`;
+  },
+  // ── Heuristic seeders (local-only — no API). Keep faithful to world data. ──
+  _suggestClockSeed(n){
+    if(!n)return null;
+    // Highest-stress faction first (position='losing'/'fragmenting'). Fall back to highest-tension stat.
+    const fac=(n.factions||[]).find(f=>f&&(f.position==='losing'||f.position==='fragmenting'))||(n.factions||[])[0];
+    if(fac&&fac.name)return{name:fac.name+' pushes the issue',size:6};
+    const stat=(n.coreStats||n.stats||[]).find?.(s=>s&&typeof s.value==='number'&&s.value<=30);
+    if(stat)return{name:(stat.displayName||stat.key||'Threat')+' collapses',size:6};
+    return null;
+  },
+  _suggestBeatSeed(n){
+    if(!n)return null;
+    const hook=(n.hooks||n.plotSeeds||[]).find?.(h=>h&&h.status!=='resolved')||(n.hooks||n.plotSeeds||[])[0];
+    if(hook&&(hook.text||hook.name))return hook.text||hook.name;
+    return null;
+  },
+  _suggestNpcSeeds(n){
+    if(!n||!Array.isArray(n.characters))return[];
+    // Pick up to 3 active characters not already on the board.
+    const cp=State.cp();
+    const taken=new Set(cp.npcs.map(x=>(x.linkedCharacterId)||x.name?.toLowerCase()));
+    const out=[];
+    for(const c of n.characters){
+      if(!c||!c.name)continue;
+      if(taken.has(c.id)||taken.has(c.name.toLowerCase()))continue;
+      out.push({id:c.id,name:c.name,role:c.role||c.title||''});
+      if(out.length>=3)break;
+    }
+    return out;
+  },
+  _suggestSecretSeed(n){
+    if(!n||!Array.isArray(n.chronicle)||!n.chronicle.length)return null;
+    // Pick a high-weight chronicle event the players might rediscover.
+    const ev=[...n.chronicle].sort((a,b)=>Math.abs((b.weight||0))-Math.abs((a.weight||0)))[0];
+    if(ev&&ev.name)return`A scrap of truth points to ${ev.name}.`;
+    return null;
+  },
+  // Local-heuristic: a clock is "idle" if its last change is older than the current session start.
+  _clockIsIdle(c){
+    if(!c||!c.lastChangedAt)return false;
+    const start=State.cp().sessionStartedAt||0;
+    return c.lastChangedAt<start;
   },
   wire(){
     if(this._wired)return;
@@ -11272,7 +11592,7 @@ const Campaign={
       State.persist();
       this.close();
     });
-    // Add buttons
+    // Top-level Add buttons (per-section "+ Clock / + Beat / + NPC / + Secret")
     root.querySelectorAll('[data-cmp-add]').forEach(btn=>{
       btn.addEventListener('click',()=>{
         const t=btn.dataset.cmpAdd;
@@ -11283,17 +11603,65 @@ const Campaign={
         this.render();
       });
     });
-    // Delegated clicks for the dynamic lists
+    // ─── Delegated clicks for all dynamic content ───
     root.addEventListener('click',e=>{
+      // Click a clock segment to set the fill level
       const seg=e.target.closest('.cmp-clock__seg');
       if(seg){
         const wrap=seg.closest('[data-clock-svg]');
         if(wrap){State.cpSetClockSeg(wrap.dataset.clockSvg,parseInt(seg.dataset.seg,10));this.render();}
         return;
       }
+      // Click a markdown placeholder to enter edit mode
+      const md=e.target.closest('.cmp-md');
+      if(md&&!e.target.closest('a')){this._editMd(md.dataset.mdField);return;}
       const t=e.target.closest('button');
       if(!t)return;
       const d=t.dataset;
+      // Smart empty-state seeded actions
+      if(d.cmpSeed){
+        if(d.cmpSeed==='clock'){State.cpInsertClock({name:d.seedName||'New Threat',size:parseInt(d.seedSize,10)||6});}
+        else if(d.cmpSeed==='beat'){State.cpInsertBeat({text:d.seedText||''},0);}
+        else if(d.cmpSeed==='npc'){State.cpInsertNpc({name:d.seedName||'',role:d.seedRole||'',linkedCharacterId:d.seedCid||null,here:true});}
+        else if(d.cmpSeed==='secret'){State.cpInsertSecret({text:d.seedText||''});}
+        this.render();return;
+      }
+      // Open a linked character panel
+      if(d.npcOpen){
+        if(typeof CharacterDetail!=='undefined'&&CharacterDetail.open){CharacterDetail.open(d.npcOpen);}
+        else if(typeof Render!=='undefined'&&Render.openCharacter){Render.openCharacter(d.npcOpen);}
+        else{showToast?showToast('Open Characters panel to view this NPC.'):0;}
+        return;
+      }
+      // Suggest linking an NPC by name to a realm character
+      if(d.npcLinkSuggest){
+        const npc=State.cp().npcs.find(x=>x.id===d.npcLinkSuggest);
+        if(!npc)return;
+        const match=this._matchCharacter(npc.name);
+        if(match){
+          State.cpUpdateNpc(d.npcLinkSuggest,{linkedCharacterId:match.id});
+          this.render();
+          showToast?showToast(`Linked to ${match.name}.`):0;
+        }else{
+          showToast?showToast('No matching character in this realm yet — create one in Characters first.'):0;
+        }
+        return;
+      }
+      // Log a delivered secret to the chronicle (seeds an inscribe form with deliveredTo context)
+      if(d.secretLog){
+        const sec=State.cp().secrets.find(x=>x.id===d.secretLog);
+        if(!sec)return;
+        const seed=`${sec.text}${sec.deliveredTo?` — delivered to ${sec.deliveredTo}`:''}`;
+        if(typeof InscribeModal!=='undefined'&&InscribeModal.open){InscribeModal.open({description:seed});}
+        else if(typeof Modals!=='undefined'&&Modals.open){
+          // Best-effort: copy seed to clipboard so the GM can paste into the existing Chronicle inscribe.
+          Utils.copyToClipboard?.(seed);
+        }else{
+          showToast?showToast('Copied seed to clipboard — paste into Chronicle.'):0;
+        }
+        return;
+      }
+      // Standard row actions
       if(d.clockDel){if(confirm('Delete this clock?')){State.cpRemoveClock(d.clockDel);this.render();}return;}
       if(d.beatCheck){State.cpToggleBeat(d.beatCheck);this.render();return;}
       if(d.beatUp){State.cpMoveBeat(d.beatUp,-1);this.render();return;}
@@ -11304,7 +11672,7 @@ const Campaign={
       if(d.secretCheck){State.cpToggleSecret(d.secretCheck);this.render();return;}
       if(d.secretDel){State.cpRemoveSecret(d.secretDel);this.render();return;}
     });
-    // Delegated text commits on change/blur for inline inputs + textareas
+    // ─── Text commits on change/blur for inline inputs + textareas ───
     root.addEventListener('change',e=>{
       const d=e.target.dataset||{};
       if(d.clockName!=null&&d.clockName!=='')State.cpUpdateClock(d.clockName,{name:e.target.value});
@@ -11313,18 +11681,173 @@ const Campaign={
         const c=State.cp().clocks.find(x=>x.id===d.clockSize);if(c&&c.filled>c.size)State.cpUpdateClock(d.clockSize,{filled:c.size});this.render();}
       else if(d.beatText)State.cpUpdateBeat(d.beatText,{text:e.target.value});
       else if(d.secretText)State.cpUpdateSecret(d.secretText,{text:e.target.value});
+      else if(d.secretDeliveredto)State.cpUpdateSecret(d.secretDeliveredto,{deliveredTo:e.target.value});
       else if(d.npcName!=null&&d.npcName!=='')State.cpUpdateNpc(d.npcName,{name:e.target.value});
       else if(d.npcRole)State.cpUpdateNpc(d.npcRole,{role:e.target.value});
       else if(d.npcMotivation)State.cpUpdateNpc(d.npcMotivation,{motivation:e.target.value});
     });
-    // Notes + Stakes — debounced autosave on every keystroke
-    const autosave=(field,el)=>{
-      clearTimeout(this._notesTimer);
-      this._notesTimer=setTimeout(()=>State.cpSetText(field,el.value),400);
-    };
-    document.getElementById('cmp-notes')?.addEventListener('input',e=>autosave('notes',e.target));
-    document.getElementById('cmp-stakes')?.addEventListener('input',e=>autosave('stakes',e.target));
+    // ─── Alt+ArrowUp/Down keyboard reorder on focused beat row (a11y) ───
+    root.addEventListener('keydown',e=>{
+      const row=e.target.closest('.cmp-row--beat');
+      if(!row)return;
+      const id=row.dataset.beat;if(!id)return;
+      if(e.altKey&&e.key==='ArrowUp'){e.preventDefault();State.cpMoveBeat(id,-1);this.render();
+        // Refocus the moved row
+        setTimeout(()=>document.querySelector(`.cmp-row--beat[data-beat="${CSS.escape(id)}"]`)?.focus(),0);
+        return;}
+      if(e.altKey&&e.key==='ArrowDown'){e.preventDefault();State.cpMoveBeat(id,1);this.render();
+        setTimeout(()=>document.querySelector(`.cmp-row--beat[data-beat="${CSS.escape(id)}"]`)?.focus(),0);
+        return;}
+    });
+    // ─── Native HTML5 drag-and-drop on beat rows ───
+    root.addEventListener('dragstart',e=>{
+      const row=e.target.closest?.('.cmp-row--beat');
+      if(!row)return;
+      this._dragId=row.dataset.beat||null;
+      row.classList.add('is-dragging');
+      row.setAttribute('aria-grabbed','true');
+      try{e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',this._dragId||'');}catch(err){}
+    });
+    root.addEventListener('dragend',e=>{
+      const row=e.target.closest?.('.cmp-row--beat');
+      if(row){row.classList.remove('is-dragging');row.setAttribute('aria-grabbed','false');}
+      root.querySelectorAll('.cmp-row--beat.is-drag-over').forEach(el=>el.classList.remove('is-drag-over'));
+      this._dragId=null;
+    });
+    root.addEventListener('dragover',e=>{
+      const row=e.target.closest?.('.cmp-row--beat');
+      if(!row||!this._dragId||row.dataset.beat===this._dragId)return;
+      e.preventDefault();
+      try{e.dataTransfer.dropEffect='move';}catch(err){}
+      root.querySelectorAll('.cmp-row--beat.is-drag-over').forEach(el=>el!==row&&el.classList.remove('is-drag-over'));
+      row.classList.add('is-drag-over');
+    });
+    root.addEventListener('drop',e=>{
+      const row=e.target.closest?.('.cmp-row--beat');
+      if(!row||!this._dragId)return;
+      e.preventDefault();
+      const fromId=this._dragId;const toId=row.dataset.beat;
+      if(!toId||fromId===toId)return;
+      const beats=State.cp().beats;
+      const fromIdx=beats.findIndex(b=>b.id===fromId);
+      const toIdx=beats.findIndex(b=>b.id===toId);
+      if(fromIdx<0||toIdx<0)return;
+      const dir=toIdx-fromIdx;
+      // Move stepwise so undo is sensible (one move per snapshot).
+      const steps=Math.abs(dir);
+      const sign=dir>0?1:-1;
+      for(let i=0;i<steps;i++)State.cpMoveBeat(fromId,sign);
+      this._dragId=null;
+      this.render();
+    });
+    // ─── Subscribe to data emitters so render stays fresh after cp:changed ───
+    document.addEventListener('cp:changed',()=>{
+      if(this.isOpen())this.render();
+    });
   },
+};
+
+// ─── LIVE MODE MODULE ────────────────────────────────────────────────────────
+// F3 architecture (ai-layer-plan-v2 §4) scoped to Campaign as first subscriber.
+// Off by default. When on, listens to committed Campaign + world events, debounces
+// triggers, enforces rate caps, fills three slot contracts via the F1 brain, and
+// repaints the commentary rail. Local-heuristics engine ships value with no API.
+const LiveMode={
+  _wired:false,
+  // State machine: idle / thinking / answered / paused / error.
+  _state:'idle',
+  // In-window timestamps for the per-minute rate cap.
+  _recentCalls:[],
+  // Pending debounce timer for trigger flurries.
+  _debounceTimer:null,
+  // Whether the user manually paused (via indicator click). Distinct from cap pauses.
+  _userPaused:false,
+  // Last commentary slot payload (for instant rail repaint on re-open).
+  _lastSlots:null,
+  // Last local heuristics output. Always fresh on re-render.
+  _lastHeuristics:[],
+  // Single inflight controller so flurries cancel cleanly.
+  _abort:null,
+  // Reduced-motion preference resolved once (matchMedia is fast enough but cache anyway).
+  _reducedMotion:false,
+  init(){
+    if(this._wired)return;
+    this._wired=true;
+    try{this._reducedMotion=!!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches);}catch(e){this._reducedMotion=false;}
+    // Subscribe to committed-change emitter. Trivial keystroke flags are ignored.
+    document.addEventListener('cp:changed',e=>{
+      if(e.detail?.trivial)return;
+      this._onTrigger('campaign:'+(e.detail?.fields?.[0]||'change'));
+    });
+    // World-side triggers that Campaign cares about: chronicle, faction CRUD,
+    // character status, hook resolved. The sc:changed emitter already exists
+    // for these. The trivial filter keeps autosave flurries out.
+    document.addEventListener('sc:changed',e=>{
+      if(e.detail?.trivial)return;
+      const fields=e.detail?.fields||[];
+      if(fields.includes('campaign'))return; // covered by cp:changed above
+      const worldRelevant=['chronicle','faction','character','hook','front'];
+      if(fields.some(f=>worldRelevant.includes(f)))this._onTrigger('world:'+fields.filter(f=>worldRelevant.includes(f)).join(','));
+    });
+  },
+  isOn(){return !!(typeof State!=='undefined'&&State.cpLiveOn&&State.cpLiveOn());},
+  // Local-heuristics-only mode: if Live is off OR no API key, the rail still
+  // shows useful notes. The rail itself decides which to render based on this.
+  isLocalOnly(){
+    if(!this.isOn())return true;
+    try{return !(Copilot.isConfigured&&Copilot.isConfigured());}catch(e){return true;}
+  },
+  _onTrigger(source){
+    if(!this.isOn())return;
+    if(this._userPaused)return;
+    // Always refresh local heuristics on every trigger — cheap, useful even when paused.
+    this._refreshHeuristics();
+    if(this.isLocalOnly()){this._renderRail();return;}
+    // Debounce flurries into one call. Spec §6.3: 2500ms.
+    clearTimeout(this._debounceTimer);
+    this._debounceTimer=setTimeout(()=>this._maybeFire(source),2500);
+    this._setState('thinking');
+  },
+  _maybeFire(source){
+    // Rate caps: 6/min (auto-pause + resume), 60/session (hard pause).
+    const settings=State.data?.meta?.settings||{};
+    const perMin=settings.liveModeCap?.perMin||6;
+    const perSession=settings.liveModeCap?.perSession||60;
+    const now=Date.now();
+    this._recentCalls=this._recentCalls.filter(t=>now-t<60000);
+    const cp=State.cp();
+    if(this._recentCalls.length>=perMin){
+      this._setState('paused');
+      this._lastPauseReason='rate-cap';
+      return;
+    }
+    if((cp.sessionCallCount||0)>=perSession){
+      this._setState('paused');
+      this._lastPauseReason='session-cap';
+      return;
+    }
+    // Stub: real fire path lands in C6. For C1 skeleton just keep heuristics fresh.
+    this._setState('idle');
+    this._renderRail();
+  },
+  _refreshHeuristics(){
+    // Heuristics engine lives in C4. Skeleton returns empty array.
+    this._lastHeuristics=[];
+  },
+  _renderRail(){
+    // Rail render lives in C4–C5. Skeleton is a no-op so the file remains
+    // balanced and the module compiles. Real rail mounts into Campaign DOM.
+  },
+  _setState(s){
+    this._state=s;
+    // Indicator DOM ships in C3; until then, broadcast the state for inspectors.
+    try{document.dispatchEvent(new CustomEvent('live:state',{detail:{state:s,reducedMotion:this._reducedMotion}}));}catch(e){}
+  },
+  // Public surface used by the toggle + warning modal (lands in C5).
+  enable(){State.cpSetLiveOn(true);this._userPaused=false;this._setState('idle');},
+  disable(){State.cpSetLiveOn(false);clearTimeout(this._debounceTimer);if(this._abort){try{this._abort.abort();}catch(e){}}this._setState('idle');},
+  pause(){this._userPaused=true;clearTimeout(this._debounceTimer);this._setState('paused');},
+  resume(){this._userPaused=false;this._recentCalls=[];this._setState('idle');this._refreshHeuristics();this._renderRail();},
 };
 
 // ─── TONIGHT MODULE ──────────────────────────────────────────────────────────
@@ -16309,6 +16832,9 @@ async function bootstrap(){
   if(typeof Copilot!=='undefined')Copilot.updateStatus();
   // Apply GM mode if enabled
   if(typeof GMMode!=='undefined')GMMode.apply();
+  // F3 Live Mode skeleton — subscribes to committed Campaign + world events.
+  // Off by default; this just primes listeners so the toggle reacts instantly.
+  if(typeof LiveMode!=='undefined')LiveMode.init();
   // Mode Picker gates first run — show it before rendering dashboard
   if(!State.data.meta.firstRunComplete){
     if(typeof FrontDoor!=='undefined')FrontDoor.open();
@@ -16597,11 +17123,11 @@ window.__rwClearDevTheme=function(){localStorage.removeItem('rw_dev_theme');loca
   <div class="cmp-grid cmp-grid--bottom">
     <section class="cmp-card" aria-label="Live session notes">
       <div class="cmp-card__hd"><h2 class="cmp-card__title">Live Session Notes</h2></div>
-      <textarea class="cmp-area" id="cmp-notes" rows="6" placeholder="Jot what happens at the table — autosaves." aria-label="Live session notes"></textarea>
+      <div id="cmp-notes-md" class="cmp-md-host" aria-label="Live session notes (markdown — click to edit)"></div>
     </section>
     <section class="cmp-card" aria-label="Stakes">
       <div class="cmp-card__hd"><h2 class="cmp-card__title">Stakes</h2></div>
-      <textarea class="cmp-area cmp-stakes-area" id="cmp-stakes" rows="3" placeholder="What happens if the players do nothing?" aria-label="Stakes if players do nothing"></textarea>
+      <div id="cmp-stakes-md" class="cmp-md-host" aria-label="Stakes (markdown — click to edit)"></div>
     </section>
   </div>
 </div>
