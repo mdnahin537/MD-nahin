@@ -58,6 +58,23 @@ Hunter's verbatim grievances: *"GM mode is not in the mode setting and when it t
 
 **Current GM build (commit 54d25c4):** `GMMode` `:12389` exposes 4 AI tools via toolbar. Toggle in Settings + badge below wordmark. Each tool routes through `Copilot.generate*` → F1 brain. 3-variant pickers on Quick NPC + Strong Start. **Solid foundation, wrong placement.**
 
+---
+
+### ⚠️ CORRECTION (verified in live code af6f031, 2026-06-02) — the above was partly stale.
+
+Re-reading the actual `index.html` revealed two things the earlier audit got wrong, plus the real root cause of Hunter's grievance:
+
+1. **"4 of 9 tools consolidated" is STALE.** The `.gm-toolbar` (`:3219`) already holds **all 10** tools: Quick NPC, Session Prep, What's at Stake, Strong Start, Proclamation, News, Letter, Glossary, **Encounter**, Names. A later session finished W2-T07's consolidation into the top toolbar; the audit note was never updated. The consolidation, in the top-toolbar form, is **DONE**.
+
+2. **The "when it turns off the place it stays" bug is a real code defect — FOUND.** In the Mode picker (`:15203`), the **World** branch does NOT disable GM mode. The comment at `:15160` says *"World = WorldShell with GM Mode off,"* but the `else` branch only `Campaign.close()` + a toast — it never calls `State.setSetting('gmMode',false)`. So Campaign→World leaves `gmMode=true`: toolbar still shown, `world-mode-shell` still pinned at `top:96px` (the P1.9 offset), layout visibly "stuck." **Intent vs code disagree. This is the bug.**
+
+3. **GM has THREE inconsistent controls:** (a) Settings `#toggle-gm-mode` (`:3716`), (b) Mode-picker Campaign item implicitly sets `gmMode=true` (`:15199`) but World does NOT clear it (the bug), (c) badge-click disables (`:12943`). No explicit GM entry in the mode dropdown.
+
+**Revised GM task (smaller than originally scoped):**
+- **Fix the World-branch bug** — `setSetting('gmMode',false)` + `GMMode.apply()` so layout reverts cleanly. (Verifiable, unambiguous, ~3 lines.)
+- **Make the GM control explicit + consistent** in the mode picker so the three controls agree.
+- **Open design fork (needs Hunter):** the top `.gm-toolbar` is invisible/de-emphasized in the default **Ember** theme (`review/04-ui.md` C-R4). W2-T07's *written* decision was to move the 10 tools into the WorldShell left panel (`wms-lp`) as `wms-gm-tools` and delete `.gm-toolbar`. But since the toolbar already works in non-Ember themes, this is now a choice, not a bug-fix. → ASK Hunter before doing the DOM surgery.
+
 **Plan (separate agent task, AFTER Campaign rebuild):**
 - Move GM toggle into the Mode picker popover.
 - Build the WorldShell-left-panel "GM Tools" section (`wms-gm-tools`) per W2-T07.
