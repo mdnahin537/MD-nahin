@@ -806,11 +806,23 @@ button.wms-sec-link{background:none;border:none;padding:0;cursor:pointer}
   .wms-cn-lbl{opacity:.75}
 }
 .wms-cn--curr .wms-cn-lbl{color:var(--ember-color)}
-/* Material Symbols utility class */
+/* Material Symbols utility class.
+   Resilience: the glyph font is a remote Google CDN load. If it fails (offline,
+   slow link, blocked tracker, file:// with no net), the ligature would otherwise
+   render as its raw codeword — "shield", "fort", "casino" — sprawling into the
+   layout. We clip each span to one glyph-width and keep it hidden until the font
+   is confirmed loaded (body.fonts-ready, set by JS at boot). On permanent
+   failure the icon is simply absent; every nav item also carries a text label,
+   so nothing becomes unusable and no codeword ever leaks. */
 .material-symbols-outlined{font-family:'Material Symbols Outlined';font-weight:normal;font-style:normal;
   font-size:20px;display:inline-block;line-height:1;text-transform:none;letter-spacing:normal;
   word-wrap:normal;white-space:nowrap;direction:ltr;
   font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24}
+/* Until the glyph font is confirmed loaded, hide the span AND clip it to one
+   glyph-width so a failed/slow load can neither show the raw ligature codeword
+   nor reserve its full text width in the layout. Lifted the moment fonts-ready
+   lands, so loaded icons render at their natural advance with no clipping. */
+body:not(.fonts-ready) .material-symbols-outlined{visibility:hidden;width:1em;overflow:hidden}
 
 /* ── LEFT NAV RAIL ────────────────────────────────────────────────────── */
 .wms-nav{grid-column:1;grid-row:1/3;background:#080b10;
@@ -1421,7 +1433,7 @@ body.mobile-gate-open{overflow:hidden}
 .tlog__clear:hover{color:var(--color-crisis,#ffb4ab)}
 
 /* ── F7 · COST METER (top-left, shares ornament area with F3 thinking indicator) ── */
-.rw-cost-meter{position:fixed;top:72px;left:var(--space-4);z-index:90;display:inline-flex;align-items:center;gap:var(--space-2);padding:5px var(--space-3);border-radius:999px;border:0.5px solid var(--color-border-default,rgba(160,142,124,0.30));background:var(--color-bg,#120c07);color:var(--color-text-muted,#c0b898);font-size:var(--text-label-sm,.75rem);letter-spacing:0.04em;cursor:pointer;font-family:var(--font-mono);transition:border-color 80ms,color 80ms,box-shadow 160ms;user-select:none}
+.rw-cost-meter{position:fixed;top:calc(72px + var(--sample-banner-height,0px));left:var(--space-4);z-index:90;display:inline-flex;align-items:center;gap:var(--space-2);padding:5px var(--space-3);border-radius:999px;border:0.5px solid var(--color-border-default,rgba(160,142,124,0.30));background:var(--color-bg,#120c07);color:var(--color-text-muted,#c0b898);font-size:var(--text-label-sm,.75rem);letter-spacing:0.04em;cursor:pointer;font-family:var(--font-mono);transition:border-color 80ms,color 80ms,box-shadow 160ms;user-select:none}
 .rw-cost-meter:hover{border-color:var(--ember-color,#ffb964);color:var(--ember-color,#ffb964)}
 .rw-cost-meter__dot{color:var(--ember-color,#ffb964);font-size:9px}
 .rw-cost-meter__usd{color:var(--color-ink,#f4ecd8);letter-spacing:0.02em}
@@ -1430,6 +1442,11 @@ body.mobile-gate-open{overflow:hidden}
 .rw-cost-meter.is-warning .rw-cost-meter__usd{color:var(--color-amber-deep,#c98e2a)}
 .rw-cost-meter.is-near-cap{border-color:var(--color-crisis,#c94747);color:var(--color-crisis,#c94747)}
 .rw-cost-meter.is-paused{border-color:var(--color-crisis,#c94747);background:rgba(201,71,71,0.10);color:var(--color-crisis,#c94747)}
+/* The fixed meter's top stacks two offsets robustly: the sample-mode banner
+   (measured live into --sample-banner-height) shifts the whole app down, and GM
+   Mode v2 adds a 44px bar below the 60px strip. calc() keeps the meter clear of
+   the strip, the banner, the GM bar, or any combination — no guessed constants. */
+body.gm-mode .rw-cost-meter{top:calc(116px + var(--sample-banner-height,0px))}
 
 /* ── F8 · ACCURACY CHIP (inline next to each AI surface) ── */
 .rw-acc-chip{display:inline-flex;align-items:center;gap:var(--space-2);padding:3px 8px;border-radius:999px;border:0.5px solid var(--color-border-default,rgba(160,142,124,0.30));background:transparent;color:var(--color-text-muted,#c0b898);font-size:var(--text-label-sm,.7rem);font-family:var(--font-mono);letter-spacing:0.02em;cursor:pointer;line-height:1.4;max-width:100%;transition:border-color 80ms,color 80ms}
@@ -3467,7 +3484,7 @@ SECTION 8: DOM STRUCTURE
         <span class="material-symbols-outlined">share</span>Web
       </a>
       <a class="wms-nav__item" data-route="solo" href="#" aria-label="Solo Mode">
-        <span class="material-symbols-outlined">casino</span>Solo
+        <span class="material-symbols-outlined">auto_stories</span>Solo
       </a>
       <a class="wms-nav__item" data-route="threads" href="#" aria-label="Plot Threads">
         <span class="material-symbols-outlined">account_tree</span>Threads
@@ -17455,6 +17472,23 @@ async function bootstrap(){
   if(typeof Ambient!=='undefined')Ambient.apply();
   // Initialize Copilot panel status
   if(typeof Copilot!=='undefined')Copilot.updateStatus();
+  // Reveal Material Symbols icons only once the remote glyph font has actually
+  // loaded; on failure they stay hidden (text labels remain) so no ligature
+  // codeword ever leaks into the UI. See the .material-symbols-outlined rule.
+  (function revealIconsWhenReady(){
+    const ready=()=>document.body.classList.add('fonts-ready');
+    try{
+      if(document.fonts&&document.fonts.ready){
+        document.fonts.ready.then(()=>{
+          let ok=true;
+          try{ok=document.fonts.check('20px "Material Symbols Outlined"');}catch(e){ok=true;}
+          if(ok)ready();
+        });
+        // Safety net: if the readiness promise stalls but glyphs are usable, reveal.
+        setTimeout(()=>{try{if(document.fonts.check('20px "Material Symbols Outlined"'))ready();}catch(e){}},2500);
+      }else{ready();}
+    }catch(e){ready();}
+  })();
   // Apply GM mode if enabled (instant: no entrance animation on first paint).
   if(typeof GMMode!=='undefined')GMMode.apply({instant:true});
   // F3 Live Mode skeleton — subscribes to committed Campaign + world events.
