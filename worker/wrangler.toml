@@ -1,0 +1,38 @@
+name = "rw-license"
+main = "src/index.ts"
+compatibility_date = "2024-09-25"
+compatibility_flags = ["nodejs_compat"]
+
+# KV namespace:
+#   RATELIMIT — per-IP per-minute counters (license endpoints) AND the demo
+#               daily caps (demo:ip:* / demo:global:*). One namespace, cheap.
+#
+# Create it with (current syntax — note the SPACE, not a colon):
+#   wrangler kv namespace create RATELIMIT
+# then paste the id below.
+[[kv_namespaces]]
+binding = "RATELIMIT"
+id = "REPLACE_WITH_RATELIMIT_KV_ID"
+
+[vars]
+# Comma-separated production origin allowlist. file:// loads (itch.io desktop
+# bundles, local opens) send Origin: null, which the Worker also allows.
+ALLOWED_ORIGINS = "https://realmwright.app,https://www.realmwright.app,https://html-classic.itch.zone"
+
+# PAYWALL — both required. The Worker fails closed (503) if either is blank.
+# Find these in the LS activate response `meta` block, or the LS dashboard.
+LS_PRODUCT_ID = ""
+LS_STORE_ID = ""
+
+# Demo cost fences.
+DEMO_MODEL = "anthropic/claude-3.5-haiku"   # exact OpenRouter slug — verify on openrouter.ai/models
+DEMO_PER_IP_DAILY = "5"
+DEMO_GLOBAL_DAILY = "300"
+DEMO_MAX_TOKENS = "1200"
+RATE_LIMIT_PER_MIN = "30"
+
+# SECRETS — never commit these. Set with `wrangler secret put <NAME>`:
+#   OPENROUTER_KEY    — your OpenRouter API key (demo spend runs on this)
+#   TURNSTILE_SECRET  — Cloudflare Turnstile secret key (pairs with the site key in index.html)
+#   ITCH_API_KEY      — your itch.io API key (Settings -> API keys); server-only
+#   ITCH_GAME_ID      — numeric id of the RealmWright itch.io game
