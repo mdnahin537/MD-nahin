@@ -12,7 +12,9 @@ Detailed evidence per module in `.audit/findings/<chunk>.md`. This file = ranked
 | C01 config/prompts · C02 solo/cost · C03 utils/markdown · C06 render · C07 modals/export · C08a/b copilot · C09 campaign · C10 worldshell/GM · C11 panels · C12 search · C13 misc · C14 CSS · C15 HTML | ⏳ pending | blocked on subagent session-limit (resets 11pm UTC) |
 | X1 wiring · X2 security · X3 logic-exec · X4 data-flow | ⏳ pending | cross-cutting, after chunks |
 
-Tally so far: **2 CRITICAL · 4 HIGH · 8 MEDIUM · 4 LOW · 1 POLISH**.
+Tally so far: **2 CRITICAL · 4 HIGH · 9 MEDIUM · 4 LOW · 1 POLISH**.
+
+**Security spot-check (main render path): NO XSS critical.** `Markdown.render` is escape-first + DOMPurify-sanitize; `escHtml` is complete; interpolation escaping is consistent. Detail: `.audit/findings/X2a-xss-spotcheck.md`. (Full sink sweep still pending in X2.)
 
 ---
 
@@ -37,6 +39,7 @@ Tally so far: **2 CRITICAL · 4 HIGH · 8 MEDIUM · 4 LOW · 1 POLISH**.
 - **C04-5 — itch.io licenses never re-validated** (L6145); revoked keys keep access on-device. Decide intentionally + document.
 - **C04-7 — AutoSave cadence quirks** (counts undo-pushes; ~19 edits before first backup; one-shot prompt).
 - **C05-4 — Auto-snapshot uses wall-clock delta** (L7013); clock skew can suppress/spam daily snapshots. (Snapshots ARE bounded to 7 — no leak.)
+- **X2a-1 — Ships with the FALLBACK sanitizer, not real DOMPurify** (L3223). Escape-first keeps the markdown path low-risk, but the hand-rolled sanitizer is weaker vs mXSS and allows `id`/`class` (DOM-clobber). Paste real DOMPurify before shipping (one-line swap already scaffolded).
 
 ### LOW / POLISH
 - **C04-6 — `deviceFingerprint()` + `IDB_KEY_FINGERPRINT` are dead** (orphans).
