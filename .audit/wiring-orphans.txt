@@ -1,0 +1,16 @@
+1	_siteKeyGuard
+1	bindDecipherFab
+1	emberDecorate
+1	revealIconsWhenReady
+1	storageAvailable
+2	_collectAffectedStats
+2	_readDeviceToken
+2	deviceFingerprint
+2	generatePDF
+2	handleCorruptStorage
+2	hideTooltip
+2	rebuildPreserving
+2	renderSessionPrepPDF
+2	resolveVars
+2	segPath
+2	showTooltipEl
