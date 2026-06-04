@@ -1,0 +1,25 @@
+name = "rw-license"
+main = "index.js"
+compatibility_date = "2024-11-01"
+
+# After deploying, set these in Cloudflare dashboard:
+# Workers & Pages → rw-license → Settings → Variables and Secrets
+#   ITCHIO_API_KEY          = "your-itch-developer-api-key"
+#   ITCHIO_GAME_ID          = "your-numeric-game-id"
+#   OPENROUTER_KEY          = "sk-or-v1-..."        (for /api/demo/generate)
+#   TURNSTILE_SECRET        = "0x4AAAAAAA..."       (Cloudflare Turnstile secret key)
+#   DEMO_GLOBAL_DAILY_CAP   = "30"                  (optional; defaults to 30)
+#
+# Free tier: 100,000 requests/day — more than enough for a $29 indie tool.
+
+# KV namespaces — create these in the Cloudflare dashboard under
+# Workers & Pages → KV, then paste the namespace ID below.
+# IDs are NOT secrets; safe to commit.
+
+[[kv_namespaces]]
+binding = "DEMO_KV"
+id = "REPLACE_WITH_DEMO_KV_ID"
+
+[[kv_namespaces]]
+binding = "LICENSE_KV"
+id = "REPLACE_WITH_LICENSE_KV_ID"
