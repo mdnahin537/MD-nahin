@@ -5,7 +5,9 @@
 committed deliverable. Pick up at the first `[ ]`.
 
 ## Phase 1 — Verify
-- [ ] 1A · Opus   · CRITICALs + secret-leak cluster      → `01-criticals.md`   — IN PROGRESS
+- [x] 1A · Opus   · CRITICALs + secret-leak cluster      → `01-criticals.md`   — DONE 2026-06-05
+      verdicts: C04-1 CONFIRMED (scope tightened), C05-1 OVERSTATED→HIGH, C09-1 CONFIRMED,
+      C11-1 CONFIRMED. Secret-leak = YES (proven in Node). 0 false-positives, 0 needs-browser.
 - [ ] 1B · Opus   · Money/security                        → `02-security.md`
 - [ ] 1C · Sonnet · HIGH coverage gaps                    → `03-coverage.md`
 - [ ] 1D · Sonnet · HIGH remainder                        → `04-high.md`
