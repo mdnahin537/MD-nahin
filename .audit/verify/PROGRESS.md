@@ -13,7 +13,13 @@ committed deliverable. Pick up at the first `[ ]`.
       a label — forged license can't burn Hunter's credits); C05-6 CONFIRMED (API key plaintext
       in the file backup — AutoSave._write L6302 raw-dumps State.data); X2a-1/X2-2/X2-7 CONFIRMED.
       Worker-side CORS/CSRF + demo cap = NEEDS-WORKER-SOURCE. 0 false-positives.
-- [ ] 1C · Sonnet · HIGH coverage gaps                    → `03-coverage.md`
+- [x] 1C · Sonnet · HIGH coverage gaps                    → `03-coverage.md`   — DONE 2026-06-05
+      verdicts: C07-1 CONFIRMED (export drops Fronts/Bestiary/Relations/Glossary/Artifacts — no
+      builders, L8941); C12-1 CONFIRMED (search omits Fronts/Relations/Artifacts/Glossary; Bestiary
+      IS indexed L15576); C12-2 CONFIRMED (dead links: war-room/chronicle panels absent); C02-1
+      CONFIRMED (solo stale). OVERSTATED: C12-4 (factions stale only on retired rw_legacy_layout).
+      PARTIAL: C11-3 (PDF missing only Fronts/Bestiary/Relations — Artifacts+Glossary ARE in PDF).
+      Second-class EVERYWHERE: Fronts, Relations. 0 false-positives.
 - [ ] 1D · Sonnet · HIGH remainder                        → `04-high.md`
 - [ ] 1E · Opus   · Gap hunt (5 risk zones)               → `05-gaps.md`
 - [ ] Consolidate → `REPORT-v2.md`
