@@ -8,7 +8,11 @@ committed deliverable. Pick up at the first `[ ]`.
 - [x] 1A · Opus   · CRITICALs + secret-leak cluster      → `01-criticals.md`   — DONE 2026-06-05
       verdicts: C04-1 CONFIRMED (scope tightened), C05-1 OVERSTATED→HIGH, C09-1 CONFIRMED,
       C11-1 CONFIRMED. Secret-leak = YES (proven in Node). 0 false-positives, 0 needs-browser.
-- [ ] 1B · Opus   · Money/security                        → `02-security.md`
+- [x] 1B · Opus   · Money/security                        → `02-security.md`   — DONE 2026-06-05
+      verdicts: X2-3 OVERSTATED (AI uses the USER's own key; license gates only auto-backup +
+      a label — forged license can't burn Hunter's credits); C05-6 CONFIRMED (API key plaintext
+      in the file backup — AutoSave._write L6302 raw-dumps State.data); X2a-1/X2-2/X2-7 CONFIRMED.
+      Worker-side CORS/CSRF + demo cap = NEEDS-WORKER-SOURCE. 0 false-positives.
 - [ ] 1C · Sonnet · HIGH coverage gaps                    → `03-coverage.md`
 - [ ] 1D · Sonnet · HIGH remainder                        → `04-high.md`
 - [ ] 1E · Opus   · Gap hunt (5 risk zones)               → `05-gaps.md`
