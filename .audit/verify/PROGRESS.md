@@ -31,7 +31,11 @@ committed deliverable. Pick up at the first `[ ]`.
             C04-2 prose tempered (visible "Device limit reached" + deactivate path — not silent/
             permanent); C13-2 CORRECTS 1A (expiry toast is INVISIBLE, not "non-dismissible").
             COMPOUND CHAIN C04-1 → C13-2 → C04-2/C04-3 = the audit's #1 business-critical issue.
-- [ ] 1E · Opus   · Gap hunt (5 risk zones)               → `05-gaps.md`
+- [x] 1E · Opus   · Gap hunt (5 risk zones)               → `05-gaps.md`   — DONE 2026-06-05
+      11 new GAPs. Reviewed/corrected: GAP-4 HIGH (migration omits workflowState → TypeError for
+      upgraders); GAP-8 RE-GRADED HIGH→MEDIUM (seeds ARE named; reachable only via malformed import);
+      GAP-8+GAP-9 = one root (catch-less canon-apply loop); GAP-1 HIGH-but-recoverable-on-reload.
+      Render zone swept CLEAN (full field→handler map). 0 new CRITICAL. No hidden catastrophe.
 - [ ] Consolidate → `REPORT-v2.md`
 
 ## Phase 2 — Make it more useful
