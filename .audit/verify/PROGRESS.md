@@ -20,7 +20,13 @@ committed deliverable. Pick up at the first `[ ]`.
       CONFIRMED (solo stale). OVERSTATED: C12-4 (factions stale only on retired rw_legacy_layout).
       PARTIAL: C11-3 (PDF missing only Fronts/Bestiary/Relations — Artifacts+Glossary ARE in PDF).
       Second-class EVERYWHERE: Fronts, Relations. 0 false-positives.
-- [ ] 1D · Sonnet · HIGH remainder                        → `04-high.md`
+- [~] 1D · SPLIT — first combined agent died at the token limit and wrote nothing (lesson:
+      all agents now write incrementally). Re-fired as two lean tasks:
+      [x] 1D-a · main agent (inline grep) · themes/CSS (C14) → `04a-themes.md` — DONE 2026-06-05
+            C14-2 CONFIRMED (9 undefined vars; `--color-success` dropped — 0 var() uses);
+            C14-5 CONFIRMED (ember-only structural elements break Manuscript/Modern);
+            C14-1/C14-3/C14-14 OVERSTATED (each self-walked-back in the finding text).
+      [ ] 1D-b · Sonnet (incremental writes) · leaks + license-UX → `04b-leaks-license.md` — RUNNING
 - [ ] 1E · Opus   · Gap hunt (5 risk zones)               → `05-gaps.md`
 - [ ] Consolidate → `REPORT-v2.md`
 
