@@ -36,7 +36,10 @@ committed deliverable. Pick up at the first `[ ]`.
       upgraders); GAP-8 RE-GRADED HIGH→MEDIUM (seeds ARE named; reachable only via malformed import);
       GAP-8+GAP-9 = one root (catch-less canon-apply loop); GAP-1 HIGH-but-recoverable-on-reload.
       Render zone swept CLEAN (full field→handler map). 0 new CRITICAL. No hidden catastrophe.
-- [ ] Consolidate → `REPORT-v2.md`
+- [x] Consolidate → `REPORT-v2.md`   — DONE 2026-06-05 ★ PHASE 1 VERIFICATION COMPLETE
+      ~24 findings re-checked + 11 gaps. 0 hallucinated, ~8 over-graded (corrected), 0 new CRITICAL.
+      #1 = compound license-failure chain (C04-1→C13-2→C04-2/C04-3). Ship-blockers: license chain,
+      secret-leak, Fronts/Relations coverage, real DOMPurify.
 
 ## Phase 2 — Make it more useful
 - [ ] 2A · Opus   · Product/UX review                     → `../improve/PRODUCT-REVIEW.md`
