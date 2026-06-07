@@ -160,4 +160,23 @@ Status: COMPLETE (5/5 settled — all CONFIRMED)
 
 Is the license-expiry recovery experience safe for a paying customer? **No.** Every single link in the chain is broken: the one notification meant to tell the customer their license failed is functionally invisible (finding 3), the device-identity header that should let the server recognize a returning device is never sent (finding 5), and clicking "Re-activate" — the prescribed recovery action — burns a fresh device-activation slot instead of refreshing the existing one (finding 4), so a few silent server hiccups can permanently lock a paying customer out of software they own, with no visible warning along the way. Two unrelated permanent listener leaks (findings 1, 2) compound general session-health risk but are independent of the license-recovery chain.
 
-</content>
+## Main-agent review (2026-06-05) — verified against source; two refinements
+- **C04-3 CONFIRMED clean:** `_hdr()` (L6099–6103) returns only `{Accept, Content-Type}` and
+  contradicts its own comment (L6096–6098). Verified.
+- **C04-2 CONFIRMED, prose tempered:** the cap-hit path (L6116–6118) returns a *visible* "Device
+  limit reached" error and the Worker rolls back the rejected instance; a `deactivate()` path exists
+  (L6160). So it is NOT a silent/permanent brick — the real shape is "burned slots accumulate →
+  eventually 'Device limit reached' → recover via Worker/support." Severity stays HIGH; the
+  "permanent lockout, zero warning" phrasing was slightly alarmist. (Worker cap/reset = NEEDS-WORKER-SOURCE.)
+- **C13-2 CONFIRMED, and it CORRECTS 1A:** `showToast` (L8124–8126) adds `is-visible` then
+  `setTimeout(remove, duration)`; `duration=0` strips it before the 240ms fade-in → INVISIBLE.
+  1A (01-criticals.md) called this toast "non-dismissible/sticky" — that was WRONG; it is invisible.
+  This makes the expiry experience worse, not better.
+- **Findings 1 & 2 (listener leaks):** accepted as consistent with the verified RelationshipWeb leak
+  pattern (1A); review effort was concentrated on the consequential license chain.
+
+### Compound chain — the audit's #1 issue (proven across 1A + 1D-b)
+`C04-1` (server blip → `{error}` JSON → license silently invalidated + AutoSave stops) → `C13-2`
+(the re-activate warning is invisible) → `C04-2`/`C04-3` (re-activation burns a fresh device slot
+instead of reusing the device) → device cap exhausted → "Device limit reached," support-only
+recovery. Every link proven in code. Small, clear fixes. Highest priority.

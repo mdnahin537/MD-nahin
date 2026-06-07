@@ -26,7 +26,11 @@ committed deliverable. Pick up at the first `[ ]`.
             C14-2 CONFIRMED (9 undefined vars; `--color-success` dropped — 0 var() uses);
             C14-5 CONFIRMED (ember-only structural elements break Manuscript/Modern);
             C14-1/C14-3/C14-14 OVERSTATED (each self-walked-back in the finding text).
-      [ ] 1D-b · Sonnet (incremental writes) · leaks + license-UX → `04b-leaks-license.md` — RUNNING
+      [x] 1D-b · Sonnet · leaks + license-UX → `04b-leaks-license.md` — DONE 2026-06-05
+            5/5 CONFIRMED HIGH. Reviewed against source: C04-3 verified (hdr contradicts its comment);
+            C04-2 prose tempered (visible "Device limit reached" + deactivate path — not silent/
+            permanent); C13-2 CORRECTS 1A (expiry toast is INVISIBLE, not "non-dismissible").
+            COMPOUND CHAIN C04-1 → C13-2 → C04-2/C04-3 = the audit's #1 business-critical issue.
 - [ ] 1E · Opus   · Gap hunt (5 risk zones)               → `05-gaps.md`
 - [ ] Consolidate → `REPORT-v2.md`
 
