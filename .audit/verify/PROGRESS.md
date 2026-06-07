@@ -42,7 +42,12 @@ committed deliverable. Pick up at the first `[ ]`.
       secret-leak, Fronts/Relations coverage, real DOMPurify.
 
 ## Phase 2 — Make it more useful
-- [ ] 2A · Opus   · Product/UX review                     → `../improve/PRODUCT-REVIEW.md`
+- [x] 2A · Opus   · Product/UX review                     → `../improve/PRODUCT-REVIEW.md` — DONE 2026-06-05
+      Thesis: "wide where it should be deep." Wedge = AI canon-paste + Tonight-as-GENERATOR (no
+      competitor owns it; only weekly-retention hook). #1 activation killer = BYO-key wall in front
+      of first value (also hides the wedge). $29 = proof-not-price is the blocker. Cut: Foundry
+      export, relationship web, 3→1 theme; demote Relations/Bestiary. Halal: clean (watch occult/
+      "oracle" marketing framing only). Grounded in the real features + bugs. Reviewed: agree.
 
 ## Phase 3 — Desktop test script
 - [ ] 3A · Sonnet · Desktop runbook                       → `../test/DESKTOP-RUNBOOK.md`
