@@ -58,7 +58,12 @@ committed deliverable. Pick up at the first `[ ]`.
       Tonight demo. Constraint: WebFetch 403-blocked, WebSearch-only (confidence flagged in-doc).
 
 ## Phase 3 — Desktop test script
-- [ ] 3A · Sonnet · Desktop runbook                       → `../test/DESKTOP-RUNBOOK.md`
+- [x] 3A · Sonnet · Desktop runbook                       → `../test/DESKTOP-RUNBOOK.md` — DONE 2026-06-05
+      10 steps (4 eyeball + 6 DevTools), ~20-30 min, covers all 13 browser-only checks with exact
+      actions + PASS/FAIL + finding IDs. Verified: IDB name (realmwright/kv) + canon pipe-format
+      correct against source. Only untestable-on-desktop item: demo-proxy spend cap (NEEDS-WORKER-SOURCE).
+
+★★★ CAMPAIGN COMPLETE — Phase 1 (verify) + Phase 2/2b (product+market) + Phase 3 (desktop) all done.
 
 ---
 
