@@ -48,6 +48,14 @@ committed deliverable. Pick up at the first `[ ]`.
       of first value (also hides the wedge). $29 = proof-not-price is the blocker. Cut: Foundry
       export, relationship web, 3→1 theme; demote Relations/Bestiary. Halal: clean (watch occult/
       "oracle" marketing framing only). Grounded in the real features + bugs. Reviewed: agree.
+- [x] 2b · Opus (web) · Market/customer research          → `../improve/MARKET-RESEARCH.md` — DONE 2026-06-05
+      OVERTURNS 2A's core claim: the AI-canon/Tonight wedge is NOT unowned (StormScape/CharGen/
+      Archivist/RoleForge already do canon-memory prep). Real white space = offline + own-data +
+      one-time + BYO-key (NO rival occupies it). AI backlash is institutional (ENnies/DriveThruRPG/
+      Inkarnate) but targets PUBLISHED/SOLD AI, not PRIVATE prep (corroborated by a neutral source).
+      PIVOT: lead with ownership/offline/once/private; AI = private "proof," not the headline noun.
+      $29 = right-to-low (Foundry $50, Dungeon Alchemist $44.99 anchor ~$45). Build first: no-key
+      Tonight demo. Constraint: WebFetch 403-blocked, WebSearch-only (confidence flagged in-doc).
 
 ## Phase 3 — Desktop test script
 - [ ] 3A · Sonnet · Desktop runbook                       → `../test/DESKTOP-RUNBOOK.md`
