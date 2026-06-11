@@ -329,3 +329,29 @@ This directly addresses POSITION §1's open fork ("a geopolitics sim that *can* 
 ---
 
 *End of V2. Net change from B+: the field is more crowded (named new entrants), the living-world thesis has a real competitor (RippleForge) that forces T2 from "unserved" to "differentiated-but-served," the storage lane is confirmed free-saturated, a real one-time→subscription case study (Old Greg's) grounds T3, and the $19 price is flagged as under-signaling the product's claimed depth. The ownership-led, AI-as-private-proof positioning from the B+ research survives every adversarial pass and is strengthened — but "no competitor does this" must become "the only finished, buy-once, fully-offline one."*
+
+---
+
+## INDEPENDENT CHECK — R10 (different mind than the producer; 2026-06-10)
+
+Spot-checked the 6 most load-bearing claims (the artifact's own "spot-check assist" list), ~10 distinct
+URLs re-searched independently. **Result: 6/6 claims supported, all sources real, zero fabrication.**
+
+1. RippleForge — VERIFIED (site exists, exact title "Living World Simulation for TTRPGs"; reactive
+   ripple + AI note-processing mechanic confirmed; supports the T1/T2 modification as written).
+2. Old Greg's Tavern — VERIFIED, tiers exact. Nuance recorded: the $5 one-time tier still exists but is
+   **metered (50 rounds)**; §1.4's "abandoned one-time" phrasing is slightly strong — subscriptions were
+   *added* and one-time became metered. The structural lesson (hosted AI cannot sustain unlimited
+   one-time) is thereby **reinforced**, not weakened.
+3. ENnies ban holds; "U-turn" = toward the ban — VERIFIED, including the "does not go far enough" language.
+4. Red Circle Games (26 Apr 2026) — source, date, and topic VERIFIED; the exact quoted sentence did not
+   surface in the checker's extract (different excerpt of the same article) — noted, not a failure.
+5. Price-as-depth ($19.99↔50+hrs; $9.99–14.99↔short) — VERIFIED **verbatim**, plus independent
+   corroborating indie-pricing sources surfaced in the check.
+6. "Most DMs are trying to run a session next Tuesday" (minvarpg) — VERIFIED **verbatim**, including the
+   "free tier too cramped" and "presentation rather than play" complaints.
+
+**R10: PASS → all 10 gates pass. Grade: A+ (with the declared unknowns of §"What we still don't know" —
+allowed; hidden unknowns — none found).** Standing caveats for downstream users of this research:
+RippleForge's offline/BYO/price model remains UNVERIFIED (manual visit recommended); BYO-key conversion
+loss is structurally argued, not quantified; Reddit/Discord voice is directional.

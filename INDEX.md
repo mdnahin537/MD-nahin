@@ -25,8 +25,8 @@ single-file, BYO-key or local AI. Halal throughout. Payouts: Gumroad + Payoneer 
 | Artifact | What it is | Grade | Status |
 |---|---|---|---|
 | `POSITION.md` | Firsthand product truth, line-cited | A− | **A+ pass in progress** — closing §8 gaps, verifying all inherited claims |
-| `.audit/research/MARKET-RESEARCH-V2.md` | The A+ market/customer research | — | **Being produced**; iterates until Rubric R passes |
-| `.audit/improve/MARKET-RESEARCH.md` | First web-sourced research | B+ | Input to V2; superseded when V2 lands |
+| `.audit/research/MARKET-RESEARCH-V2.md` | The A+ market/customer research | **A+ ✅** | Passed all 10 Rubric-R gates incl. independent spot-check (2026-06-10). **The research foundation.** |
+| `.audit/improve/MARKET-RESEARCH.md` | First web-sourced research | B+ | **Superseded by V2** — historical input only |
 | `.audit/improve/PRODUCT-REVIEW.md` | First product review | C | Two false premises (Tonight "viewer"; "unowned wedge"). Use only with POSITION corrections |
 | `.audit/REPORT.md` + `.audit/findings/` | Bug audit (19 passes) | C+ | **Lead list only** — every claim must be re-verified against source before use (it was wrong on the flagship) |
 | `.audit/research/EXTERNAL-DOSSIER.md` | Externally commissioned dossier | D | **Quarantined** — fabricated citations; do not cite |
