@@ -17,8 +17,11 @@ product truly is, read firsthand from source). Grades below follow the QUALITY-B
 
 Without AI: a genuinely **$49-grade** GM tool — deep, offline, deterministic prep.
 With AI: a **$229-grade** tool — every feature AI-elevated plus AI-only extras.
-Sold at **$19 one-time**: the value-to-price gap is the weapon. Own-your-data, offline,
-single-file, BYO-key or local AI. Halal throughout. Payouts: Gumroad + Payoneer only.
+Sold at **$19 one-time** (early-supporter; see CEO-REVIEW R2): the value-to-price gap is the
+weapon. Own-your-data, offline, single-file, BYO-key or local AI. Halal throughout.
+Payouts: Payoneer-compatible rails — **itch.io (Hunter-verified), Lemon Squeezy, Gumroad,
+possibly more → the license is UNIVERSAL** (one Worker, per-store adapters, honor-ware,
+never gates safety). Ruling by Hunter 2026-06-11; supersedes CEO-REVIEW R7's itch caution.
 
 ## Ledger
 

@@ -20,7 +20,9 @@ High-quality thinking + AI execution = maximum leverage with minimum time.
 HARD CONSTRAINTS — non-negotiable on every task:
 - Halal only: no gambling, interest-based finance, adult content, haram verticals
   → Flag any haram adjacency proactively before building anything
-- Payouts: Gumroad + Payoneer only. Stripe-dependent platforms are non-viable.
+- Payouts: Payoneer-compatible rails only. Hunter confirmed (2026-06-11, firsthand):
+  itch.io supports Payoneer; Lemon Squeezy and Gumroad acceptable; may sell on multiple
+  storefronts → product licensing must be UNIVERSAL (storefront-agnostic Worker adapters).
 - Never commit secrets. Never expose credentials. Always use .env.example.
 
 
