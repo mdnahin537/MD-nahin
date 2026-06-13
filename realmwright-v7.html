@@ -6141,17 +6141,26 @@ const LicenseGate={
       return{success:true};
     }catch(e){return{success:false,error:'Could not reach validation server.'};}
   },
+  // Pure decision: a server problem must never revoke a paying customer (CC-LIC).
+  // Only an explicit {valid:false} from a reachable server flips status.
+  _decideValidity(resOk,json,currentValid){
+    if(!resOk)return{valid:currentValid,fireExpired:false};
+    if(json&&json.valid===false)return{valid:false,fireExpired:currentValid};
+    if(json&&json.valid===true)return{valid:true,fireExpired:false};
+    return{valid:currentValid,fireExpired:false};
+  },
   async _backgroundValidate(){
     if(!this._data||this._data.platform!=='lemonsqueezy')return;
     try{
       const body=new URLSearchParams({license_key:this._data.key,instance_id:this._data.instanceId||''});
       const res=await fetch(WORKER_URL+'/api/license/validate',
         {method:'POST',headers:await this._hdr('application/x-www-form-urlencoded'),credentials:'include',body});
-      const json=await res.json();
-      const wasValid=this._data.valid;
-      this._data.valid=!!json.valid;
+      let json;
+      try{json=await res.json();}catch(e){json=null;}
+      const {valid,fireExpired}=this._decideValidity(res.ok,json,this._data.valid);
+      this._data.valid=valid;
       await IDB.set(IDB_KEY_LICENSE,this._data);
-      if(wasValid&&!json.valid)document.dispatchEvent(new CustomEvent('license:expired'));
+      if(fireExpired)document.dispatchEvent(new CustomEvent('license:expired'));
     }catch(e){
       // Network blip — log and move on. The next bootstrap will retry.
       console.warn('[license:validate] background validate failed',e&&e.message);
