@@ -6269,7 +6269,7 @@ const AutoSave={
     try{this._handle=await IDB.get(IDB_KEY_BACKUP_HANDLE)||null;}catch(e){this._handle=null;}
   },
   tick(){
-    if(!LicenseGate.isActive())return; // only auto-save for licensed users
+    // Honor-ware (R5): safety is never license-gated.
     if(State.data.meta?._sampleMode)return; // never save sample data
     this._counter++;
     if(this._counter%AUTO_SAVE_THRESHOLD===0)this._triggerSave();
