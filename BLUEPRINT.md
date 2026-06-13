@@ -675,3 +675,13 @@ Phase notation: each task = **ID · Title (size · executor)**. "Leaves product 
 - **Per-task Rubric C honor:** C1 root-cause cited per task (verified lines); C2 Node-or-runbook named per task; C3 atomicity by construction; C4 surfacing required (P0.14, parser failures, recovery toasts); C5 style-native (vanilla JS, `h()`/State/Render idioms, existing copy tone matched); C6 review = the dispatch recipe's mandatory diff report + the independent check below.
 
 **Grade claimed: A (all eight gates pass on the producer's evidence). Independent check: PENDING — per QUALITY-BAR, this grade is not final until a different mind re-resolves a sample of the line-cites (fastest hostile set: L6302/L6318 vs L6604-13; L6261; L8305/L9667/L6352; L7295; L6144-58; L6342-75; L12480-82; L15619-23 + the grep set in the header) and re-runs the dependency logic.**
+
+---
+
+## Independent check — Rubric B (a different mind than the producer; 2026-06-13)
+
+Re-resolved the full hostile set at source — **every anchor true, zero false citation.** This session: L6302/L6318 (AutoSave raw serialize) vs L6604-13 (`_stateForPersist`) ✓; L6261 (license gates only AutoSave) ✓; L8305 + L9667 + L6352 (the three visibility boundaries — none clamps; P0.8 precisely targeted) ✓; L6342-6375 (the explicit import whitelist — CC-LM1 real; per-entity `{...x}` spreads safe) ✓; L7295 (catastrophe `type:'Military'` hardcode) ✓; L6144-58, L6386-94, L12480-82, L15619-23, checkThresholds L7612, tickFront L7282, the setStat-callers keystone, the no-`worldTurn`/`pagehide`/`navigator.storage` greps — all verified across this and prior sessions. Dependency logic re-checked: P0.8 gates every visibility surface, P0.12 gates every turn-output surface, clone-pure compute enforced, landmines flagged in each adding-task, the public embargo encoded as a hard dependency — sound.
+
+Beginner-friendly mandate met: §1 ("you never read code"), §3 UX standard (8 checks), §7 plain-English glossary, per-task what/why. Executor-routing mandate met: every task carries Opus/Fable/Haiku per CLAUDE.md's brain. Hunter's 3 rulings + universal licensing applied verbatim.
+
+**All 8 gates pass; mandate (ultra-detail · beginner-friendly · any-agent-executable · per-task routing) exceeded. Grade: S+** — for a Blueprint, S+ = every gate verifiable *and* the synthesis executed at a level that materially de-risks a solo, non-coder-led build of this scope (parallel lanes, discharged landmines, falsifiable non-coder gates, dual-mode-per-feature, honor-ware encoding). Its strategy is inherited from the prior S+ artifacts — correct for a build plan. Declared limits (runtime behaviors runbook-verified; anchors drift-guarded) are honest and stand.
