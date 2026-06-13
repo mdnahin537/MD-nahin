@@ -6310,7 +6310,7 @@ const AutoSave={
         return;
       }
       const writable=await this._handle.createWritable();
-      await writable.write(JSON.stringify(State.data,null,2));
+      await writable.write(JSON.stringify(_stateForPersist(),null,2));
       await writable.close();
     }catch(e){
       if(e.name==='NotAllowedError')showToast('Auto-backup paused — permission revoked.',[{label:'Re-enable',handler:()=>this._reqPermAndWrite()}],0);
@@ -6326,7 +6326,7 @@ const AutoSave={
   },
   _fallbackDownload(){
     try{
-      const blob=new Blob([JSON.stringify(State.data,null,2)],{type:'application/json'});
+      const blob=new Blob([JSON.stringify(_stateForPersist(),null,2)],{type:'application/json'});
       const url=URL.createObjectURL(blob);
       const a=document.createElement('a');
       a.href=url;a.download='realmwright-backup-'+new Date().toISOString().slice(0,10)+'.json';
