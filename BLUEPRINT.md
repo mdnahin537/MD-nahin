@@ -27,10 +27,12 @@
 
 Per `CLAUDE.md`'s orchestration brain (the binding mapping for this plan):
 
+> **⚠ Routing update — 2026-06-13:** Anthropic pulled **Fable 5**; it is no longer an executor here. **Sonnet 4.6 (`claude-sonnet-4-6`) takes the default-builder role** — every task card below that reads "Fable 5" is now executed by **Sonnet 4.6**. Opus 4.8 (money/security/engine/critical) and Haiku 4.5 (trivial) are unchanged.
+
 | Task class | Executor model | Why |
 |---|---|---|
 | Security, license/money paths, credential handling, data-loss fixes, the simulation engine core, anything expensive-if-wrong | **Opus 4.8** (`claude-opus-4-8`) | Wrong = lost trust, lost money, or corrupted worlds. Pay for the strongest reasoning. |
-| Standard feature builds, UI surfaces, deterministic assembly functions, generators, parsers with a pinned spec, tests | **Fable 5** | The default builder. Every Fable task here carries an exact spec + acceptance test, so it needs competence, not architecture judgment. |
+| Standard feature builds, UI surfaces, deterministic assembly functions, generators, parsers with a pinned spec, tests | **Sonnet 4.6** (`claude-sonnet-4-6`) | The default builder (was Fable 5 — pulled 2026-06-13). Every such task carries an exact spec + acceptance test, so it needs competence, not architecture judgment. |
 | Copy swaps, label changes, file ops, store-page text edits, trivial lookups | **Haiku 4.5** | Cheap and sufficient when the change is mechanical. |
 
 **Dispatch recipe (one paragraph — paste this, fill the brackets):**
