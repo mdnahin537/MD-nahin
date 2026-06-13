@@ -6099,6 +6099,8 @@ const LicenseGate={
   async _hdr(ct){
     const h={Accept:'application/json'};
     if(ct)h['Content-Type']=ct;
+    const tok=await _readDeviceToken();
+    if(tok)h['X-Device-Token']=tok;
     return h;
   },
   async activate(key){
@@ -8132,7 +8134,7 @@ function showToast(msg,links=[],duration=4000){
   });
   t.classList.add('is-visible');
   clearTimeout(_toastTimer);
-  _toastTimer=setTimeout(()=>t.classList.remove('is-visible'),duration);
+  if(duration>0)_toastTimer=setTimeout(()=>t.classList.remove('is-visible'),duration);
 }
 // ─── SLIDER ATTACHMENT ───
 function attachSlider(el,key,nid){
