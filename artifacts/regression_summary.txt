@@ -1,0 +1,10 @@
+[PASS] 1. App boots without console errors (P1.6 Render null-guards)
+[PASS] 2. Empty-state "Create your first realm" CTA renders (P1.7)
+[PASS] 3. Nation/faction add+delete; chronicleLinks orphan sweep (NEW-A3)
+[PASS] 4. License modal exposes aria-labelledby + aria-modal (NEW-B6 / A3-5)
+[PASS] 5. Modal close buttons labelled + keyboard reachable (A3-4)
+[PASS] 6. Mobile 375px: .wms-panels reflows to single column (#16)
+[PASS] 7. DOMPurify strips onerror from Markdown output (P1.12)
+[PASS] 8. OpenRouter key lives in IDB, scrubbed from localStorage (P1.13)
+[PASS] 9. Worker URL set + CSP present + cors-anywhere fully removed (P1.1 / P1.12)
+[PASS] 10. axe-core a11y scan

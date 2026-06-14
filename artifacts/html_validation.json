@@ -1,0 +1,5 @@
+{
+  "_note": "W3C validator.w3.org was sandbox-blocked during Phase 5 verification. Hunter must re-run from a network-enabled environment. Either: (1) `npm i -g html-validate && html-validate src/index.html`, or (2) the W3C web UI at https://validator.w3.org/nu/ uploading src/index.html.",
+  "skipped": true,
+  "reason": "Host not in sandbox allowlist"
+}
