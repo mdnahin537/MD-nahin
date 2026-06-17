@@ -5866,6 +5866,7 @@ const CLAMP={
   eventWeight(w){const n=Number(w);return Number.isFinite(n)?Utils.clamp(Math.round(n),-30,30):0;},
   year(y,fallback){if(y==null||y==='')return fallback;const n=Math.floor(Number(y));return Number.isFinite(n)?Utils.clamp(n,1,99999):fallback;},
   eventType(t){return CLAMP.EVENT_TYPES.includes(t)?t:'Political';},
+  visibility(v){const s=String(v==null?'':v).trim().toLowerCase();return ['public','private','forecast'].includes(s)?s:(s===''?'public':'private');},
 };
 // Inline Markdown renderer. Escapes HTML first (XSS-safe), then tokenizes
 // bold/italic/headers/lists/inline+block code. Defensive: falls back to
@@ -6360,7 +6361,7 @@ function buildNationFromSeed(seed){
     stats:{},
     factions:(seed.factions||[]).map(f=>({...f,id:f.id||Utils.uuid()})),
     laws:seed.laws||[],
-    chronicle:(seed.chronicle||[]).map(e=>({...e,id:e.id||Utils.uuid(),createdAt:e.createdAt||Utils.now(),source:e.source||'manual',weight:CLAMP.eventWeight(e.weight),year:CLAMP.year(e.year,seed.currentYear),type:CLAMP.eventType(e.type)})),
+    chronicle:(seed.chronicle||[]).map(e=>({...e,id:e.id||Utils.uuid(),createdAt:e.createdAt||Utils.now(),source:e.source||'manual',weight:CLAMP.eventWeight(e.weight),year:CLAMP.year(e.year,seed.currentYear),type:CLAMP.eventType(e.type),visibility:CLAMP.visibility(e.visibility)})),
     // Preserve characters and artifacts from imports (was hardcoded empty, silently destroying data on re-import)
     characters:(seed.characters||[]).map(c=>({...c,id:c.id||Utils.uuid(),createdAt:c.createdAt||Utils.now(),chronicleLinks:Array.isArray(c.chronicleLinks)?c.chronicleLinks.slice():[]})),
     artifacts:(seed.artifacts||[]).map(a=>({...a,id:a.id||Utils.uuid()})),
@@ -8315,7 +8316,7 @@ const Parse={
         const p=rest.split('|').map(s=>s.trim());
         if(p.length>=4){
           const w=normNum(p[2]).match(/[+-]?\d+/);
-          candidates.push({type:'event',name:p[0],evType:p[1]||'Political',weight:w?parseInt(w[0],10):0,visibility:p[3]||'public',description:p.slice(4).join(' | ')});
+          candidates.push({type:'event',name:p[0],evType:p[1]||'Political',weight:w?parseInt(w[0],10):0,visibility:CLAMP.visibility(p[3]||'public'),description:p.slice(4).join(' | ')});
         }else failures.push({line,reason:'event needs 4+ pipe-separated parts'});
       }else if(kind==='faction'){
         const p=rest.split('|').map(s=>s.trim());
@@ -9677,7 +9678,7 @@ const Copilot={
       if(!args.name||!args.description||!args.type)return {error:'Missing required fields: name, description, type.'};
       if(!CLAMP.EVENT_TYPES.includes(args.type))return {error:`Invalid type '${args.type}'. Must be one of: ${CLAMP.EVENT_TYPES.join(', ')}.`};
       if(args.weight!=null&&(!Number.isFinite(Number(args.weight))||Number(args.weight)<-30||Number(args.weight)>30))return {error:`weight out of range: must be an integer from -30 to 30 (got ${args.weight}).`};
-      return {kind:'chronicle',data:{name:args.name,description:args.description,type:CLAMP.eventType(args.type),weight:CLAMP.eventWeight(args.weight),visibility:args.visibility||'public'},summary:`Add chronicle: ${args.name}`};
+      return {kind:'chronicle',data:{name:args.name,description:args.description,type:CLAMP.eventType(args.type),weight:CLAMP.eventWeight(args.weight),visibility:CLAMP.visibility(args.visibility||'public')},summary:`Add chronicle: ${args.name}`};
     }
     if(name==='add_npc'){
       if(!args.name||!args.role)return {error:'Missing required fields: name, role.'};
