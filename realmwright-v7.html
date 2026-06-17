@@ -619,6 +619,30 @@ body.theme-ember .gm-badge{
 /* When pressures stack on a narrower viewport */
 @media (max-width:1100px){.wms-pressures{grid-template-columns:1fr 1fr}}
 @media (max-width:780px){.wms-pressures{grid-template-columns:1fr}}
+/* P2.6 — World Heartbeat panel */
+.wms-heartbeat{display:flex;flex-direction:column;gap:10px}
+.wms-hb-item{display:flex;flex-direction:column;gap:6px;padding:14px 16px;
+  background:rgba(255,185,100,.025);border:1px solid var(--color-border-hairline);
+  border-left:3px solid transparent;position:relative;
+  transition:border-color .2s,background .2s}
+.wms-hb-item:hover{background:rgba(255,185,100,.05);border-color:rgba(255,185,100,.28)}
+.wms-hb-item--threshold{border-left-color:var(--color-tense)}
+.wms-hb-item--front{border-left-color:var(--color-crisis)}
+.wms-hb-item--pressure{border-left-color:rgba(255,185,100,.55)}
+.wms-hb-kind{font-family:var(--font-mono);font-size:9px;letter-spacing:.22em;
+  text-transform:uppercase;color:var(--color-text-muted);font-weight:500}
+.wms-hb-text{font-family:'Cinzel',serif;font-size:13px;color:var(--color-ink);
+  line-height:1.4;font-weight:400}
+.wms-hb-rule{font-size:11px;color:var(--color-text-muted);line-height:1.5;
+  font-style:italic;display:none}
+.wms-hb-item:hover .wms-hb-rule{display:block}
+.wms-hb-ask{margin-top:6px;padding:4px 10px;font-size:10px;letter-spacing:.14em;
+  text-transform:uppercase;font-family:var(--font-mono);
+  background:transparent;border:1px solid rgba(255,185,100,.30);
+  color:var(--ember-color,#FFB964);cursor:pointer;
+  transition:background .15s,border-color .15s;align-self:flex-start}
+.wms-hb-ask:hover{background:rgba(255,185,100,.10);border-color:rgba(255,185,100,.55)}
+.wms-hb-stable{font-size:12px;color:var(--color-text-faint);font-style:italic;padding:6px 0}
 /* Tablet reflow — left/right rails shrink, center keeps breathing room. */
 @media (max-width:1100px){.wms-panels{grid-template-columns:248px 1fr 256px}}
 /* Below 900px: collapse the right rail under the center column. */
@@ -3493,6 +3517,11 @@ SECTION 8: DOM STRUCTURE
           <div class="wms-nation-era" id="wms-nation-era"></div>
         </div>
         <div class="wms-nation-notes" id="wms-nation-notes"></div>
+        <!-- P2.6 — World Heartbeat: read-only top-3 imminence panel -->
+        <div class="wms-section" id="wms-heartbeat-section">
+          <div class="wms-sec-label">World Heartbeat — What Approaches</div>
+          <div class="wms-heartbeat" id="wms-heartbeat"></div>
+        </div>
         <div class="wms-section">
           <div class="wms-sec-label">Active Pressures</div>
           <div class="wms-pressures" id="wms-pressures"></div>
@@ -7650,6 +7679,100 @@ const Compute={
       if(crossed){State.tickFront(nid,f.id,1,{by:'stat-trigger',silent:true});frontChanged=true;}
     });
     return{chronicle:chronicleChanged,front:frontChanged};
+  },
+  // P2.6 — World Heartbeat: pure selector, no State.*, deterministic, no RNG.
+  // Returns the top-n (default 3) most-imminent items ranked by severity.
+  // Each item: {kind, text, distance, ruleText}
+  //   kind: 'threshold' | 'front' | 'pressure'
+  //   text: human-readable summary of what is about to happen
+  //   distance: numeric severity score (lower = more imminent/severe)
+  //   ruleText: the rule/cause in halal-clean prose
+  // HALAL: vocabulary is "approaching threshold / active pressure / one tick from resolution"
+  //   — NEVER prophecy / fate / omen / foretell / destiny.
+  heartbeat(n, limit=3){
+    const candidates=[];
+    const E=s=>String(s||'');
+    // ── 1. STAT THRESHOLDS WITHIN N POINTS ────────────────────────────────
+    // For each stat, for each threshold, compute the distance to the threshold
+    // given the stat's current value and direction. Pure compare — no mutation.
+    CORE_STATS.forEach(cd=>{
+      const stat=n.stats[cd.key];
+      if(!stat||(cd.thresholds||[]).length===0)return;
+      const val=stat.value;
+      cd.thresholds.forEach(t=>{
+        let dist=null;
+        if(t.direction==='falling'){
+          // Threshold fires when value falls below atValue.
+          // Distance = how far the value is above the threshold (positive = not yet crossed).
+          if(val>t.atValue)dist=val-t.atValue;
+        }else if(t.direction==='rising'){
+          // Threshold fires when value rises above atValue.
+          // Distance = how far the value is below the threshold.
+          if(val<t.atValue)dist=t.atValue-val;
+        }
+        // Only surfaces thresholds within 15 points — tight window for "about to happen".
+        if(dist===null||dist>15)return;
+        // Severity: lower distance = more imminent → lower rank score.
+        // Weight the urgency by the magnitude of the event weight (more negative = more severe).
+        const severity=dist*10 - Math.abs(t.eventWeight||0);
+        candidates.push({
+          kind:'threshold',
+          text:`${E(cd.displayName)} approaching threshold (${val} → ${t.atValue}, ${t.direction})`,
+          distance:dist,
+          ruleText:`${E(t.eventName)}: ${E(cd.displayName)} is ${dist} point${dist===1?'':'s'} from the "${E(t.direction)}" threshold at ${t.atValue}. If crossed: ${E(t.eventDesc.replace(/{year}/g,'[year]').replace(/{nation}/g,'[nation]'))}.`,
+          _severity:severity,
+        });
+      });
+    });
+    // ── 2. FRONTS ONE TICK FROM RESOLUTION ────────────────────────────────
+    // A front is "imminent" when clockSize - clockFilled <= 2 (within 2 ticks).
+    // distance = ticks remaining (1 = most imminent).
+    (n.fronts||[]).forEach(f=>{
+      if(f.status!=='active')return;
+      const size=f.clockSize||0;
+      const filled=f.clockFilled||0;
+      const ticksLeft=size-filled;
+      if(ticksLeft<=0||ticksLeft>2)return;
+      const severity=-100+ticksLeft*5; // front resolution is always top-priority
+      candidates.push({
+        kind:'front',
+        text:`Front "${E(f.name||'Unnamed')}" ${ticksLeft===1?'is one tick from resolution':'has 2 ticks remaining'} (${filled}/${size} segments)`,
+        distance:ticksLeft,
+        ruleText:`Active front "${E(f.name||'Unnamed')}" has ${ticksLeft} tick${ticksLeft===1?'':'s'} left until the clock fills (${filled}/${size}). When the clock fills, the front resolves — this requires GM attention now.`,
+        _severity:severity,
+      });
+    });
+    // ── 3. ACTIVE PRESSURES + THE DRIFT THEY CAUSE NEXT TURN ──────────────
+    // Reuses WorldTurn.DRIFT_RULES and WorldTurn._PRESSURE_CONDS (same predicates as
+    // Compute.pressures / PRESSURE_RULES). Text reads: "Food crisis active → Food −2 next turn".
+    // Only emit if WorldTurn is available (avoids breaking in test harnesses that load Compute alone).
+    if(typeof WorldTurn!=='undefined'&&Array.isArray(WorldTurn.DRIFT_RULES)){
+      WorldTurn.DRIFT_RULES.forEach(rule=>{
+        const cond=WorldTurn._PRESSURE_CONDS[rule.ruleId];
+        if(typeof cond!=='function'||!cond(n.stats))return;
+        // Build a compact drift summary: "Food −2, Legitimacy −1"
+        const driftSummary=rule.drifts.map(d=>{
+          const statDef=CORE_STATS.find(c=>c.key===d.statKey);
+          const name=statDef?statDef.displayName:d.statKey;
+          return `${name} ${d.delta>0?'+':''}${d.delta}`;
+        }).join(', ');
+        // Severity: pressures are less imminent than a 1-tick front but more than a distant threshold.
+        // Use count of drifts * magnitude as proxy.
+        const mag=rule.drifts.reduce((s,d)=>s+Math.abs(d.delta),0);
+        const severity=0 - mag*5; // negative = more severe
+        candidates.push({
+          kind:'pressure',
+          text:`Active pressure "${E(rule.ruleId)}" → ${driftSummary} next turn`,
+          distance:mag, // "distance" for pressures = total drift magnitude (larger = more pressing)
+          ruleText:rule.ruleText+` (Next turn drift: ${driftSummary}.)`,
+          _severity:severity,
+        });
+      });
+    }
+    // ── RANK by severity score (most severe / most imminent first), cap at limit ──
+    candidates.sort((a,b)=>a._severity-b._severity);
+    // Remove internal sort key before returning
+    return candidates.slice(0,limit).map(({_severity,...item})=>item);
   },
 };
 // ─── WORLD TURN ENGINE (P2.1) — the clone-pure, deterministic, no-AI driver ───
@@ -14628,6 +14751,7 @@ const WorldShell={
     }
     // Panels
     this._renderSliders(nat);
+    this._renderHeartbeat(nat);
     this._renderPressures(nat);
     this._renderFactions(nat);
     this._renderChars(nat);
@@ -14691,6 +14815,50 @@ const WorldShell={
     });
     document.getElementById('wms-adv-toggle')?.addEventListener('click',()=>{
       this._showAdvanced=!this._showAdvanced;this._renderSliders(nat);
+    });
+  },
+
+  // P2.6 — World Heartbeat render: reads Compute.heartbeat, renders top-3 read-only list.
+  // "What should I do about this?" button hands the item to Copilot (AI half — optional).
+  // HALAL: "approaching threshold / active pressure / one tick from resolution" only.
+  _renderHeartbeat(nat){
+    const ctr=document.getElementById('wms-heartbeat');if(!ctr)return;
+    const items=Compute.heartbeat(nat,3);
+    const E=Utils.escHtml;
+    const KIND_LABEL={threshold:'Approaching Threshold',front:'One Tick from Resolution',pressure:'Active Pressure'};
+    if(!items.length){
+      // Quiet-world fallback: how many pressures are dormant (informative, not empty)
+      const dormant=(typeof WorldTurn!=='undefined'&&Array.isArray(WorldTurn.DRIFT_RULES))?WorldTurn.DRIFT_RULES.length:9;
+      const activePressureCount=Compute.pressures(nat).length;
+      ctr.innerHTML=`<div class="wms-hb-stable">World stable — ${dormant - activePressureCount} pressure${dormant - activePressureCount===1?'':'s'} dormant, no thresholds approaching.</div>`;
+      return;
+    }
+    let html='';
+    items.forEach(item=>{
+      const kindLabel=E(KIND_LABEL[item.kind]||item.kind);
+      html+=`<div class="wms-hb-item wms-hb-item--${E(item.kind)}" data-hb-text="${E(item.text)}" data-hb-rule="${E(item.ruleText)}">
+        <div class="wms-hb-kind">${kindLabel}</div>
+        <div class="wms-hb-text">${E(item.text)}</div>
+        <div class="wms-hb-rule">${E(item.ruleText)}</div>
+        <button class="wms-hb-ask" type="button" title="Open Copilot with this item as context">What should I do about this?</button>
+      </div>`;
+    });
+    ctr.innerHTML=html;
+    // Wire the "What should I do?" buttons → hand item to Copilot (AI half, CC-DUAL)
+    ctr.querySelectorAll('.wms-hb-ask').forEach(btn=>{
+      btn.addEventListener('click',e=>{
+        e.stopPropagation();
+        const item=btn.closest('.wms-hb-item');
+        if(!item)return;
+        const text=item.dataset.hbText||'';
+        const rule=item.dataset.hbRule||'';
+        const prompt=`World Heartbeat alert: ${text}\n\nRule: ${rule}\n\nWhat should I do about this?`;
+        // Copilot handoff: pre-fill input and open panel
+        const inp=document.getElementById('copilot-input');
+        if(inp){inp.value=prompt;inp.dispatchEvent(new Event('input'));}
+        if(typeof Copilot!=='undefined'){Copilot.open();}
+        else{if(typeof showToast!=='undefined')showToast('Configure the Copilot to use AI advice.');}
+      });
     });
   },
 
