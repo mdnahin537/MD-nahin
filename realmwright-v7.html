@@ -16333,13 +16333,13 @@ function bindEventListeners(){
     const v=!State.data.meta.settings.showForecasts;
     State.setSetting('showForecasts',v);
     document.getElementById('toggle-forecasts-setting')?.classList.toggle('is-on',v);
-    Render.chronicleBand();Render.recentPulse();
+    document.dispatchEvent(new CustomEvent('sc:changed',{detail:{fields:['stat','chronicle']}}));
   });
   document.getElementById('toggle-secrets')?.addEventListener('click',()=>{
     const v=!State.data.meta.settings.showSecrets;
     State.setSetting('showSecrets',v);
     document.getElementById('toggle-secrets')?.classList.toggle('is-on',v);
-    Render.chronicleBand();Render.recentPulse();
+    document.dispatchEvent(new CustomEvent('sc:changed',{detail:{fields:['stat','chronicle']}}));
   });
 
   // Zoom
