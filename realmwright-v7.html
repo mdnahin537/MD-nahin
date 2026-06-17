@@ -3968,6 +3968,22 @@ SECTION 8: DOM STRUCTURE
     </div>
     <div class="settings-section">
       <div class="settings-section__title">Backups</div>
+      <!-- P2.7 — Vault status chip. VaultChip.refresh() keeps this live. -->
+      <!-- Four states: Protected / Backup ready / No on-disk backup / Best-effort -->
+      <div id="vault-chip-wrap" style="margin-bottom:14px;padding:10px 14px;border-radius:6px;border:1px solid var(--color-border-hairline);background:rgba(0,0,0,.15);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span id="vault-chip-dot" style="width:8px;height:8px;border-radius:50%;background:var(--color-text-muted);flex-shrink:0"></span>
+          <span id="vault-chip-label" style="font-size:var(--text-label-sm);color:var(--color-text-muted)">Checking…</span>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button id="vault-chip-cta" class="btn btn--secondary" style="font-size:var(--text-label-sm);padding:2px 10px;display:none"></button>
+          <!-- P2.8 — Test my backup: hidden file input wired by VaultChip.init() -->
+          <button id="vault-chip-test-btn" class="btn btn--secondary" style="font-size:var(--text-label-sm);padding:2px 10px;display:none">Test my backup</button>
+          <input type="file" id="vault-chip-test-file" accept=".json" style="display:none">
+        </div>
+      </div>
+      <!-- P2.8 — Restore drill result panel (read-only; never writes) -->
+      <div id="vault-drill-result" style="display:none;margin-bottom:12px;padding:10px 14px;border-radius:6px;border:1px solid var(--color-border-hairline);background:rgba(0,0,0,.1);font-size:var(--text-body-sm);color:var(--color-text-muted)"></div>
       <p style="font-size:var(--text-body-sm);color:var(--color-text-muted);margin-bottom:12px">RealmWright auto-saves a snapshot every 24 hours. The last 7 are kept. Use "Preview restore" to see what changes before committing.</p>
       <div id="snapshot-list" style="display:flex;flex-direction:column;gap:6px"></div>
       <p id="snapshot-list-empty" style="font-size:var(--text-label-sm);color:var(--color-text-faint);display:none">No snapshots yet — one will be created after 24 hours of use.</p>
@@ -6278,11 +6294,21 @@ const Demo={
   },
 };
 
+// ── P2.7 — AutoSave with _lastWriteAt timestamp and once-per-session fallback reminder ──
+// Key changes from pre-P2.7:
+//   • _lastWriteAt: set inside _write() every time a real on-disk write succeeds.
+//   • _fallbackReminderShown: gates the once-per-session reminder so there are zero
+//     unsolicited downloads from the auto/action path anywhere in the app.
+//   • _fallbackDownload() is now a DOWNLOAD UTILITY only — never auto-called from
+//     _triggerSave(). The action loop now shows a toast reminder instead.
+//   • VaultChip.refresh() is called after every successful _write() so the chip stays live.
 const AutoSave={
   _counter:0,
   _handle:null,
   _supported:'showSaveFilePicker' in window,
   _promptPending:false,
+  _lastWriteAt:null,           // P2.7: ISO timestamp of the last successful on-disk write
+  _fallbackReminderShown:false, // P2.7: once-per-session guard — no unsolicited auto-downloads
   async init(){
     if(!this._supported)return;
     try{this._handle=await IDB.get(IDB_KEY_BACKUP_HANDLE)||null;}catch(e){this._handle=null;}
@@ -6294,7 +6320,17 @@ const AutoSave={
     if(this._counter%AUTO_SAVE_THRESHOLD===0)this._triggerSave();
   },
   async _triggerSave(){
-    if(!this._supported){this._fallbackDownload();return;}
+    // P2.7: non-FSA path → once-per-session reminder toast (no download). manualSave() downloads.
+    if(!this._supported){
+      if(!this._fallbackReminderShown){
+        this._fallbackReminderShown=true;
+        showToast('Your data is stored in the browser. Export a backup to keep it safe.',[
+          {label:'Export now',handler:()=>this.manualSave()}
+        ],12000);
+        if(typeof VaultChip!=='undefined')VaultChip.refresh();
+      }
+      return;
+    }
     if(!this._handle){
       if(!this._promptPending){
         this._promptPending=true;
@@ -6331,6 +6367,9 @@ const AutoSave={
       const writable=await this._handle.createWritable();
       await writable.write(JSON.stringify(_stateForPersist(),null,2));
       await writable.close();
+      // P2.7: stamp the successful write time and refresh the vault chip
+      this._lastWriteAt=new Date().toISOString();
+      if(typeof VaultChip!=='undefined')VaultChip.refresh();
     }catch(e){
       if(e.name==='NotAllowedError')showToast('Auto-backup paused — permission revoked.',[{label:'Re-enable',handler:()=>this._reqPermAndWrite()}],0);
     }
@@ -6343,6 +6382,9 @@ const AutoSave={
       else{this._handle=null;try{await IDB.set(IDB_KEY_BACKUP_HANDLE,null);}catch(e){}}
     }catch(e){}
   },
+  // P2.7: _fallbackDownload is a DOWNLOAD UTILITY (manual path only).
+  // It is NOT called from _triggerSave() — that path now shows a reminder toast.
+  // Callers: manualSave() (explicit user action), setupPicker() fallback path.
   _fallbackDownload(){
     try{
       const blob=new Blob([JSON.stringify(_stateForPersist(),null,2)],{type:'application/json'});
@@ -6358,6 +6400,166 @@ const AutoSave={
     else if(this._supported)this.setupPicker();
     else this._fallbackDownload();
   }
+};
+
+// ── P2.7 — VaultChip: live custody indicator in the Settings › Backups section ──
+// Reads AutoSave state and renders one of four chip states:
+//   1. "Protected — backed up <N> ago"  (persisted + handle + _lastWriteAt)
+//   2. "Backup ready — not yet written"  (handle set, no write yet)
+//   3. "No on-disk backup — set one up"  (FSA supported, no handle) → CTA opens setupPicker
+//   4. "Best-effort storage — export weekly" (FSA unsupported) → CTA = Export now
+// VaultChip.refresh() is called by AutoSave._write() and by the settings modal open event.
+const VaultChip={
+  // Pure helper — formats a timestamp as a human-readable relative string.
+  // Returns "just now" / "2 min ago" / "1 h ago" / "3 days ago" etc.
+  // Pure function: no side-effects, no DOM access — factored out for testability (P2.8 test).
+  _relativeTime(isoStr){
+    if(!isoStr)return null;
+    const diffMs=Date.now()-new Date(isoStr).getTime();
+    if(isNaN(diffMs)||diffMs<0)return null;
+    const s=Math.floor(diffMs/1000);
+    if(s<60)return'just now';
+    const m=Math.floor(s/60);
+    if(m<60)return m+' min ago';
+    const h=Math.floor(m/60);
+    if(h<24)return h+' h ago';
+    const d=Math.floor(h/24);
+    return d+' day'+(d===1?'':'s')+' ago';
+  },
+  refresh(){
+    const dot=document.getElementById('vault-chip-dot');
+    const lbl=document.getElementById('vault-chip-label');
+    const cta=document.getElementById('vault-chip-cta');
+    const testBtn=document.getElementById('vault-chip-test-btn');
+    if(!dot||!lbl||!cta)return;
+    const persisted=State._storagePersisted;
+    const handle=AutoSave._handle;
+    const lastAt=AutoSave._lastWriteAt;
+    const supported=AutoSave._supported;
+    if(handle&&lastAt){
+      // State 1: on-disk backup configured and at least one write succeeded
+      const when=this._relativeTime(lastAt)||'recently';
+      dot.style.background='var(--color-thriving,#5c9e6a)';
+      lbl.textContent='Protected — backed up '+when;
+      cta.style.display='none';
+    }else if(handle&&!lastAt){
+      // State 2: handle exists but no write has completed yet this session
+      dot.style.background='var(--color-gold-deep,#b5893a)';
+      lbl.textContent='Backup ready — not yet written';
+      cta.style.display='none';
+    }else if(supported&&!handle){
+      // State 3: FSA available but no save location chosen
+      dot.style.background='var(--color-text-muted,#9a8f7e)';
+      lbl.textContent='No on-disk backup — set one up';
+      cta.textContent='Set up backup';
+      cta.onclick=()=>AutoSave.setupPicker();
+      cta.style.display='';
+    }else{
+      // State 4: non-Chromium / FSA unavailable — best-effort browser storage
+      dot.style.background='var(--color-crisis,#c74545)';
+      lbl.textContent='Best-effort storage — export weekly';
+      cta.textContent='Export now';
+      cta.onclick=()=>AutoSave.manualSave();
+      cta.style.display='';
+    }
+    // Show "Test my backup" whenever there is something to test (any state that has data)
+    if(testBtn)testBtn.style.display=persisted===false?'none':'';
+  },
+  init(){
+    // Wire the "Test my backup" button to the hidden file input (P2.8)
+    const testBtn=document.getElementById('vault-chip-test-btn');
+    const fileInput=document.getElementById('vault-chip-test-file');
+    if(testBtn&&fileInput){
+      testBtn.addEventListener('click',()=>fileInput.click());
+      fileInput.addEventListener('change',()=>{
+        const f=fileInput.files&&fileInput.files[0];
+        if(f)RestoreDrill.run(f);
+        fileInput.value=''; // reset so same file can be re-picked
+      });
+    }
+    this.refresh();
+  },
+};
+
+// ── P2.8 — RestoreDrill: read-only backup-file health check ──
+// DRY-RUN ONLY. Real state is never touched.
+// Flow: file input → JSON.parse → migrateIfNeeded on a DEEP CLONE → count entities
+//       → render summary or friendly error. No commitRestore(), no persistNow().
+const RestoreDrill={
+  // Pure helper: given parsed + migrated snapshot data, count entities across all realms.
+  // Returns {realms, counts:{label,n}[], savedAt} or throws if shape is invalid.
+  // Factored out of run() so the Node test can call it directly without a File or DOM.
+  inspect(data){
+    if(!data||typeof data!=='object'||!Array.isArray(data.nations)){
+      throw new Error('not-realmwright');
+    }
+    const ENTITY_TYPES=[
+      {key:'chronicle',label:'events'},
+      {key:'characters',label:'characters'},
+      {key:'factions',label:'factions'},
+      {key:'sessions',label:'sessions'},
+      {key:'hooks',label:'hooks'},
+      {key:'secrets',label:'secrets'},
+      {key:'fronts',label:'fronts'},
+      {key:'locations',label:'locations'},
+      {key:'bestiary',label:'bestiary entries'},
+      {key:'artifacts',label:'artifacts'},
+    ];
+    const realms=data.nations.length;
+    const totals={};
+    ENTITY_TYPES.forEach(t=>{totals[t.key]=0;});
+    (data.nations||[]).forEach(n=>{
+      ENTITY_TYPES.forEach(t=>{totals[t.key]+=(n[t.key]||[]).length;});
+    });
+    const counts=ENTITY_TYPES
+      .filter(t=>totals[t.key]>0)
+      .map(t=>({label:t.label,n:totals[t.key]}));
+    const savedAt=data.meta&&data.meta.lastUpdatedAt
+      ? new Date(data.meta.lastUpdatedAt).toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'})
+      : null;
+    return{realms,counts,savedAt};
+  },
+  // Run the drill from a File object. Reads the file, clones+migrates, calls inspect(),
+  // renders into #vault-drill-result. Real state is never touched.
+  run(file){
+    const resultEl=document.getElementById('vault-drill-result');
+    if(!resultEl)return;
+    resultEl.style.display='';
+    resultEl.innerHTML='<em style="color:var(--color-text-muted)">Reading file…</em>';
+    const reader=new FileReader();
+    reader.onload=()=>{
+      let msg='';
+      try{
+        // Clone-first pattern from commitRestore (L7112) — but we never commit.
+        const raw=reader.result;
+        let parsed;
+        try{parsed=JSON.parse(raw);}catch(e){
+          msg='<span style="color:var(--color-crisis)">This file isn\'t a RealmWright backup — it may be truncated. Try another.</span>';
+          resultEl.innerHTML=msg;return;
+        }
+        // migrateIfNeeded on a deep clone: real state is untouched
+        const clone=migrateIfNeeded(JSON.parse(JSON.stringify(parsed)));
+        let info;
+        try{info=RestoreDrill.inspect(clone);}catch(e){
+          msg='<span style="color:var(--color-crisis)">This file isn\'t a RealmWright backup — it may be truncated. Try another.</span>';
+          resultEl.innerHTML=msg;return;
+        }
+        // Build the summary line: "1 realm, 214 events, 12 characters"
+        const realmWord=info.realms===1?'realm':'realms';
+        const partList=[info.realms+' '+realmWord].concat(info.counts.map(c=>c.n+' '+c.label));
+        const lastSaved=info.savedAt?' — last saved '+info.savedAt+'.':'.';
+        const summary='This file contains '+partList.join(', ')+lastSaved+' Looks healthy.';
+        msg='<span style="color:var(--color-thriving,#5c9e6a)">'+Utils.escHtml(summary)+'</span>';
+      }catch(e){
+        msg='<span style="color:var(--color-crisis)">This file isn\'t a RealmWright backup — it may be truncated. Try another.</span>';
+      }
+      resultEl.innerHTML=msg;
+    };
+    reader.onerror=()=>{
+      resultEl.innerHTML='<span style="color:var(--color-crisis)">Could not read the file. Try another.</span>';
+    };
+    reader.readAsText(file);
+  },
 };
 
 function buildNationFromSeed(seed){
@@ -17718,7 +17920,11 @@ const SnapshotManager={
     if(confirmBtn)confirmBtn.addEventListener('click',()=>this.commitRestore());
     // Re-render list whenever settings modal opens
     document.addEventListener('sc:modal-open',e=>{
-      if(e.detail==='settings')this.renderList();
+      if(e.detail==='settings'){
+        this.renderList();
+        // P2.7: refresh vault chip so it reflects current AutoSave state
+        if(typeof VaultChip!=='undefined')VaultChip.refresh();
+      }
     });
   },
 };
@@ -18195,6 +18401,8 @@ async function bootstrap(){
   LicenseQueue.drain().catch(e=>console.error('[license:queue] drain failed',e));
   await DemoCounter.init();
   await AutoSave.init();
+  // P2.7/P2.8: init vault chip display and wire the restore-drill file input
+  if(typeof VaultChip!=='undefined')VaultChip.init();
   LicenseGateUI.bind();
   if(typeof SampleMode!=='undefined')SampleMode.bind();
   if(typeof Solo!=='undefined')Solo.bind();
