@@ -17541,6 +17541,8 @@ window.addEventListener('beforeunload',function(e){
     return (e.returnValue='You have unsaved input. Leave anyway?');
   }
 });
+window.addEventListener('pagehide',()=>{try{State.persistNow();}catch(e){}});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'){try{State.persistNow();}catch(e){}}});
 
 // Developer theme override. Usage in console: __rwSetTheme('manuscript')
 window.__rwSetTheme=function(t){
