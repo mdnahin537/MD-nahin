@@ -7830,7 +7830,7 @@ const WorldTurn={
       });
 
       turns.push({
-        label:'Season '+(seasonIndex+1),     // plain fallback label; P2.2 Almanac supplies named labels
+        label:ALMANAC.turnLabel(nation.currentYear,nation.era||'default'), // P2.2 — Almanac named label
         seasonKey:Math.round((nation.currentYear%1)*4)%4, // 0..3 quarter index for Almanac mapping
         deltas,events,frontTicks,resolved,
       });
@@ -7845,6 +7845,34 @@ const WorldTurn={
       proposed:{statFinal,newEvents:proposedNewEvents,frontTicks:proposedFrontTicks},
       capped,
     };
+  },
+};
+// ─── ALMANAC (P2.2) — civic/seasonal calendar, era-aware, halal-clean ───
+// All names are civic/seasonal fiction. No zodiac, omen, fate, or prophecy content.
+// CC-HALAL: vocabulary is civic/economic/agricultural — the world turns on harvests and
+// councils, never on fate or celestial portent.
+const ALMANAC={
+  // seasonsByEra: era key → 4 season names [index 0..3], spanning the year as quarters.
+  // 'default'  — generic medieval/pre-industrial civic calendar used when era is unknown.
+  // 'Ancient'  — Classical civic calendar used in older empires and dynastic realms.
+  // 'Maritime' — Trade-port and seafaring realm calendar (tides, market seasons, harbor guilds).
+  seasonsByEra:{
+    default:['Thaw','High Sun','Harvest','Lean Winter'],
+    Ancient:['First Flood','High Heat','Grain Month','Cold Council'],
+    Maritime:['Breaking Ice','Trade Winds','Amber Tide','Harbor Dark'],
+  },
+  // season(yearFloat, era) → { index: 0..3, name: string }
+  // index = clamp(floor((yearFloat % 1) * 4), 0, 3).
+  // Falls back to 'default' era if the given era key is not found.
+  season(yearFloat,era){
+    const index=Math.max(0,Math.min(3,Math.floor((yearFloat%1)*4)));
+    const names=this.seasonsByEra[era]||this.seasonsByEra['default'];
+    return{index,name:names[index]};
+  },
+  // turnLabel(yearFloat, era) → e.g. "Turn of the Lean Winter, Year 1247"
+  turnLabel(yearFloat,era){
+    const s=this.season(yearFloat,era);
+    return'Turn of the '+s.name+', Year '+Math.floor(yearFloat);
   },
 };
 // Fill-and-Copy variable resolver
@@ -14244,7 +14272,8 @@ const WorldShell={
     if(titleEl)titleEl.textContent=nat.name;
     const eraEl=document.getElementById('wms-nation-era');
     if(eraEl){eraEl.innerHTML='';
-      const yearLine=document.createElement('div');yearLine.innerHTML=`<strong>Year ${Utils.escHtml(String(nat.currentYear))}</strong>`;
+      const _alm=ALMANAC.season(nat.currentYear,nat.era||'default');
+      const yearLine=document.createElement('div');yearLine.innerHTML=`<strong>${Utils.escHtml(_alm.name)}, Year ${Utils.escHtml(String(Math.floor(nat.currentYear)))}</strong>`;
       const eraLine=document.createElement('div');eraLine.textContent=nat.era||'';
       eraEl.appendChild(yearLine);if(nat.era)eraEl.appendChild(eraLine);
     }
