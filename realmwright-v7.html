@@ -8304,10 +8304,11 @@ const Parse={
         // Accept "Name +5", "Name: +5", "Name: +5 (from 50 to 55)" — with Unicode dashes
         const cleaned=normNum(stripAsides(rest));
         // Remove any internal colons after the name: "Legitimacy: +5" → "Legitimacy +5"
-        let m=cleaned.match(/^(.+?)\s*:\s*([+-]?\d+)\s*$/);
-        if(!m)m=cleaned.match(/^(.+?)\s+([+-]?\d+)\s*$/);
+        // Decimal-aware: "Food +2.5" parses, then rounds to the nearest integer.
+        let m=cleaned.match(/^(.+?)\s*:\s*([+-]?\d+(?:\.\d+)?)\s*$/);
+        if(!m)m=cleaned.match(/^(.+?)\s+([+-]?\d+(?:\.\d+)?)\s*$/);
         if(m){
-          const delta=parseInt(m[2],10);
+          const delta=Math.round(parseFloat(m[2]));
           if(Number.isFinite(delta))candidates.push({type:'stat',statName:m[1].trim(),delta});
           else failures.push({line,reason:'stat delta not a finite number'});
         }
@@ -8315,12 +8316,20 @@ const Parse={
       }else if(kind==='event'){
         const p=rest.split('|').map(s=>s.trim());
         if(p.length>=4){
-          const w=normNum(p[2]).match(/[+-]?\d+/);
-          candidates.push({type:'event',name:p[0],evType:p[1]||'Political',weight:w?parseInt(w[0],10):0,visibility:CLAMP.visibility(p[3]||'public'),description:p.slice(4).join(' | ')});
+          // Decimal-aware weight; CLAMP.eventWeight rounds + clamps to [-30,30] (e.g. -7.8 → -8).
+          const w=normNum(p[2]).match(/[+-]?\d+(?:\.\d+)?/);
+          candidates.push({type:'event',name:p[0],evType:p[1]||'Political',weight:CLAMP.eventWeight(w?w[0]:0),visibility:CLAMP.visibility(p[3]||'public'),description:p.slice(4).join(' | ')});
         }else failures.push({line,reason:'event needs 4+ pipe-separated parts'});
       }else if(kind==='faction'){
         const p=rest.split('|').map(s=>s.trim());
-        if(p.length>=1&&p[0])candidates.push({type:'faction',name:p[0],desc:p.slice(1).join(' | ')||''});
+        if(p.length>=1&&p[0]){
+          // Back-compat: a 2-part line "Name | description" whose 2nd field is NOT a
+          // recognized faction type is treated as name + description (slot p.slice(1) into desc).
+          const FAC_TYPES=['Government','Opposition','Religious','Economic','Military'];
+          const p1IsType=p.length>=2&&FAC_TYPES.some(t=>t.toLowerCase()===(p[1]||'').toLowerCase());
+          if(!p1IsType)candidates.push({type:'faction',name:p[0],facType:'',position:'',desc:p.slice(1).join(' | ')||''});
+          else candidates.push({type:'faction',name:p[0],facType:p[1]||'',position:p[2]||'',desc:p.slice(3).join(' | ')||''});
+        }
         else failures.push({line,reason:'faction needs name'});
       }else if(kind==='character'){
         const p=rest.split('|').map(s=>s.trim());
@@ -8366,8 +8375,11 @@ const Parse={
     State._suppressUndo=true;
     const unmatched=[];
     const touched=new Set(); // tracks which kinds were touched, for accurate dispatch fields
+    const errors=[]; // per-candidate failures — a single bad candidate must not abort the batch
+    const skipped={event:0,faction:0,character:0,artifact:0}; // dedupe skip counts, surfaced below
     try{
     candidates.forEach(c=>{
+      try{
       if(c.type==='stat'){
         const key=this.matchStatKey(n,c.statName);
         if(key){
@@ -8379,14 +8391,38 @@ const Parse={
           unmatched.push(c.statName);
         }
       }
-      else if(c.type==='event'){const ev={id:Utils.uuid(),name:c.name,type:CLAMP.eventType(c.evType),weight:CLAMP.eventWeight(c.weight),description:c.description||'',year:CLAMP.year(n.currentYear,n.currentYear),visibility:c.visibility||'public',relatedStats:[],source:'ai-canon',createdAt:Utils.now()};n.chronicle.push(ev);touched.add('chronicle');}
-      else if(c.type==='faction'){
-        // Deduplicate: skip if a faction with the same name (case-insensitive) already exists
-        const dupe=n.factions.find(f=>f.name.toLowerCase()===c.name.toLowerCase());
-        if(!dupe){n.factions.push({id:Utils.uuid(),name:c.name,type:'Unknown',position:'holding',description:c.desc||'',leaderName:''});touched.add('faction');}
+      else if(c.type==='event'){
+        // Deduplicate: skip if an event with the same name (case-insensitive) AND same year exists.
+        const evYear=CLAMP.year(n.currentYear,n.currentYear);
+        const dupe=n.chronicle.find(e=>(e.name||'').toLowerCase()===(c.name||'').toLowerCase()&&e.year===evYear);
+        if(!dupe){const ev={id:Utils.uuid(),name:c.name,type:CLAMP.eventType(c.evType),weight:CLAMP.eventWeight(c.weight),description:c.description||'',year:evYear,visibility:c.visibility||'public',relatedStats:[],source:'ai-canon',createdAt:Utils.now()};n.chronicle.push(ev);touched.add('chronicle');}
+        else skipped.event++;
       }
-      else if(c.type==='character'){n.characters.push({id:Utils.uuid(),name:c.name,role:c.role||'',description:c.desc||'',status:'active',drive:'',fear:'',factionId:null,chronicleLinks:[],createdAt:Utils.now()});touched.add('character');}
-      else if(c.type==='artifact'){n.artifacts.push({id:Utils.uuid(),type:c.artType,content:c.content||''});touched.add('artifact');}
+      else if(c.type==='faction'){
+        // Deduplicate: skip if a faction with the same name (case-insensitive) already exists.
+        // Guard with (f.name||'') so a stored name-less faction can't throw and abort the batch.
+        const dupe=n.factions.find(f=>(f.name||'').toLowerCase()===(c.name||'').toLowerCase());
+        if(!dupe){
+          // AI-declared structure preserved: honor c.facType/c.position when valid, else safe defaults.
+          // Type allowlist mirrors importFromText's contract; unknown → 'Unknown' (never dropped).
+          const facType=(c.facType&&['Government','Opposition','Religious','Economic','Military'].includes(c.facType))?c.facType:'Unknown';
+          const position=['holding','gaining','losing','fragmenting'].includes((c.position||'').toLowerCase())?(c.position||'').toLowerCase():'holding';
+          n.factions.push({id:Utils.uuid(),name:c.name,type:facType,position,description:c.desc||'',leaderName:''});touched.add('faction');
+        }else skipped.faction++;
+      }
+      else if(c.type==='character'){
+        // Deduplicate: skip if a character with the same name (case-insensitive) already exists.
+        const dupe=n.characters.find(ch=>(ch.name||'').toLowerCase()===(c.name||'').toLowerCase());
+        if(!dupe){n.characters.push({id:Utils.uuid(),name:c.name,role:c.role||'',description:c.desc||'',status:'active',drive:'',fear:'',factionId:null,chronicleLinks:[],createdAt:Utils.now()});touched.add('character');}
+        else skipped.character++;
+      }
+      else if(c.type==='artifact'){
+        // Deduplicate: skip if an artifact with the same artType + content (exact) already exists.
+        const dupe=n.artifacts.find(a=>(a.type||'')===(c.artType||'')&&(a.content||'')===(c.content||''));
+        if(!dupe){n.artifacts.push({id:Utils.uuid(),type:c.artType,content:c.content||''});touched.add('artifact');}
+        else skipped.artifact++;
+      }
+      }catch(e){errors.push({line:c.name||c.statName||'(unknown)',reason:e.message});}
     });
     }finally{State._suppressUndo=false;}
     State._touch(nid);State.persist();
@@ -8396,6 +8432,13 @@ const Parse={
     document.dispatchEvent(new CustomEvent('sc:changed',{detail:{fields,nid}}));
     if(unmatched.length){
       setTimeout(()=>showToast(`Couldn't match stat${unmatched.length>1?'s':''}: ${unmatched.join(', ')}`,[],5000),600);
+    }
+    const skipTotal=skipped.event+skipped.faction+skipped.character+skipped.artifact;
+    if(skipTotal){
+      setTimeout(()=>showToast(`Skipped ${skipTotal} duplicate${skipTotal>1?'s':''}.`,[],5000),600);
+    }
+    if(errors.length){
+      setTimeout(()=>showToast(`Skipped ${errors.length} malformed item${errors.length>1?'s':''}: ${errors.map(e=>e.line).join(', ')}`,[],6000),600);
     }
   },
 };
