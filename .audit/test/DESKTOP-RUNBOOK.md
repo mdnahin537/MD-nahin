@@ -565,3 +565,404 @@ you'd prioritize a fix. The compound license-failure chain (**C04-1 → C13-2 �
 the audit's #1 priority bundle) is proven end-to-end in code/Node and doesn't need a browser
 to be believed — but step 9 above lets you at least *see* the one piece of that chain that
 manifests visually (the invisible toast).
+
+---
+
+# PHASE 0 GATE
+
+**What this is:** The exit gate for Phase 0 — the last check you run before anything goes
+public. The five scenarios below each confirm that a specific group of Phase 0 fixes actually
+works in a real browser. Every step is written for someone who is not a coder. You do NOT need
+to understand the code — you just need to follow the clicks and compare what you see to the
+"Expected result."
+
+**Do this gate ONLY after all of P0.1–P0.14 have been applied to the file.** If any task is
+still in progress, skip its scenario and come back when it is done.
+
+**Time:** ~40–50 minutes for all five scenarios. You can run them in any order — each is
+self-contained — but scenario 2 involves closing tabs, so do it in a dedicated window you are
+comfortable closing.
+
+**Requirements:**
+- Chrome or Edge (desktop), the updated `realmwright-v7.html` file.
+- DevTools (press **F12** — same primer as Section B above applies here).
+- For scenario 1 (license): the Worker must be deployed. See the **"After Worker deploy"** note
+  at the end of this section if the Worker is not yet live. If it is not live, skip scenario 1
+  and come back.
+- For scenario 5 (sanitizer + canon): no extra setup needed beyond the app itself.
+
+**How PASS works here:** Unlike Section A/B above (which proved bugs existed), this gate proves
+fixes are working. A PASS here is "the fixed behavior happened." A FAIL means the fix did not
+land correctly — flag it for the agent and re-run after the fix is corrected.
+
+---
+
+## Gate Scenario 1 — License never self-revokes (P0.1 / P0.2)
+
+**What you are checking:** A paying customer's license must stay active even when the license
+server is unreachable. The app must show a visible, dismissible warning — never silently
+lock them out.
+
+**Pre-existing condition:** You need an activated license in the app. Open Settings → License
+and activate with a real key before starting this scenario. Confirm the status shows "Active"
+or similar.
+
+**Exact actions:**
+1. Open the app with your activated license. Confirm the license status reads as active
+   (check Settings → License for a green/active indicator).
+2. Open DevTools (F12). Click the **Network** tab across the top.
+3. In the Network tab, find the **throttling dropdown** — it usually shows "No throttling" or
+   "Online." Click it and select **"Offline."** (This tells the browser to pretend the internet
+   is gone, so the license server becomes unreachable.)
+4. Now use the app normally for 30–60 seconds: edit a stat by moving a slider, add a short
+   note, open a panel. Do anything you would do in a real session.
+5. Watch the screen: look for any toast notification or status change in the license area.
+6. If a warning toast appears, click its dismiss button (the × or "Dismiss" label).
+7. Check Settings → License again. Read the status text.
+8. Switch DevTools Network back to **"Online"** (click the throttling dropdown again and
+   select Online or No throttling).
+
+**Expected result:** While offline, the app continues working without interruption. Your
+license status does NOT change to "invalid" or "expired." If a warning appears (for example
+"License could not be verified"), it is readable — it stays on screen long enough to read and
+has a button you can click (such as "Re-activate" or "Dismiss"). Clicking that button makes
+the toast go away. After going back online, the status returns to active on the next background
+check.
+
+**PASS looks like:** The app keeps working while offline. The license shows as still active (or
+shows a soft "could not verify" warning that is readable and dismissible — not a hard lockout).
+The warning toast stays on screen until you click it away.
+
+**FAIL looks like:** Going offline flips the license to "invalid" or "expired." Or a toast
+appears so briefly you cannot read it. Or the app stops letting you do things it was letting
+you do before.
+
+**[ screenshot — license status while offline ]**
+
+**[ screenshot — the warning toast (if one appeared), with dismiss button visible ]**
+
+**Confirms fixes:** P0.1 (server error no longer revokes the license), P0.2 (warning toast is
+sticky and visible, not invisible).
+
+---
+
+## Gate Scenario 2 — Your world is durable and no writes are lost (P0.5 / P0.6)
+
+**What you are checking:** The app must request "protected" storage from the browser so your
+world cannot be quietly deleted. Edits you make must survive even if you close the tab within
+a second of making them.
+
+**Pre-existing condition:** None. Works on any realm, including the sample realm.
+
+**Exact actions — Part 1 (storage protection):**
+1. Open the app. Open DevTools (F12) and click the **Console** tab.
+2. Click into the Console text box at the bottom, type the following exactly, and press Enter:
+   ```
+   await navigator.storage.persisted()
+   ```
+3. Read what appears directly below what you typed.
+4. Now look at the save-state chip in the app's header area (a small label, often showing
+   "Saved" or a cloud/disk icon with a tooltip). Hover over it with your mouse and read the
+   tooltip text.
+
+**Expected result for Part 1:** The Console prints `true`. The save chip's tooltip reads
+something like "Saved · storage protected" (the exact wording may vary, but it should confirm
+protected status). If the Console prints `false`, the chip's tooltip should say something like
+"Saved · best-effort storage — set up a backup" (honest about the limitation, not silent).
+
+**[ screenshot — Console showing `true` after `await navigator.storage.persisted()` ]**
+
+**[ screenshot — save chip tooltip text ]**
+
+**Exact actions — Part 2 (no lost writes on tab close):**
+5. Open a stat slider (for example the "Food" or first stat in the list). Move it to a clearly
+   different value — something you will recognize, like all the way to the left or right. Note
+   the number it shows.
+6. **Within about 1 second** of moving the slider, close the tab entirely (click the × on the
+   browser tab, or press Ctrl+W). Do not wait. Close it fast.
+7. Reopen the app (double-click the `.HTML` file again, or reopen the recently closed tab).
+8. Look at that same stat. Read its value.
+
+**Expected result for Part 2:** The stat shows the value you set in step 5 — not the value it
+had before you moved it. Your edit survived the fast tab close.
+
+**[ screenshot — the stat value after reopening, matching the value you set ]**
+
+**Exact actions — Part 3 (no lost writes on tab switch):**
+9. Move the same stat slider again to a new value. Note it.
+10. Immediately — within about 1 second — switch to a different browser tab or a different
+    application window (Alt+Tab). Stay away for about 5 seconds.
+11. Switch back to the RealmWright tab.
+12. Reload the page (F5 or Ctrl+R).
+13. Check the stat value.
+
+**Expected result for Part 3:** The stat shows the value you set in step 9. Tab-switching
+away and coming back (which puts the tab in the background) also triggers a save.
+
+**[ screenshot — the stat value after reload, matching step 9's value ]**
+
+**Confirms fixes:** P0.5 (browser granted durable storage, chip tells the truth), P0.6
+(pagehide and visibility-change events now flush writes instantly).
+
+---
+
+## Gate Scenario 3 — First-run gate closes (P0.7)
+
+**What you are checking:** A brand-new user sees the opening pitch screen exactly once. After
+they close it, it never appears again — they go straight into their realm on every reload.
+
+**Pre-existing condition:** You need a **fresh browser profile** — one that has never opened
+this app before. The easiest way: open an **Incognito / Private window** (Ctrl+Shift+N in
+Chrome) and open the `.HTML` file there. Incognito windows start with empty storage, so the
+app sees you as a brand-new user.
+
+**Exact actions:**
+1. Open a new Incognito window. Open the `.HTML` file in it. Watch what appears.
+2. The opening pitch screen (FrontDoor) should cover the screen. Look at it — this is the
+   "first run" state. You can use any of the buttons on it (close the × button, press Escape,
+   click "Try a sample," or click "Enter the workshop" — any of these closes it).
+3. Close the FrontDoor screen in any way you prefer.
+4. Now reload the page (press F5 or Ctrl+R) and watch what happens immediately after the
+   page finishes loading.
+5. Reload a second time (F5 again) and watch again.
+
+**Expected result:** Step 1–2: The FrontDoor pitch opens on first load — that is correct, it
+is supposed to show once. Step 4: After reloading, the FrontDoor does NOT reappear. Instead,
+you see the main app (your realm or the sample realm) load directly, possibly with a small
+"Welcome back" toast message in a corner. Step 5: Same result on the second reload — no
+FrontDoor, straight into the realm.
+
+**PASS looks like:** FrontDoor appears exactly once (first load). On every reload after that,
+the app opens straight into the realm. The words "Welcome back" may appear briefly as a small
+toast.
+
+**FAIL looks like:** The FrontDoor full-screen pitch reappears on reload #1 or #2 — exactly
+like the bug in Step 1 of Section A above (which this fix was meant to correct).
+
+**[ screenshot — the FrontDoor open on first launch ]**
+
+**[ screenshot — the app loading straight into the realm on reload (no FrontDoor) ]**
+
+**Confirms fix:** P0.7 (`firstRunComplete` is now set to true when FrontDoor is closed,
+so the returning-user path is no longer dead code).
+
+---
+
+## Gate Scenario 4 — Secrets stay secret and the toggle works (P0.8 / P0.9)
+
+**What you are checking:** Events marked Private — in any capitalization or phrasing — must
+never appear on a player-facing screen. The Show Secrets toggle must update the entire visible
+layout instantly, without a page reload.
+
+**Pre-existing condition:** None. Works on any realm. You will paste a small amount of text
+into the app — no AI account or API key needed.
+
+**Exact actions — Part 1 (secrets do not leak):**
+1. Make sure the **Secrets toggle** is OFF (the toggle labeled "Secrets" or "Show secrets in
+   chronicle" — look in the chronicle band controls or Settings). When it is OFF, private
+   events should be hidden.
+2. Find the **"▼ Paste AI Response"** button (in the Arsenal or sidebar area) and click it to
+   open the paste panel.
+3. Paste the following three lines into the text box exactly as written:
+   ```
+   Event: The Betrayal | Political | 5 | Private | The duke's secret plot
+   Event: The Rumor | Political | 3 | SECRET | Soldiers hear strange things
+   Event: The Festival | Political | 2 | public | A harvest celebration
+   ```
+4. Review the candidates the app shows you and click **Apply** (accept all three).
+5. Look at the main on-screen chronicle / timeline — the history band a player could see over
+   your shoulder (the default view when no GM-only panel is open).
+
+**Expected result for Part 1:** Only "The Festival" (the public event) appears on the visible
+timeline. "The Betrayal" (capital P in "Private") and "The Rumor" (all-caps "SECRET") do NOT
+appear — they are treated as private and hidden just like a correctly lowercase-tagged
+`private` event.
+
+**[ screenshot — the timeline showing only The Festival, with the two private/SECRET events hidden ]**
+
+**Exact actions — Part 2 (toggle updates the whole layout):**
+6. With those three events now in the realm, click the **Secrets toggle** to turn it **ON**
+   (show all events including private ones). Watch the main timeline.
+7. Check whether "The Betrayal" and "The Rumor" now appear in the timeline. Also look at any
+   open panels (chronicle panel, sidebar, WorldShell view) — they should all update.
+8. Click the toggle again to turn it **OFF**. Watch the timeline and panels immediately.
+
+**Expected result for Part 2:** When you turn the toggle ON, the two private events appear
+in the timeline and any open panels — the whole visible layout updates instantly, without you
+reloading the page. When you turn the toggle OFF, they disappear again from all panels
+immediately. No reload is needed at any point.
+
+**PASS looks like:** Private/SECRET events are invisible when secrets are OFF. The toggle
+turns them on and off across the whole layout (not just one corner) with no reload — both
+ways.
+
+**FAIL looks like:** "Private" (capital P) or "SECRET" (all caps) events appear on the
+timeline even when secrets are OFF — they leak. Or the toggle does not visibly refresh the
+timeline and panels immediately (the bug from Section A Step 3).
+
+**[ screenshot — timeline with Secrets ON, showing all three events ]**
+
+**[ screenshot — timeline with Secrets OFF again, showing only The Festival ]**
+
+**Confirms fixes:** P0.8 (visibility clamp now normalizes any capitalization to lowercase,
+so `Private` and `SECRET` are both treated as `private`), P0.9 (the toggle now dispatches a
+full layout re-render, not just the legacy hidden band).
+
+---
+
+## Gate Scenario 5 — Sanitizer, canon parser, and catastrophe type (P0.11 / P0.10 / P0.12)
+
+**What you are checking:** Three separate fixes in one scenario.
+- The real DOMPurify sanitizer is active (hostile HTML cannot run).
+- The canon paste parser handles decimal stats, 4-field factions, and duplicate lines correctly.
+- When a non-military front's clock fills, the chronicle records the right type, not "Military."
+
+**Pre-existing condition:** None. All parts use the app's paste and front tools — no AI key
+needed.
+
+**Exact actions — Part A (sanitizer: hostile HTML is inert):**
+1. Find any field in the app that renders markdown or formatted text — for example the
+   description field of a faction, NPC, or the notes area of an event. Click into it to edit.
+2. Paste the following text exactly into that field:
+   ```
+   <img src=x onerror=alert(1)>
+   ```
+3. Save or confirm the field (click away, or press Enter/Save if the field has a button).
+4. Watch the screen carefully. Do NOT click "OK" on any popup if one appears.
+5. Open DevTools (F12) → **Console** tab. Look for any red errors or any line mentioning
+   `alert`.
+
+**Expected result for Part A:** Nothing happens when you paste and save that text. No popup
+dialog appears. No alert box appears. In the Console, there are no red errors related to
+`onerror` or `alert`. The text may render as plain text or just a broken image icon — but it
+does not execute.
+
+**[ screenshot — the field after pasting, showing no alert popup, no red Console errors ]**
+
+**Exact actions — Part B (canon parser: decimals, 4-field factions, duplicates):**
+6. Open the **"▼ Paste AI Response"** panel again.
+7. Paste the following block exactly:
+   ```
+   Stat: Food +2.5
+   Event: The Drought | Political | -7.8 | public | Crops fail across the lowlands
+   Faction: The Iron Concord | Military | gaining | A mercenary company rises
+   Event: The Drought | Political | -7.8 | public | Crops fail across the lowlands
+   ```
+   (Note: "The Drought" event appears twice — this is intentional to test the duplicate check.)
+8. Review the candidates the app shows you and click **Apply**.
+9. Read any toast notification that appears after applying.
+10. Open the chronicle/events list and find "The Drought." Count how many times it appears.
+11. Look at the faction list for "The Iron Concord." Check whether it has a type (Military)
+    and a position (gaining).
+
+**Expected result for Part B:**
+- The Food stat changes by +3 (the app rounds 2.5 to the nearest whole number — this is
+  correct behavior, not a bug).
+- The Drought event is added once, not twice. A toast or note says something like "skipped
+  1 duplicate."
+- The Iron Concord faction appears with type "Military" and position "gaining" — not just a
+  name with no type or a pipe-joined description.
+
+**[ screenshot — toast showing "skipped 1 duplicate" (or similar wording) ]**
+
+**[ screenshot — The Iron Concord in the faction list, showing type Military and position gaining ]**
+
+**Exact actions — Part C (catastrophe type: front resolves with the right label):**
+12. Open the **Fronts & Clocks** panel and click **"+ New Front"** to create a new front.
+13. Give it any name (for example "The Plague"). In the front form, find the field labeled
+    something like "When this front resolves, the chronicle records it as…" and set it to
+    **Natural** (or the closest non-Military option available in the dropdown).
+14. Save the front.
+15. Now fill its clock all the way to the end — click each clock segment until the clock is
+    completely full, or use whatever "fill clock" or "advance" button the front shows.
+16. Open the chronicle and find the event that was just added when the clock completed.
+17. Read the event's type label.
+
+**Expected result for Part C:** The chronicle event created by the front resolution shows
+type **Natural** — not "Military." The type matches what you selected in step 13.
+
+**PASS looks like:** All three parts pass: no alert fires; decimals round correctly and
+duplicates are skipped with a message; the front's chronicle event shows the type you chose.
+
+**FAIL looks like:** An alert popup appears (Part A). The Drought appears twice with no
+duplicate message, or The Iron Concord has no type (Part B). The chronicle event says
+"Military" regardless of what you set (Part C).
+
+**[ screenshot — the chronicle event from front resolution, showing "Natural" (or whichever type you chose) as the event type ]**
+
+**Confirms fixes:** P0.11 (real DOMPurify is active — hostile HTML is inert), P0.10 (canon
+parser correctly handles decimal deltas, 4-field factions with type and position, and deduplicates
+re-pasted items with a visible message), P0.12 (fronts now store and use their `catastropheType`
+field, so the chronicle event reflects the correct type instead of hardcoding "Military").
+
+---
+
+## Phase 0 Gate Checklist
+
+Tick each box after running its scenario. All five must be ticked before anything goes public.
+
+- [ ] **G1a.** License stays active while DevTools Network is set to Offline → no hard lockout
+- [ ] **G1b.** Warning toast (if it appears) is readable and stays on screen until dismissed
+- [ ] **G2a.** `await navigator.storage.persisted()` in Console returns `true` (or chip says "best-effort" honestly)
+- [ ] **G2b.** Edit a stat, close the tab within ~1 s, reopen → edit survived
+- [ ] **G2c.** Edit a stat, switch tabs for 5 s, come back and reload → edit survived
+- [ ] **G3a.** Fresh Incognito profile: FrontDoor opens on first load
+- [ ] **G3b.** After closing FrontDoor: reload once → no FrontDoor, opens straight into realm
+- [ ] **G3c.** Reload a second time → still no FrontDoor
+- [ ] **G4a.** `Private`-cased event does NOT appear on timeline when Secrets is OFF
+- [ ] **G4b.** `SECRET`-cased event does NOT appear on timeline when Secrets is OFF
+- [ ] **G4c.** Toggle Secrets ON → both events appear across whole layout, no reload needed
+- [ ] **G4d.** Toggle Secrets OFF → both events disappear across whole layout, no reload needed
+- [ ] **G5a.** Pasting `<img src=x onerror=alert(1)>` into a markdown field → no alert popup, no Console errors
+- [ ] **G5b.** Canon paste with `Food +2.5` → Food stat changes by +3 (rounded)
+- [ ] **G5c.** Canon paste with duplicate Drought event → appears once, "skipped 1 duplicate" message shown
+- [ ] **G5d.** The Iron Concord faction → type Military, position gaining (not a blank or pipe-joined string)
+- [ ] **G5e.** Non-military front clock fills → chronicle event type matches what you set (not "Military")
+
+---
+
+## After Worker deploy — end-to-end license gate (run this separately)
+
+**Note:** This scenario requires the Cloudflare Worker (in the `worker/` folder) to be
+deployed. The Worker is NOT part of the main HTML file — it is a separate cloud service that
+handles license verification for Gumroad, itch.io, and Lemon Squeezy. Before running these
+checks, follow the `worker/README.md` instructions to deploy it.
+
+Once the Worker is live, run these two extra checks:
+
+**Check W1 — One real key per store activates:**
+1. Obtain one real license key from each storefront you sell on (Gumroad, itch.io, and/or
+   Lemon Squeezy — you only need the stores you have set up).
+2. Open the app → Settings → License → Activate. Enter the Gumroad key and activate. Confirm
+   the status shows active.
+3. Close the app, reopen it. Confirm the license is still active on reload.
+4. Repeat steps 2–3 for each additional store key (itch.io, Lemon Squeezy) — test each in a
+   separate fresh session or Incognito window.
+
+**Expected result:** Each store's key activates successfully. The status shows active. Reloading
+keeps the license active (the Worker is not re-contacted on every reload — the client holds the
+validated state).
+
+**[ screenshot — license status showing active after Gumroad key activation ]**
+
+**[ screenshot — license status showing active after itch.io key activation ]**
+
+**Check W2 — A store outage during validate leaves the client active:**
+1. Activate a license key (any store) and confirm it is active.
+2. Open DevTools → Network tab → set throttling to **"Offline"** (same as Gate Scenario 1).
+3. Wait for the app's background validation cycle to run — or dispatch the validation manually
+   from the Console if you know the command. Alternatively, just wait 60 seconds with the app
+   open and offline.
+4. Check the license status. Check whether any functionality was removed.
+
+**Expected result:** The client stays active. A soft warning may appear ("could not verify —
+will retry"), but the status does not flip to invalid and nothing stops working. This is the
+P0.1 behavior, confirmed end-to-end against the real Worker.
+
+**[ screenshot — license status while offline, showing still-active (not invalid) ]**
+
+**Gate checklist additions (after Worker deploy):**
+- [ ] **GW1a.** Gumroad key activates end-to-end against the live Worker
+- [ ] **GW1b.** itch.io key activates end-to-end against the live Worker  *(if itch.io store is live)*
+- [ ] **GW1c.** Lemon Squeezy key activates end-to-end against the live Worker  *(if LS store is live)*
+- [ ] **GW2.** Store outage (DevTools Offline) during validate → client stays active, no hard lockout
