@@ -6648,6 +6648,7 @@ const State={
       const cold=await Secrets.loadKey();
       if(cold)this.data.meta.settings.copilotKey=cold;
       await this.persistNow();
+      if(navigator.storage&&navigator.storage.persist){navigator.storage.persisted().then(p=>p?null:navigator.storage.persist()).then(p=>{State._storagePersisted=!!p;}).catch(()=>{State._storagePersisted=null;});}
       return;
     }
     try{
@@ -6687,6 +6688,7 @@ const State={
         localStorage.removeItem(LEGACY_KEY);
       }catch(e){}
     }catch(e){handleCorruptStorage(typeof raw==='string'?raw:JSON.stringify(raw));}
+    if(navigator.storage&&navigator.storage.persist){navigator.storage.persisted().then(p=>p?null:navigator.storage.persist()).then(p=>{State._storagePersisted=!!p;}).catch(()=>{State._storagePersisted=null;});}
   },
   pushUndo(){
     if(this._suppressUndo)return;
@@ -7697,7 +7699,7 @@ const UI={
     dot.className='save-dot';
     if(s==='saving'){dot.classList.add('save-dot--saving');lbl.textContent='Saving…';}
     else if(s==='error'){dot.classList.add('save-dot--error');lbl.textContent='Save failed — export now';}
-    else lbl.textContent='Saved';
+    else{lbl.textContent='Saved';lbl.title=State._storagePersisted===true?'Saved · storage protected':'Saved · best-effort storage — set up a backup';}
   }
 };
 // ─── RENDER MODULE ───
