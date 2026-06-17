@@ -4446,6 +4446,18 @@ SECTION 8: DOM STRUCTURE
       <textarea class="form-textarea" id="nf-catastrophe" rows="2" placeholder="The rebellion seizes the capital and deposes the ruling council."></textarea>
     </div>
     <div class="form-field">
+      <label class="form-label" for="nf-catastrophe-type">When this front resolves, the chronicle records it as…</label>
+      <select class="form-input" id="nf-catastrophe-type" aria-label="Chronicle event type when this front resolves">
+        <option value="Military">Military</option>
+        <option value="Political">Political</option>
+        <option value="Economic">Economic</option>
+        <option value="Cultural">Cultural</option>
+        <option value="Social">Social</option>
+        <option value="Diplomatic">Diplomatic</option>
+        <option value="Natural">Natural</option>
+      </select>
+    </div>
+    <div class="form-field">
       <label class="form-label">Linked factions</label>
       <div id="nf-factions-multi" style="display:flex;flex-wrap:wrap;gap:6px"></div>
     </div>
@@ -7266,6 +7278,7 @@ const State={
       id:Utils.uuid(),name:cfg.name||'Unnamed Front',description:cfg.description||'',
       clockSize:cfg.clockSize||6,clockFilled:0,status:'active',
       catastropheEvent:cfg.catastropheEvent||'',
+      catastropheType:cfg.catastropheType?CLAMP.eventType(cfg.catastropheType):'Military',
       linkedHookIds:cfg.linkedHookIds||[],linkedFactionIds:cfg.linkedFactionIds||[],
       optionalStatTrigger:cfg.optionalStatTrigger||null,
       ticks:[],createdAt:Utils.now(),resolvedAt:null,
@@ -7306,7 +7319,7 @@ const State={
       f.status='resolved';f.resolvedAt=Utils.now();
       n.chronicle=n.chronicle||[];
       const ev={
-        id:Utils.uuid(),name:f.name,type:'Military',weight:-10, // B3: front resolution is catastrophic — negative weight
+        id:Utils.uuid(),name:f.name,type:f.catastropheType||'Military',weight:-10, // B3: front resolution is catastrophic — negative weight
         description:f.catastropheEvent||(f.name+' has come to pass.'),
         year:n.currentYear,visibility:'public',
         relatedStats:opts.by==='stat-trigger'&&f.optionalStatTrigger?.statKey?[f.optionalStatTrigger.statKey]:[], // B27
@@ -14612,6 +14625,7 @@ const Fronts={
     document.getElementById('nf-name').value='';
     document.getElementById('nf-desc').value='';
     document.getElementById('nf-catastrophe').value='';
+    const catTypeSelNew=document.getElementById('nf-catastrophe-type');if(catTypeSelNew)catTypeSelNew.value='Military';
     document.getElementById('nf-trigger-toggle').checked=false;
     document.getElementById('nf-trigger-config').style.display='none';
     document.getElementById('nf-trigger-val').value='30';
@@ -14641,6 +14655,7 @@ const Fronts={
     document.getElementById('nf-name').value=f.name;
     document.getElementById('nf-desc').value=f.description||'';
     document.getElementById('nf-catastrophe').value=f.catastropheEvent||'';
+    const catTypeSelEdit=document.getElementById('nf-catastrophe-type');if(catTypeSelEdit)catTypeSelEdit.value=f.catastropheType||'Military';
     // Clock size
     document.querySelectorAll('#nf-clock-size .char-status-pill').forEach(p=>{
       p.classList.toggle('is-selected',parseInt(p.dataset.size,10)===f.clockSize);
@@ -14684,6 +14699,7 @@ const Fronts={
       name,
       description:document.getElementById('nf-desc').value.trim(),
       catastropheEvent:document.getElementById('nf-catastrophe').value.trim(),
+      catastropheType:document.getElementById('nf-catastrophe-type')?.value||'Military',
       clockSize,linkedFactionIds,optionalStatTrigger:trigger,
     };
     const editId=document.getElementById('nf-edit-id').value;
