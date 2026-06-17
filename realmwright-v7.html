@@ -15418,13 +15418,6 @@ const RelationshipWeb = {
       });
     });
 
-    // Background click clears selection
-    svg.addEventListener('click',()=>{
-      this._selected=null;
-      const detail=document.getElementById('web-node-detail');
-      if(detail)detail.style.display='none';
-      this._render();
-    });
   },
 
   _showDetail(n){
@@ -15478,6 +15471,14 @@ const RelationshipWeb = {
         this._panStart={x:evt.clientX,y:evt.clientY};
       }
     });
+
+    // Background click clears selection — bound once, guarded to be resilient if init runs twice
+    if(!svg._bgBound){svg._bgBound=true;svg.addEventListener('click',()=>{
+      this._selected=null;
+      const detail=document.getElementById('web-node-detail');
+      if(detail)detail.style.display='none';
+      this._render();
+    });}
 
     // Scroll to zoom
     container.addEventListener('wheel',evt=>{
