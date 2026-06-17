@@ -7618,6 +7618,235 @@ const Compute={
     return{chronicle:chronicleChanged,front:frontChanged};
   },
 };
+// ─── WORLD TURN ENGINE (P2.1) — the clone-pure, deterministic, no-AI driver ───
+// CONTRACT: compute(nationClone, elapsedDays, opts) is a PURE function.
+//   • Never reads or writes State.* — operates only on a deep clone of its input.
+//   • Never mutates its input (deep-clones internally; input is byte-equal after the call).
+//   • Uses NO randomness (no Utils.uuid/Utils.now/Math.random/Date) — fully deterministic in v1.
+//   • Re-implements the semantics of the verified primitives (checkThresholds crossing + 5-year
+//     dedupe + front stat-triggers; tickFront clock-fill + catastrophe resolution; Compute.pressures
+//     conditions; the stat clamp bounds) PURELY inside this module — it composes them, it does not call them.
+//   • PROPOSES changes only; the P2.3 commit path writes them through State (setStat/addEvent/tickFront).
+// HALAL: every drift cites the rule/pressure that produced it. Vocabulary is civic/economic — the world
+//   moves because of named pressures and clocks, never fate/omen/prophecy/destiny.
+const WorldTurn={
+  SEASON_DAYS:91.3125,   // 365.25 / 4 — one season, the year-advance convention (saveSession precedent)
+  MAX_TURNS:8,           // hard cap: a single world-turn never advances more than 8 seasons (2 years)
+  // DRIFT_RULES — one entry per PRESSURE_RULES id. Each active pressure applies its per-turn stat
+  // drifts (clamped to each stat's [min,max]). ruleText is halal-clean prose naming the pressure;
+  // ruleId resolves back to the PRESSURE_RULES entry. Authored from the real PRESSURE_RULES.
+  DRIFT_RULES:[
+    {ruleId:'food-crisis',
+     drifts:[{statKey:'food_production',delta:-2},{statKey:'legitimacy',delta:-1}],
+     ruleText:'Food crisis active: with the harvests still failing, granary reserves draw down (Food −2) and the strain on the treasury costs the regime standing (Legitimacy −1).'},
+    {ruleId:'opposition-rising',
+     drifts:[{statKey:'opposition',delta:1},{statKey:'legitimacy',delta:-1}],
+     ruleText:'Opposition rising: with dissent now spoken openly and the censors withdrawn, the movement gathers (Opposition +1) while the regime loses ground (Legitimacy −1).'},
+    {ruleId:'unpaid-army',
+     drifts:[{statKey:'manpower',delta:-1},{statKey:'legitimacy',delta:-1}],
+     ruleText:'Unpaid army: a season without wages thins the ranks as captains and soldiers drift away (Manpower −1), and the unrest reaches the capital (Legitimacy −1).'},
+    {ruleId:'corruption-bleeding',
+     drifts:[{statKey:'trade',delta:-1},{statKey:'legitimacy',delta:-1}],
+     ruleText:'Treasury bleeding: with graft skimming a third of what the state is owed, commerce reroutes around the tolls (Trade −1) and confidence in the administration erodes (Legitimacy −1).'},
+    {ruleId:'legitimacy-fracture',
+     drifts:[{statKey:'cohesion',delta:-1},{statKey:'legitimacy',delta:-1}],
+     ruleText:'Legitimacy fractured: when proclamations from the palace are no longer repeated at home, shared purpose frays (Cohesion −1) and authority slips further (Legitimacy −1).'},
+    {ruleId:'knowledge-stagnation',
+     drifts:[{statKey:'knowledge',delta:-1}],
+     ruleText:'Knowledge stagnation: with the provincial schools shut and the older codes going unread, learning recedes another step (Knowledge −1).'},
+    {ruleId:'cohesion-fracture',
+     drifts:[{statKey:'cohesion',delta:-1},{statKey:'opposition',delta:1}],
+     ruleText:'Cohesion fracturing: as capital and provinces pull toward separate interests, common ground narrows (Cohesion −1) and rival factions find new recruits (Opposition +1).'},
+    {ruleId:'urban-strain',
+     drifts:[{statKey:'food_production',delta:-1},{statKey:'cohesion',delta:-1}],
+     ruleText:'Urban strain: the great cities outrun what the countryside can feed, so reserves are spent on bread queues (Food −1) and resentment between city and country grows (Cohesion −1).'},
+    {ruleId:'trade-collapse',
+     drifts:[{statKey:'trade',delta:-2},{statKey:'raw_materials',delta:-1}],
+     ruleText:'Trade collapse: with merchants crossing the borders only under arms, commerce contracts sharply (Trade −2) and the workshops ration what they can no longer import (Raw Materials −1).'},
+  ],
+  // The PRESSURE_RULES conditions, re-implemented purely (same predicates as Compute.pressures /
+  // PRESSURE_RULES; kept here so compute() never reaches outside the module). Each takes the clone's
+  // stats map ({key:{value,...}}) and returns whether the pressure is active.
+  _PRESSURE_CONDS:{
+    'food-crisis':s=>(s.food_production?.value)<40,
+    'opposition-rising':s=>(s.opposition?.value)>=6&&(s.legitimacy?.value)<50,
+    'unpaid-army':s=>(s.manpower?.value)<50&&(s.trade?.value)<60,
+    'corruption-bleeding':s=>(s.corruption?.value)>=7,
+    'legitimacy-fracture':s=>(s.legitimacy?.value)<30,
+    'knowledge-stagnation':s=>(s.knowledge?.value)<35,
+    'cohesion-fracture':s=>(s.cohesion?.value)<35,
+    'urban-strain':s=>(s.urbanization?.value)>75&&(s.food_production?.value)<60,
+    'trade-collapse':s=>(s.trade?.value)<30,
+  },
+  // Resolve a ruleId to its DRIFT_RULES entry (used by tests to prove every delta is traceable).
+  ruleById(id){return this.DRIFT_RULES.find(r=>r.ruleId===id)||null;},
+  // Pure clamp — mirrors Utils.clamp(value,min,max), duplicated so the module is self-contained.
+  _clamp(v,a,b){return Math.max(a,Math.min(b,v));},
+  // Active pressures on a stats map, in DRIFT_RULES order (deterministic).
+  _activePressures(stats){return this.DRIFT_RULES.filter(r=>{const c=this._PRESSURE_CONDS[r.ruleId];return typeof c==='function'&&!!c(stats);});},
+  // Pure re-implementation of checkThresholds' crossing + 5-year dedupe, for ONE stat going old→new.
+  // Returns the threshold events that would newly fire (deterministic ids; no Utils.uuid/now). It also
+  // appends them to the clone's chronicle so the dedupe window is honoured across turns within one run.
+  _crossThresholds(nation,stat,oldVal,newVal,turnIndex){
+    const out=[];
+    if(!stat||!Array.isArray(stat.thresholds))return out;
+    stat.thresholds.forEach((t,ti)=>{
+      let crossed=false;
+      if(t.direction==='falling'&&oldVal>=t.atValue&&newVal<t.atValue)crossed=true;
+      if(t.direction==='rising'&&oldVal<t.atValue&&newVal>=t.atValue)crossed=true;
+      if(!crossed)return;
+      // 5-year dedupe against the clone's OWN chronicle (same predicate as checkThresholds L7599).
+      const dup=nation.chronicle.find(e=>e.name===t.eventName&&e.year>=nation.currentYear-5);
+      if(dup)return;
+      const year=Math.floor(nation.currentYear);
+      const desc=String(t.eventDesc).replace(/{year}/g,year).replace(/{nation}/g,nation.name);
+      const ev={
+        id:'wt-thr-'+turnIndex+'-'+stat.key+'-'+ti,
+        name:t.eventName,type:t.eventType,weight:t.eventWeight,description:desc,
+        year,visibility:'public',relatedStats:[stat.key],source:'threshold',sourceType:'world-turn',
+      };
+      nation.chronicle.push(ev); // so a later turn in this same run sees it for dedupe
+      out.push(ev);
+    });
+    return out;
+  },
+  // Pure re-implementation of a front's optional stat-trigger (checkThresholds L7609-7617).
+  // If the trigger crosses for `statKey` going old→new, returns true (caller ticks the front).
+  _statTriggerCrossed(front,statKey,oldVal,newVal){
+    if(!front||front.status!=='active'||!front.optionalStatTrigger)return false;
+    const t=front.optionalStatTrigger;
+    if(t.statKey!==statKey)return false;
+    return t.direction==='below'
+      ?(oldVal>=t.threshold&&newVal<t.threshold)
+      :(oldVal<=t.threshold&&newVal>t.threshold);
+  },
+  // Pure re-implementation of tickFront's clock-fill + catastrophe resolution (tickFront L7256-7283).
+  // Mutates the front ON THE CLONE, returns the catastrophe event if this tick filled the clock, else null.
+  _tickFront(nation,front,delta,turnIndex,reason){
+    if(!front||front.status!=='active')return null;
+    const before=front.clockFilled;
+    front.clockFilled=this._clamp(front.clockFilled+delta,0,front.clockSize);
+    front.ticks=Array.isArray(front.ticks)?front.ticks:[];
+    front.ticks.push({by:'world-turn',delta,reason:reason||'world-turn',turnIndex});
+    if(before<front.clockSize&&front.clockFilled===front.clockSize){
+      front.status='resolved';
+      const ev={
+        id:'wt-front-'+turnIndex+'-'+front.id,
+        name:front.name,
+        type:front.catastropheType||'Military',   // P0.12 catastropheType carried onto the event
+        weight:-10,
+        description:front.catastropheEvent||(front.name+' has come to pass.'),
+        year:Math.floor(nation.currentYear),visibility:'public',
+        relatedStats:[],sourceType:'front-resolution',sourceId:front.id,source:'front',
+      };
+      nation.chronicle.push(ev);
+      return ev;
+    }
+    return null;
+  },
+  // ─── THE ENGINE ───
+  compute(nationClone,elapsedDays,opts={}){
+    // Deep-clone the input so we NEVER mutate it (clone-purity guarantee). The param is named
+    // nationClone by contract, but the input must remain byte-equal after the call regardless.
+    const nation=JSON.parse(JSON.stringify(nationClone));
+    nation.chronicle=Array.isArray(nation.chronicle)?nation.chronicle:[];
+    nation.fronts=Array.isArray(nation.fronts)?nation.fronts:[];
+    nation.factions=Array.isArray(nation.factions)?nation.factions:[];
+    nation.stats=nation.stats&&typeof nation.stats==='object'?nation.stats:{};
+
+    const days=Number(elapsedDays)||0;
+    const rawTurns=Math.floor(days/this.SEASON_DAYS);
+    const capped=rawTurns>this.MAX_TURNS;
+    const turnCount=Math.max(0,Math.min(rawTurns,this.MAX_TURNS));
+
+    const turns=[];
+    const proposedNewEvents=[];
+    const proposedFrontTicks=[];
+
+    for(let i=0;i<turnCount;i++){
+      // Advance the clone's clock by one season FIRST, so threshold/catastrophe events this turn
+      // carry this turn's year and the 5-year dedupe window moves correctly (saveSession precedent).
+      const yearDelta=this.SEASON_DAYS/365.25; // = 0.25
+      nation.currentYear=Math.round((((nation.currentYear||0)+yearDelta))*100)/100;
+      if(Number.isInteger(nation.currentYear))nation.currentYear=Math.round(nation.currentYear);
+      const seasonIndex=i; // 0-based season offset within this world-turn (Almanac maps to names in P2.2)
+
+      const deltas=[];
+      const events=[];
+      const frontTicks=[];
+      const resolved=[];
+
+      // (a) DRIFT — apply every active pressure's drifts, clamped. Record pre-turn values per stat so
+      // crossing logic runs old→new across the whole turn's drift (composes setStat→checkThresholds).
+      const preTurn={};
+      const active=this._activePressures(nation.stats);
+      active.forEach(rule=>{
+        rule.drifts.forEach(d=>{
+          const stat=nation.stats[d.statKey];
+          if(!stat)return;
+          if(!(d.statKey in preTurn))preTurn[d.statKey]=stat.value;
+          const before=stat.value;
+          const after=this._clamp(before+d.delta,stat.min,stat.max);
+          const applied=after-before; // honest delta after clamping (0 at a bound)
+          stat.value=after;
+          deltas.push({statKey:d.statKey,delta:applied,ruleId:rule.ruleId,ruleText:rule.ruleText});
+        });
+      });
+
+      // (b) FACTION TICKS — every faction with position==='gaining' advances each active front whose
+      // linkedFactionIds includes that faction by +1. A fill appends the front's catastrophe event.
+      nation.factions.forEach(f=>{
+        if(f.position!=='gaining')return;
+        nation.fronts.forEach(front=>{
+          if(front.status!=='active')return;
+          if(!Array.isArray(front.linkedFactionIds)||!front.linkedFactionIds.includes(f.id))return;
+          const reason='Faction gaining: '+(f.name||'an ascendant faction')+' presses this front (+1).';
+          const cat=this._tickFront(nation,front,1,i,reason);
+          frontTicks.push({frontId:front.id,delta:1,reason});
+          proposedFrontTicks.push({frontId:front.id,delta:1,reason});
+          if(cat){events.push(cat);resolved.push(cat);proposedNewEvents.push(cat);}
+        });
+      });
+
+      // (c) THRESHOLDS — re-evaluate each drifted stat old→new with pure crossing + 5-year dedupe
+      // against the clone's own chronicle. Also fire front optional stat-triggers (then re-tick).
+      Object.keys(preTurn).forEach(statKey=>{
+        const stat=nation.stats[statKey];
+        const oldVal=preTurn[statKey];
+        const newVal=stat.value;
+        if(oldVal===newVal)return;
+        const crossed=this._crossThresholds(nation,stat,oldVal,newVal,i);
+        crossed.forEach(ev=>{events.push(ev);proposedNewEvents.push(ev);});
+        // Front optional stat-triggers — a crossing may tick a front (checkThresholds L7609-7617).
+        nation.fronts.forEach(front=>{
+          if(this._statTriggerCrossed(front,statKey,oldVal,newVal)){
+            const reason='Stat trigger: '+stat.displayName+' crossed the front’s threshold (+1).';
+            const cat=this._tickFront(nation,front,1,i,reason);
+            frontTicks.push({frontId:front.id,delta:1,reason});
+            proposedFrontTicks.push({frontId:front.id,delta:1,reason});
+            if(cat){events.push(cat);resolved.push(cat);proposedNewEvents.push(cat);}
+          }
+        });
+      });
+
+      turns.push({
+        label:'Season '+(seasonIndex+1),     // plain fallback label; P2.2 Almanac supplies named labels
+        seasonKey:Math.round((nation.currentYear%1)*4)%4, // 0..3 quarter index for Almanac mapping
+        deltas,events,frontTicks,resolved,
+      });
+    }
+
+    // proposed.statFinal — the drifted end-state for every stat on the clone (key→value).
+    const statFinal={};
+    Object.keys(nation.stats).forEach(k=>{statFinal[k]=nation.stats[k].value;});
+
+    return {
+      turns,
+      proposed:{statFinal,newEvents:proposedNewEvents,frontTicks:proposedFrontTicks},
+      capped,
+    };
+  },
+};
 // Fill-and-Copy variable resolver
 function resolveVars(tpl,nation){
   const stab=Compute.stability(nation);
