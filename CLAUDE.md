@@ -325,6 +325,14 @@ Decision tree (run silently at session start):
   4. Approach rejected? → Write to CLAUDE.md immediately. Tag [REJECTED] + reason.
   5. Session ending? → Compress key decisions to CLAUDE.md. Let claude-mem handle logs.
 
+VOCABULARY STANDARD — NEW SURFACES (blueprint P1.4):
+Every NEW player-facing surface (Sandtable, Press, Almanac, Tables, future screens) ships with
+market-default language that reads well to halal-conscious and secular buyers alike. Existing
+Solo/oracle copy STAYS as Hunter ruled — do not retrofit it.
+  USE:   "project", "model", "forecast", "the math says", "simulate", "odds".
+  NEVER (on new surfaces): "foretell", "fate", "omen", "prophecy", "destiny".
+  ("oracle" is kept ONLY on the existing Solo surface per Hunter's ruling — not on new ones.)
+
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ## MODEL & EFFORT SELECTION — AUTOMATIC
