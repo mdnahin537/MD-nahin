@@ -3396,8 +3396,8 @@ SECTION 8: DOM STRUCTURE
       <div class="wms-nav__sigil">
         <div class="wms-nav__sigil-icon"><span class="material-symbols-outlined">shield</span></div>
         <div>
-          <span class="wms-nav__sigil-title">Strategist</span>
-          <span class="wms-nav__sigil-sub">High Command</span>
+          <span class="wms-nav__sigil-title" id="sigil-title">Strategist</span>
+          <span class="wms-nav__sigil-sub" id="sigil-sub">High Command</span>
         </div>
       </div>
       <a class="wms-nav__item is-active" data-route="war-room" href="#">
@@ -5937,6 +5937,10 @@ const TERM_GM_MAP={
   pressures:'tensions',
   Pressure:'Tension',
   Pressures:'Tensions',
+  'War Room':'Prep Room',
+  'war room':'prep room',
+  stat:'realm stat',
+  Stat:'Realm stat',
 };
 function Term(key){
   try{
@@ -11389,7 +11393,7 @@ const FrontDoor={
       {role:'system',content:sys},
       {role:'user',content:prompt},
     ],'anthropic/claude-haiku-latest');
-    if(btn){btn.disabled=false;btn.textContent='Generate session';}
+    if(btn){btn.disabled=false;btn.textContent='Prep this session';}
     if(result.error){
       if(outBox)outBox.innerHTML=`<div class="fd-demo__error">${Utils.escHtml(result.error)}</div>`;
       // Re-render captcha for the next attempt
@@ -13501,6 +13505,13 @@ const GMMode={
     if(typeof Copilot!=='undefined'&&Copilot.isOpen&&Copilot.isOpen()){
       Copilot.renderMessages();
     }
+    // Swap sigil title/subtitle by mode.
+    // GM mode: "Realm Keeper / Game Master's Table"
+    // Strategist mode (default): "Strategist / High Command"
+    const sigilTitle=document.getElementById('sigil-title');
+    const sigilSub=document.getElementById('sigil-sub');
+    if(sigilTitle)sigilTitle.textContent=on?'Realm Keeper':'Strategist';
+    if(sigilSub)sigilSub.textContent=on?"Game Master's Table":'High Command';
   },
   // ─── GM bar group interaction (collapse/expand, one-at-a-time, ESC) ───
   _groups(){return Array.from(document.querySelectorAll('#gm-bar .gm-bar__group'));},
@@ -17691,7 +17702,7 @@ window.__rwClearDevTheme=function(){localStorage.removeItem('rw_dev_theme');loca
       <h1 class="fd-wordmark__name" id="fd-title">RealmWright</h1>
       <span class="fd-wordmark__diamond" aria-hidden="true">◆</span>
     </div>
-    <p class="fd-subtitle" id="fd-subtitle">The AI that remembers your campaign.</p>
+    <p class="fd-subtitle" id="fd-subtitle">Run a great session on 15 minutes of prep.</p>
   </div>
   <div class="modal__body fd-body">
     <div class="form-field">
@@ -17709,7 +17720,7 @@ window.__rwClearDevTheme=function(){localStorage.removeItem('rw_dev_theme');loca
     </div>
     <!-- Phase 5A: Turnstile captcha for unlicensed visitors. Auto-hides for licensed users via FrontDoor.open(). -->
     <div class="fd-turnstile" id="fd-turnstile" aria-label="Free-preview verification"></div>
-    <button type="button" class="btn btn--primary fd-generate-btn" id="fd-generate-btn">Generate session</button>
+    <button type="button" class="btn btn--primary fd-generate-btn" id="fd-generate-btn">Prep this session</button>
     <!-- Phase 5A: Inline demo output (single-shot preview for unlicensed visitors). -->
     <div class="fd-demo" id="fd-demo-output" aria-live="polite"></div>
     <div class="fd-divider" role="separator" aria-hidden="true">
@@ -17718,7 +17729,7 @@ window.__rwClearDevTheme=function(){localStorage.removeItem('rw_dev_theme');loca
       <hr class="fd-divider__rule">
     </div>
     <div class="fd-secondary-actions">
-      <button type="button" class="btn btn--secondary" id="fd-sample" aria-label="Try a pre-built sample session">Try a sample first</button>
+      <button type="button" class="btn btn--secondary" id="fd-sample" aria-label="Try a pre-built sample session">See a sample session</button>
       <button type="button" class="btn btn--secondary" id="fd-activate" aria-label="Activate your RealmWright license">Activate license</button>
     </div>
     <div class="fd-recent" id="fd-recent" aria-label="Recent sessions">
