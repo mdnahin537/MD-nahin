@@ -1383,6 +1383,34 @@ body.theme-ember .sample-picker__card:hover{border-color:rgba(255,185,100,0.30)}
 .sample-picker__card-pitch{font-size:var(--text-body-sm);color:var(--color-text-muted);line-height:1.5;flex:1;margin:0}
 .sample-picker__cta{margin-top:auto;width:100%;justify-content:center}
 
+/* ── WORLD TURN REPORT (P2.3 — "While You Were Away") ─────────────────────── */
+.wtr__intro{font-size:var(--text-body-sm);color:var(--color-text-muted);line-height:1.55;margin:0 0 18px}
+.wtr__assure{font-style:italic;color:var(--color-text-faint)}
+.wtr__capped{font-size:var(--text-label-sm);color:var(--color-amber);border:1px solid var(--color-amber);border-radius:4px;padding:6px 10px;margin:0 0 16px}
+.wtr__group{margin:0 0 22px}
+.wtr__group-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:0 0 10px;padding-bottom:6px;border-bottom:.5px solid var(--color-gold-pale)}
+.wtr__group-title{font-family:var(--font-display,'Cinzel',serif);font-size:var(--text-heading);color:var(--color-ink);margin:0}
+.wtr__group-toggle{font-size:var(--text-label-sm);color:var(--color-text-muted);background:none;border:none;cursor:pointer;text-decoration:underline;padding:0}
+.wtr__empty{font-size:var(--text-body-sm);color:var(--color-text-faint);font-style:italic;padding:4px 0}
+.wtr__line{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-radius:6px;border:.5px solid var(--color-border-hairline);margin:0 0 8px;background:var(--color-surface);transition:border-color .12s,opacity .12s}
+.wtr__line:hover{border-color:var(--color-gold-pale)}
+.wtr__line.is-vetoed{opacity:.45}
+.wtr__line.is-vetoed .wtr__line-cause{text-decoration:line-through}
+.wtr__cb{margin-top:3px;flex:0 0 auto;cursor:pointer;width:16px;height:16px;accent-color:var(--ember-color,#c9a961)}
+.wtr__line-body{flex:1;min-width:0}
+.wtr__line-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:2px}
+.wtr__line-name{font-size:var(--text-body-sm);color:var(--color-ink);font-weight:600}
+.wtr__delta{font-family:var(--font-display,'Cinzel',serif);font-size:var(--text-label-sm);font-variant-numeric:tabular-nums}
+.wtr__delta--up{color:var(--color-positive,#6a9a4a)}
+.wtr__delta--down{color:var(--color-negative,#c05a4a)}
+.wtr__delta--zero{color:var(--color-text-faint)}
+.wtr__line-cause{font-size:var(--text-label-sm);color:var(--color-text-muted);line-height:1.45}
+.wtr__kind{font-size:9px;font-family:var(--font-display,'Cinzel',serif);letter-spacing:.1em;text-transform:uppercase;border-radius:3px;padding:1px 6px;color:var(--color-text-faint);border:.5px solid var(--color-border-hairline)}
+.wtr__kind--event{color:var(--color-gold-deep);border-color:var(--color-gold-pale)}
+.wtr__kind--front{color:var(--color-negative,#c05a4a);border-color:var(--color-negative,#c05a4a)}
+.wtr__gm-badge{font-size:9px;font-family:var(--font-display,'Cinzel',serif);letter-spacing:.1em;text-transform:uppercase;border-radius:3px;padding:1px 6px;color:var(--color-amber);border:1px solid var(--color-amber);background:rgba(201,169,97,.06)}
+.wtr__applied{font-size:var(--text-body-sm);color:var(--color-text-muted);text-align:center;padding:24px 0}
+
 /* ── MOBILE GATE ──────────────────────────────────────────────────────────── */
 .mobile-gate{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:var(--space-8);background:var(--color-bg,#120c07);background-image:radial-gradient(ellipse 80% 60% at 50% 35%,rgba(255,185,100,0.055) 0%,transparent 65%);text-align:center;animation:mobile-gate-enter var(--duration-slow,400ms) var(--ease-out,cubic-bezier(0.16,1,0.3,1)) both}
 @keyframes mobile-gate-enter{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
@@ -6336,6 +6364,9 @@ function buildNationFromSeed(seed){
     glossary:seed.glossary||null,
     notes:seed.notes||'',
     oracleLog:Array.isArray(seed.oracleLog)?seed.oracleLog:[],
+    // CC-LM1 (P2.3): the "While You Were Away" turn log must survive export→import.
+    // Without this whitelist the field is silently dropped on every re-import.
+    turnLog:Array.isArray(seed.turnLog)?seed.turnLog:[],
     metadata:{
       createdAt:seed.metadata?.createdAt||Utils.now(),
       lastUpdatedAt:Utils.now(),
@@ -11772,6 +11803,286 @@ const FrontDoor={
     if(hrs<24)return`${hrs} hour${hrs===1?'':'s'} ago`;
     const days=Math.floor(hrs/24);
     return`${days} day${days===1?'':'s'} ago`;
+  },
+};
+
+// ─── WORLD TURN REPORT (P2.3) — "While You Were Away", the vetoable turn ─────
+// The first surface that writes WorldTurn.compute's output into the user's real
+// saved world. Correctness invariants (the whole point of this module):
+//   1. ONE undo snapshot per commit — the saveSession suppression pattern, reused
+//      verbatim: State.pushUndo() exactly once, _suppressUndo=true while writing,
+//      restore in finally, one sc:changed at the end. Result: one Ctrl+Z reverts
+//      the entire turn.
+//   2. No double events. A front-resolution catastrophe is produced by State.tickFront
+//      itself when an accepted tick fills the clock — so it is NOT also added via
+//      addEvent. Only threshold events (source!=='front') are added. Stat writes use
+//      skipThreshold=true so the engine's already-enumerated thresholds never re-fire.
+//   3. Double-apply guard: session.turnAppliedAt is stamped per realm+token; a turn
+//      already applied is refused.
+// Vocabulary is halal-clean: the world turns on rules and pressures, never on fate.
+const WorldTurnReport={
+  _current:null,   // {nid, result, elapsedDays, token}
+  // ── PURE SELECTOR (CC-LM1 testable core) ─────────────────────────────────
+  // Deterministic line-id for each reviewable line. Same derivation is used by the
+  // renderer (checkbox state) and the committer (what to apply), so a veto in the UI
+  // maps 1:1 onto an excluded line here. No DOM, no State — pure over compute output.
+  lineId(kind,turnIndex,key,ordinal){return kind+':'+turnIndex+':'+key+(ordinal==null?'':':'+ordinal);},
+  // Walk the compute output and emit every reviewable line with its stable id, in the
+  // exact render order. One place defines the line taxonomy.
+  enumerateLines(result){
+    const lines=[];
+    (result.turns||[]).forEach((turn,ti)=>{
+      (turn.deltas||[]).forEach(d=>{
+        lines.push({kind:'stat',id:this.lineId('stat',ti,d.statKey+'~'+d.ruleId),turnIndex:ti,statKey:d.statKey,delta:d.delta,ruleText:d.ruleText});
+      });
+      // Threshold events only — front-resolution events are bound to their front-tick line.
+      (turn.events||[]).filter(e=>e.source!=='front').forEach(ev=>{
+        lines.push({kind:'event',id:this.lineId('event',ti,ev.id),turnIndex:ti,event:ev});
+      });
+      // Front ticks: one line per tick. If this tick is the one that resolved the front,
+      // carry the catastrophe event so the GM sees the consequence on the same checkbox.
+      const ticksOnFront={};
+      (turn.frontTicks||[]).forEach(ft=>{
+        const ord=(ticksOnFront[ft.frontId]=(ticksOnFront[ft.frontId]||0)+1)-1;
+        const resolvedEv=(turn.resolved||[]).find(r=>r.sourceId===ft.frontId)||null;
+        lines.push({kind:'front',id:this.lineId('front',ti,ft.frontId,ord),turnIndex:ti,frontId:ft.frontId,delta:ft.delta,ruleText:ft.reason,resolvedEvent:resolvedEv});
+      });
+    });
+    return lines;
+  },
+  // THE FILTER under test: given the compute output and a Set of vetoed line-ids,
+  // return exactly what to apply — stat finals (accumulated from the live base per stat),
+  // events to add, and front ticks to apply — excluding vetoed lines, keeping the rest.
+  // baseStats: {statKey: currentValue} from the live nation, so a vetoed early delta
+  // does not silently shift a later accepted delta on the same stat.
+  selectAccepted(result,vetoedIds,baseStats){
+    const vetoed=vetoedIds instanceof Set?vetoedIds:new Set(vetoedIds||[]);
+    const base=baseStats||{};
+    const running={};                  // statKey -> accumulated value across accepted deltas
+    const statTouched={};              // statKey -> true if any accepted delta hit it
+    const events=[];
+    const frontTicks=[];
+    this.enumerateLines(result).forEach(line=>{
+      if(vetoed.has(line.id))return;   // vetoed: keep it out entirely
+      if(line.kind==='stat'){
+        const k=line.statKey;
+        if(!(k in running))running[k]=(k in base)?base[k]:0;
+        running[k]=running[k]+line.delta;   // setStat re-clamps to [min,max] on write
+        statTouched[k]=true;
+      }else if(line.kind==='event'){
+        events.push(line.event);
+      }else if(line.kind==='front'){
+        frontTicks.push({frontId:line.frontId,delta:line.delta});
+      }
+    });
+    const stats=Object.keys(statTouched).map(k=>({statKey:k,finalValue:running[k]}));
+    return{stats,events,frontTicks};
+  },
+  // ── OPEN / RENDER ─────────────────────────────────────────────────────────
+  open(elapsedDays,opts={}){
+    const n=State.get();
+    if(!n){showToast('No active realm.');return;}
+    const days=Number(elapsedDays)||0;
+    if(days<WorldTurn.SEASON_DAYS){
+      showToast('Not enough time has passed for the world to take a turn (one season needed).');
+      return;
+    }
+    // A turn is identified by the realm + how far it advances. Re-opening the SAME
+    // advance after committing is refused (double-apply guard).
+    const token=String(opts.token||('elapsed:'+days));
+    if(n.turnAppliedAt&&n.turnAppliedAt.token===token){
+      showToast('This turn has already been applied. Open a new advance to take another turn.');
+      return;
+    }
+    const result=WorldTurn.compute(n,days);
+    if(!result.turns.length){
+      showToast('The world is quiet — no changes proposed for this span.');
+      return;
+    }
+    this._current={nid:n.id,result,elapsedDays:days,token};
+    this._ensureModal();
+    this._render(result);
+    Modals.open('world-turn');
+  },
+  _ensureModal(){
+    if(document.getElementById('modal-world-turn'))return;
+    const wrapper=document.createElement('div');
+    wrapper.innerHTML=this._modalShellHtml();
+    document.body.appendChild(wrapper.firstElementChild);
+  },
+  _modalShellHtml(){
+    return('<div class="modal modal--lg" id="modal-world-turn" role="dialog" aria-modal="true" aria-labelledby="wtr-title">'
+      +'<div class="modal__header"><h2 class="modal__title" id="wtr-title">While You Were Away</h2>'
+      +'<button class="modal__close" data-close="world-turn" aria-label="Close">&#215;</button></div>'
+      +'<div class="modal__body" id="wtr-body"></div>'
+      +'<div class="modal__footer" id="wtr-footer"></div>'
+      +'</div>');
+  },
+  _render(result){
+    const E=Utils.escHtml;
+    const body=document.getElementById('wtr-body');
+    const footer=document.getElementById('wtr-footer');
+    if(!body||!footer)return;
+    const lines=this.enumerateLines(result);
+    const linesByTurn=(result.turns||[]).map((_,ti)=>lines.filter(l=>l.turnIndex===ti));
+    let html='';
+    html+='<p class="wtr__intro">While you were away, the world moved by its own rules. Review each change below — the cause is named on every line. Uncheck anything you want to veto, then commit. <span class="wtr__assure">Nothing is written until you accept.</span></p>';
+    if(result.capped){
+      html+='<div class="wtr__capped">This span is long — the report covers the first '+WorldTurn.MAX_TURNS+' seasons (a single turn never advances more than two years at once).</div>';
+    }
+    result.turns.forEach((turn,ti)=>{
+      html+='<div class="wtr__group" data-turn="'+ti+'">';
+      html+='<div class="wtr__group-head"><h3 class="wtr__group-title">'+E(turn.label)+'</h3>'
+          +'<button class="wtr__group-toggle" type="button" data-turn-toggle="'+ti+'">Toggle all</button></div>';
+      const tl=linesByTurn[ti];
+      if(!tl.length){
+        html+='<div class="wtr__empty">No changes this season — the world held steady.</div>';
+      }else{
+        tl.forEach(line=>{html+=this._lineHtml(line);});
+      }
+      html+='</div>';
+    });
+    body.innerHTML=html;
+    footer.innerHTML='<button class="btn btn--secondary" type="button" data-close="world-turn">Not now</button>'
+      +'<button class="btn btn--primary" type="button" id="wtr-commit">Commit the turn</button>';
+    this._bind();
+  },
+  _lineHtml(line){
+    const E=Utils.escHtml;
+    const id=E(line.id);
+    let kindBadge='',head='',cause='';
+    if(line.kind==='stat'){
+      const stat=(State.get().stats||{})[line.statKey];
+      const name=stat?stat.displayName:line.statKey;
+      const d=line.delta;
+      const cls=d>0?'wtr__delta--up':d<0?'wtr__delta--down':'wtr__delta--zero';
+      const sign=d>0?'+':'';
+      head='<span class="wtr__line-name">'+E(name)+'</span><span class="wtr__delta '+cls+'">'+sign+d+'</span>';
+      cause=E(line.ruleText);
+    }else if(line.kind==='event'){
+      const ev=line.event;
+      const gm=(ev.visibility==='private'||ev.visibility==='forecast');
+      kindBadge='<span class="wtr__kind wtr__kind--event">Event</span>';
+      const badge=gm?'<span class="wtr__gm-badge" title="GM-only — withheld from players">'+(ev.visibility==='forecast'?'Forecast':'GM only')+'</span>':'';
+      head='<span class="wtr__line-name">'+E(ev.name)+'</span>'+kindBadge+badge;
+      cause=E(ev.description||'');
+    }else if(line.kind==='front'){
+      const n=State.get();
+      const front=(n.fronts||[]).find(f=>f.id===line.frontId);
+      const fname=front?front.name:'a front';
+      kindBadge='<span class="wtr__kind wtr__kind--front">Front</span>';
+      head='<span class="wtr__line-name">'+E(fname)+' &middot; clock '+(line.delta>0?'+':'')+line.delta+'</span>'+kindBadge;
+      cause=E(line.ruleText||'');
+      if(line.resolvedEvent){
+        cause+=' <strong>&rarr; resolves: '+E(line.resolvedEvent.name)+'.</strong>';
+      }
+    }
+    return('<label class="wtr__line" data-line-id="'+id+'">'
+      +'<input type="checkbox" class="wtr__cb" data-line="'+id+'" checked>'
+      +'<span class="wtr__line-body"><span class="wtr__line-head">'+head+'</span>'
+      +'<span class="wtr__line-cause">'+cause+'</span></span></label>');
+  },
+  _bind(){
+    const modal=document.getElementById('modal-world-turn');
+    if(!modal)return;
+    // Dynamically-injected modals are NOT covered by the init-time data-close binding.
+    modal.querySelectorAll('[data-close="world-turn"]').forEach(b=>b.addEventListener('click',()=>Modals.close('world-turn')));
+    // Strike-through veto styling + per-turn toggle-all.
+    modal.querySelectorAll('.wtr__cb').forEach(cb=>{
+      cb.addEventListener('change',()=>{
+        const lbl=cb.closest('.wtr__line');
+        if(lbl)lbl.classList.toggle('is-vetoed',!cb.checked);
+      });
+    });
+    modal.querySelectorAll('[data-turn-toggle]').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        const group=modal.querySelector('.wtr__group[data-turn="'+btn.dataset.turnToggle+'"]');
+        if(!group)return;
+        const boxes=group.querySelectorAll('.wtr__cb');
+        const anyChecked=Array.from(boxes).some(b=>b.checked);
+        boxes.forEach(b=>{b.checked=!anyChecked;b.dispatchEvent(new Event('change'));});
+      });
+    });
+    const commit=modal.querySelector('#wtr-commit');
+    if(commit)commit.addEventListener('click',()=>this.commit());
+  },
+  _vetoedIds(){
+    const modal=document.getElementById('modal-world-turn');
+    const out=new Set();
+    if(!modal)return out;
+    modal.querySelectorAll('.wtr__cb').forEach(cb=>{if(!cb.checked)out.add(cb.dataset.line);});
+    return out;
+  },
+  // ── COMMIT (THE CRITICAL PATH) — mirrors saveSession's undo suppression ─────
+  commit(){
+    const cur=this._current;
+    if(!cur){Modals.close('world-turn');return;}
+    const n=State.get();
+    if(!n||n.id!==cur.nid){showToast('The active realm changed — reopen the turn report.');Modals.close('world-turn');return;}
+    // Double-apply guard (re-checked at commit time, not just at open).
+    if(n.turnAppliedAt&&n.turnAppliedAt.token===cur.token){
+      showToast('This turn was already applied.');Modals.close('world-turn');return;
+    }
+    const baseStats={};
+    Object.keys(n.stats||{}).forEach(k=>{baseStats[k]=n.stats[k].value;});
+    const accepted=this.selectAccepted(cur.result,this._vetoedIds(),baseStats);
+
+    // ── ONE undo snapshot for the whole turn (saveSession pattern, verbatim). ──
+    State.pushUndo();
+    State._suppressUndo=true;
+    let appliedStats=0,appliedEvents=0,appliedTicks=0,resolvedFronts=0;
+    try{
+      // (1) Stat finals — skipThreshold=true: the engine already enumerated every
+      //     threshold crossing into accepted.events, so the stat write must NOT re-fire them.
+      accepted.stats.forEach(s=>{State.setStat(n.id,s.statKey,s.finalValue,true);appliedStats++;});
+      // (2) Threshold events — pure additions. Fresh ids so two different turns never
+      //     collide on the engine's per-run synthetic ids.
+      accepted.events.forEach(ev=>{
+        const copy=Object.assign({},ev);delete copy.id;
+        copy.source=copy.source||'world-turn';
+        State.addEvent(n.id,copy);appliedEvents++;
+      });
+      // (3) Front ticks — tickFront itself writes the catastrophe event if a tick fills
+      //     the clock, so we do NOT separately add front-resolution events (no doubles).
+      accepted.frontTicks.forEach(ft=>{
+        const before=(n.fronts||[]).find(f=>f.id===ft.frontId);
+        const wasActive=before&&before.status==='active';
+        State.tickFront(n.id,ft.frontId,ft.delta,{by:'world-turn',silent:true});
+        appliedTicks++;
+        const after=(n.fronts||[]).find(f=>f.id===ft.frontId);
+        if(wasActive&&after&&after.status==='resolved')resolvedFronts++;
+      });
+      // (4) Double-apply stamp + turn log (CC-LM1).
+      const summary=this._summarize(appliedStats,appliedEvents,appliedTicks,resolvedFronts);
+      n.turnAppliedAt={at:Utils.now(),token:cur.token,elapsedDays:cur.elapsedDays};
+      n.turnLog=Array.isArray(n.turnLog)?n.turnLog:[];
+      n.turnLog.push({at:Utils.now(),summary,seen:false});
+      State._touch(n.id);
+    }finally{
+      State._suppressUndo=false;
+    }
+    // ONE persist + ONE sc:changed for the entire turn (downstream render/undo UI).
+    State.persist();
+    document.dispatchEvent(new CustomEvent('sc:changed',{detail:{fields:['nation','stat','chronicle','front'],nid:n.id}}));
+    this._renderApplied(appliedStats,appliedEvents,appliedTicks,resolvedFronts);
+    Render.all();
+  },
+  _summarize(stats,events,ticks,resolved){
+    const parts=[];
+    if(stats)parts.push(stats+' stat change'+(stats===1?'':'s'));
+    if(events)parts.push(events+' event'+(events===1?'':'s'));
+    if(ticks)parts.push(ticks+' front advance'+(ticks===1?'':'s'));
+    if(resolved)parts.push(resolved+' front resolved');
+    return parts.length?('While you were away: '+parts.join(', ')+'.'):'While you were away: the world held steady.';
+  },
+  _renderApplied(stats,events,ticks,resolved){
+    const body=document.getElementById('wtr-body');
+    const footer=document.getElementById('wtr-footer');
+    if(body)body.innerHTML='<div class="wtr__applied">'+Utils.escHtml(this._summarize(stats,events,ticks,resolved))
+      +'<br><br>The turn is written to your realm. Press Ctrl+Z to revert the whole turn at once.</div>';
+    if(footer)footer.innerHTML='<button class="btn btn--primary" type="button" data-close="world-turn">Done</button>';
+    footer&&footer.querySelectorAll('[data-close="world-turn"]').forEach(b=>b.addEventListener('click',()=>Modals.close('world-turn')));
+    showToast(this._summarize(stats,events,ticks,resolved),[],5000);
   },
 };
 
