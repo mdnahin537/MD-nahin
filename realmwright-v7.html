@@ -11300,6 +11300,7 @@ const FrontDoor={
   },
 
   close(){
+    if(State?.data?.meta&&!State.data.meta.firstRunComplete){State.data.meta.firstRunComplete=true;State.persistNow();}
     const el=document.getElementById('modal-front-door');
     const bg=document.getElementById('modal-backdrop');
     if(!el)return;
