@@ -3482,6 +3482,9 @@ SECTION 8: DOM STRUCTURE
         </div>
         <div class="wms-sliders" id="wms-sliders"></div>
         <button class="wms-inscribe" id="wms-inscribe-btn">◆ &nbsp;Inscribe Event</button>
+        <!-- P2.4b — Advance the World standalone action -->
+        <button class="wms-inscribe" id="wms-advance-world-btn" style="margin-top:0;border-top:none;border-color:rgba(255,185,100,.18);opacity:.85" title="Open the world turn report for a chosen time span">⧖ &nbsp;Advance the World</button>
+        <!-- end P2.4b -->
       </aside>
       <!-- CENTER PANEL: Nation content — pressures, factions, characters -->
       <section class="wms-cp" id="wms-cp">
@@ -12086,6 +12089,20 @@ const WorldTurnReport={
   },
 };
 
+// ── P2.5 — latestUnseenTurn: pure selector (CC-LM1 testable core) ────────────
+// Returns the latest {at, summary, seen} entry from n.turnLog where seen===false,
+// or null if every entry is seen, turnLog is empty, or n is nullish.
+// Does NOT run WorldTurn.compute — reads only the already-stored summary.
+function latestUnseenTurn(n){
+  if(!n||!Array.isArray(n.turnLog)||!n.turnLog.length)return null;
+  // Latest = highest index (appended chronologically in commit()).
+  for(let i=n.turnLog.length-1;i>=0;i--){
+    if(n.turnLog[i].seen===false)return n.turnLog[i];
+  }
+  return null;
+}
+// ── end P2.5 helper ───────────────────────────────────────────────────────────
+
 // ─── CAMPAIGN MODE — GM session-prep center (v2) ────────────────────────────
 // Persistent per-save board (clocks, beats, NPCs, secrets, notes, stakes) tightly
 // connected to the world brain. Manual is first-class; AI pills (C3) and the
@@ -13458,7 +13475,21 @@ const SHSPanels={
     Modals.close('new-session');
     this.renderSessions();
     if(this._open==='hooks')this.renderHooks();
-    showToast(`Session ${added?.number||'?'} saved. World now Year ${n.currentYear}.`,[],4000);
+    // ── P2.4a — End Session → world turn offer ────────────────────────────────
+    // Offer the world turn exactly once, after the save toast fires. Conditions:
+    //   · advanceDays > 0 (time actually passed)
+    //   · WorldTurnReport exists (P2.3 shipped)
+    //   · The turn for this exact span hasn't already been applied to this nation
+    //     (double-apply guard reuses the token format that WorldTurnReport.open uses)
+    // UX-2/6: offer once via toast action, never force — the GM decides.
+    const _turnToken='elapsed:'+advanceDays;
+    const _turnAlreadyApplied=!!(n.turnAppliedAt&&n.turnAppliedAt.token===_turnToken);
+    const _turnActions=[];
+    if(advanceDays>0&&typeof WorldTurnReport!=='undefined'&&!_turnAlreadyApplied){
+      _turnActions.push({label:'Take the World Turn →',handler:()=>WorldTurnReport.open(advanceDays)});
+    }
+    showToast(`Session ${added?.number||'?'} saved. World now Year ${n.currentYear}.`,_turnActions,_turnActions.length?8000:4000);
+    // ── end P2.4a ─────────────────────────────────────────────────────────────
     Render.all();
   },
 
@@ -14979,6 +15010,62 @@ const WorldShell={
     document.getElementById('wms-factions-link')?.addEventListener('click',()=>{
       Interact?.expandDomain?.('political');
     });
+    // ── P2.4b — "Advance the World" standalone picker ────────────────────────
+    // Opens a small inline picker (days or seasons) then calls WorldTurnReport.open().
+    // Works even with no logged session — open() takes elapsedDays directly.
+    // UX-2/6: offer; never force. The GM picks the span and confirms.
+    document.getElementById('wms-advance-world-btn')?.addEventListener('click',()=>{
+      if(typeof WorldTurnReport==='undefined'){showToast('World turn report not available.');return;}
+      if(!State.get()){showToast('No active realm.');return;}
+      // Inject a lightweight picker popover anchored to the button, dismissed on outside-click.
+      const existing=document.getElementById('wms-adv-picker');
+      if(existing){existing.remove();return;}
+      const OPTS=[
+        {label:'1 season (~91 days)',days:Math.round(WorldTurn.SEASON_DAYS)},
+        {label:'2 seasons (~183 days)',days:Math.round(WorldTurn.SEASON_DAYS*2)},
+        {label:'1 year (~365 days)',days:365},
+        {label:'2 years (~730 days)',days:730},
+        {label:'Custom days…',days:null},
+      ];
+      const picker=document.createElement('div');
+      picker.id='wms-adv-picker';
+      picker.style.cssText='position:absolute;z-index:600;background:var(--color-parchment-warm);border:1px solid var(--color-gold-pale);border-radius:6px;padding:12px 0;min-width:220px;box-shadow:var(--shadow-modal);display:flex;flex-direction:column;gap:0';
+      const btn=document.getElementById('wms-advance-world-btn');
+      const rect=btn.getBoundingClientRect();
+      picker.style.left=rect.left+'px';
+      picker.style.top=(rect.bottom+6)+'px';
+      picker.style.position='fixed';
+      // Label
+      const lbl=document.createElement('div');
+      lbl.style.cssText='padding:6px 16px 10px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-text-muted);border-bottom:1px solid var(--color-border-hairline);margin-bottom:4px';
+      lbl.textContent='Advance the world by…';
+      picker.appendChild(lbl);
+      OPTS.forEach(opt=>{
+        const row=document.createElement('button');
+        row.type='button';
+        row.style.cssText='padding:9px 16px;background:none;border:none;text-align:left;cursor:pointer;font-size:var(--text-body-sm);color:var(--color-ink);width:100%;';
+        row.textContent=opt.label;
+        row.addEventListener('mouseenter',()=>{row.style.background='rgba(255,185,100,.10)';row.style.color='var(--ember-color)';});
+        row.addEventListener('mouseleave',()=>{row.style.background='none';row.style.color='var(--color-ink)';});
+        row.addEventListener('click',()=>{
+          picker.remove();
+          if(opt.days===null){
+            const raw=prompt('Enter number of days to advance:');
+            const d=parseInt(raw,10);
+            if(!d||d<1){return;}
+            WorldTurnReport.open(d);
+          }else{
+            WorldTurnReport.open(opt.days);
+          }
+        });
+        picker.appendChild(row);
+      });
+      document.body.appendChild(picker);
+      // Dismiss on click outside
+      const dismiss=(e)=>{if(!picker.contains(e.target)&&e.target!==btn){picker.remove();document.removeEventListener('click',dismiss,true);}};
+      setTimeout(()=>document.addEventListener('click',dismiss,true),0);
+    });
+    // ── end P2.4b ─────────────────────────────────────────────────────────────
   },
 };
 // ─── PRINT PREVIEW ─────────────────────────────────────────────
@@ -18106,6 +18193,53 @@ async function bootstrap(){
       const n=State.get();const stab=Compute.stability(n);const status=Compute.status(stab);
       setTimeout(()=>showToast(`Welcome back. ${n.name} — ${status} at ${stab}.`,[],4000),800);
     }
+    // ── P2.5 — "world moved" badge ────────────────────────────────────────────
+    // After the returning-user branch resolves and the active nation is loaded:
+    // if the latest turnLog entry has seen===false, show a dismissible War-Room
+    // banner. Click (opens read-only summary detail) OR dismiss both set seen=true
+    // and persist. Does NOT re-run WorldTurn.compute — reads only the stored summary.
+    // UX-2/6: one banner, never nags after dismissed.
+    (function mountWorldMovedBadge(){
+      const _n=State.get();
+      const entry=typeof latestUnseenTurn==='function'?latestUnseenTurn(_n):null;
+      if(!entry)return;
+      const existing=document.getElementById('wms-world-moved-badge');
+      if(existing)existing.remove();
+      const banner=document.createElement('div');
+      banner.id='wms-world-moved-badge';
+      banner.setAttribute('role','status');
+      banner.setAttribute('aria-live','polite');
+      // Inject below the wms-chr-label-row (chronicle header) so it sits inside
+      // the visible war-room space without overlapping the chronicle nodes.
+      const E=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      banner.style.cssText='position:fixed;bottom:0;left:0;right:0;z-index:490;background:rgba(13,23,38,.92);border-top:1px solid rgba(255,185,100,.38);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;backdrop-filter:blur(6px)';
+      banner.innerHTML=`<div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0">
+        <span style="color:var(--ember-color);font-size:18px;flex-shrink:0">◆</span>
+        <span id="wms-wmb-text" style="font-size:var(--text-body-sm);color:var(--color-parchment);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${E(entry.summary||'The world moved while you were away.')}</span>
+        <button id="wms-wmb-open" type="button" style="flex-shrink:0;padding:6px 14px;background:none;border:1px solid rgba(255,185,100,.45);color:var(--ember-color);cursor:pointer;font-size:var(--text-label-sm);border-radius:3px;white-space:nowrap">Review →</button>
+      </div>
+      <button id="wms-wmb-dismiss" type="button" aria-label="Dismiss" style="flex-shrink:0;background:none;border:none;color:var(--color-text-muted);cursor:pointer;font-size:20px;padding:0 4px;line-height:1">&#215;</button>`;
+      document.body.appendChild(banner);
+      // Mark seen + persist — shared by both dismiss and review
+      function markSeen(){
+        const cur=State.get();
+        if(cur&&Array.isArray(cur.turnLog)){
+          // Find and mark the same entry by reference (at + summary match)
+          const idx=cur.turnLog.findIndex(e=>e.at===entry.at&&e.summary===entry.summary);
+          if(idx>=0){cur.turnLog[idx].seen=true;State._touch(cur.id);State.persist();}
+        }
+        banner.remove();
+      }
+      document.getElementById('wms-wmb-dismiss')?.addEventListener('click',markSeen);
+      // "Review →": mark seen + show a simple read-only detail toast (the turn is
+      // already written; we show the stored summary only, no re-compute).
+      document.getElementById('wms-wmb-open')?.addEventListener('click',()=>{
+        markSeen();
+        // Brief full-text detail in a toast with a long duration
+        showToast(entry.summary||'The world moved while you were away.',[],7000);
+      });
+    })();
+    // ── end P2.5 ──────────────────────────────────────────────────────────────
     // Legacy onboarding for users who predate Mode Picker
     if(!State.data.meta.settings.onboardingComplete){
       setTimeout(()=>startOnboarding(),500);
