@@ -6583,6 +6583,7 @@ function _stateForPersist(){
   return {...d,meta:{...d.meta,settings:{...settings,copilotKey:null}}};
 }
 // ─── STATE MODULE ───
+let _persistErrorShown=false;
 const State={
   data:null,
   _undoStack:[],
@@ -6723,8 +6724,8 @@ const State={
     if(this.data.meta?._sampleMode)return;
     // P1.13: scrub copilotKey from the serialized blob.
     const json=JSON.stringify(_stateForPersist());
-    try{await IDB.set(STORAGE_KEY,json);}catch(e){}
-    try{localStorage.setItem(STORAGE_KEY,json);}catch(e){}
+    try{await IDB.set(STORAGE_KEY,json);}catch(e){console.warn('[persist]',e);if(!_persistErrorShown){_persistErrorShown=true;UI.setSave('error');showToast('Storage error — export your work to keep it safe.',[{label:'Export now',handler:()=>document.getElementById('export-json-btn')?.click()}],8000);}}
+    try{localStorage.setItem(STORAGE_KEY,json);}catch(e){console.warn('[persist]',e);if(!_persistErrorShown){_persistErrorShown=true;UI.setSave('error');showToast('Storage error — export your work to keep it safe.',[{label:'Export now',handler:()=>document.getElementById('export-json-btn')?.click()}],8000);}}
   },
   get(){
     const id=this.data.meta.activeNationId;
