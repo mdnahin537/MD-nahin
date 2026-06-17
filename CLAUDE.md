@@ -23,7 +23,14 @@ HARD CONSTRAINTS — non-negotiable on every task:
 - Payouts: Payoneer-compatible rails only. Hunter confirmed (2026-06-11, firsthand):
   itch.io supports Payoneer; Lemon Squeezy and Gumroad acceptable; may sell on multiple
   storefronts → product licensing must be UNIVERSAL (storefront-agnostic Worker adapters).
+  → RealmWright decision (2026-06-17): [REJECTED] Gumroad — Hunter dropped it. Live scope =
+    Lemon Squeezy + itch.io + free-demo only. Keep the Worker platform layer extensible
+    (adding a store later is cheap) but do NOT build a Gumroad adapter unless Hunter revisits.
 - Never commit secrets. Never expose credentials. Always use .env.example.
+  → RealmWright money-path Worker is BUILT and lives at `worker/` on the magical-mayer/PR#9
+    branch (assembled from PR#4 base + PR#5 demo/itch/paywall, security-audited, paywall hole
+    closed, 21/21 tests). It was NEVER missing — earlier `NEEDS-WORKER-SOURCE` tags were wrong;
+    the source was always on PR#4/#5. Inert until Hunter does the §8 deploy (wrangler secrets).
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
