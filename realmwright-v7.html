@@ -1432,6 +1432,7 @@ body.theme-ember .sample-picker__card:hover{border-color:rgba(255,185,100,0.30)}
 .wtr__kind{font-size:9px;font-family:var(--font-display,'Cinzel',serif);letter-spacing:.1em;text-transform:uppercase;border-radius:3px;padding:1px 6px;color:var(--color-text-faint);border:.5px solid var(--color-border-hairline)}
 .wtr__kind--event{color:var(--color-gold-deep);border-color:var(--color-gold-pale)}
 .wtr__kind--front{color:var(--color-crisis);border-color:var(--color-crisis)}
+.wtr__kind--whisper{color:var(--color-event-diplomatic,var(--color-text-muted));border-color:var(--color-event-diplomatic,var(--color-border-default))}
 .wtr__gm-badge{font-size:9px;font-family:var(--font-display,'Cinzel',serif);letter-spacing:.1em;text-transform:uppercase;border-radius:3px;padding:1px 6px;color:var(--color-amber);border:1px solid var(--color-amber);background:rgba(201,169,97,.06)}
 .wtr__applied{font-size:var(--text-body-sm);color:var(--color-text-muted);text-align:center;padding:24px 0}
 
@@ -8304,10 +8305,16 @@ const WorldTurn={
         });
       });
 
+      // (d) WHISPER (P4.5) — spread public news ONE hop outward through the location tree and
+      //     faction lines (local→regional→common). Pure + deterministic; runs on the clone.
+      //     Private/forecast events never advance (the leak gate). Guarded so a test harness that
+      //     loads WorldTurn without Whisper still runs (mirrors the DRIFT_RULES dormancy guard).
+      const whispers=(typeof Whisper!=='undefined'&&typeof Whisper.spread==='function')?Whisper.spread(nation,i):[];
+
       turns.push({
         label:ALMANAC.turnLabel(nation.currentYear,nation.era||'default'), // P2.2 — Almanac named label
         seasonKey:Math.round((nation.currentYear%1)*4)%4, // 0..3 quarter index for Almanac mapping
-        deltas,events,frontTicks,resolved,
+        deltas,events,frontTicks,resolved,whispers,
       });
     }
 
@@ -8320,6 +8327,89 @@ const WorldTurn={
       proposed:{statFinal,newEvents:proposedNewEvents,frontTicks:proposedFrontTicks},
       capped,
     };
+  },
+};
+// ─── WHISPER LEDGER (P4.5) — who has heard the news ───────────────────────────
+// A deterministic knowledge layer that rides on top of the engine. Each PUBLIC event
+// carries `knownBy={tier, leakedTo}` where tier is how far the news has travelled:
+//   local    — known only at/around the event's origin location.
+//   regional — spread ONE hop up the location tree (to the parent region) and along
+//              the controlling faction's line.
+//   common   — common knowledge across the whole realm.
+// v1 is deliberately tiny: exactly 3 tiers and exactly ONE spread rule, frozen —
+//   each World Turn, every PUBLIC event advances ONE tier (local→regional→common),
+//   idempotent once it reaches common.
+// THE LEAK GATE: a PRIVATE or FORECAST event's knownBy NEVER advances on its own. The
+//   only way a secret travels is an explicit GM leak, which appends to `leakedTo`
+//   (a GM action — never the engine). So compute can never spread what the GM withheld.
+// PURITY: spread() runs INSIDE WorldTurn.compute ON THE CLONE. It uses built-ins only —
+//   no State, no Math.random, no Date, no Utils — and decides each event purely from
+//   that event's own current tier + visibility. Iteration is array-order (chronicle order),
+//   so there is no Set-iteration or object-key-order dependence; same input → same output.
+// CC-DUAL: deterministic only here. AI rumour-voicing is deferred to P6.
+// CC-HALAL: a rumour is fictional SOCIAL information (who has heard what) — never fate,
+//   omen, prophecy, or destiny. The vocabulary is news/word/report.
+const Whisper={
+  // The frozen tier ladder. Index = distance the news has travelled. Do not extend in v1.
+  TIERS:['local','regional','common'],
+  // Pure next-tier: advance one hop; idempotent at the top (common stays common). An
+  // unrecognised tier normalises to 'local' (defensive — a tampered import can't break the ladder).
+  _next(tier){const i=this.TIERS.indexOf(tier);if(i<0)return 'local';return i>=this.TIERS.length-1?this.TIERS[i]:this.TIERS[i+1];},
+  // THE LEAK GATE predicate: only PUBLIC events ever spread by themselves.
+  _isPublic(e){return e&&e.visibility==='public';},
+  // Normalise an event's knownBy to a valid shape WITHOUT advancing it. New PUBLIC events
+  // default to 'local' at their origin; everything keeps a clean {tier,leakedTo}. Pure.
+  _normalize(e){
+    const kb=(e&&e.knownBy&&typeof e.knownBy==='object')?e.knownBy:{};
+    const tier=this.TIERS.indexOf(kb.tier)>=0?kb.tier:'local';
+    const leakedTo=Array.isArray(kb.leakedTo)?kb.leakedTo.slice():[];
+    return{tier,leakedTo};
+  },
+  // Name WHO knows at a given tier — for the report's "Who knows?" line only. Pure, deterministic:
+  // walks the location tree by parentId and reads controllingFactionName. Never affects spread.
+  _audience(nation,e,tier){
+    const locs=Array.isArray(nation&&nation.locations)?nation.locations:[];
+    const here=e&&e.happenedAtLocationId?locs.find(l=>l.id===e.happenedAtLocationId)||null:null;
+    if(tier==='common')return 'common knowledge across the realm';
+    if(tier==='local'){
+      return here?('locally, around '+here.name):'only those at the source';
+    }
+    // regional: the parent region + the controlling faction line, where known.
+    const parent=here&&here.parentId?locs.find(l=>l.id===here.parentId)||null:null;
+    const parts=[];
+    if(parent)parts.push('the wider '+parent.name);
+    else if(here)parts.push('the region around '+here.name);
+    else parts.push('the surrounding region');
+    const fac=here&&here.controllingFactionName?here.controllingFactionName:(parent&&parent.controllingFactionName?parent.controllingFactionName:null);
+    if(fac)parts.push(fac);
+    return parts.join(' and ');
+  },
+  // THE ENGINE ENTRY — called once per turn inside WorldTurn.compute, on the CLONE.
+  // For each event: normalise its knownBy in place (so new events get their 'local' default),
+  // then — only if PUBLIC and not yet 'common' — advance exactly ONE tier. Returns the list of
+  // events whose tier changed THIS turn, each as {eventId,eventName,fromTier,toTier,audience},
+  // so the turn report can surface a vetoable "Who knows?" line. PRIVATE/forecast events are
+  // normalised but NEVER advanced (the leak gate). Idempotent at common.
+  spread(nation,turnIndex){
+    const changes=[];
+    const chronicle=Array.isArray(nation&&nation.chronicle)?nation.chronicle:[];
+    chronicle.forEach(e=>{
+      const kb=this._normalize(e);
+      e.knownBy=kb;                         // default/repair on the clone (rides {...e} on import)
+      if(!this._isPublic(e))return;         // leak gate: private/forecast never advance on their own
+      const fromTier=kb.tier;
+      const toTier=this._next(fromTier);
+      if(toTier===fromTier)return;          // already common → idempotent, no change line
+      kb.tier=toTier;
+      changes.push({
+        eventId:e.id,
+        eventName:e.name,
+        fromTier,toTier,
+        audience:this._audience(nation,e,toTier),
+        turnIndex,
+      });
+    });
+    return changes;
   },
 };
 // ─── ALMANAC (P2.2) — civic/seasonal calendar, era-aware, halal-clean ───
@@ -12296,6 +12386,12 @@ const WorldTurnReport={
         const resolvedEv=(turn.resolved||[]).find(r=>r.sourceId===ft.frontId)||null;
         lines.push({kind:'front',id:this.lineId('front',ti,ft.frontId,ord),turnIndex:ti,frontId:ft.frontId,delta:ft.delta,ruleText:ft.reason,resolvedEvent:resolvedEv});
       });
+      // Whisper (P4.5): one "Who knows?" line per event whose tier advanced this turn.
+      // Vetoable/overridable exactly like every other line — committing applies the knownBy
+      // change through the same selectAccepted path.
+      (turn.whispers||[]).forEach(w=>{
+        lines.push({kind:'whisper',id:this.lineId('whisper',ti,w.eventId),turnIndex:ti,whisper:w});
+      });
     });
     return lines;
   },
@@ -12311,6 +12407,7 @@ const WorldTurnReport={
     const statTouched={};              // statKey -> true if any accepted delta hit it
     const events=[];
     const frontTicks=[];
+    const whispers=[];                 // accepted knownBy advances: {eventId,toTier}
     this.enumerateLines(result).forEach(line=>{
       if(vetoed.has(line.id))return;   // vetoed: keep it out entirely
       if(line.kind==='stat'){
@@ -12322,10 +12419,17 @@ const WorldTurnReport={
         events.push(line.event);
       }else if(line.kind==='front'){
         frontTicks.push({frontId:line.frontId,delta:line.delta});
+      }else if(line.kind==='whisper'){
+        // Apply the FINAL accepted tier for this event. If the same event advanced across
+        // multiple turns in this report, the last (highest) accepted toTier wins — keyed by id.
+        const w=line.whisper;
+        const existing=whispers.find(x=>x.eventId===w.eventId);
+        if(existing)existing.toTier=w.toTier;
+        else whispers.push({eventId:w.eventId,toTier:w.toTier});
       }
     });
     const stats=Object.keys(statTouched).map(k=>({statKey:k,finalValue:running[k]}));
-    return{stats,events,frontTicks};
+    return{stats,events,frontTicks,whispers};
   },
   // ── OPEN / RENDER ─────────────────────────────────────────────────────────
   open(elapsedDays,opts={}){
@@ -12425,6 +12529,13 @@ const WorldTurnReport={
       if(line.resolvedEvent){
         cause+=' <strong>&rarr; resolves: '+E(line.resolvedEvent.name)+'.</strong>';
       }
+    }else if(line.kind==='whisper'){
+      // "Who knows?" — public news travelling one hop outward. Vocabulary is news/word
+      // (market-default, halal-clean): never fate/omen/prophecy.
+      const w=line.whisper;
+      kindBadge='<span class="wtr__kind wtr__kind--whisper">Who knows?</span>';
+      head='<span class="wtr__line-name">'+E(w.eventName)+'</span>'+kindBadge;
+      cause='Word of this has spread — now '+E(w.toTier)+' ('+E(w.audience)+').';
     }
     return('<label class="wtr__line" data-line-id="'+id+'">'
       +'<input type="checkbox" class="wtr__cb" data-line="'+id+'" checked>'
@@ -12479,7 +12590,7 @@ const WorldTurnReport={
     // ── ONE undo snapshot for the whole turn (saveSession pattern, verbatim). ──
     State.pushUndo();
     State._suppressUndo=true;
-    let appliedStats=0,appliedEvents=0,appliedTicks=0,resolvedFronts=0;
+    let appliedStats=0,appliedEvents=0,appliedTicks=0,resolvedFronts=0,appliedWhispers=0;
     try{
       // (1) Stat finals — skipThreshold=true: the engine already enumerated every
       //     threshold crossing into accepted.events, so the stat write must NOT re-fire them.
@@ -12501,8 +12612,19 @@ const WorldTurnReport={
         const after=(n.fronts||[]).find(f=>f.id===ft.frontId);
         if(wasActive&&after&&after.status==='resolved')resolvedFronts++;
       });
+      // (3b) Whisper advances (P4.5) — apply each accepted knownBy tier change to the LIVE
+      //      chronicle event by id. The engine never leaks: only PUBLIC events ever appear here,
+      //      and leakedTo is preserved untouched (a GM leak is a separate action). New events
+      //      without a knownBy get one initialised at the accepted tier.
+      (accepted.whispers||[]).forEach(w=>{
+        const ev=(n.chronicle||[]).find(e=>e.id===w.eventId);
+        if(!ev)return;
+        const prevLeaks=(ev.knownBy&&Array.isArray(ev.knownBy.leakedTo))?ev.knownBy.leakedTo:[];
+        ev.knownBy={tier:w.toTier,leakedTo:prevLeaks};
+        appliedWhispers++;
+      });
       // (4) Double-apply stamp + turn log (CC-LM1).
-      const summary=this._summarize(appliedStats,appliedEvents,appliedTicks,resolvedFronts);
+      const summary=this._summarize(appliedStats,appliedEvents,appliedTicks,resolvedFronts,appliedWhispers);
       n.turnAppliedAt={at:Utils.now(),token:cur.token,elapsedDays:cur.elapsedDays};
       n.turnLog=Array.isArray(n.turnLog)?n.turnLog:[];
       n.turnLog.push({at:Utils.now(),summary,seen:false});
@@ -12513,25 +12635,26 @@ const WorldTurnReport={
     // ONE persist + ONE sc:changed for the entire turn (downstream render/undo UI).
     State.persist();
     document.dispatchEvent(new CustomEvent('sc:changed',{detail:{fields:['nation','stat','chronicle','front'],nid:n.id}}));
-    this._renderApplied(appliedStats,appliedEvents,appliedTicks,resolvedFronts);
+    this._renderApplied(appliedStats,appliedEvents,appliedTicks,resolvedFronts,appliedWhispers);
     Render.all();
   },
-  _summarize(stats,events,ticks,resolved){
+  _summarize(stats,events,ticks,resolved,whispers){
     const parts=[];
     if(stats)parts.push(stats+' stat change'+(stats===1?'':'s'));
     if(events)parts.push(events+' event'+(events===1?'':'s'));
     if(ticks)parts.push(ticks+' front advance'+(ticks===1?'':'s'));
     if(resolved)parts.push(resolved+' front resolved');
+    if(whispers)parts.push(whispers+' news '+(whispers===1?'spread':'reports spread'));
     return parts.length?('While you were away: '+parts.join(', ')+'.'):'While you were away: the world held steady.';
   },
-  _renderApplied(stats,events,ticks,resolved){
+  _renderApplied(stats,events,ticks,resolved,whispers){
     const body=document.getElementById('wtr-body');
     const footer=document.getElementById('wtr-footer');
-    if(body)body.innerHTML='<div class="wtr__applied">'+Utils.escHtml(this._summarize(stats,events,ticks,resolved))
+    if(body)body.innerHTML='<div class="wtr__applied">'+Utils.escHtml(this._summarize(stats,events,ticks,resolved,whispers))
       +'<br><br>The turn is written to your realm. Press Ctrl+Z to revert the whole turn at once.</div>';
     if(footer)footer.innerHTML='<button class="btn btn--primary" type="button" data-close="world-turn">Done</button>';
     footer&&footer.querySelectorAll('[data-close="world-turn"]').forEach(b=>b.addEventListener('click',()=>Modals.close('world-turn')));
-    showToast(this._summarize(stats,events,ticks,resolved),[],5000);
+    showToast(this._summarize(stats,events,ticks,resolved,whispers),[],5000);
   },
 };
 
