@@ -3508,6 +3508,9 @@ SECTION 8: DOM STRUCTURE
         <button class="wms-inscribe" id="wms-inscribe-btn">◆ &nbsp;Inscribe Event</button>
         <!-- P2.4b — Advance the World standalone action -->
         <button class="wms-inscribe" id="wms-advance-world-btn" style="margin-top:0;border-top:none;border-color:rgba(255,185,100,.18);opacity:.85" title="Open the world turn report for a chosen time span">⧖ &nbsp;Advance the World</button>
+        <!-- P2.9 — Sandtable: project a hypothetical scenario on a clone -->
+        <button class="wms-inscribe" id="wms-sandtable-btn" style="margin-top:0;border-top:none;border-color:rgba(255,185,100,.18);opacity:.85" title="Project a what-if scenario — no changes are written">⬡ &nbsp;Sandtable</button>
+        <!-- end P2.9 -->
         <!-- end P2.4b -->
       </aside>
       <!-- CENTER PANEL: Nation content — pressures, factions, characters -->
@@ -12414,6 +12417,349 @@ const WorldTurnReport={
   },
 };
 
+// ── P2.9 — sandtableProject: clone-pure projection helper (CC-LM3) ───────────
+// Takes the LIVE nation, a deltas map {statKey: deltaValue}, front-tick adjustments
+// [{frontId, delta}], and a horizon (1–8 seasons). Returns:
+//   { hypothetical: <WorldTurn.compute result on patched clone>,
+//     baseline:     <WorldTurn.compute result on unpatched clone>,
+//     realNation:   nation (NEVER MUTATED — returned only so callers can assert purity) }
+//
+// Constitutive guarantee (CC-LM3): the real nation object is NEVER touched.
+// No Apply button exists in v1 — analysis only (N2 I7-iii tightened).
+// Vocabulary: projection / forecast / simulate — never foretell / fate / omen / prophecy / destiny.
+function sandtableProject(nation, deltas, frontAdjustments, horizon) {
+  // Deep-clone TWICE: one for hypothetical, one for baseline.
+  // JSON.parse(JSON.stringify(...)) is the established precedent (L7015, CC-LM3).
+  const hypoClone     = JSON.parse(JSON.stringify(nation));
+  const baselineClone = JSON.parse(JSON.stringify(nation));
+
+  // Apply the hypothetical stat deltas to the hypo clone only.
+  const clampVal = (v, mn, mx) => Math.max(mn, Math.min(mx, v));
+  if (deltas && typeof deltas === 'object') {
+    Object.keys(deltas).forEach(k => {
+      if (hypoClone.stats && hypoClone.stats[k]) {
+        const s = hypoClone.stats[k];
+        s.value = clampVal((s.value || 0) + Number(deltas[k] || 0), s.min, s.max);
+      }
+    });
+  }
+  // Apply front-tick adjustments to the hypo clone only.
+  if (Array.isArray(frontAdjustments)) {
+    frontAdjustments.forEach(adj => {
+      if (!adj || !adj.frontId) return;
+      const f = (hypoClone.fronts || []).find(fr => fr.id === adj.frontId);
+      if (f && f.status === 'active') {
+        f.clockFilled = clampVal((f.clockFilled || 0) + Number(adj.delta || 0), 0, f.clockSize || 1);
+      }
+    });
+  }
+
+  const elapsedDays = Math.max(1, Math.min(8, Math.floor(horizon || 1))) * WorldTurn.SEASON_DAYS;
+
+  return {
+    hypothetical: WorldTurn.compute(hypoClone, elapsedDays),
+    baseline:     WorldTurn.compute(baselineClone, elapsedDays),
+    realNation:   nation,   // caller may byte-check this is unchanged
+  };
+}
+
+// ── P2.9 — Sandtable modal (N2 co-flagship) ──────────────────────────────────
+// War-game the same math as WorldTurn, on a deep clone, rendered as a side-by-side diff
+// with rule citations. No writes to the real world; no Apply button in v1 (CC-LM3).
+// Vocabulary throughout: "projection", "forecast", "simulate" — never fate/prophecy/omen.
+const Sandtable = {
+  _state: null,   // { deltas:{statKey:number}, frontAdj:[{frontId,delta}], horizon:number, result:null }
+
+  open() {
+    const n = State.get();
+    if (!n) { showToast('No active realm.'); return; }
+    this._state = {
+      deltas: {},
+      frontAdj: [],
+      horizon: 4,
+      result: null,
+    };
+    this._ensureModal();
+    this._renderInputs(n);
+    Modals.open('sandtable');
+  },
+
+  _ensureModal() {
+    if (document.getElementById('modal-sandtable')) return;
+    const div = document.createElement('div');
+    div.innerHTML = this._shellHtml();
+    document.body.appendChild(div.firstElementChild);
+    // Wire close button
+    document.getElementById('modal-sandtable')
+      ?.querySelector('[data-close="sandtable"]')
+      ?.addEventListener('click', () => Modals.close('sandtable'));
+    // Wire Run Projection button
+    document.getElementById('st-run-btn')
+      ?.addEventListener('click', () => this._runProjection());
+  },
+
+  _shellHtml() {
+    return (
+      '<div class="modal modal--lg" id="modal-sandtable" role="dialog" aria-modal="true" aria-labelledby="st-title">'
+      + '<div class="modal__header">'
+      +   '<h2 class="modal__title" id="st-title">Sandtable — Project a Scenario</h2>'
+      +   '<button class="modal__close" data-close="sandtable" aria-label="Close">&#215;</button>'
+      + '</div>'
+      + '<div class="modal__body" id="st-body"></div>'
+      + '<div class="modal__footer" id="st-footer">'
+      +   '<span class="st-footer-label">A projection, not a promise — the table decides.</span>'
+      +   '<button class="btn btn--secondary" type="button" data-close="sandtable">Close</button>'
+      + '</div>'
+      + '</div>'
+    );
+  },
+
+  _renderInputs(n) {
+    const body = document.getElementById('st-body');
+    if (!body) return;
+    const E = Utils.escHtml;
+    const s = this._state;
+    const stats = n.stats || {};
+    const fronts = (n.fronts || []).filter(f => f.status === 'active');
+    const statKeys = Object.keys(stats);
+
+    let html = '<div class="st-layout">';
+
+    // — Hypothetical inputs ——————————————————————————
+    html += '<div class="st-inputs">';
+    html += '<div class="st-section-label">Hypothetical adjustments</div>';
+    html += '<p class="st-hint">Nudge stats and fronts, then run the projection to see how the math changes over your chosen horizon.</p>';
+
+    // Stat steppers
+    if (statKeys.length) {
+      html += '<div class="st-stat-grid">';
+      statKeys.forEach(k => {
+        const stat = stats[k];
+        const cur = s.deltas[k] || 0;
+        html += `<div class="st-stat-row" data-stat="${E(k)}">`;
+        html += `<span class="st-stat-name" title="${E(stat.displayName)}">${E(stat.displayName)}</span>`;
+        html += `<span class="st-stat-cur">${stat.value}</span>`;
+        html += `<button class="st-stepper-btn" data-action="dec" data-stat="${E(k)}" aria-label="Decrease ${E(stat.displayName)} by 5" type="button">−</button>`;
+        html += `<span class="st-delta-val" id="st-delta-${E(k)}">${cur >= 0 ? '+' : ''}${cur}</span>`;
+        html += `<button class="st-stepper-btn" data-action="inc" data-stat="${E(k)}" aria-label="Increase ${E(stat.displayName)} by 5" type="button">+</button>`;
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+
+    // Front tick adjustments
+    if (fronts.length) {
+      html += '<div class="st-section-label" style="margin-top:16px">Front clock adjustments</div>';
+      html += '<div class="st-front-grid">';
+      fronts.forEach(f => {
+        const adj = (s.frontAdj.find(a => a.frontId === f.id) || {}).delta || 0;
+        html += `<div class="st-front-row" data-front="${E(f.id)}">`;
+        html += `<span class="st-front-name">${E(f.name)}</span>`;
+        html += `<span class="st-front-clock">${f.clockFilled}/${f.clockSize}</span>`;
+        html += `<button class="st-stepper-btn" data-action="fdec" data-front="${E(f.id)}" aria-label="Remove one tick from ${E(f.name)}" type="button">−</button>`;
+        html += `<span class="st-delta-val" id="st-fadj-${E(f.id)}">${adj >= 0 ? '+' : ''}${adj}</span>`;
+        html += `<button class="st-stepper-btn" data-action="finc" data-front="${E(f.id)}" aria-label="Add one tick to ${E(f.name)}" type="button">+</button>`;
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+
+    // Horizon slider
+    html += '<div class="st-section-label" style="margin-top:16px">Horizon</div>';
+    html += `<div class="st-horizon-wrap">`;
+    html += `<input type="range" class="st-horizon-slider" id="st-horizon" min="1" max="8" step="1" value="${s.horizon}" aria-label="Projection horizon in seasons">`;
+    html += `<span class="st-horizon-label" id="st-horizon-label">${s.horizon} season${s.horizon === 1 ? '' : 's'}</span>`;
+    html += `</div>`;
+
+    html += '<div style="margin-top:20px">';
+    html += '<button class="btn btn--primary" id="st-run-btn" type="button">Run Projection</button>';
+    html += '</div>';
+    html += '</div>'; // end st-inputs
+
+    // — Diff area (empty until Run Projection) ————————————————————————
+    html += '<div class="st-diff" id="st-diff-area">';
+    html += '<div class="st-diff-placeholder">Run a projection to see the side-by-side forecast.</div>';
+    html += '</div>';
+
+    html += '</div>'; // end st-layout
+
+    body.innerHTML = html;
+
+    // Wire stepper buttons (event delegation on body)
+    body.addEventListener('click', e => {
+      const btn = e.target.closest('.st-stepper-btn');
+      if (!btn) return;
+      const action = btn.dataset.action;
+      const statKey = btn.dataset.stat;
+      const frontId = btn.dataset.front;
+      if ((action === 'inc' || action === 'dec') && statKey) {
+        const step = action === 'inc' ? 5 : -5;
+        s.deltas[statKey] = (s.deltas[statKey] || 0) + step;
+        const lbl = document.getElementById('st-delta-' + statKey);
+        if (lbl) lbl.textContent = (s.deltas[statKey] >= 0 ? '+' : '') + s.deltas[statKey];
+      }
+      if ((action === 'finc' || action === 'fdec') && frontId) {
+        let rec = s.frontAdj.find(a => a.frontId === frontId);
+        if (!rec) { rec = { frontId, delta: 0 }; s.frontAdj.push(rec); }
+        rec.delta += (action === 'finc' ? 1 : -1);
+        const lbl = document.getElementById('st-fadj-' + frontId);
+        if (lbl) lbl.textContent = (rec.delta >= 0 ? '+' : '') + rec.delta;
+      }
+    });
+
+    // Wire horizon slider
+    const slider = document.getElementById('st-horizon');
+    const horizLbl = document.getElementById('st-horizon-label');
+    if (slider && horizLbl) {
+      slider.addEventListener('input', () => {
+        s.horizon = parseInt(slider.value, 10);
+        horizLbl.textContent = s.horizon + ' season' + (s.horizon === 1 ? '' : 's');
+      });
+    }
+
+    // Re-wire Run Projection (may have been removed on re-render)
+    document.getElementById('st-run-btn')?.addEventListener('click', () => this._runProjection());
+  },
+
+  _runProjection() {
+    const n = State.get();
+    if (!n) { showToast('No active realm.'); return; }
+    const s = this._state;
+    const result = sandtableProject(n, s.deltas, s.frontAdj, s.horizon);
+    s.result = result;
+    this._renderDiff(n, result);
+  },
+
+  _renderDiff(n, result) {
+    const area = document.getElementById('st-diff-area');
+    if (!area) return;
+    const E = Utils.escHtml;
+    const hypo = result.hypothetical;
+    const base = result.baseline;
+    const stats = n.stats || {};
+
+    // ── Stat comparison ─────────────────────────────────────────────────────
+    let html = '';
+    html += '<div class="st-diff-section-label">Stat forecast (hypothetical vs baseline)</div>';
+
+    const allStatKeys = Array.from(new Set([
+      ...Object.keys(hypo.proposed.statFinal),
+      ...Object.keys(base.proposed.statFinal),
+    ]));
+
+    const changedStats = allStatKeys.filter(k => hypo.proposed.statFinal[k] !== base.proposed.statFinal[k]);
+
+    if (changedStats.length === 0) {
+      html += '<p class="st-no-diff">The math says these scenarios converge — no stat divergence over this horizon.</p>';
+    } else {
+      html += '<table class="st-diff-table"><thead><tr>'
+        + '<th>Stat</th><th>Baseline end</th><th>Hypothetical end</th><th>Δ</th>'
+        + '</tr></thead><tbody>';
+      changedStats.forEach(k => {
+        const bv = base.proposed.statFinal[k] ?? '—';
+        const hv = hypo.proposed.statFinal[k] ?? '—';
+        const diff = (typeof hv === 'number' && typeof bv === 'number') ? hv - bv : '—';
+        const cls = typeof diff === 'number' && diff > 0 ? 'st-diff-pos' : (typeof diff === 'number' && diff < 0 ? 'st-diff-neg' : '');
+        const name = stats[k]?.displayName || k;
+        html += `<tr><td>${E(name)}</td><td>${E(String(bv))}</td><td>${E(String(hv))}</td><td class="${cls}">${typeof diff === 'number' ? (diff > 0 ? '+' : '') + diff : '—'}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+
+    // ── Rule citations from diverging deltas ────────────────────────────────
+    const hypoRules = new Map();
+    const baseRules = new Map();
+    (hypo.turns || []).forEach(t => (t.deltas || []).forEach(d => { if (!hypoRules.has(d.ruleId)) hypoRules.set(d.ruleId, d.ruleText); }));
+    (base.turns || []).forEach(t => (t.deltas || []).forEach(d => { if (!baseRules.has(d.ruleId)) baseRules.set(d.ruleId, d.ruleText); }));
+
+    const hypoOnly = [...hypoRules.keys()].filter(id => !baseRules.has(id));
+    const baseOnly = [...baseRules.keys()].filter(id => !hypoRules.has(id));
+
+    if (hypoOnly.length || baseOnly.length) {
+      html += '<div class="st-diff-section-label" style="margin-top:16px">Rules that differ between scenarios</div>';
+      html += '<div class="st-rule-diff">';
+      hypoOnly.forEach(id => {
+        html += `<div class="st-rule-row st-rule-hypo"><span class="st-rule-tag">Hypothetical only</span>${E(hypoRules.get(id))}</div>`;
+      });
+      baseOnly.forEach(id => {
+        html += `<div class="st-rule-row st-rule-base"><span class="st-rule-tag">Baseline only</span>${E(baseRules.get(id))}</div>`;
+      });
+      html += '</div>';
+    }
+
+    // ── Event comparison ────────────────────────────────────────────────────
+    const hypoEventNames = new Set((hypo.proposed.newEvents || []).map(e => e.name));
+    const baseEventNames = new Set((base.proposed.newEvents || []).map(e => e.name));
+    const hypoOnlyEvents = (hypo.proposed.newEvents || []).filter(e => !baseEventNames.has(e.name));
+    const baseOnlyEvents = (base.proposed.newEvents || []).filter(e => !hypoEventNames.has(e.name));
+
+    if (hypoOnlyEvents.length || baseOnlyEvents.length) {
+      html += '<div class="st-diff-section-label" style="margin-top:16px">Events that differ</div>';
+      html += '<div class="st-rule-diff">';
+      hypoOnlyEvents.forEach(ev => {
+        html += `<div class="st-rule-row st-rule-hypo"><span class="st-rule-tag">Hypothetical</span>${E(ev.name)} — ${E(ev.description || '')}</div>`;
+      });
+      baseOnlyEvents.forEach(ev => {
+        html += `<div class="st-rule-row st-rule-base"><span class="st-rule-tag">Baseline</span>${E(ev.name)} — ${E(ev.description || '')}</div>`;
+      });
+      html += '</div>';
+    }
+
+    // ── Capped warning ──────────────────────────────────────────────────────
+    if (hypo.capped || base.capped) {
+      html += '<p class="st-capped-warn">This span is long — the simulation covers the first ' + WorldTurn.MAX_TURNS + ' seasons.</p>';
+    }
+
+    area.innerHTML = html;
+  },
+};
+
+// ── P2.9 — Sandtable CSS (injected once, inline, no extra file) ──────────────
+(function injectSandtableCSS() {
+  if (document.getElementById('sandtable-style')) return;
+  const el = document.createElement('style');
+  el.id = 'sandtable-style';
+  el.textContent = `
+.st-layout{display:grid;grid-template-columns:1fr 1.4fr;gap:24px;min-height:320px}
+@media(max-width:680px){.st-layout{grid-template-columns:1fr;}}
+.st-inputs{display:flex;flex-direction:column;gap:8px}
+.st-section-label{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:4px}
+.st-hint{font-size:var(--text-body-sm);color:var(--color-text-muted);margin:0 0 12px}
+.st-stat-grid{display:flex;flex-direction:column;gap:6px}
+.st-stat-row{display:flex;align-items:center;gap:6px;font-size:var(--text-body-sm)}
+.st-stat-name{width:90px;color:var(--color-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0}
+.st-stat-cur{width:28px;text-align:right;color:var(--color-text-muted);font-family:var(--font-mono);font-size:11px;flex-shrink:0}
+.st-stepper-btn{width:22px;height:22px;border:1px solid var(--color-border-hairline);background:transparent;border-radius:4px;cursor:pointer;color:var(--color-gold);font-size:13px;line-height:1;padding:0;flex-shrink:0}
+.st-stepper-btn:hover{background:rgba(255,185,100,.12);border-color:var(--ember-color)}
+.st-delta-val{width:32px;text-align:center;font-family:var(--font-mono);font-size:11px;color:var(--color-gold);flex-shrink:0}
+.st-front-grid{display:flex;flex-direction:column;gap:6px}
+.st-front-row{display:flex;align-items:center;gap:6px;font-size:var(--text-body-sm)}
+.st-front-name{flex:1;color:var(--color-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st-front-clock{width:32px;text-align:right;font-family:var(--font-mono);font-size:11px;color:var(--color-text-muted);flex-shrink:0}
+.st-horizon-wrap{display:flex;align-items:center;gap:12px}
+.st-horizon-slider{flex:1;accent-color:var(--ember-color)}
+.st-horizon-label{font-size:var(--text-body-sm);color:var(--color-gold);width:70px}
+.st-diff{border-left:1px solid var(--color-border-hairline);padding-left:20px;overflow-y:auto;max-height:540px}
+.st-diff-placeholder{color:var(--color-text-muted);font-size:var(--text-body-sm);padding-top:32px}
+.st-diff-section-label{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:8px}
+.st-diff-table{width:100%;border-collapse:collapse;font-size:var(--text-body-sm)}
+.st-diff-table th{text-align:left;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted);padding:4px 8px 4px 0;border-bottom:1px solid var(--color-border-hairline)}
+.st-diff-table td{padding:5px 8px 5px 0;border-bottom:.5px solid var(--color-border-hairline);color:var(--color-ink)}
+.st-diff-pos{color:#5cb85c;font-family:var(--font-mono)}
+.st-diff-neg{color:#d9534f;font-family:var(--font-mono)}
+.st-no-diff{color:var(--color-text-muted);font-size:var(--text-body-sm)}
+.st-rule-diff{display:flex;flex-direction:column;gap:8px}
+.st-rule-row{font-size:var(--text-body-sm);line-height:1.4;color:var(--color-ink);padding:6px 8px;border-radius:4px;background:rgba(255,185,100,.04)}
+.st-rule-hypo{border-left:2px solid var(--ember-color)}
+.st-rule-base{border-left:2px solid var(--color-text-muted)}
+.st-rule-tag{display:inline-block;font-size:9px;letter-spacing:.1em;text-transform:uppercase;padding:1px 5px;border-radius:3px;margin-right:6px;background:rgba(255,185,100,.12);color:var(--color-text-muted)}
+.st-capped-warn{font-size:var(--text-body-sm);color:var(--color-text-muted);margin-top:12px;font-style:italic}
+.st-footer-label{font-size:var(--text-body-sm);color:var(--color-text-muted);flex:1;font-style:italic}
+#modal-sandtable .modal__footer{display:flex;align-items:center;gap:12px;padding-top:12px;border-top:1px solid var(--color-border-hairline)}
+  `.trim();
+  document.head.appendChild(el);
+})();
+
 // ── P2.5 — latestUnseenTurn: pure selector (CC-LM1 testable core) ────────────
 // Returns the latest {at, summary, seen} entry from n.turnLog where seen===false,
 // or null if every entry is seen, turnLog is empty, or n is nullish.
@@ -15436,6 +15782,13 @@ const WorldShell={
       setTimeout(()=>document.addEventListener('click',dismiss,true),0);
     });
     // ── end P2.4b ─────────────────────────────────────────────────────────────
+    // ── P2.9 — Sandtable button ───────────────────────────────────────────────
+    document.getElementById('wms-sandtable-btn')?.addEventListener('click', () => {
+      if (typeof Sandtable === 'undefined') { showToast('Sandtable not available.'); return; }
+      if (!State.get()) { showToast('No active realm.'); return; }
+      Sandtable.open();
+    });
+    // ── end P2.9 ──────────────────────────────────────────────────────────────
   },
 };
 // ─── PRINT PREVIEW ─────────────────────────────────────────────
