@@ -4188,6 +4188,8 @@ SECTION 8: DOM STRUCTURE
   </div>
   <div class="sc-panel__actions">
     <button class="btn btn--primary" id="new-session-btn">+ New Session</button>
+    <!-- P4.3 — Press recap: preview the player-safe "Previously on…" handout, then print. -->
+    <button class="btn btn--secondary" id="press-recap-btn" type="button" title="Preview a player-safe recap of last session, then print it for the table">⎙ Print Recap</button>
   </div>
 </div>
 
@@ -6682,6 +6684,10 @@ function buildNationFromSeed(seed){
     // CC-LM1 (P2.3): the "While You Were Away" turn log must survive export→import.
     // Without this whitelist the field is silently dropped on every re-import.
     turnLog:Array.isArray(seed.turnLog)?seed.turnLog:[],
+    // CC-LM1 (P4.3): the Press recap archive ("Previously on…") must survive export→import.
+    // Same named landmine as turnLog — without this whitelist every printed recap is
+    // silently wiped on the next re-import. Non-array → [] (a tampered import can't inject junk).
+    pressArchive:Array.isArray(seed.pressArchive)?seed.pressArchive:[],
     metadata:{
       createdAt:seed.metadata?.createdAt||Utils.now(),
       lastUpdatedAt:Utils.now(),
@@ -14063,6 +14069,284 @@ const RunMode={
   },
 };
 
+// ─── PRINT-CONTAINER HELPER (P4.3) ─────────────────────────────────────────────
+// The shared print mechanism behind generatePDF (Story Bible) and renderSessionPrepPDF
+// (Session Prep): write a scoped <style> + content into #print-container, then present
+// it through PrintPreview (with a window.print fallback) and clear the container after.
+// Code-health flagged the Press recap as the 3rd reuse of this tail — so the tail is
+// lifted here once. buildContent(pc) writes the markup; the present/preview/clear cycle
+// is identical to the two existing callers (which can migrate to this later — they are
+// deliberately left untouched here so working print paths don't move).
+const PrintContainer={
+  present(buildContent,title){
+    const pc=document.getElementById('print-container');
+    if(!pc){if(typeof showToast!=='undefined')showToast('Print surface unavailable.',[],3000);return;}
+    buildContent(pc);
+    pc.style.display='block';
+    if(typeof PrintPreview!=='undefined'){
+      setTimeout(()=>{
+        const clone=pc.cloneNode(true);
+        clone.style.display='block';
+        PrintPreview.open(clone,title);
+        pc.innerHTML='';pc.style.display='none';
+      },100);
+    }else{
+      setTimeout(()=>{window.print();setTimeout(()=>{pc.innerHTML='';pc.style.display='none';},1000);},200);
+    }
+  },
+};
+
+// ─── PRESS — N6 recap: "Previously on…" (P4.3) ─────────────────────────────────
+// A printable, PLAYER-SAFE session recap, assembled deterministically. Because the GM
+// PRINTS this and hands it to players, the #1 requirement is the secret-leak guarantee:
+// it must carry ONLY public content. Same risk class as the Foundry-export leak (C1).
+//
+// CC-LM2 (hard secret gate, constitutive): publicEventsSince is filtered to
+//   e.visibility==='public' ONLY — never private, never forecast. This is the exact
+//   trustworthy gate generatePDF uses (the `e.visibility==='public'` branch, ~L9691);
+//   CLAMP.visibility (~L5980) normalises every imported event so anything that is not
+//   the literal string 'public' is excluded by ===. Secrets are never read at all.
+// CC-DUAL: fully deterministic. AI era-voice prose is P6 (facts first; prose optional later).
+// CC-HALAL: civic-document framing only — "recap", "events", "open threads"; no
+//   fate/omen/prophecy/destiny vocabulary anywhere on this surface (VOCABULARY STANDARD).
+//
+// Wired from bootstrap via Press.bind() — NOT the bindEventListeners monolith
+// (code-health rule: a surface owns its listeners, like RunMode/Campaign/Tonight).
+const Press={
+  _wired:false,
+  _ARCHIVE_CAP:200, // keep the archive bounded so long campaigns don't bloat the save.
+
+  // PURE: resolve a hook id to its title from the nation's hooks (defensive — returns
+  // the id itself if unresolved, never throws). Titles are GM-authored, player-facing.
+  _hookTitle(n,hid){
+    const h=((n&&n.hooks)||[]).find(x=>x&&x.id===hid);
+    return (h&&(h.title||h.description))||String(hid);
+  },
+  // PURE: resolve an NPC/character id to a display name (defensive).
+  _npcName(n,cid){
+    const c=((n&&n.characters)||[]).find(x=>x&&x.id===cid);
+    return (c&&c.name)||String(cid);
+  },
+  // PURE: open hooks for the "open threads" block. Handles both the live status shape
+  // ({status:'open'}) and the sample-fixture shape ({resolved:false}). Returns {title,description}.
+  _openThreads(n){
+    return ((n&&n.hooks)||[]).filter(h=>{
+      if(!h)return false;
+      if(h.status)return h.status==='open';
+      return h.resolved===false; // fixture shape: resolved flag, no status
+    }).map(h=>({title:h.title||'Untitled thread',description:h.description||''}));
+  },
+
+  // PURE (the centerpiece). Build a player-safe recap from the LAST session record +
+  // public-only events since that session + open threads. No DOM, no persistence, no
+  // globals — unit-testable standalone. Returns null only when there is no realm.
+  //   sessionBlock        : {number,title,summary,hooksOpened[],hooksClosed[],npcsAppeared[]} | null
+  //   publicEventsSince   : public events with year >= the last session's in-fiction year
+  //   openThreads         : open hooks
+  //   meta                : counts the GM preview uses, incl. withheld (non-public-since) count
+  recap(n){
+    if(!n||typeof n!=='object')return null;
+    const sessions=Array.isArray(n.sessions)?n.sessions:[];
+    // Last session = highest .number if present, else last in array order (fixtures
+    // ship sessions in order without ids). Deterministic on both shapes.
+    let last=null;
+    if(sessions.length){
+      last=sessions.reduce((a,b)=>{
+        const na=(a&&typeof a.number==='number')?a.number:-Infinity;
+        const nb=(b&&typeof b.number==='number')?b.number:-Infinity;
+        return nb>na?b:a;
+      });
+    }
+    // The "since" cutoff: events at or after the last session's in-fiction year. The
+    // leak gate is INDEPENDENT of this cutoff — even a generous window cannot admit a
+    // private/forecast event, because the visibility filter runs unconditionally.
+    const sinceYear=last?(typeof last.inFictionDate==='number'?last.inFictionDate
+      :(typeof n.currentYear==='number'?n.currentYear:-Infinity)):-Infinity;
+    const chronicle=Array.isArray(n.chronicle)?n.chronicle:[];
+    // ── CC-LM2 HARD GATE: public visibility ONLY. Nothing else passes. ──
+    const publicSince=chronicle.filter(e=>{
+      if(!e||e.visibility!=='public')return false; // the constitutive leak gate
+      const y=(typeof e.year==='number')?e.year:0;
+      return y>=sinceYear;
+    }).slice().sort((a,b)=>{
+      if(a.year!==b.year)return (a.year||0)-(b.year||0);
+      const ca=a.createdAt||'',cb=b.createdAt||'';
+      return ca===cb?0:(ca<cb?-1:1); // stable secondary key -> deterministic order
+    }).map(e=>({name:e.name||'Untitled event',type:e.type||'',year:e.year,description:e.description||''}));
+    // How many events since the cutoff were withheld (non-public). Surfaced to the GM
+    // so they SEE that private/forecast material was held back — never the content.
+    const withheldSince=chronicle.filter(e=>{
+      if(!e||e.visibility==='public')return false;
+      const y=(typeof e.year==='number')?e.year:0;
+      return y>=sinceYear;
+    }).length;
+
+    let sessionBlock=null;
+    if(last){
+      const ho=Array.isArray(last.hooksOpened)?last.hooksOpened:[];
+      const hc=Array.isArray(last.hooksClosed)?last.hooksClosed:[];
+      const na=Array.isArray(last.npcsAppeared)?last.npcsAppeared:[];
+      sessionBlock={
+        number:(typeof last.number==='number')?last.number:null,
+        title:last.title||(last.number?('Session '+last.number):'Last Session'),
+        summary:last.summary||'',
+        hooksOpened:ho.map(id=>this._hookTitle(n,id)),
+        hooksClosed:hc.map(id=>this._hookTitle(n,id)),
+        npcsAppeared:na.map(id=>this._npcName(n,id)),
+      };
+    }
+    const openThreads=this._openThreads(n);
+    return {
+      sessionBlock,
+      publicEventsSince:publicSince,
+      openThreads,
+      meta:{
+        realmName:(n.name||'Realm'),
+        sinceYear:(sinceYear===-Infinity?null:sinceYear),
+        publicCount:publicSince.length,
+        withheldCount:withheldSince, // events held back from players (count only — never text)
+        openThreadCount:openThreads.length,
+      },
+    };
+  },
+
+  // PURE: render a recap object to an escaped HTML string (no DOM). Used by the print
+  // path AND directly assertable in Node (the leak test renders to string and asserts
+  // ZERO leak tokens). Escaping mirrors the Story-Bible/Session-Prep templates.
+  recapHtmlString(rc,opts){
+    const o=opts||{};
+    const esc=(typeof Utils!=='undefined'&&Utils.escHtml)
+      ? Utils.escHtml
+      : (s)=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    if(!rc)return '<div class="press-recap"><p>No realm to recap.</p></div>';
+    const m=rc.meta||{};
+    const sb=rc.sessionBlock;
+    let html='<div class="press-recap">';
+    html+=`<h1><span class="ornament">§</span>Previously on ${esc(m.realmName||'the Realm')}</h1>`;
+    html+=`<p class="press-recap__meta">A recap for the table · ${esc(o.dateLabel||'')}</p>`;
+    html+='<div class="press-recap__rule"></div>';
+    if(sb){
+      html+=`<h2>Last time${sb.number?` — Session ${esc(sb.number)}`:''}</h2>`;
+      html+=`<h3>${esc(sb.title||'Last Session')}</h3>`;
+      if(sb.summary)html+=`<p>${esc(sb.summary)}</p>`;
+      if(sb.hooksClosed&&sb.hooksClosed.length){
+        html+='<p class="press-recap__label">Resolved</p><ul>'+sb.hooksClosed.map(t=>`<li>${esc(t)}</li>`).join('')+'</ul>';
+      }
+      if(sb.hooksOpened&&sb.hooksOpened.length){
+        html+='<p class="press-recap__label">New threads raised</p><ul>'+sb.hooksOpened.map(t=>`<li>${esc(t)}</li>`).join('')+'</ul>';
+      }
+      if(sb.npcsAppeared&&sb.npcsAppeared.length){
+        html+='<p class="press-recap__label">Who appeared</p><p>'+sb.npcsAppeared.map(esc).join(' · ')+'</p>';
+      }
+    }else{
+      html+='<h2>Last time</h2><p>No session has been logged yet. End a session to start the recap.</p>';
+    }
+    const ev=rc.publicEventsSince||[];
+    html+='<h2>What has come to light</h2>';
+    if(ev.length){
+      html+='<div class="press-recap__events">';
+      ev.forEach(e=>{
+        html+='<div class="press-recap__event">'
+          +`<div class="press-recap__event-head"><span class="press-recap__event-year">${esc(e.year)}</span> <span class="press-recap__event-name">${esc(e.name)}</span>`
+          +(e.type?` <span class="press-recap__event-type">${esc(e.type)}</span>`:'')+'</div>'
+          +(e.description?`<div class="press-recap__event-desc">${esc(e.description)}</div>`:'')
+          +'</div>';
+      });
+      html+='</div>';
+    }else{
+      html+='<p>Nothing new has been made public since last session.</p>';
+    }
+    const ot=rc.openThreads||[];
+    html+='<h2>Open threads</h2>';
+    if(ot.length){
+      html+='<ul>'+ot.map(t=>`<li><strong>${esc(t.title)}</strong>${t.description?` — ${esc(t.description)}`:''}</li>`).join('')+'</ul>';
+    }else{
+      html+='<p>No open threads.</p>';
+    }
+    html+='<div class="press-recap__footer">Player handout · public record only · generated by RealmWright</div>';
+    html+='</div>';
+    return html;
+  },
+
+  // The scoped print stylesheet — editorial-dark authoring, parchment-clean on the page.
+  _STYLE:`
+    @media print{
+      body>*:not(#print-container){display:none!important}
+      #print-container{display:block!important}
+      @page{margin:0.75in;size:letter}
+    }
+    #print-container{font-family:'Fraunces',Georgia,'Times New Roman',serif;color:#1a1a1a;max-width:7in;margin:0 auto;padding:0.4in;line-height:1.5}
+    #print-container .press-recap h1{font-size:2.3rem;font-weight:500;margin:0 0 0.3rem;letter-spacing:-0.01em;color:#0d1b2a}
+    #print-container .press-recap h1 .ornament{color:#a88a45;font-weight:300;margin-right:0.4rem}
+    #print-container .press-recap__meta{font-style:italic;color:#666;font-size:0.95rem;margin:0 0 0.2rem}
+    #print-container .press-recap__rule{height:0.5px;background:#c9a961;margin:1rem 0 1.4rem;width:6rem}
+    #print-container .press-recap h2{font-family:'Fraunces',Georgia,serif;font-size:1.35rem;font-weight:500;margin:1.8rem 0 0.6rem;padding-bottom:0.4rem;border-bottom:0.5px solid #c9a961;color:#0d1b2a;font-variant:small-caps;letter-spacing:0.04em}
+    #print-container .press-recap h3{font-size:1.1rem;font-weight:500;margin:0.6rem 0 0.4rem;color:#0d1b2a}
+    #print-container .press-recap p{font-size:0.95rem;line-height:1.6;margin:0 0 0.7rem}
+    #print-container .press-recap__label{font-variant:small-caps;letter-spacing:0.06em;color:#a88a45;font-size:0.85rem;margin:0.8rem 0 0.2rem}
+    #print-container .press-recap ul{margin:0 0 0.8rem;padding-left:1.1rem}
+    #print-container .press-recap li{font-size:0.95rem;line-height:1.55;margin-bottom:0.3rem}
+    #print-container .press-recap__event{margin:0.5rem 0 0.9rem;padding-left:0.7rem;border-left:0.5px solid #ddd}
+    #print-container .press-recap__event-year{font-weight:500;color:#a88a45}
+    #print-container .press-recap__event-name{font-weight:500}
+    #print-container .press-recap__event-type{font-size:0.78rem;color:#888;font-variant:small-caps;letter-spacing:0.04em;margin-left:0.3rem}
+    #print-container .press-recap__event-desc{font-size:0.92rem;color:#333;line-height:1.55;margin-top:0.15rem}
+    #print-container .press-recap__footer{margin-top:2.5rem;padding-top:0.9rem;border-top:0.5px solid #ddd;font-size:0.72rem;color:#999;text-align:center;font-variant:small-caps;letter-spacing:0.06em}
+  `,
+
+  // Build the recap, append it to n.pressArchive (bounded), and persist. Returns the
+  // recap object so callers (preview/print) reuse it without recomputing.
+  _archiveAndReturn(n){
+    const rc=this.recap(n);
+    if(!rc)return null;
+    if(!Array.isArray(n.pressArchive))n.pressArchive=[];
+    n.pressArchive.push({
+      at:(typeof Utils!=='undefined'&&Utils.now)?Utils.now():new Date().toISOString(),
+      sessionNumber:rc.sessionBlock?rc.sessionBlock.number:null,
+      publicCount:rc.meta.publicCount,
+      openThreadCount:rc.meta.openThreadCount,
+    });
+    if(n.pressArchive.length>this._ARCHIVE_CAP)n.pressArchive.splice(0,n.pressArchive.length-this._ARCHIVE_CAP);
+    if(typeof State!=='undefined'){State._touch&&State._touch(n.id);State.persist&&State.persist();}
+    return rc;
+  },
+
+  // MANDATORY GM PREVIEW (UX, N6 I7-i). The GM ALWAYS sees exactly what players will
+  // get — including the withheld count — BEFORE any print. There is no print path that
+  // skips this gate. The preview's "Print / Save PDF" button is PrintPreview's own.
+  preview(){
+    if(typeof State==='undefined'||!State.get){if(typeof showToast!=='undefined')showToast('No active realm.',[],3000);return;}
+    const n=State.get();
+    if(!n){if(typeof showToast!=='undefined')showToast('No active realm.',[],3000);return;}
+    const rc=this._archiveAndReturn(n);
+    if(!rc){if(typeof showToast!=='undefined')showToast('Nothing to recap yet.',[],3000);return;}
+    const dateLabel=new Date().toLocaleDateString();
+    const inner=this.recapHtmlString(rc,{dateLabel});
+    PrintContainer.present(pc=>{
+      pc.innerHTML=`<style>${this._STYLE}</style><div id="press-recap-content"></div>`;
+      const host=pc.querySelector('#press-recap-content');
+      // Withheld banner: tells the GM material was held back from players (count only).
+      const wc=rc.meta.withheldCount;
+      const banner=document.createElement('div');
+      banner.style.cssText='margin:0 0 1.2rem;padding:0.6rem 0.9rem;background:#f5efe0;border-left:3px solid #c9a961;font-size:0.85rem;color:#5a4a25;font-family:Georgia,serif';
+      banner.textContent=wc>0
+        ? `Player-safe recap — ${wc} private/forecast item${wc===1?'':'s'} withheld. Players see only what is below.`
+        : 'Player-safe recap — public record only. Players see exactly what is below.';
+      host.appendChild(banner);
+      // The recap body is built from the SAME escaped string the test asserts on.
+      const body=document.createElement('div');
+      body.innerHTML=inner;
+      host.appendChild(body);
+    },'Previously On — Player Recap');
+  },
+
+  // BIND — all Press wiring lives here (called from bootstrap, NOT the monolith).
+  bind(){
+    if(this._wired)return;this._wired=true;
+    document.getElementById('press-recap-btn')?.addEventListener('click',()=>this.preview());
+  },
+};
+
 // ─── TONIGHT MODULE ──────────────────────────────────────────────────────────
 const Tonight={
   // Stored results for "Save secrets" (activated in Delivery C)
@@ -19174,6 +19458,7 @@ async function bootstrap(){
   if(typeof FrontDoor!=='undefined')FrontDoor.bind();
   if(typeof Tonight!=='undefined')Tonight.bind();
   if(typeof RunMode!=='undefined')RunMode.bind();
+  if(typeof Press!=='undefined')Press.bind();
   if(typeof TransparencyLog!=='undefined')TransparencyLog.bind();
   if(typeof CostMeter!=='undefined')CostMeter.bind();
   if(typeof CostGate!=='undefined')CostGate._ensure();
