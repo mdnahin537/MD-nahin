@@ -2434,6 +2434,35 @@ body.theme-ember .sc-panel__title{color:var(--ember-color)}
 .sc-session-title{font-family:var(--font-display);font-size:var(--text-body);margin:4px 0 2px}
 .sc-session-meta{font-size:var(--text-label-sm);color:var(--color-text-muted)}
 .sc-session-summary{font-size:var(--text-body-sm);color:var(--color-text-muted);margin-top:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+/* P4.4 — Season Brief (pacing dashboard). Editorial-dark, square (2px) corners. */
+.brief{border:1px solid var(--color-border-default);border-radius:var(--radius-sm);background:var(--color-surface);padding:var(--space-3);margin-bottom:var(--space-4)}
+.brief__head{display:flex;align-items:baseline;gap:var(--space-2);padding-bottom:var(--space-2);margin-bottom:var(--space-2);border-bottom:1px solid var(--color-border-hairline)}
+.brief__kicker{font-family:var(--font-display);font-size:var(--text-body);color:var(--color-text-primary);letter-spacing:.01em}
+.brief__sub{font-size:var(--text-label-sm);color:var(--color-text-muted);font-style:italic}
+.brief__guard{font-size:var(--text-body-sm);color:var(--color-text-muted);text-align:center;padding:var(--space-4) var(--space-2);font-style:italic}
+.brief__metric{padding:var(--space-2) 0;border-bottom:1px solid var(--color-border-hairline)}
+.brief__metric:last-of-type{border-bottom:none}
+.brief__metric-head{display:flex;align-items:baseline;justify-content:space-between;gap:var(--space-2)}
+.brief__metric-title{font-family:var(--font-display);font-size:var(--text-body-sm);color:var(--color-text-primary)}
+.brief__stat{font-family:var(--font-mono);font-size:var(--text-label-sm);color:var(--color-gold);white-space:nowrap}
+.brief__metric-body{font-size:var(--text-label-sm);color:var(--color-text-muted);margin-top:2px;line-height:1.45}
+.brief__metric-body--ok{color:var(--color-thriving)}
+.brief__cites{display:flex;flex-wrap:wrap;gap:var(--space-1);margin-top:var(--space-2)}
+.brief__cite{font-size:var(--text-label-sm);color:var(--color-text-primary);background:var(--color-parchment-pale);border:1px solid var(--color-border-hairline);border-radius:var(--radius-sm);padding:1px var(--space-2);line-height:1.5}
+.brief__cite em{color:var(--color-tense);font-style:normal}
+.brief__bars{margin-top:var(--space-2);display:flex;flex-direction:column;gap:var(--space-1)}
+.brief__bar-row{display:flex;align-items:center;gap:var(--space-2);font-size:var(--text-label-sm)}
+.brief__bar-label{flex:0 0 38%;color:var(--color-text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.brief__bar-track{flex:1;height:8px;background:var(--color-parchment-pale);border:1px solid var(--color-border-hairline);border-radius:var(--radius-sm);overflow:hidden}
+.brief__bar-fill{display:block;height:100%;background:var(--color-gold)}
+.brief__bar-val{flex:0 0 auto;font-family:var(--font-mono);color:var(--color-text-muted);white-space:nowrap}
+.brief__ai{margin-top:var(--space-3);padding-top:var(--space-2);border-top:1px solid var(--color-border-hairline)}
+.brief__ai-out{margin-top:var(--space-2)}
+.brief__ai-loading,.brief__ai-empty,.brief__ai-err{font-size:var(--text-label-sm);color:var(--color-text-muted);font-style:italic}
+.brief__ai-err{color:var(--color-crisis)}
+.brief__ai-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--space-2)}
+.brief__ai-list li{font-size:var(--text-body-sm);color:var(--color-text-primary);padding-left:var(--space-3);border-left:2px solid var(--color-gold);line-height:1.5}
+.brief__ai-cites{display:flex;flex-wrap:wrap;gap:var(--space-1);margin-top:var(--space-1)}
 /* Hook rows */
 .sc-hook-item{padding:var(--space-3);border-left:3px solid var(--color-border-hairline);margin-bottom:var(--space-2);display:flex;align-items:flex-start;gap:8px}
 .sc-hook-item--open{border-left-color:var(--color-thriving)}
@@ -14347,6 +14376,410 @@ const Press={
   },
 };
 
+// ─── SEASON BRIEF MODULE (P4.4) ───────────────────────────────────────────────
+// The showrunner's pacing dashboard. Pacing is the GM's #1 confirmed pain (R-Q4)
+// and only this product holds the data: the sessions array, hook lineage
+// (raisedInSession/closedInSession), front ticks[] tagged with sessionId, secret
+// deployment status, and per-session npcsAppeared. Brief.metrics(n) reads all of it
+// and reports what the math says about the campaign's pacing.
+//
+// CC-DUAL: Brief.metrics(n) is the no-AI CORE — fully deterministic, no DOM, no
+//   State.* side-effects, unit-testable standalone. The optional AI "dramatic read"
+//   (Brief.dramaticRead) is clearly the AI half: ONE call, only when configured, and
+//   the deterministic dashboard stands alone without it.
+// CC-GROUND: every metric carries the entities/counts it is derived from, so the UI
+//   cites them; the AI read's questions each name the entities they use.
+// CC-HALAL: the framing is analytical — "the math says this thread is cold,"
+//   "this NPC hasn't appeared in N sessions." Never fate/omen/prophecy/destiny.
+//   (VOCABULARY STANDARD: forecast/model/the-math-says — swept across all copy here.)
+//
+// Wired from bootstrap via Brief.bind() — NOT the bindEventListeners monolith
+// (code-health rule: a surface owns its listeners, like Press/RunMode/Campaign).
+const Brief={
+  _wired:false,
+  // A thread/NPC/secret is "cold" once this many sessions have passed without
+  // movement. Matches the small-N unlock gate so the dashboard never claims a trend
+  // it cannot see.
+  MIN_SESSIONS:3,
+  STATIC_FRONT_SESSIONS:3, // a front untouched for >= the last 3 sessions reads cold
+  UNSEEN_NPC_SESSIONS:3,   // an NPC absent for >= 3 sessions reads cold
+  AGING_SECRET_SESSIONS:3, // a secret undeployed across >= 3 logged sessions reads aging
+
+  // PURE: chronological session list (ascending by .number, falling back to array
+  // order). Returns a fresh array — never mutates n.sessions. Deterministic on both
+  // the live shape and the fixture shape.
+  _orderedSessions(n){
+    const ss=Array.isArray(n&&n.sessions)?n.sessions.slice():[];
+    // Stable sort by number when present; ties and number-less fixtures keep array order.
+    return ss
+      .map((s,i)=>({s,i}))
+      .sort((a,b)=>{
+        const an=typeof a.s.number==='number'?a.s.number:a.i+1;
+        const bn=typeof b.s.number==='number'?b.s.number:b.i+1;
+        return an===bn?a.i-b.i:an-bn;
+      })
+      .map(x=>x.s);
+  },
+  _npcName(n,cid){
+    const c=((n&&n.characters)||[]).find(x=>x&&x.id===cid);
+    return (c&&c.name)||String(cid);
+  },
+  _hookTitle(h){ return (h&&(h.title||h.description))||'Untitled thread'; },
+  _factionName(n,fid){
+    if(!fid)return 'Unaligned';
+    const f=((n&&n.factions)||[]).find(x=>x&&x.id===fid);
+    return (f&&f.name)||'Unaligned';
+  },
+
+  // ── THE CORE (CC-DUAL: no-AI). PURE: no DOM, no persistence, no State.* writes.
+  // Returns either a small-N guard object, or a metrics object whose every field
+  // cites the entities it was derived from. Deterministic: same input → same output.
+  metrics(n){
+    if(!n||typeof n!=='object'){
+      return {guard:true,sessionsLogged:0,needed:this.MIN_SESSIONS,
+        message:`Log ${this.MIN_SESSIONS} more sessions to unlock trends.`};
+    }
+    const sessions=this._orderedSessions(n);
+    const N=sessions.length;
+
+    // Small-N guard (UX-3): below the floor we show the unlock message, never a
+    // half-baked trend.
+    if(N<this.MIN_SESSIONS){
+      const needed=this.MIN_SESSIONS-N;
+      return {guard:true,sessionsLogged:N,needed,
+        message:`Log ${needed} more session${needed===1?'':'s'} to unlock trends.`};
+    }
+
+    const sessionIds=new Set(sessions.map(s=>s.id).filter(Boolean));
+    // Position index by session id — how far back a session sits from the latest.
+    // latest session → distance 0; the one before → 1; etc.
+    const distanceFromEnd={};
+    sessions.forEach((s,idx)=>{ if(s.id)distanceFromEnd[s.id]=(N-1)-idx; });
+    const lastWindowIds=new Set(sessions.slice(-this.STATIC_FRONT_SESSIONS).map(s=>s.id).filter(Boolean));
+
+    // 1) HOOKS opened-vs-closed trend — from the hook lineage (raisedInSession /
+    //    closedInSession), the authoritative source. Each side cites its hooks.
+    const hooks=Array.isArray(n.hooks)?n.hooks:[];
+    const openedHooks=hooks.filter(h=>h&&sessionIds.has(h.raisedInSession));
+    const closedHooks=hooks.filter(h=>h&&sessionIds.has(h.closedInSession));
+    // "Open now" = raised but not resolved. Handles live status shape and fixture
+    // shape (resolved flag, no status).
+    const openNowHooks=hooks.filter(h=>{
+      if(!h)return false;
+      if(h.status)return h.status==='open';
+      return h.resolved===false;
+    });
+    const opened=openedHooks.length, closed=closedHooks.length;
+    const trend=opened>closed?'widening':(closed>opened?'closing':'flat');
+    const hooksMetric={
+      opened,closed,netOpen:opened-closed,trend,
+      openedHooks:openedHooks.map(h=>({id:h.id,title:this._hookTitle(h)})),
+      closedHooks:closedHooks.map(h=>({id:h.id,title:this._hookTitle(h)})),
+      openNowHooks:openNowHooks.map(h=>({id:h.id,title:this._hookTitle(h)})),
+    };
+
+    // 2) FRONTS static across the last 3 sessions — a front whose ticks[] carry no
+    //    sessionId from the recent window (and isn't resolved) is cold. sessionsSinceTick
+    //    = how many sessions back its newest session-tagged tick lands (Infinity = never).
+    const fronts=Array.isArray(n.fronts)?n.fronts:[];
+    const staticFronts=[];
+    fronts.forEach(f=>{
+      if(!f||f.status==='resolved')return;
+      const ticks=Array.isArray(f.ticks)?f.ticks:[];
+      const tickedRecently=ticks.some(t=>t&&lastWindowIds.has(t.sessionId));
+      if(tickedRecently)return;
+      // Newest recognised session-tick → its distance from the latest session.
+      let sinceTick=Infinity;
+      ticks.forEach(t=>{
+        if(t&&t.sessionId&&distanceFromEnd[t.sessionId]!==undefined){
+          sinceTick=Math.min(sinceTick,distanceFromEnd[t.sessionId]);
+        }
+      });
+      staticFronts.push({
+        id:f.id,name:f.name||'Unnamed Front',
+        clockFilled:f.clockFilled||0,clockSize:f.clockSize||0,
+        sessionsSinceTick:sinceTick===Infinity?N:sinceTick,
+        neverTicked:sinceTick===Infinity,
+      });
+    });
+    staticFronts.sort((a,b)=>b.sessionsSinceTick-a.sessionsSinceTick);
+
+    // 3) NPCs unseen >= N sessions — last appearance is the most recent session whose
+    //    npcsAppeared holds the npc id. sessionsSinceSeen = its distance from the
+    //    latest session; never-seen NPCs report the full span.
+    const characters=Array.isArray(n.characters)?n.characters:[];
+    const unseenNpcs=[];
+    characters.forEach(c=>{
+      if(!c||c.status==='dead'||c.status==='deceased')return; // a dead NPC absent is not a pacing miss
+      let lastSeenDist=Infinity;
+      sessions.forEach((s,idx)=>{
+        const appeared=Array.isArray(s.npcsAppeared)?s.npcsAppeared:[];
+        if(appeared.includes(c.id))lastSeenDist=Math.min(lastSeenDist,(N-1)-idx);
+      });
+      const since=lastSeenDist===Infinity?N:lastSeenDist;
+      if(since>=this.UNSEEN_NPC_SESSIONS){
+        unseenNpcs.push({id:c.id,name:c.name||'Unnamed',role:c.role||'',
+          sessionsSinceSeen:since,neverSeen:lastSeenDist===Infinity});
+      }
+    });
+    unseenNpcs.sort((a,b)=>b.sessionsSinceSeen-a.sessionsSinceSeen);
+
+    // 4) SECRETS aging undeployed — undeployed secrets older than the aging window.
+    //    Age is measured in LOGGED SESSIONS since the secret was created (the secret's
+    //    createdAt vs each session's date) so the metric reads purely from campaign
+    //    data, not wall-clock. A secret with no createdAt counts against every session.
+    const secrets=Array.isArray(n.secrets)?n.secrets:[];
+    const agingSecrets=[];
+    secrets.forEach(s=>{
+      if(!s||s.status==='deployed')return;
+      const created=s.createdAt?Date.parse(s.createdAt):NaN;
+      // Sessions that have elapsed since the secret existed.
+      const sessionsSince=sessions.filter(ss=>{
+        const sd=ss.date?Date.parse(ss.date):NaN;
+        if(isNaN(created))return true;          // unknown birth → counts against all
+        if(isNaN(sd))return true;               // unknown session date → still counts
+        return sd>=created;
+      }).length;
+      if(sessionsSince>=this.AGING_SECRET_SESSIONS){
+        agingSecrets.push({id:s.id,
+          title:s.title||(s.content?String(s.content).slice(0,60):'Untitled secret'),
+          sessionsUndeployed:sessionsSince});
+      }
+    });
+    agingSecrets.sort((a,b)=>b.sessionsUndeployed-a.sessionsUndeployed);
+
+    // 5) FACTION screen-time share — every NPC appearance across all sessions, grouped
+    //    by the appearing NPC's faction, as a share of total appearances. NPCs with no
+    //    faction land in "Unaligned". Cites the raw appearance count per faction.
+    const factionTally={}; // factionId|'__unaligned__' -> count
+    let totalAppearances=0;
+    sessions.forEach(s=>{
+      const appeared=Array.isArray(s.npcsAppeared)?s.npcsAppeared:[];
+      appeared.forEach(cid=>{
+        const c=characters.find(x=>x&&x.id===cid);
+        const key=c&&c.factionId?c.factionId:'__unaligned__';
+        factionTally[key]=(factionTally[key]||0)+1;
+        totalAppearances++;
+      });
+    });
+    const factionShares=Object.keys(factionTally).map(key=>{
+      const fid=key==='__unaligned__'?null:key;
+      const appearances=factionTally[key];
+      return {factionId:fid,factionName:this._factionName(n,fid),appearances,
+        share:totalAppearances?appearances/totalAppearances:0};
+    }).sort((a,b)=>b.appearances-a.appearances||a.factionName.localeCompare(b.factionName));
+
+    return {
+      guard:false,
+      sessionsLogged:N,
+      window:this.STATIC_FRONT_SESSIONS,
+      hooks:hooksMetric,
+      staticFronts,
+      unseenNpcs,
+      agingSecrets,
+      factionShares,
+      totalAppearances,
+    };
+  },
+
+  // PURE: a compact text block of the metrics for the AI prompt (CC-GROUND — every
+  // entity the model may cite appears here by name). No DOM.
+  _metricsForPrompt(m){
+    if(!m||m.guard)return 'No trends yet — too few sessions logged.';
+    const L=[];
+    L.push(`Sessions logged: ${m.sessionsLogged}. Trend window: last ${m.window} sessions.`);
+    L.push(`Hooks — opened ${m.hooks.opened}, closed ${m.hooks.closed} (net ${m.hooks.netOpen>=0?'+':''}${m.hooks.netOpen}, ${m.hooks.trend}).`);
+    if(m.hooks.openNowHooks.length)
+      L.push('Open threads: '+m.hooks.openNowHooks.map(h=>`"${h.title}"`).join(', ')+'.');
+    if(m.staticFronts.length)
+      L.push('Cold fronts (no advance in window): '+m.staticFronts.map(f=>`"${f.name}" (${f.neverTicked?'never advanced':f.sessionsSinceTick+' sessions since advance'})`).join(', ')+'.');
+    if(m.unseenNpcs.length)
+      L.push('NPCs off-screen: '+m.unseenNpcs.map(c=>`${c.name} (${c.neverSeen?'never appeared':c.sessionsSinceSeen+' sessions'})`).join(', ')+'.');
+    if(m.agingSecrets.length)
+      L.push('Undeployed secrets aging: '+m.agingSecrets.map(s=>`"${s.title}" (${s.sessionsUndeployed} sessions)`).join(', ')+'.');
+    if(m.factionShares.length)
+      L.push('Faction screen-time: '+m.factionShares.map(f=>`${f.factionName} ${Math.round(f.share*100)}%`).join(', ')+'.');
+    return L.join('\n');
+  },
+
+  // ── OPTIONAL AI "DRAMATIC READ" (CC-DUAL: the AI half). ONE call over buildContext
+  // + the metrics block, returning <=3 escalation options PHRASED AS QUESTIONS, each
+  // citing the entities it uses (CC-GROUND). Reuses Copilot.buildContext +
+  // Copilot._apiFetch verbatim — no forked AI path. Throws if AI isn't configured;
+  // the caller keeps the deterministic dashboard either way.
+  async dramaticRead(n){
+    if(typeof Copilot==='undefined'||!Copilot.isConfigured())
+      throw new Error('Copilot not configured. Add an API key in Settings.');
+    const nation=n||State.get();
+    if(!nation)throw new Error('No active realm.');
+    const m=this.metrics(nation);
+    if(m.guard)throw new Error(m.message);
+    const ctx=Copilot.buildContext(nation);
+    const metricsBlock=this._metricsForPrompt(m);
+    // CC-HALAL written into the prompt header so the model can't drift to fate-talk.
+    const sys='You are a TTRPG showrunner\'s pacing analyst. You are given a world summary and a '
+      +'deterministic PACING REPORT computed from the campaign log. Propose at most THREE escalation '
+      +'options for the next session. RULES: (1) Each option MUST be phrased as a QUESTION the GM could '
+      +'answer at the table. (2) Each MUST cite, by name, the specific threads / NPCs / fronts / secrets / '
+      +'factions from the report it draws on. (3) Framing is analytical pacing advice — "the math says this '
+      +'thread is cold," "this NPC has been off-screen N sessions." NEVER use the words fate, destiny, omen, '
+      +'prophecy, or foretell. Return JSON only: {"questions":[{"text":"<the question>","cites":["<entity name>", ...]}]}.';
+    const user='# World context\n'+ctx+'\n\n# Pacing report (deterministic)\n'+metricsBlock
+      +'\n\nReturn the escalation questions now.';
+    const data=await Copilot._apiFetch(
+      [{role:'system',content:sys},{role:'user',content:user}],
+      {stream:false,max_tokens:600,response_format:{type:'json_object'}});
+    const raw=data?.choices?.[0]?.message?.content||'{}';
+    let parsed;
+    try{parsed=JSON.parse(raw);}
+    catch(e){const c=raw.replace(/```json|```/g,'').trim();try{parsed=JSON.parse(c);}catch(e2){parsed={};}}
+    const questions=Array.isArray(parsed.questions)?parsed.questions.slice(0,3):[];
+    return questions.map(q=>({
+      text:typeof q==='string'?q:(q&&q.text)||'',
+      cites:Array.isArray(q&&q.cites)?q.cites.filter(Boolean):[],
+    })).filter(q=>q.text);
+  },
+
+  // ── RENDER (the dashboard markup string). PURE given the nation — builds from
+  // metrics(n) only; no persistence. The guard state renders the unlock message.
+  render(n){
+    const E=Utils.escHtml;
+    const m=this.metrics(n);
+    let html='<section class="brief" aria-label="Season Brief">';
+    html+='<div class="brief__head"><span class="brief__kicker">Season Brief</span>'
+      +'<span class="brief__sub">what the pacing math says</span></div>';
+
+    if(m.guard){
+      html+=`<div class="brief__guard">${E(m.message)}</div>`;
+      html+='</section>';
+      return html;
+    }
+
+    // 1) Hooks trend
+    const h=m.hooks;
+    const trendWord=h.trend==='widening'?'widening (more opened than closed)'
+      :h.trend==='closing'?'closing (more closed than opened)':'holding even';
+    html+='<div class="brief__metric">'
+      +'<div class="brief__metric-head"><span class="brief__metric-title">Hook flow</span>'
+      +`<span class="brief__stat">+${h.opened} / −${h.closed}</span></div>`
+      +`<div class="brief__metric-body">Threads are ${E(trendWord)}. `
+      +`${h.openNowHooks.length} open right now.</div>`;
+    if(h.openNowHooks.length)
+      html+='<div class="brief__cites">'+h.openNowHooks.map(x=>`<span class="brief__cite" data-cite-hook="${E(x.id)}">${E(x.title)}</span>`).join('')+'</div>';
+    html+='</div>';
+
+    // 2) Cold fronts
+    html+='<div class="brief__metric">'
+      +'<div class="brief__metric-head"><span class="brief__metric-title">Cold fronts</span>'
+      +`<span class="brief__stat">${m.staticFronts.length}</span></div>`;
+    if(m.staticFronts.length){
+      html+='<div class="brief__metric-body">No advance in the last '+m.window+' sessions — the math says these threats have gone quiet:</div>';
+      html+='<div class="brief__cites">'+m.staticFronts.map(f=>{
+        const tag=f.neverTicked?'never advanced':f.sessionsSinceTick+' sessions cold';
+        return `<span class="brief__cite" data-cite-front="${E(f.id)}">${E(f.name)} <em>(${E(tag)})</em></span>`;
+      }).join('')+'</div>';
+    }else{
+      html+='<div class="brief__metric-body brief__metric-body--ok">Every active front has advanced recently.</div>';
+    }
+    html+='</div>';
+
+    // 3) Off-screen NPCs
+    html+='<div class="brief__metric">'
+      +'<div class="brief__metric-head"><span class="brief__metric-title">Off-screen NPCs</span>'
+      +`<span class="brief__stat">${m.unseenNpcs.length}</span></div>`;
+    if(m.unseenNpcs.length){
+      html+='<div class="brief__metric-body">Haven\'t appeared in '+m.UNSEEN_NPC_SESSIONS+'+ sessions:</div>';
+      html+='<div class="brief__cites">'+m.unseenNpcs.map(c=>{
+        const tag=c.neverSeen?'never on-screen':c.sessionsSinceSeen+' sessions';
+        return `<span class="brief__cite" data-cite-npc="${E(c.id)}">${E(c.name)} <em>(${E(tag)})</em></span>`;
+      }).join('')+'</div>';
+    }else{
+      html+='<div class="brief__metric-body brief__metric-body--ok">Your cast has been on-screen recently.</div>';
+    }
+    html+='</div>';
+
+    // 4) Aging secrets
+    html+='<div class="brief__metric">'
+      +'<div class="brief__metric-head"><span class="brief__metric-title">Undeployed secrets</span>'
+      +`<span class="brief__stat">${m.agingSecrets.length}</span></div>`;
+    if(m.agingSecrets.length){
+      html+='<div class="brief__metric-body">Sitting unrevealed across '+m.AGING_SECRET_SESSIONS+'+ sessions:</div>';
+      html+='<div class="brief__cites">'+m.agingSecrets.map(s=>
+        `<span class="brief__cite" data-cite-secret="${E(s.id)}">${E(s.title)} <em>(${E(s.sessionsUndeployed)} sessions)</em></span>`
+      ).join('')+'</div>';
+    }else{
+      html+='<div class="brief__metric-body brief__metric-body--ok">No secrets aging on the shelf.</div>';
+    }
+    html+='</div>';
+
+    // 5) Faction screen-time
+    html+='<div class="brief__metric">'
+      +'<div class="brief__metric-head"><span class="brief__metric-title">Faction screen-time</span>'
+      +`<span class="brief__stat">${m.totalAppearances} appearance${m.totalAppearances===1?'':'s'}</span></div>`;
+    if(m.factionShares.length){
+      html+='<div class="brief__bars">'+m.factionShares.map(f=>{
+        const pct=Math.round(f.share*100);
+        return `<div class="brief__bar-row" data-cite-faction="${E(f.factionId||'')}">`
+          +`<span class="brief__bar-label">${E(f.factionName)}</span>`
+          +`<span class="brief__bar-track"><span class="brief__bar-fill" style="width:${pct}%"></span></span>`
+          +`<span class="brief__bar-val">${pct}% · ${E(f.appearances)}</span></div>`;
+      }).join('')+'</div>';
+    }else{
+      html+='<div class="brief__metric-body brief__metric-body--ok">No NPC appearances logged yet.</div>';
+    }
+    html+='</div>';
+
+    // AI dramatic read — offered only when configured (CC-DUAL: clearly the AI half).
+    if(typeof Copilot!=='undefined'&&Copilot.isConfigured()){
+      html+='<div class="brief__ai" id="brief-ai">'
+        +'<button class="btn btn--secondary" id="brief-ai-btn">Ask the model: where\'s the pressure?</button>'
+        +'<div class="brief__ai-out" id="brief-ai-out" aria-live="polite"></div></div>';
+    }
+
+    html+='</section>';
+    return html;
+  },
+
+  // Render the AI escalation questions into the dashboard (CC-GROUND: each question
+  // shows the entities it cites). Called only on the button path.
+  async _runDramaticRead(){
+    const out=document.getElementById('brief-ai-out');
+    const btn=document.getElementById('brief-ai-btn');
+    if(!out)return;
+    const E=Utils.escHtml;
+    out.innerHTML='<div class="brief__ai-loading">Reading the pacing…</div>';
+    if(btn)btn.disabled=true;
+    try{
+      const qs=await this.dramaticRead(State.get());
+      if(!qs.length){out.innerHTML='<div class="brief__ai-empty">No escalation questions came back.</div>';}
+      else{
+        out.innerHTML='<ul class="brief__ai-list">'+qs.map(q=>{
+          const cites=q.cites.length?'<span class="brief__ai-cites">'+q.cites.map(c=>`<span class="brief__cite">${E(c)}</span>`).join('')+'</span>':'';
+          return `<li>${E(q.text)}${cites}</li>`;
+        }).join('')+'</ul>';
+      }
+    }catch(err){
+      out.innerHTML=`<div class="brief__ai-err">${E(err&&err.message||'The model could not be reached.')}</div>`;
+    }finally{
+      if(btn)btn.disabled=false;
+    }
+  },
+
+  // BIND — all Brief wiring lives here (called from bootstrap, NOT the monolith).
+  // The dashboard is re-rendered on every renderSessions(), so the AI button is wired
+  // by delegation on the persistent #sessions-body container.
+  bind(){
+    if(this._wired)return;this._wired=true;
+    const body=document.getElementById('sessions-body');
+    if(body)body.addEventListener('click',e=>{
+      if(e.target&&e.target.closest&&e.target.closest('#brief-ai-btn')){
+        e.preventDefault();
+        this._runDramaticRead();
+      }
+    });
+  },
+};
+
 // ─── TONIGHT MODULE ──────────────────────────────────────────────────────────
 const Tonight={
   // Stored results for "Save secrets" (activated in Delivery C)
@@ -14720,8 +15153,14 @@ const SHSPanels={
     const n=State.get();const ctr=document.getElementById('sessions-body');if(!ctr)return;
     const E=Utils.escHtml;
     const sessions=[...(n.sessions||[])].reverse();
-    if(!sessions.length){ctr.innerHTML='<div class="sc-empty">No sessions logged yet. End a session to start the record.</div>';return;}
-    let html='';
+    // P4.4 — the Season Brief dashboard renders at the top of the panel in every state.
+    // Below the floor it shows the unlock message; otherwise the deterministic trends.
+    const briefHtml=(typeof Brief!=='undefined')?Brief.render(n):'';
+    if(!sessions.length){
+      ctr.innerHTML=briefHtml+'<div class="sc-empty">No sessions logged yet. End a session to start the record.</div>';
+      return;
+    }
+    let html=briefHtml;
     sessions.forEach(s=>{
       const d=s.date?new Date(s.date).toLocaleDateString():'';
       const openHooks=(n.hooks||[]).filter(h=>h.raisedInSession===s.id&&h.status==='open').length;
@@ -19459,6 +19898,7 @@ async function bootstrap(){
   if(typeof Tonight!=='undefined')Tonight.bind();
   if(typeof RunMode!=='undefined')RunMode.bind();
   if(typeof Press!=='undefined')Press.bind();
+  if(typeof Brief!=='undefined')Brief.bind();
   if(typeof TransparencyLog!=='undefined')TransparencyLog.bind();
   if(typeof CostMeter!=='undefined')CostMeter.bind();
   if(typeof CostGate!=='undefined')CostGate._ensure();
