@@ -3045,6 +3045,54 @@ SECTION 7: MOTION & STATE STYLES
 .cmp-rail__act:hover{color:var(--ember-color)}
 .cmp-rail__pin-badge{font-size:9px;color:var(--ember-color);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;display:block}
 @media (max-width:980px){.campaign-mode.has-rail .cmp-grid{margin-right:0}.cmp-rail{position:static;width:auto;max-width:100%;border-left:none;border-top:1px solid var(--color-border-hairline)}}
+/* ─── RUN MODE — the at-the-table cockpit (P4.1). Single screen, zero nav, dim-light ── */
+.run-mode{position:fixed;inset:0;background:var(--color-bg);z-index:8000;overflow-y:auto;display:none;flex-direction:column}
+.run-mode.is-open{display:flex}
+.run-mode__header{display:flex;justify-content:space-between;align-items:center;gap:var(--space-4);padding:var(--space-4) var(--space-6);border-bottom:1px solid var(--color-border-default);position:sticky;top:0;background:var(--color-bg);z-index:10;flex-shrink:0}
+.run-mode__title{font-family:var(--font-display),'Cinzel',serif;font-size:var(--text-h1);margin:0;color:var(--color-ink);letter-spacing:.02em}
+.run-mode__title small{display:block;font-family:var(--font-body);font-size:var(--text-label-sm);color:var(--color-text-faint);font-weight:400;letter-spacing:.04em;margin-top:2px}
+.run-mode__head-actions{display:flex;align-items:center;gap:var(--space-3);flex-shrink:0}
+.run-mode__dice-toggle{background:transparent;border:1px solid var(--color-border-default);border-radius:var(--radius-none);padding:10px 16px;color:var(--color-text-muted);cursor:pointer;font-size:var(--text-label);font-family:var(--font-body);letter-spacing:.04em;transition:border-color var(--duration-instant),color var(--duration-instant);min-height:44px}
+.run-mode__dice-toggle:hover{border-color:var(--ember-color);color:var(--ember-color)}
+.run-mode.is-dice-only .run-mode__dice-toggle{border-color:var(--ember-color);color:var(--ember-color)}
+.run-mode__exit{background:transparent;border:1px solid var(--color-border-default);border-radius:var(--radius-none);padding:10px 18px;color:var(--color-text-muted);cursor:pointer;font-size:var(--text-label);font-family:var(--font-body);letter-spacing:.04em;transition:border-color var(--duration-instant),color var(--duration-instant);min-height:44px}
+.run-mode__exit:hover{border-color:var(--ember-color);color:var(--ember-color)}
+.run-mode__grid{flex:1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--space-5);padding:var(--space-6);align-items:start;max-width:1600px;width:100%;margin:0 auto}
+.run-mode.is-dice-only .run-mode__grid{grid-template-columns:1fr;max-width:760px}
+.run-mode.is-dice-only .run-mode__col--clocks,.run-mode.is-dice-only .run-mode__col--secrets{display:none}
+.run-mode__col{background:var(--color-parchment-warm);border:1px solid var(--color-border-default);border-radius:var(--radius-none);padding:var(--space-5);min-width:0}
+.run-mode__col-title{font-family:var(--font-display),'Cinzel',serif;font-size:var(--text-label);color:var(--ember-color);text-transform:uppercase;letter-spacing:.10em;margin:0 0 var(--space-4);border-bottom:1px solid var(--color-border-hairline);padding-bottom:var(--space-2)}
+.run-mode__clock{display:grid;grid-template-columns:72px 1fr;gap:var(--space-3);align-items:center;padding:var(--space-3) 0;border-bottom:1px solid var(--color-border-hairline)}
+.run-mode__clock:last-child{border-bottom:none}
+.run-mode__clock .cmp-clock__svg{width:72px;height:72px;cursor:pointer}
+.run-mode__clock-name{font-size:var(--text-body);color:var(--color-ink);font-weight:500;line-height:1.3}
+.run-mode__clock-count{font-size:var(--text-label-sm);color:var(--color-text-faint);font-variant-numeric:tabular-nums;margin-top:var(--space-1);letter-spacing:.05em}
+.run-mode__secret{display:flex;align-items:flex-start;gap:var(--space-3);padding:var(--space-3) 0;border-bottom:1px solid var(--color-border-hairline);cursor:pointer}
+.run-mode__secret:last-child{border-bottom:none}
+.run-mode__secret-check{flex-shrink:0;width:28px;height:28px;border:2px solid var(--color-border-default);border-radius:var(--radius-none);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--ember-color);font-size:16px;line-height:1;padding:0;transition:border-color var(--duration-instant),background var(--duration-instant)}
+.run-mode__secret-check:hover{border-color:var(--ember-color)}
+.run-mode__secret[aria-checked="true"] .run-mode__secret-check{border-color:var(--ember-color);background:var(--ember-glow-soft)}
+.run-mode__secret-text{font-size:var(--text-body);color:var(--color-ink);line-height:1.45;min-width:0;word-break:break-word}
+.run-mode__secret[aria-checked="true"] .run-mode__secret-text{color:var(--color-text-faint);text-decoration:line-through;text-decoration-color:var(--color-border-default)}
+.run-mode__dice-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-3);margin-bottom:var(--space-5)}
+.run-mode.is-dice-only .run-mode__dice-pad{grid-template-columns:repeat(3,1fr);gap:var(--space-4)}
+.run-mode__die{background:var(--color-parchment-pale);border:1px solid var(--color-gold-pale);border-radius:var(--radius-none);color:var(--color-gold);cursor:pointer;font-family:var(--font-display),'Cinzel',serif;font-size:var(--text-h2);letter-spacing:.04em;min-height:64px;display:flex;align-items:center;justify-content:center;transition:border-color var(--duration-instant),background var(--duration-instant),color var(--duration-instant)}
+.run-mode.is-dice-only .run-mode__die{min-height:96px;font-size:var(--text-display)}
+.run-mode__die:hover{border-color:var(--ember-color);background:var(--color-parchment-warm);color:var(--ember-color-bright)}
+.run-mode__die:active{background:var(--ember-glow-soft)}
+.run-mode__roll-now{font-size:var(--text-display-lg);font-family:var(--font-display),'Cinzel',serif;color:var(--ember-color);text-align:center;margin:0 0 var(--space-4);min-height:1.2em;font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.run-mode__roll-now small{display:block;font-family:var(--font-body);font-size:var(--text-label);color:var(--color-text-faint);font-weight:400;letter-spacing:.05em;text-transform:uppercase;margin-top:var(--space-1)}
+.run-mode__roll-log{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:var(--space-1);max-height:46vh;overflow-y:auto}
+.run-mode__roll-log li{display:flex;align-items:baseline;gap:var(--space-2);padding:var(--space-2) var(--space-3);background:var(--color-surface);border:1px solid var(--color-border-hairline);border-radius:var(--radius-none);font-size:var(--text-body-sm);color:var(--color-text-muted)}
+.run-mode__roll-log .rl-die{font-family:var(--font-mono);color:var(--color-text-faint);min-width:3ch}
+.run-mode__roll-log .rl-result{font-family:var(--font-display),'Cinzel',serif;color:var(--color-gold);font-size:var(--text-body);font-variant-numeric:tabular-nums}
+.run-mode__end{display:flex;flex-direction:column;align-items:center;gap:var(--space-2);padding:var(--space-5) var(--space-6) var(--space-8);flex-shrink:0}
+.run-mode.is-dice-only .run-mode__end{display:none}
+.run-mode__end-btn{background:var(--color-gold);border:1px solid var(--color-gold);border-radius:var(--radius-none);color:var(--color-ink-elevated);cursor:pointer;font-family:var(--font-display),'Cinzel',serif;font-size:var(--text-h3);letter-spacing:.06em;text-transform:uppercase;padding:18px 48px;min-height:60px;transition:background var(--duration-instant),box-shadow var(--duration-instant)}
+.run-mode__end-btn:hover{background:var(--color-gold-pale);box-shadow:0 0 24px var(--ember-glow)}
+.run-mode__end-note{font-size:var(--text-label-sm);color:var(--color-text-faint);letter-spacing:.03em;text-align:center;max-width:520px}
+.run-mode__empty{font-size:var(--text-body-sm);color:var(--color-text-faint);padding:var(--space-3) 0;line-height:1.5}
+@media (max-width:1080px){.run-mode__grid{grid-template-columns:1fr;max-width:760px}}
 /* ─── FRONTS PANEL ─── */
 .fronts-list{padding:0 0 80px}
 .front-card{background:var(--color-parchment-warm);border:1px solid var(--color-border-hairline);border-radius:8px;padding:16px;margin:12px 16px;display:grid;grid-template-columns:80px 1fr;gap:12px;align-items:start}
@@ -3330,6 +3378,10 @@ SECTION 8: DOM STRUCTURE
           <button type="button" class="mode-dropdown__item" data-mode="campaign" role="menuitem">
             <span class="mode-dropdown__mark">🎲</span>
             <span class="mode-dropdown__text"><span class="mode-dropdown__name">Campaign</span><span class="mode-dropdown__desc">Full-screen prep board for active play.</span></span>
+          </button>
+          <button type="button" class="mode-dropdown__item" id="mode-run-item" role="menuitem">
+            <span class="mode-dropdown__mark">⚔️</span>
+            <span class="mode-dropdown__text"><span class="mode-dropdown__name">Run the Table</span><span class="mode-dropdown__desc">At-the-table cockpit — clocks, secrets, dice.</span></span>
           </button>
           <button type="button" class="mode-dropdown__item" data-mode="world" role="menuitem">
             <span class="mode-dropdown__mark">🌍</span>
@@ -13419,6 +13471,8 @@ const Campaign={
 // Off by default. When on, listens to committed Campaign + world events, debounces
 // triggers, enforces rate caps, fills three slot contracts via the F1 brain, and
 // repaints the commentary rail. Local-heuristics engine ships value with no API.
+//
+// (RunMode — the P4.1 at-the-table cockpit — is defined just below LiveMode.)
 const LiveMode={
   _wired:false,
   // State machine: idle / thinking / answered / paused / error.
@@ -13659,6 +13713,222 @@ const LiveMode={
   disable(){State.cpSetLiveOn(false);clearTimeout(this._debounceTimer);if(this._abort){try{this._abort.abort();}catch(e){}}this._setState('idle');},
   pause(){this._userPaused=true;clearTimeout(this._debounceTimer);this._setState('paused');},
   resume(){this._userPaused=false;this._recentCalls=[];this._setState('idle');this._refreshHeuristics();this._renderRail();},
+};
+
+// ─── RUN MODE MODULE (P4.1) ──────────────────────────────────────────────────
+// The at-the-table cockpit: a full-screen, zero-nav, single screen the GM runs a
+// LIVE session in. Three columns — campaign clocks / secret bank / dice+roll-log —
+// plus one End Session button. Deliberately tight (v1): beats + NPC rail are v1.1.
+//
+// REUSE, do not fork:
+//   - Clocks  -> the real Campaign-prep clocks via State.cpSetClockSeg + Campaign._clockSVG.
+//   - Secrets -> the real `delivered` toggle via State.cpToggleSecret (same cp().secrets data).
+//   - Dice    -> its own clean d4..d20 roller (task-resolution randomness; NO stakes - CC-HALAL).
+//   - End     -> hands off to the REAL SHSPanels.openNewSession -> saveSession, which already
+//                fires the P2.4 "Take the World Turn" offer. No save logic is duplicated here.
+//   - Surface -> mirrors the Tonight/Campaign full-screen overlay pattern (.is-open toggle).
+//   - LiveMode.markSessionStart() on open so the idle-clock heuristic has a baseline.
+//
+// Wired from bootstrap via RunMode.bind() - NOT from the bindEventListeners monolith
+// (code-health rule: keep Run Mode's listeners in its own module, like Campaign/Tonight).
+const RunMode={
+  // The dice this cockpit offers. Polyhedral set; pure-rolled, no wagering.
+  _DICE:[4,6,8,10,12,20],
+  _ROLL_LOG_CAP:100,
+  _wired:false,
+
+  // PURE: one fair die roll in [1,sides]. Task-resolution randomness - not maysir,
+  // no stakes, no wager. Mirrors Solo._rollD100/_rollD10's Math.random shape.
+  _rollDie(sides){
+    const n=parseInt(sides,10);
+    if(!Number.isFinite(n)||n<2)return 1;
+    return Math.floor(Math.random()*n)+1;
+  },
+
+  // PURE: assemble a plain session-record snapshot from the campaign board.
+  // No DOM, no persistence - used for the End-Session summary line and unit-testable.
+  // Counts the GM cares about when closing a night: clocks completed, secrets landed, rolls made.
+  _sessionRecordFromState(cp){
+    const c=cp||{};
+    const clocks=Array.isArray(c.clocks)?c.clocks:[];
+    const secrets=Array.isArray(c.secrets)?c.secrets:[];
+    const rolls=Array.isArray(c.runRollLog)?c.runRollLog:[];
+    return {
+      clockCount:clocks.length,
+      clocksFilled:clocks.filter(k=>k&&k.size>0&&k.filled>=k.size).length,
+      secretCount:secrets.length,
+      secretsDelivered:secrets.filter(s=>s&&s.delivered).length,
+      rollCount:rolls.length,
+    };
+  },
+
+  // PURE: a short human line from the snapshot (no DOM). Plain, market-default copy.
+  _sessionSummaryLine(rec){
+    const r=rec||{};
+    return `Tonight: ${r.secretsDelivered||0}/${r.secretCount||0} secrets delivered - `
+      +`${r.clocksFilled||0}/${r.clockCount||0} clocks filled - ${r.rollCount||0} rolls.`;
+  },
+
+  isOpen(){return !!document.getElementById('run-mode')?.classList.contains('is-open');},
+
+  open(){
+    const el=document.getElementById('run-mode');
+    if(!el)return;
+    el.classList.add('is-open');
+    // Idle-clock heuristic baseline (same call Campaign.open makes). Keyless.
+    if(typeof LiveMode!=='undefined'){
+      try{LiveMode.markSessionStart&&LiveMode.markSessionStart();}catch(e){}
+    }
+    this.render();
+  },
+
+  close(){document.getElementById('run-mode')?.classList.remove('is-open');},
+
+  toggleDiceOnly(){
+    const el=document.getElementById('run-mode');if(!el)return;
+    const on=el.classList.toggle('is-dice-only');
+    document.getElementById('run-dice-toggle')?.setAttribute('aria-pressed',on?'true':'false');
+  },
+
+  // Roll a die, push to the persisted campaign roll log (capped), repaint the result + log.
+  roll(sides){
+    const n=parseInt(sides,10);
+    if(!this._DICE.includes(n))return;
+    const value=this._rollDie(n);
+    const cp=State.cp();
+    if(!Array.isArray(cp.runRollLog))cp.runRollLog=[];
+    cp.runRollLog.unshift({die:'d'+n,value,at:Date.now()});
+    if(cp.runRollLog.length>this._ROLL_LOG_CAP)cp.runRollLog.length=this._ROLL_LOG_CAP;
+    // Trivial commit: a dice roll is not undo-worthy and shouldn't spam the rail.
+    State.cpSetText&&State.cpSetText('runRollLogTouch',Date.now());
+    const now=document.getElementById('run-roll-now');
+    if(now)now.innerHTML=`${value}<small>d${n}</small>`;
+    this._renderRollLog();
+    return value;
+  },
+
+  // End Session: NO forked save. Close the cockpit, then open the REAL session-record
+  // sheet pre-populated (SHSPanels.openNewSession). When the GM saves, the shipped
+  // SHSPanels.saveSession runs and fires the P2.4 "Take the World Turn" offer itself.
+  endSession(){
+    const rec=this._sessionRecordFromState(State.cp());
+    this.close();
+    if(typeof Campaign!=='undefined')Campaign.close();
+    if(typeof SHSPanels!=='undefined'&&SHSPanels.openNewSession){
+      SHSPanels.openNewSession();
+      // Seed the summary field with the deterministic night snapshot if the GM left it blank.
+      const sumEl=document.getElementById('ns-summary');
+      if(sumEl&&!sumEl.value.trim())sumEl.value=this._sessionSummaryLine(rec);
+    }else{
+      showToast('Session record sheet unavailable.',[],3000);
+    }
+  },
+
+  // ── RENDER ──
+  render(){
+    if(!this.isOpen())return;
+    this._renderClocks();
+    this._renderSecrets();
+    this._renderDicePad();
+    this._renderRollLog();
+  },
+
+  _renderClocks(){
+    const host=document.getElementById('run-clocks');if(!host)return;
+    const cp=State.cp();const E=Utils.escHtml;
+    const clocks=cp.clocks||[];
+    if(!clocks.length){
+      host.innerHTML=`<div class="run-mode__empty">No clocks yet. Build them in Campaign prep, then tick them here as the night moves.</div>`;
+      return;
+    }
+    // Reuse Campaign._clockSVG verbatim - same geometry, same data-seg semantics.
+    const svg=(typeof Campaign!=='undefined'&&Campaign._clockSVG)?Campaign._clockSVG.bind(Campaign):null;
+    host.innerHTML=clocks.map(c=>{
+      const ring=svg?svg(c.size,c.filled):`${c.filled}/${c.size}`;
+      return `<div class="run-mode__clock" data-clock="${E(c.id)}">
+        <div class="cmp-clock__svg-wrap" data-clock-svg="${E(c.id)}" title="Click a segment to advance this threat">${ring}</div>
+        <div>
+          <div class="run-mode__clock-name">${E(c.name||'Threat')}</div>
+          <div class="run-mode__clock-count">${c.filled}/${c.size} filled</div>
+        </div>
+      </div>`;
+    }).join('');
+  },
+
+  _renderSecrets(){
+    const host=document.getElementById('run-secrets');if(!host)return;
+    const cp=State.cp();const E=Utils.escHtml;
+    const secrets=cp.secrets||[];
+    if(!secrets.length){
+      host.innerHTML=`<div class="run-mode__empty">No secrets staged. Stock the bank in Campaign prep, then check them off here when the table earns them.</div>`;
+      return;
+    }
+    host.innerHTML=secrets.map(s=>{
+      const txt=(s.text||'').trim()||'(untitled secret)';
+      return `<div class="run-mode__secret" data-secret="${E(s.id)}" role="checkbox" aria-checked="${s.delivered?'true':'false'}" tabindex="0">
+        <button class="run-mode__secret-check" type="button" tabindex="-1" aria-hidden="true">✓</button>
+        <div class="run-mode__secret-text">${E(txt)}</div>
+      </div>`;
+    }).join('');
+  },
+
+  _renderDicePad(){
+    const host=document.getElementById('run-dice-pad');if(!host)return;
+    host.innerHTML=this._DICE.map(d=>`<button class="run-mode__die" type="button" data-die="${d}" aria-label="Roll a d${d}">d${d}</button>`).join('');
+  },
+
+  _renderRollLog(){
+    const host=document.getElementById('run-roll-log');if(!host)return;
+    const cp=State.cp();const E=Utils.escHtml;
+    const log=cp.runRollLog||[];
+    if(!log.length){host.innerHTML='';return;}
+    host.innerHTML=log.map(r=>`<li><span class="rl-die">${E(r.die||'')}</span><span class="rl-result">${E(String(r.value))}</span></li>`).join('');
+  },
+
+  // BIND - all Run Mode wiring lives here (called from bootstrap, NOT the monolith).
+  bind(){
+    if(this._wired)return;this._wired=true;
+
+    // Launch from the Mode dropdown's "Run the Table" item (added to the menu markup).
+    document.getElementById('mode-run-item')?.addEventListener('click',()=>{
+      document.getElementById('mode-dropdown')?.classList.remove('is-open');
+      document.getElementById('switch-mode-btn')?.setAttribute('aria-expanded','false');
+      if(typeof Tonight!=='undefined')Tonight.close();
+      this.open();
+    });
+
+    document.getElementById('run-exit')?.addEventListener('click',()=>this.close());
+    document.getElementById('run-dice-toggle')?.addEventListener('click',()=>this.toggleDiceOnly());
+    document.getElementById('run-end-session')?.addEventListener('click',()=>this.endSession());
+
+    // Delegated clicks inside the cockpit: clock segments, secret toggles, dice.
+    const root=document.getElementById('run-mode');
+    if(root){
+      root.addEventListener('click',e=>{
+        const die=e.target.closest('[data-die]');
+        if(die){this.roll(die.dataset.die);return;}
+        const seg=e.target.closest('.cmp-clock__seg');
+        if(seg){
+          const wrap=seg.closest('[data-clock-svg]');
+          if(wrap){State.cpSetClockSeg(wrap.dataset.clockSvg,parseInt(seg.dataset.seg,10));this._renderClocks();}
+          return;
+        }
+        const sec=e.target.closest('.run-mode__secret');
+        if(sec&&sec.dataset.secret){State.cpToggleSecret(sec.dataset.secret);this._renderSecrets();return;}
+      });
+      // Keyboard: space/enter toggles a focused secret; Escape leaves the cockpit.
+      root.addEventListener('keydown',e=>{
+        if(e.key==='Escape'){this.close();return;}
+        if((e.key===' '||e.key==='Enter')){
+          const sec=e.target.closest&&e.target.closest('.run-mode__secret');
+          if(sec&&sec.dataset.secret){e.preventDefault();State.cpToggleSecret(sec.dataset.secret);this._renderSecrets();}
+        }
+      });
+    }
+
+    // Live re-render: if a clock/secret changes from any path while open, reflect it.
+    document.addEventListener('cp:changed',()=>{if(this.isOpen())this.render();});
+  },
 };
 
 // ─── TONIGHT MODULE ──────────────────────────────────────────────────────────
@@ -18766,6 +19036,7 @@ async function bootstrap(){
   if(typeof Solo!=='undefined')Solo.bind();
   if(typeof FrontDoor!=='undefined')FrontDoor.bind();
   if(typeof Tonight!=='undefined')Tonight.bind();
+  if(typeof RunMode!=='undefined')RunMode.bind();
   if(typeof TransparencyLog!=='undefined')TransparencyLog.bind();
   if(typeof CostMeter!=='undefined')CostMeter.bind();
   if(typeof CostGate!=='undefined')CostGate._ensure();
@@ -19258,6 +19529,38 @@ window.__rwClearDevTheme=function(){localStorage.removeItem('rw_dev_theme');loca
     </section>
   </div>
   <aside class="cmp-rail" id="cmp-rail" role="complementary" aria-label="Live commentary — heads-up, questions, watch-outs" hidden></aside>
+</div>
+
+<!-- ─── RUN MODE — at-the-table cockpit (P4.1): clocks / secret bank / dice ─── -->
+<div class="run-mode" id="run-mode" role="main" aria-label="Run Mode — live session cockpit">
+  <header class="run-mode__header">
+    <h1 class="run-mode__title">🎲 Run the Table<small>Live session cockpit — tick clocks, deliver secrets, roll the dice.</small></h1>
+    <div class="run-mode__head-actions">
+      <button class="run-mode__dice-toggle" id="run-dice-toggle" type="button" aria-pressed="false" title="Collapse to a big dice pad for fast rolling">Dice only</button>
+      <button class="run-mode__exit" id="run-exit" type="button" aria-label="Return to dashboard">← Dashboard</button>
+    </div>
+  </header>
+  <div class="run-mode__grid">
+    <section class="run-mode__col run-mode__col--clocks" aria-label="Campaign clocks">
+      <h2 class="run-mode__col-title">Clocks</h2>
+      <div id="run-clocks"></div>
+    </section>
+    <section class="run-mode__col run-mode__col--secrets" aria-label="Secret bank">
+      <h2 class="run-mode__col-title">Secret Bank</h2>
+      <div id="run-secrets"></div>
+    </section>
+    <section class="run-mode__col run-mode__col--dice" aria-label="Dice and roll log">
+      <h2 class="run-mode__col-title">Dice</h2>
+      <div class="run-mode__roll-now" id="run-roll-now" aria-live="polite"></div>
+      <div class="run-mode__dice-pad" id="run-dice-pad"></div>
+      <h2 class="run-mode__col-title" style="margin-top:var(--space-4)">Roll Log</h2>
+      <ul class="run-mode__roll-log" id="run-roll-log" aria-label="Recent rolls"></ul>
+    </section>
+  </div>
+  <div class="run-mode__end">
+    <button class="run-mode__end-btn" id="run-end-session" type="button">End Session</button>
+    <p class="run-mode__end-note">Opens the session record sheet — log what happened, advance time, then take the World Turn.</p>
+  </div>
 </div>
 
 <!-- ─── NOTES DECIPHER MODAL ─── -->
