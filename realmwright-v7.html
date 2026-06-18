@@ -1402,7 +1402,7 @@ body.theme-ember .modal--front-door :focus-visible{outline-color:var(--ember-col
 body.theme-ember .sample-picker__card:hover{border-color:rgba(255,185,100,0.30)}
 .sample-picker__card-header{display:flex;flex-direction:column;gap:4px}
 .sample-picker__tag{display:inline-block;font-size:9px;font-family:'Cinzel',serif;letter-spacing:0.14em;text-transform:uppercase;color:var(--ember-color);border:1px solid rgba(255,185,100,0.28);border-radius:3px;padding:2px 7px;align-self:flex-start;margin-bottom:4px}
-.sample-picker__card-title{font-family:'Cinzel',serif;font-size:var(--text-heading);margin:0;color:var(--color-ink)}
+.sample-picker__card-title{font-family:'Cinzel',serif;font-size:var(--text-h2);margin:0;color:var(--color-ink)}
 .sample-picker__card-sub{font-size:var(--text-label-sm);color:var(--color-text-muted);margin:0}
 .sample-picker__card-pitch{font-size:var(--text-body-sm);color:var(--color-text-muted);line-height:1.5;flex:1;margin:0}
 .sample-picker__cta{margin-top:auto;width:100%;justify-content:center}
@@ -1413,7 +1413,7 @@ body.theme-ember .sample-picker__card:hover{border-color:rgba(255,185,100,0.30)}
 .wtr__capped{font-size:var(--text-label-sm);color:var(--color-amber);border:1px solid var(--color-amber);border-radius:4px;padding:6px 10px;margin:0 0 16px}
 .wtr__group{margin:0 0 22px}
 .wtr__group-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:0 0 10px;padding-bottom:6px;border-bottom:.5px solid var(--color-gold-pale)}
-.wtr__group-title{font-family:var(--font-display,'Cinzel',serif);font-size:var(--text-heading);color:var(--color-ink);margin:0}
+.wtr__group-title{font-family:var(--font-display,'Cinzel',serif);font-size:var(--text-h2);color:var(--color-ink);margin:0}
 .wtr__group-toggle{font-size:var(--text-label-sm);color:var(--color-text-muted);background:none;border:none;cursor:pointer;text-decoration:underline;padding:0}
 .wtr__empty{font-size:var(--text-body-sm);color:var(--color-text-faint);font-style:italic;padding:4px 0}
 .wtr__line{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-radius:6px;border:.5px solid var(--color-border-hairline);margin:0 0 8px;background:var(--color-surface);transition:border-color .12s,opacity .12s}
@@ -1425,13 +1425,13 @@ body.theme-ember .sample-picker__card:hover{border-color:rgba(255,185,100,0.30)}
 .wtr__line-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:2px}
 .wtr__line-name{font-size:var(--text-body-sm);color:var(--color-ink);font-weight:600}
 .wtr__delta{font-family:var(--font-display,'Cinzel',serif);font-size:var(--text-label-sm);font-variant-numeric:tabular-nums}
-.wtr__delta--up{color:var(--color-positive,#6a9a4a)}
-.wtr__delta--down{color:var(--color-negative,#c05a4a)}
+.wtr__delta--up{color:var(--color-thriving)}
+.wtr__delta--down{color:var(--color-crisis)}
 .wtr__delta--zero{color:var(--color-text-faint)}
 .wtr__line-cause{font-size:var(--text-label-sm);color:var(--color-text-muted);line-height:1.45}
 .wtr__kind{font-size:9px;font-family:var(--font-display,'Cinzel',serif);letter-spacing:.1em;text-transform:uppercase;border-radius:3px;padding:1px 6px;color:var(--color-text-faint);border:.5px solid var(--color-border-hairline)}
 .wtr__kind--event{color:var(--color-gold-deep);border-color:var(--color-gold-pale)}
-.wtr__kind--front{color:var(--color-negative,#c05a4a);border-color:var(--color-negative,#c05a4a)}
+.wtr__kind--front{color:var(--color-crisis);border-color:var(--color-crisis)}
 .wtr__gm-badge{font-size:9px;font-family:var(--font-display,'Cinzel',serif);letter-spacing:.1em;text-transform:uppercase;border-radius:3px;padding:1px 6px;color:var(--color-amber);border:1px solid var(--color-amber);background:rgba(201,169,97,.06)}
 .wtr__applied{font-size:var(--text-body-sm);color:var(--color-text-muted);text-align:center;padding:24px 0}
 
@@ -12750,8 +12750,8 @@ const Sandtable = {
 .st-diff-table{width:100%;border-collapse:collapse;font-size:var(--text-body-sm)}
 .st-diff-table th{text-align:left;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted);padding:4px 8px 4px 0;border-bottom:1px solid var(--color-border-hairline)}
 .st-diff-table td{padding:5px 8px 5px 0;border-bottom:.5px solid var(--color-border-hairline);color:var(--color-ink)}
-.st-diff-pos{color:#5cb85c;font-family:var(--font-mono)}
-.st-diff-neg{color:#d9534f;font-family:var(--font-mono)}
+.st-diff-pos{color:var(--color-thriving);font-family:var(--font-mono)}
+.st-diff-neg{color:var(--color-crisis);font-family:var(--font-mono)}
 .st-no-diff{color:var(--color-text-muted);font-size:var(--text-body-sm)}
 .st-rule-diff{display:flex;flex-direction:column;gap:8px}
 .st-rule-row{font-size:var(--text-body-sm);line-height:1.4;color:var(--color-ink);padding:6px 8px;border-radius:4px;background:rgba(255,185,100,.04)}
@@ -18949,7 +18949,7 @@ async function bootstrap(){
       banner.style.cssText='position:fixed;bottom:0;left:0;right:0;z-index:490;background:rgba(13,23,38,.92);border-top:1px solid rgba(255,185,100,.38);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;backdrop-filter:blur(6px)';
       banner.innerHTML=`<div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0">
         <span style="color:var(--ember-color);font-size:18px;flex-shrink:0">◆</span>
-        <span id="wms-wmb-text" style="font-size:var(--text-body-sm);color:var(--color-parchment);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${E(entry.summary||'The world moved while you were away.')}</span>
+        <span id="wms-wmb-text" style="font-size:var(--text-body-sm);color:#f4ecd8;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${E(entry.summary||'The world moved while you were away.')}</span>
         <button id="wms-wmb-open" type="button" style="flex-shrink:0;padding:6px 14px;background:none;border:1px solid rgba(255,185,100,.45);color:var(--ember-color);cursor:pointer;font-size:var(--text-label-sm);border-radius:3px;white-space:nowrap">Review →</button>
       </div>
       <button id="wms-wmb-dismiss" type="button" aria-label="Dismiss" style="flex-shrink:0;background:none;border:none;color:var(--color-text-muted);cursor:pointer;font-size:20px;padding:0 4px;line-height:1">&#215;</button>`;
