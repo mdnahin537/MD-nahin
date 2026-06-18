@@ -376,6 +376,12 @@ AUTOMATIC MODEL RULES:
   Codebase is huge (many files open)      → /model opus[1m] (1M context)
   Mid-build consultation needed           → Stay in session, say "ultrathink about [X]"
 
+  → RealmWright ruling (Hunter, 2026-06-18): EVERY new feature build = Opus 4.8 subagent,
+    NOT Sonnet. Overrides the "Sonnet = default execution" line above FOR BUILDS. Rationale:
+    quality floor for the paid product — the 4-pass quality sweep found craft gaps in the
+    Phase-2 Sonnet surfaces. Applies Phase 4 onward (P4.x / P5.x / P6.x). Haiku still fine for
+    trivial doc/file ops; planning/review still per-fit. "Anything getting built new = Opus."
+
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ## SKILL ROUTING — AUTO-TRIGGER RULES
