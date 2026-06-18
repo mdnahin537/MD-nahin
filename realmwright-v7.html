@@ -3091,6 +3091,21 @@ SECTION 7: MOTION & STATE STYLES
 .run-mode__end-btn{background:var(--color-gold);border:1px solid var(--color-gold);border-radius:var(--radius-none);color:var(--color-ink-elevated);cursor:pointer;font-family:var(--font-display),'Cinzel',serif;font-size:var(--text-h3);letter-spacing:.06em;text-transform:uppercase;padding:18px 48px;min-height:60px;transition:background var(--duration-instant),box-shadow var(--duration-instant)}
 .run-mode__end-btn:hover{background:var(--color-gold-pale);box-shadow:0 0 24px var(--ember-glow)}
 .run-mode__end-note{font-size:var(--text-label-sm);color:var(--color-text-faint);letter-spacing:.03em;text-align:center;max-width:520px}
+/* ── CANON QUICK-CHIPS (P4.2) — post-save summary -> tappable chips ───────── */
+.canon-chips{display:none;margin:0 var(--space-5) var(--space-4);padding:var(--space-4);background:var(--color-parchment-pale);border:1px solid var(--ember-color);border-radius:var(--radius-none)}
+.canon-chips.is-open{display:block}
+.canon-chips__head{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--space-3);margin-bottom:var(--space-3)}
+.canon-chips__title{font-family:var(--font-display),'Cinzel',serif;font-size:var(--text-label);color:var(--ember-color);text-transform:uppercase;letter-spacing:.10em;line-height:1.4}
+.canon-chips__hint{display:block;font-family:var(--font-body);font-size:var(--text-label-sm);color:var(--color-text-faint);text-transform:none;letter-spacing:.02em;font-weight:400;margin-top:var(--space-1)}
+.canon-chips__close{flex-shrink:0;background:transparent;border:1px solid var(--color-border-default);border-radius:var(--radius-none);color:var(--color-text-muted);cursor:pointer;width:28px;height:28px;line-height:1;font-size:18px;padding:0;display:flex;align-items:center;justify-content:center;transition:border-color var(--duration-instant),color var(--duration-instant)}
+.canon-chips__close:hover{border-color:var(--ember-color);color:var(--ember-color)}
+.canon-chips__list{display:flex;flex-direction:column;gap:var(--space-2)}
+.canon-chip{display:flex;align-items:stretch;gap:0;border:1px solid var(--color-gold-pale);border-radius:var(--radius-none);background:var(--color-surface);overflow:hidden}
+.canon-chip__body{flex:1;min-width:0;text-align:left;background:transparent;border:none;color:var(--color-ink);cursor:pointer;font-family:var(--font-body);font-size:var(--text-body-sm);line-height:1.45;padding:var(--space-3);word-break:break-word;transition:background var(--duration-instant),color var(--duration-instant)}
+.canon-chip__body:hover{background:var(--ember-glow-soft);color:var(--ember-color-bright)}
+.canon-chip__dismiss{flex-shrink:0;background:transparent;border:none;border-left:1px solid var(--color-gold-pale);color:var(--color-text-faint);cursor:pointer;width:40px;font-size:18px;line-height:1;padding:0;transition:background var(--duration-instant),color var(--duration-instant)}
+.canon-chip__dismiss:hover{background:var(--color-parchment-warm);color:var(--ember-color)}
+.canon-chips__count{margin-top:var(--space-3);font-size:var(--text-label-sm);color:var(--color-text-faint);letter-spacing:.04em;font-variant-numeric:tabular-nums}
 .run-mode__empty{font-size:var(--text-body-sm);color:var(--color-text-faint);padding:var(--space-3) 0;line-height:1.5}
 @media (max-width:1080px){.run-mode__grid{grid-template-columns:1fr;max-width:760px}}
 /* ─── FRONTS PANEL ─── */
@@ -4160,6 +4175,17 @@ SECTION 8: DOM STRUCTURE
     <button class="sc-panel__close" id="panel-sessions-close" aria-label="Close">×</button>
   </div>
   <div class="sc-panel__body" id="sessions-body"></div>
+  <!-- ── P4.2 — Canon quick-chips: tap a summary line to inscribe it ──────── -->
+  <div class="canon-chips" id="run-canon-chips" aria-hidden="true" aria-label="Inscribe summary lines">
+    <div class="canon-chips__head">
+      <div class="canon-chips__title">Inscribe from this session
+        <span class="canon-chips__hint">Tap a line to review it as a chronicle event · nothing is saved until you confirm</span>
+      </div>
+      <button class="canon-chips__close" id="run-canon-chips-close" type="button" aria-label="Dismiss all suggestions">×</button>
+    </div>
+    <div class="canon-chips__list" id="run-canon-chips-list"></div>
+    <div class="canon-chips__count" id="run-canon-chips-count"></div>
+  </div>
   <div class="sc-panel__actions">
     <button class="btn btn--primary" id="new-session-btn">+ New Session</button>
   </div>
@@ -13769,6 +13795,36 @@ const RunMode={
       +`${r.clocksFilled||0}/${r.clockCount||0} clocks filled - ${r.rollCount||0} rolls.`;
   },
 
+  // ── CANON QUICK-CHIPS (P4.2) ──────────────────────────────────────────────
+  // The no-AI half of the canon loop (the deterministic twin of the AI "Decipher"
+  // path). PURE: split a saved session summary into reviewable chip objects.
+  // One chip per line / sentence: newline-split first, then on sentence-ending
+  // periods so a run-on paragraph still yields one chip per claim. Whitespace and
+  // empty fragments are dropped. Each chip pre-seeds the EXISTING inscribe form's
+  // four fields; nothing here writes anything (UX-7 — review before apply).
+  //   name        = first ~6 words of the line (a scannable title)
+  //   description = the full line verbatim
+  //   visibility  = 'public'   (form default)
+  //   type        = 'Political' (form default)
+  _CHIP_NAME_WORDS:6,
+  _summaryToChips(text){
+    if(typeof text!=='string'||!text.trim())return [];
+    const lines=[];
+    text.split('\n').forEach(rawLine=>{
+      // Split a line on sentence-ending periods (".", "!", "?") but keep the
+      // terminator off the fragment. Ellipses and decimals are not special-cased
+      // (v1); the GM edits every chip before it commits, so a stray split is cheap.
+      const parts=rawLine.split(/(?<=[.!?])\s+|(?<=[.!?])$/);
+      parts.forEach(p=>{const s=p.replace(/\s+/g,' ').trim().replace(/[.!?]+$/,'').trim();if(s)lines.push(s);});
+    });
+    return lines.map(line=>({
+      name:line.split(/\s+/).slice(0,this._CHIP_NAME_WORDS).join(' '),
+      description:line,
+      visibility:'public',
+      type:'Political',
+    }));
+  },
+
   isOpen(){return !!document.getElementById('run-mode')?.classList.contains('is-open');},
 
   open(){
@@ -13822,6 +13878,70 @@ const RunMode={
     }else{
       showToast('Session record sheet unavailable.',[],3000);
     }
+  },
+
+  // ── CANON QUICK-CHIPS PANEL (P4.2) ────────────────────────────────────────
+  // Shown AFTER a session is saved (called from SHSPanels.saveSession). Renders
+  // each summary line/sentence as a tappable chip. Tap -> the REAL inscribe form,
+  // pre-filled, for review. Dismiss -> just drops the chip. Nothing auto-commits.
+  // Holds the live chip list so a tap reads the up-to-date description even after
+  // other chips are dismissed.
+  _chips:[],
+  showCanonChips(summary){
+    const panel=document.getElementById('run-canon-chips');
+    if(!panel)return;
+    this._chips=this._summaryToChips(summary);
+    if(!this._chips.length){this.hideCanonChips();return;}
+    this._renderCanonChips();
+    panel.classList.add('is-open');
+    panel.setAttribute('aria-hidden','false');
+    // Pull the panel into view; it lands below the saved-session list.
+    try{panel.scrollIntoView({behavior:'smooth',block:'nearest'});}catch(e){}
+  },
+  hideCanonChips(){
+    const panel=document.getElementById('run-canon-chips');
+    if(!panel)return;
+    this._chips=[];
+    panel.classList.remove('is-open');
+    panel.setAttribute('aria-hidden','true');
+    const list=document.getElementById('run-canon-chips-list');
+    if(list)list.innerHTML='';
+  },
+  _renderCanonChips(){
+    const list=document.getElementById('run-canon-chips-list');
+    if(!list)return;
+    const E=Utils.escHtml;
+    list.innerHTML=this._chips.map((c,i)=>
+      `<div class="canon-chip" data-chip="${i}">`
+        +`<button class="canon-chip__body" type="button" data-chip-inscribe="${i}" title="Review and inscribe this as a chronicle event">${E(c.description)}</button>`
+        +`<button class="canon-chip__dismiss" type="button" data-chip-dismiss="${i}" aria-label="Dismiss this line">×</button>`
+      +`</div>`
+    ).join('');
+    const count=document.getElementById('run-canon-chips-count');
+    if(count)count.textContent=this._chips.length===1?'1 line left':`${this._chips.length} lines left`;
+  },
+  // Tap a chip -> open the EXISTING inscribe modal pre-filled. Reuses Modals.open
+  // ('manual-event'), which clears ev-edit-id, so the modal's own Inscribe button
+  // routes through the real State.addEvent on confirm. We only seed the fields.
+  _inscribeChip(idx){
+    const chip=this._chips[idx];
+    if(!chip)return;
+    if(typeof Modals==='undefined'||!Modals.open){showToast('Inscribe form unavailable.',[],3000);return;}
+    if(!State.get()){showToast('No active realm.',[],3000);return;}
+    Modals.open('manual-event'); // resets fields + clears ev-edit-id => addEvent path
+    const nameEl=document.getElementById('ev-name');if(nameEl)nameEl.value=chip.name;
+    const descEl=document.getElementById('ev-desc');if(descEl)descEl.value=chip.description;
+    const typeEl=document.getElementById('ev-type');if(typeEl)typeEl.value=chip.type||'Political';
+    const visEl=document.getElementById('ev-vis');if(visEl)visEl.value=chip.visibility||'public';
+    const errEl=document.getElementById('ev-name-err');if(errEl)errEl.textContent='';
+    // The GM reviews/edits and presses Inscribe; the chip stays in the panel until
+    // dismissed, so an accidental cancel doesn't lose the line.
+  },
+  _dismissChip(idx){
+    if(idx<0||idx>=this._chips.length)return;
+    this._chips.splice(idx,1);
+    if(!this._chips.length){this.hideCanonChips();return;}
+    this._renderCanonChips();
   },
 
   // ── RENDER ──
@@ -13928,6 +14048,18 @@ const RunMode={
 
     // Live re-render: if a clock/secret changes from any path while open, reflect it.
     document.addEventListener('cp:changed',()=>{if(this.isOpen())this.render();});
+
+    // ── Canon quick-chips panel (P4.2) — delegated, lives in RunMode's own bind. ──
+    const chipPanel=document.getElementById('run-canon-chips');
+    if(chipPanel){
+      chipPanel.addEventListener('click',e=>{
+        const dismiss=e.target.closest('[data-chip-dismiss]');
+        if(dismiss){this._dismissChip(parseInt(dismiss.dataset.chipDismiss,10));return;}
+        const inscribe=e.target.closest('[data-chip-inscribe]');
+        if(inscribe){this._inscribeChip(parseInt(inscribe.dataset.chipInscribe,10));return;}
+        if(e.target.closest('#run-canon-chips-close')){this.hideCanonChips();return;}
+      });
+    }
   },
 };
 
@@ -14436,6 +14568,11 @@ const SHSPanels={
     }
     showToast(`Session ${added?.number||'?'} saved. World now Year ${n.currentYear}.`,_turnActions,_turnActions.length?8000:4000);
     // ── end P2.4a ─────────────────────────────────────────────────────────────
+    // ── P4.2 — Canon quick-chips: the no-AI ingestion path ─────────────────────
+    // Turn the just-saved summary into reviewable chips. Additive + opt-in: each
+    // chip is a one-tap pre-fill of the real inscribe form; nothing auto-commits.
+    if(summary&&typeof RunMode!=='undefined'&&RunMode.showCanonChips){RunMode.showCanonChips(summary);}
+    // ── end P4.2 ───────────────────────────────────────────────────────────────
     Render.all();
   },
 
