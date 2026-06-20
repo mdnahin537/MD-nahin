@@ -2150,6 +2150,49 @@ body.theme-manuscript .mode-dropdown__desc{color:var(--color-text-muted)}
   border-radius:var(--radius-sm);transition:border-color var(--duration-instant)}
 .workbench__add-custom-btn:hover{border-color:var(--color-gold-deep)}
 .workbench__add-custom-btn.is-hidden{display:none}
+/* House Rules (P5.1) */
+.workbench__house-rules{margin-top:var(--space-3);padding-top:var(--space-3);border-top:.5px solid var(--color-gold-pale)}
+.workbench__house-rules-hint{margin-top:var(--space-1);font-size:var(--text-label-sm);color:var(--color-text-muted);line-height:1.4}
+.hr-intro{font-size:var(--text-body-sm);color:var(--color-text-muted);margin-bottom:var(--space-3);line-height:1.45}
+.hr-tabs{display:flex;gap:var(--space-1);border-bottom:1px solid var(--color-gold-pale);margin-bottom:var(--space-4)}
+.hr-tab{appearance:none;background:none;border:none;border-bottom:2px solid transparent;color:var(--color-text-muted);
+  font-size:var(--text-label);font-weight:600;padding:var(--space-2) var(--space-3);cursor:pointer;margin-bottom:-1px}
+.hr-tab:hover{color:var(--color-ink)}
+.hr-tab.is-active{color:var(--color-gold-deep);border-bottom-color:var(--color-gold)}
+.hr-layout{display:grid;grid-template-columns:1fr 220px;gap:var(--space-4);align-items:start}
+@media (max-width:680px){.hr-layout{grid-template-columns:1fr}}
+.hr-main{min-width:0}
+.hr-preview{position:sticky;top:0;background:var(--color-ink-elevated);border:.5px solid var(--color-gold-pale);
+  border-radius:var(--radius-sm);padding:var(--space-3)}
+.hr-preview__title{font-size:var(--text-label-sm);text-transform:uppercase;letter-spacing:.05em;color:var(--color-gold-deep);margin-bottom:var(--space-2)}
+.hr-preview__body{font-size:var(--text-label-sm);color:var(--color-ink);line-height:1.5;max-height:340px;overflow-y:auto}
+.hr-preview__row{padding:var(--space-1) 0;border-bottom:.5px dotted var(--color-gold-pale)}
+.hr-preview__row:last-child{border-bottom:none}
+.hr-preview__fire{color:var(--color-crisis);font-weight:600}
+.hr-preview__armed{color:var(--color-text-muted)}
+.hr-statpick{margin-bottom:var(--space-4)}
+.hr-statpick label{display:block;font-size:var(--text-label-sm);color:var(--color-text-muted);margin-bottom:var(--space-1)}
+.hr-badge{display:inline-block;font-size:10px;line-height:1;padding:2px 5px;border-radius:3px;
+  background:var(--color-gold-pale);color:var(--color-gold-deep);margin-left:var(--space-2);vertical-align:middle}
+.hr-card{border:.5px solid var(--color-gold-pale);border-radius:var(--radius-sm);padding:var(--space-3);margin-bottom:var(--space-3)}
+.hr-card__head{display:flex;justify-content:space-between;align-items:center;gap:var(--space-2);margin-bottom:var(--space-2)}
+.hr-card__title{font-size:var(--text-label);font-weight:600;color:var(--color-ink)}
+.hr-row{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2);margin-bottom:var(--space-2)}
+.hr-field{display:flex;flex-direction:column;gap:2px}
+.hr-field--full{grid-column:1 / -1}
+.hr-field label{font-size:var(--text-label-sm);color:var(--color-text-muted)}
+.hr-field input,.hr-field select,.hr-field textarea{font-family:inherit;font-size:var(--text-label);
+  background:var(--color-bg);color:var(--color-ink);border:.5px solid var(--color-gold-pale);
+  border-radius:var(--radius-sm);padding:6px 8px}
+.hr-field textarea{resize:vertical;min-height:46px}
+.hr-btnrow{display:flex;gap:var(--space-2);flex-wrap:wrap;margin-top:var(--space-2)}
+.hr-mini{appearance:none;background:none;border:.5px solid var(--color-gold);color:var(--color-ink);
+  font-size:var(--text-label-sm);padding:4px 10px;border-radius:var(--radius-sm);cursor:pointer}
+.hr-mini:hover{border-color:var(--color-gold-deep)}
+.hr-mini--danger{border-color:var(--color-crisis);color:var(--color-crisis)}
+.hr-mini--primary{background:var(--color-gold);border-color:var(--color-gold);color:var(--color-ink)}
+.hr-empty{font-size:var(--text-label-sm);color:var(--color-text-muted);font-style:italic;padding:var(--space-2) 0}
+.hr-sectionhint{font-size:var(--text-label-sm);color:var(--color-text-muted);margin-bottom:var(--space-3);line-height:1.45}
 /* Characters in workbench */
 .char-list{display:flex;flex-direction:column;gap:var(--space-2)}
 .char-card{background:var(--color-parchment-warm);border:.5px solid var(--color-gold-pale);
@@ -3881,6 +3924,31 @@ SECTION 8: DOM STRUCTURE
   <div class="modal__footer">
     <button class="btn btn--secondary" data-close="custom-stat">Cancel</button>
     <button class="btn btn--primary" id="save-custom-stat-btn">Create stat</button>
+  </div>
+</div>
+<!-- House Rules Modal (P5.1) — forms-over-data editor: thresholds, custom pressures, drift -->
+<div class="modal modal--lg" id="modal-house-rules" role="dialog" aria-modal="true" aria-labelledby="house-rules-title">
+  <div class="modal__header">
+    <h2 class="modal__title" id="house-rules-title">⚖ House Rules</h2>
+    <button class="modal__close" data-close="house-rules" aria-label="Close">×</button>
+  </div>
+  <div class="modal__body">
+    <p class="hr-intro">Tune the rules your world runs on — entirely offline. Every edit you make is yours: it survives export and re-import.</p>
+    <div class="hr-tabs" role="tablist">
+      <button class="hr-tab is-active" data-hr-tab="thresholds" role="tab">Thresholds</button>
+      <button class="hr-tab" data-hr-tab="pressures" role="tab">Pressures</button>
+      <button class="hr-tab" data-hr-tab="drift" role="tab">World-Turn Drift</button>
+    </div>
+    <div class="hr-layout">
+      <div class="hr-main" id="house-rules-body"></div>
+      <aside class="hr-preview" aria-live="polite">
+        <div class="hr-preview__title">Live preview</div>
+        <div class="hr-preview__body" id="house-rules-preview"></div>
+      </aside>
+    </div>
+  </div>
+  <div class="modal__footer">
+    <button class="btn btn--primary" data-close="house-rules">Done</button>
   </div>
 </div>
 <!-- Character Modal -->
@@ -6735,15 +6803,28 @@ function buildNationFromSeed(seed){
       delete c.faction; // remove stale field
     }
   });
-  // Always build core stats fresh (so any threshold updates flow into existing nations on import)
+  // Build core stats fresh so changed CORE_STATS values flow into existing nations on import —
+  // BUT honour House-Rules edits. CC-LM1 (P5.1, the import-overwrite landmine): rebuilding the
+  // thresholds unconditionally silently wipes any threshold a user edited the moment they
+  // export→import. Fix: a core stat the user has edited carries `customized:true`; for those we
+  // DEEP-COPY the seed's thresholds and keep the flag, instead of overwriting from CORE_STATS.
+  // An un-customized stat still rebuilds from CORE_STATS (the rebuild's original purpose — a
+  // shipped threshold change reaching old saves — is preserved). Both directions are tested.
   CORE_STATS.forEach(c=>{    let value=c.default;
-    if(fullFormat&&isFullStat(seedStats[c.key])){value=seedStats[c.key].value;}
-    else if(seedStats[c.key]!=null&&typeof seedStats[c.key]==='number'){value=seedStats[c.key];}
+    const seedStat=seedStats[c.key];
+    const seedIsFull=fullFormat&&isFullStat(seedStat);
+    if(seedIsFull){value=seedStat.value;}
+    else if(seedStat!=null&&typeof seedStat==='number'){value=seedStat;}
+    const customized=!!(seedIsFull&&seedStat.customized);
+    const thresholds=customized
+      ? JSON.parse(JSON.stringify(Array.isArray(seedStat.thresholds)?seedStat.thresholds:[]))
+      : JSON.parse(JSON.stringify(c.thresholds||[]));
     n.stats[c.key]={
       key:c.key,displayName:c.displayName,value:CLAMP.statValue(value,c),
       min:c.min,max:c.max,weight:c.weight,category:c.category,
       description:STAT_DESC[c.key]||'',isCore:true,isCustom:false,
-      thresholds:JSON.parse(JSON.stringify(c.thresholds||[]))
+      ...(customized?{customized:true}:{}),
+      thresholds
     };
   });
   // Preserve custom stats from imports (was silently dropped — only CORE_STATS were rebuilt)
@@ -6761,10 +6842,20 @@ function buildNationFromSeed(seed){
         category:stat.category||'Political',
         description:stat.description||'',
         isCore:false,isCustom:true,
+        // Custom stats never hit the CORE_STATS rebuild, so their thresholds already survive
+        // import. We carry the `customized` flag through only so the House-Rules editor can badge
+        // an edited custom stat the same way it badges an edited core one (CC-LM1 parity).
+        ...(stat.customized?{customized:true}:{}),
         thresholds:JSON.parse(JSON.stringify(stat.thresholds||[]))
       };
     });
   }
+  // CC-LM1 (P5.1): House-Rules custom pressure annotations must survive export→import the same
+  // named-landmine way as turnLog/pressArchive — without this whitelist every custom pressure a
+  // GM authored is silently dropped on the next re-import. Non-array → [] (a tampered import
+  // cannot inject junk). These are GM-facing house rules surfaced in the editor + live preview;
+  // the global drift loop (WorldTurn.DRIFT_RULES) is the separately-edited engine lever.
+  n.housePressures=Array.isArray(seed.housePressures)?JSON.parse(JSON.stringify(seed.housePressures)):[];
   return n;
 }
 function createDefaultState(){const m=buildNationFromSeed(SEED_NATIONS[0]);return{schemaVersion:SCHEMA_VERSION,meta:{activeNationId:m.id,createdAt:Utils.now(),lastUpdatedAt:Utils.now(),settings:{...DEFAULT_SETTINGS},workflowState:{promptPending:null},firstRunComplete:false,preferredMode:null,snapshots:[],lastSnapshotAt:null,campaignPrep:emptyCampaignPrep()},nations:[m]};}
@@ -7293,6 +7384,103 @@ const State={
     this._touch(nid);
     document.dispatchEvent(new CustomEvent('sc:changed',{detail:{fields:['stat','customStat'],nid}}));
     this.persist();
+  },
+  // ── House Rules (P5.1) — threshold + custom-pressure writers. ────────────────────────────────
+  // Every threshold write marks the stat customized:true. That flag is the CC-LM1 contract:
+  // buildNationFromSeed reads it on import and preserves the user's thresholds instead of
+  // rebuilding them from CORE_STATS. Without the flag the edit is silently wiped on re-import.
+  // Works identically for core and custom stats (the engine reads stat.thresholds generically).
+  setStatThresholds(nid,key,thresholds){
+    const n=this.data.nations.find(n=>n.id===nid);
+    if(!n||!n.stats[key])return false;
+    const clean=(Array.isArray(thresholds)?thresholds:[]).map(t=>({
+      atValue:Number.isFinite(Number(t.atValue))?Math.round(Number(t.atValue)):0,
+      direction:t.direction==='rising'?'rising':'falling',
+      eventName:String(t.eventName||'').slice(0,120),
+      eventDesc:String(t.eventDesc||'').slice(0,600),
+      eventWeight:CLAMP.eventWeight(t.eventWeight),
+      eventType:CLAMP.eventType(t.eventType),
+    }));
+    this.pushUndo();
+    const s=n.stats[key];
+    s.thresholds=clean;
+    s.customized=true; // CC-LM1: survives export→import via buildNationFromSeed.
+    this._touch(nid);
+    document.dispatchEvent(new CustomEvent('sc:changed',{detail:{fields:['stat','houseRules'],nid}}));
+    this.persist();
+    return true;
+  },
+  // Reset a core stat's thresholds back to the shipped CORE_STATS baseline and clear the flag —
+  // an un-customized core stat once again tracks any future shipped threshold change (UX-3:
+  // presets/defaults are always one click away). No-op for custom stats (they have no baseline).
+  resetStatThresholds(nid,key){
+    const n=this.data.nations.find(n=>n.id===nid);
+    if(!n||!n.stats[key])return false;
+    const def=CORE_STATS.find(c=>c.key===key);
+    if(!def)return false;
+    this.pushUndo();
+    const s=n.stats[key];
+    s.thresholds=JSON.parse(JSON.stringify(def.thresholds||[]));
+    delete s.customized;
+    this._touch(nid);
+    document.dispatchEvent(new CustomEvent('sc:changed',{detail:{fields:['stat','houseRules'],nid}}));
+    this.persist();
+    return true;
+  },
+  // Custom pressure annotations: condition template (stat above/below a value) → prose the GM
+  // reads. Stored on the nation (whitelisted in buildNationFromSeed) and surfaced live in the
+  // House-Rules preview as active/inactive against current stats. They are GM-facing house rules;
+  // the global per-turn drift loop is edited separately via setDriftRule.
+  setHousePressures(nid,pressures){
+    const n=this.data.nations.find(n=>n.id===nid);
+    if(!n)return false;
+    n.housePressures=Array.isArray(pressures)?pressures.map(p=>({
+      id:p.id||Utils.uuid(),
+      statKey:String(p.statKey||''),
+      op:p.op==='above'?'above':'below',
+      atValue:Number.isFinite(Number(p.atValue))?Math.round(Number(p.atValue)):0,
+      text:String(p.text||'').slice(0,400),
+    })):[];
+    this.pushUndo();
+    this._touch(nid);
+    document.dispatchEvent(new CustomEvent('sc:changed',{detail:{fields:['houseRules'],nid}}));
+    this.persist();
+    return true;
+  },
+  // Drift-rule editor lever (P5.1): edits the GLOBAL WorldTurn.DRIFT_RULES in place — the array
+  // WorldTurn.compute reads every turn, so a changed delta/ruleText drives the next World Turn
+  // with zero engine changes. Edits the existing entry's contents (the array reference held by
+  // WorldTurn stays valid). Global by design — house rules apply to every nation's world-turn.
+  setDriftRule(ruleId,patch){
+    if(typeof WorldTurn==='undefined'||!Array.isArray(WorldTurn.DRIFT_RULES))return false;
+    const rule=WorldTurn.DRIFT_RULES.find(r=>r.ruleId===ruleId);
+    if(!rule)return false;
+    if(Array.isArray(patch.drifts)){
+      rule.drifts=patch.drifts.map(d=>({
+        statKey:String(d.statKey||''),
+        delta:Utils.clamp(Math.round(Number(d.delta)||0),-10,10),
+      })).filter(d=>d.statKey);
+    }
+    if(typeof patch.ruleText==='string')rule.ruleText=patch.ruleText.slice(0,400);
+    // Persist the override so it survives reload: store the diff under meta.settings.
+    this.data.meta=this.data.meta||{};this.data.meta.settings=this.data.meta.settings||{};
+    const ov=this.data.meta.settings.driftOverrides=this.data.meta.settings.driftOverrides||{};
+    ov[ruleId]={drifts:JSON.parse(JSON.stringify(rule.drifts)),ruleText:rule.ruleText};
+    document.dispatchEvent(new CustomEvent('sc:changed',{detail:{fields:['houseRules']}}));
+    this.persist();
+    return true;
+  },
+  resetDriftRule(ruleId){
+    if(typeof DRIFT_RULES_DEFAULTS==='undefined')return false;
+    const def=DRIFT_RULES_DEFAULTS.find(r=>r.ruleId===ruleId);
+    const rule=(typeof WorldTurn!=='undefined'?WorldTurn.DRIFT_RULES:[]).find(r=>r.ruleId===ruleId);
+    if(!def||!rule)return false;
+    rule.drifts=JSON.parse(JSON.stringify(def.drifts));
+    rule.ruleText=def.ruleText;
+    if(this.data.meta?.settings?.driftOverrides)delete this.data.meta.settings.driftOverrides[ruleId];
+    document.dispatchEvent(new CustomEvent('sc:changed',{detail:{fields:['houseRules']}}));
+    this.persist();
+    return true;
   },
   addCharacter(nid,cfg){
     const n=this.data.nations.find(n=>n.id===nid);
@@ -8329,6 +8517,28 @@ const WorldTurn={
     };
   },
 };
+// DRIFT_RULES_DEFAULTS (P5.1) — a deep snapshot of the SHIPPED drift rules, captured before any
+// House-Rules edit can mutate WorldTurn.DRIFT_RULES in place. State.resetDriftRule restores from
+// this, so "reset to default" always returns the true shipped delta/prose no matter what was
+// edited or persisted. Frozen so it can never be mutated by a shared reference.
+const DRIFT_RULES_DEFAULTS=JSON.parse(JSON.stringify(WorldTurn.DRIFT_RULES));
+Object.freeze(DRIFT_RULES_DEFAULTS);
+DRIFT_RULES_DEFAULTS.forEach(r=>{Object.freeze(r);Object.freeze(r.drifts);r.drifts.forEach(d=>Object.freeze(d));});
+// Re-apply any persisted drift-rule overrides onto the live array on load. The editor writes
+// overrides to meta.settings.driftOverrides; this makes them survive a page reload by patching
+// the live rules WorldTurn.compute reads. Idempotent and guarded.
+function applyDriftOverrides(state){
+  try{
+    const ov=state?.meta?.settings?.driftOverrides;
+    if(!ov||typeof ov!=='object')return;
+    Object.entries(ov).forEach(([ruleId,patch])=>{
+      const rule=WorldTurn.DRIFT_RULES.find(r=>r.ruleId===ruleId);
+      if(!rule||!patch)return;
+      if(Array.isArray(patch.drifts))rule.drifts=JSON.parse(JSON.stringify(patch.drifts));
+      if(typeof patch.ruleText==='string')rule.ruleText=patch.ruleText;
+    });
+  }catch(e){/* drift overrides are best-effort cosmetic-engine state; never block boot */}
+}
 // ─── WHISPER LEDGER (P4.5) — who has heard the news ───────────────────────────
 // A deterministic knowledge layer that rides on top of the engine. Each PUBLIC event
 // carries `knownBy={tier, leakedTo}` where tier is how far the news has travelled:
@@ -8660,6 +8870,8 @@ const Render={
         </div>`;
     custom.forEach(s=>html+=`<div class="workbench__custom-stat-row"><div class="workbench__custom-stat-dot"></div><span class="workbench__custom-stat-name">${Utils.escHtml(s.displayName)}</span><button class="workbench__custom-stat-edit" data-edit="${s.key}">edit</button><button class="workbench__custom-stat-delete" data-del="${s.key}">×</button></div>`);
     html+=`<button class="workbench__add-custom-btn${custom.length>=20?' is-hidden':''}" id="add-custom-btn">+ Add custom stat</button></div>`;
+    // P5.1 House Rules entry point — forms-over-data editor for thresholds, pressures, and drift.
+    html+=`<div class="workbench__house-rules"><button class="workbench__add-custom-btn" id="open-house-rules-btn" style="width:100%;justify-content:center">⚖ House Rules — thresholds, pressures &amp; drift</button><div class="workbench__house-rules-hint">Tune what events fire, what the World Turn does, and your own pressures. No AI required.</div></div>`;
     ctr.innerHTML=html;
     const advNid=n.id;
     ['pop','ter','cap'].forEach(f=>{
@@ -8677,6 +8889,7 @@ const Render={
     });
     const addBtn=document.getElementById('add-custom-btn');
     if(addBtn)addBtn.addEventListener('click',()=>Modals.open('custom-stat'));
+    document.getElementById('open-house-rules-btn')?.addEventListener('click',()=>{if(typeof HouseRules!=='undefined')HouseRules.open();});
     ctr.querySelectorAll('[data-del]').forEach(b=>b.addEventListener('click',()=>{const k=b.dataset.del;if(confirm(`Delete "${State.get().stats[k]?.displayName}"?`)){State.removeCustomStat(State.get().id,k);Render.workbench();}}));
     ctr.querySelectorAll('[data-edit]').forEach(b=>b.addEventListener('click',()=>{const k=b.dataset.edit;const s=State.get().stats[k];if(s)Modals.openEditCustomStat(s);}));
   },
@@ -9254,6 +9467,293 @@ const FocusTrap={
       try{trap.opener.focus();}catch(_){}
     }
   }
+};
+// ════════════════════════════════════════════════════════════════════════════════════════════
+// HOUSE RULES (P5.1) — forms-over-data editor for the rules the world runs on.
+//   • Thresholds: edit the {atValue,direction,eventName,eventDesc,eventWeight,eventType} array on
+//     ANY core or custom stat. Every edit marks the stat customized:true (State.setStatThresholds),
+//     which is what survives export→import (CC-LM1). The engine (checkThresholds / WorldTurn) reads
+//     stat.thresholds generically — ZERO engine changes.
+//   • Pressures: GM-facing condition→prose annotations stored on the nation; rendered live as
+//     active/inactive against current stats. (The global drift loop is the Drift tab below.)
+//   • Drift: edit WorldTurn.DRIFT_RULES in place — the array the World Turn reads every turn.
+//   • Live preview: "fires at Food<40 — Food is 44 now" feedback as you edit.
+//   • CC-DUAL: the whole editor is no-AI. One optional, thin "draft thresholds" generator routes
+//     into the canon-review pattern (AI half) and never auto-applies.
+//   • UX-3: presets/defaults first (reset-to-default, a starter template), blank editor second.
+//   • CC-HALAL: all preset prose is civic/economic — never fate/omen/prophecy/destiny.
+// Wired from bootstrap via HouseRules.bind() — NOT the bindEventListeners monolith.
+// ════════════════════════════════════════════════════════════════════════════════════════════
+const HouseRules={
+  _tab:'thresholds',
+  _statKey:null,       // currently-edited stat in the Thresholds tab
+  _draft:null,         // in-flight threshold rows for the selected stat (committed on Save)
+  _bound:false,
+  bind(){
+    if(this._bound)return; this._bound=true;
+    // Re-render the body whenever this modal opens (the F8 surface-map listener pattern, L20040).
+    document.addEventListener('sc:modal-open',e=>{ if(e.detail==='house-rules')this._renderActive(); });
+    // Live-update the preview if state changes underneath us while open.
+    document.addEventListener('sc:changed',()=>{ if(Modals._current==='house-rules')this._renderPreview(); });
+    // Tab switching (delegated, bound once — the tab buttons are static in the modal markup).
+    document.getElementById('modal-house-rules')?.querySelectorAll('.hr-tab').forEach(btn=>{
+      btn.addEventListener('click',()=>{ this._draft=null; this._pressureDraft=null; this.setTab(btn.dataset.hrTab); });
+    });
+  },
+  open(){
+    if(!State.get()){showToast('Create or open a nation first.');return;}
+    this._statKey=null;this._draft=null;
+    Modals.open('house-rules'); // fires sc:modal-open → _renderActive()
+  },
+  setTab(t){ this._tab=t; this._renderActive(); },
+  _renderActive(){
+    const modal=document.getElementById('modal-house-rules');if(!modal)return;
+    modal.querySelectorAll('.hr-tab').forEach(b=>b.classList.toggle('is-active',b.dataset.hrTab===this._tab));
+    if(this._tab==='thresholds')this._renderThresholds();
+    else if(this._tab==='pressures')this._renderPressures();
+    else this._renderDrift();
+    this._renderPreview();
+  },
+  // ── helpers ──
+  _stat(){ const n=State.get(); return n&&this._statKey?n.stats[this._statKey]:null; },
+  _statList(){ const n=State.get(); return n?Object.values(n.stats):[]; },
+  _blankThreshold(stat){
+    // UX-3: a sensible starter near the low end (or high end for max-leaning stats), not an empty row.
+    const mid=Math.round((stat.min+stat.max)/2);
+    return {atValue:mid,direction:'falling',eventName:'',eventDesc:'',eventWeight:-5,eventType:stat.category&&CLAMP.EVENT_TYPES.includes(stat.category)?stat.category:'Political'};
+  },
+  // ════════════════ TAB 1 — THRESHOLDS ════════════════
+  _renderThresholds(){
+    const host=document.getElementById('house-rules-body');if(!host)return;
+    const n=State.get();const E=Utils.escHtml;
+    const stats=this._statList();
+    if(!this._statKey||!n.stats[this._statKey])this._statKey=stats[0]?.key||null;
+    const stat=this._stat();
+    // Pull the live draft from the selected stat the first time we land on it.
+    if(stat&&(this._draft===null))this._draft=JSON.parse(JSON.stringify(stat.thresholds||[]));
+    let html=`<div class="hr-sectionhint">A threshold fires an event the first time a stat crosses a value. Edits are saved to <em>this</em> nation and survive export.</div>`;
+    html+=`<div class="hr-statpick"><label for="hr-stat-select">Stat</label><select class="form-select" id="hr-stat-select">`;
+    stats.forEach(s=>{html+=`<option value="${E(s.key)}"${s.key===this._statKey?' selected':''}>${E(s.displayName)}${s.customized?' • edited':''}${s.isCustom?' (custom)':''}</option>`;});
+    html+=`</select></div>`;
+    if(!stat){host.innerHTML=html+'<div class="hr-empty">No stats yet.</div>';return;}
+    html+=`<div class="hr-card__head"><span class="hr-card__title">${E(stat.displayName)} thresholds${stat.customized?'<span class="hr-badge">edited</span>':''}</span><span style="font-size:var(--text-label-sm);color:var(--color-text-muted)">range ${stat.min}–${stat.max}, now ${stat.value}</span></div>`;
+    const rows=this._draft||[];
+    if(!rows.length)html+=`<div class="hr-empty">No thresholds on this stat yet.</div>`;
+    rows.forEach((t,i)=>{
+      html+=`<div class="hr-card" data-thr="${i}">
+        <div class="hr-row">
+          <div class="hr-field"><label>When value is</label><select data-f="direction" data-i="${i}"><option value="falling"${t.direction==='falling'?' selected':''}>falling below</option><option value="rising"${t.direction==='rising'?' selected':''}>rising above</option></select></div>
+          <div class="hr-field"><label>at value</label><input type="number" data-f="atValue" data-i="${i}" value="${Number(t.atValue)}" min="${stat.min}" max="${stat.max}"></div>
+        </div>
+        <div class="hr-row">
+          <div class="hr-field hr-field--full"><label>Event name</label><input type="text" data-f="eventName" data-i="${i}" value="${E(t.eventName||'')}" placeholder="e.g. Lean Year Begins" maxlength="120"></div>
+        </div>
+        <div class="hr-row">
+          <div class="hr-field hr-field--full"><label>Event description — {year} and {nation} are filled in</label><textarea data-f="eventDesc" data-i="${i}" placeholder="The harvest fails in {year}…" maxlength="600">${E(t.eventDesc||'')}</textarea></div>
+        </div>
+        <div class="hr-row">
+          <div class="hr-field"><label>Stability weight (−30…+30)</label><input type="number" data-f="eventWeight" data-i="${i}" value="${Number(t.eventWeight)||0}" min="-30" max="30"></div>
+          <div class="hr-field"><label>Type</label><select data-f="eventType" data-i="${i}">${CLAMP.EVENT_TYPES.map(et=>`<option${et===t.eventType?' selected':''}>${et}</option>`).join('')}</select></div>
+        </div>
+        <div class="hr-btnrow"><button class="hr-mini hr-mini--danger" data-thr-del="${i}">Remove threshold</button></div>
+      </div>`;
+    });
+    html+=`<div class="hr-btnrow">
+      <button class="hr-mini" id="hr-thr-add">+ Add threshold</button>
+      <button class="hr-mini hr-mini--primary" id="hr-thr-save">Save thresholds</button>
+      ${stat.isCore?`<button class="hr-mini" id="hr-thr-reset">Reset to default</button>`:''}
+      <button class="hr-mini" id="hr-thr-ai" title="Optional: drafts editable rows with AI, then you review">✨ Draft with AI</button>
+    </div>`;
+    host.innerHTML=html;
+    this._wireThresholds();
+  },
+  _wireThresholds(){
+    const host=document.getElementById('house-rules-body');if(!host)return;
+    const sel=document.getElementById('hr-stat-select');
+    if(sel)sel.addEventListener('change',()=>{ this._commitDraftToMemory(); this._statKey=sel.value; this._draft=null; this._renderThresholds(); this._renderPreview(); });
+    host.querySelectorAll('[data-f]').forEach(el=>{
+      const handler=()=>{ this._readRow(el); this._renderPreview(); };
+      el.addEventListener('input',handler); el.addEventListener('change',handler);
+    });
+    host.querySelectorAll('[data-thr-del]').forEach(b=>b.addEventListener('click',()=>{ const i=+b.dataset.thrDel; this._draft.splice(i,1); this._renderThresholds(); this._renderPreview(); }));
+    document.getElementById('hr-thr-add')?.addEventListener('click',()=>{ this._draft=this._draft||[]; this._draft.push(this._blankThreshold(this._stat())); this._renderThresholds(); this._renderPreview(); });
+    document.getElementById('hr-thr-save')?.addEventListener('click',()=>this._saveThresholds());
+    document.getElementById('hr-thr-reset')?.addEventListener('click',()=>this._resetThresholds());
+    document.getElementById('hr-thr-ai')?.addEventListener('click',()=>this._draftThresholdsAI());
+  },
+  _readRow(el){
+    const i=+el.dataset.i, f=el.dataset.f;
+    if(!this._draft||!this._draft[i])return;
+    let v=el.value;
+    if(f==='atValue'||f==='eventWeight')v=Number(v)||0;
+    this._draft[i][f]=v;
+  },
+  _commitDraftToMemory(){ /* draft is read live into this._draft; nothing extra to flush */ },
+  _saveThresholds(){
+    const n=State.get();if(!n||!this._statKey)return;
+    const ok=State.setStatThresholds(n.id,this._statKey,this._draft||[]);
+    if(ok){ this._draft=JSON.parse(JSON.stringify(n.stats[this._statKey].thresholds||[])); showToast('Thresholds saved — they will survive export and re-import.'); Render.workbench(); this._renderThresholds(); this._renderPreview(); }
+  },
+  _resetThresholds(){
+    const n=State.get();if(!n||!this._statKey)return;
+    if(!confirm('Reset this stat’s thresholds to the shipped defaults? Your edits to this stat will be cleared.'))return;
+    if(State.resetStatThresholds(n.id,this._statKey)){ this._draft=JSON.parse(JSON.stringify(n.stats[this._statKey].thresholds||[])); showToast('Reset to default thresholds.'); Render.workbench(); this._renderThresholds(); this._renderPreview(); }
+  },
+  // CC-DUAL: thin optional AI generator. Builds a copy-paste prompt that returns the SAME editable
+  // threshold shape; the user pastes the AI's JSON, we load it as DRAFT rows (never auto-saved).
+  _draftThresholdsAI(){
+    const stat=this._stat();if(!stat)return;
+    const prompt=`You are drafting worldbuilding thresholds for a fictional nation's stat. All content is fiction.\nStat: "${stat.displayName}" (range ${stat.min}–${stat.max}).\nReturn ONLY a JSON array of 2–3 threshold objects, each EXACTLY:\n{"atValue":<int in range>,"direction":"falling"|"rising","eventName":"<short>","eventDesc":"<one sentence; may use {year} and {nation}>","eventWeight":<int -30..30>,"eventType":"Political|Military|Economic|Cultural|Social|Diplomatic|Natural"}\nNo prose, no markdown — just the JSON array. Keep it grounded and secular (civic/economic/natural causes; never fate, omen, prophecy, or destiny).`;
+    const pasted=window.prompt(`Copy this prompt into your AI, then paste its JSON array back here.\n\n${prompt}\n\nPaste the AI's JSON array:`);
+    if(!pasted)return;
+    try{
+      const arr=JSON.parse(pasted.trim());
+      if(!Array.isArray(arr))throw new Error('Expected a JSON array.');
+      // Load as DRAFT only — the user still reviews and must click Save (CC-DUAL: AI never commits).
+      this._draft=arr.map(t=>({
+        atValue:Utils.clamp(Math.round(Number(t.atValue)||stat.min),stat.min,stat.max),
+        direction:t.direction==='rising'?'rising':'falling',
+        eventName:String(t.eventName||'').slice(0,120),
+        eventDesc:String(t.eventDesc||'').slice(0,600),
+        eventWeight:CLAMP.eventWeight(t.eventWeight),
+        eventType:CLAMP.eventType(t.eventType),
+      }));
+      this._renderThresholds();this._renderPreview();
+      showToast('AI draft loaded — review each row, then Save to keep it.');
+    }catch(err){ showToast('Could not read that as a JSON array. '+(err.message||'')); }
+  },
+  // ════════════════ TAB 2 — PRESSURES (GM-facing condition→prose) ════════════════
+  _renderPressures(){
+    const host=document.getElementById('house-rules-body');if(!host)return;
+    const n=State.get();const E=Utils.escHtml;const stats=this._statList();
+    const list=Array.isArray(n.housePressures)?n.housePressures:[];
+    let html=`<div class="hr-sectionhint">Your own pressures: when a stat is above or below a value, surface a line of prose. These read live in the preview and travel with your export. (The World Turn’s built-in drift is the next tab.)</div>`;
+    if(!list.length)html+=`<div class="hr-empty">No custom pressures yet. Add one, or load a starter.</div>`;
+    list.forEach((p,i)=>{
+      html+=`<div class="hr-card" data-pr="${i}">
+        <div class="hr-row">
+          <div class="hr-field"><label>Stat</label><select data-pf="statKey" data-i="${i}">${stats.map(s=>`<option value="${E(s.key)}"${s.key===p.statKey?' selected':''}>${E(s.displayName)}</option>`).join('')}</select></div>
+          <div class="hr-field"><label>is</label><select data-pf="op" data-i="${i}"><option value="below"${p.op==='below'?' selected':''}>below</option><option value="above"${p.op==='above'?' selected':''}>above</option></select></div>
+        </div>
+        <div class="hr-row">
+          <div class="hr-field"><label>value</label><input type="number" data-pf="atValue" data-i="${i}" value="${Number(p.atValue)||0}"></div>
+          <div class="hr-field"></div>
+        </div>
+        <div class="hr-row"><div class="hr-field hr-field--full"><label>Then this is true:</label><textarea data-pf="text" data-i="${i}" maxlength="400" placeholder="e.g. The granaries are running dry; the council is rationing bread.">${E(p.text||'')}</textarea></div></div>
+        <div class="hr-btnrow"><button class="hr-mini hr-mini--danger" data-pr-del="${i}">Remove</button></div>
+      </div>`;
+    });
+    html+=`<div class="hr-btnrow"><button class="hr-mini" id="hr-pr-add">+ Add pressure</button><button class="hr-mini" id="hr-pr-preset">Load a starter</button><button class="hr-mini hr-mini--primary" id="hr-pr-save">Save pressures</button></div>`;
+    host.innerHTML=html;
+    this._wirePressures();
+  },
+  _wirePressures(){
+    const host=document.getElementById('house-rules-body');if(!host)return;
+    host.querySelectorAll('[data-pf]').forEach(el=>{
+      const h=()=>{ this._pressureDraft=this._collectPressures(); this._renderPreview(); };
+      el.addEventListener('input',h); el.addEventListener('change',h);
+    });
+    host.querySelectorAll('[data-pr-del]').forEach(b=>b.addEventListener('click',()=>{ const list=this._collectPressures(); list.splice(+b.dataset.prDel,1); this._pressureDraft=list; this._renderPressuresFrom(list); }));
+    document.getElementById('hr-pr-add')?.addEventListener('click',()=>{ const list=this._collectPressures(); const s=this._statList()[0]; list.push({id:Utils.uuid(),statKey:s?.key||'',op:'below',atValue:s?Math.round((s.min+s.max)/2):40,text:''}); this._pressureDraft=list; this._renderPressuresFrom(list); });
+    document.getElementById('hr-pr-preset')?.addEventListener('click',()=>{ const list=this._collectPressures(); const have=this._statList().find(s=>s.key==='food_production')||this._statList()[0]; list.push({id:Utils.uuid(),statKey:have?.key||'',op:'below',atValue:40,text:'The granaries are running low; the council has begun rationing bread in the capital.'}); this._pressureDraft=list; this._renderPressuresFrom(list); });
+    document.getElementById('hr-pr-save')?.addEventListener('click',()=>{ const n=State.get(); if(State.setHousePressures(n.id,this._collectPressures())){ showToast('Custom pressures saved.'); this._renderPreview(); } });
+  },
+  _renderPressuresFrom(list){ const n=State.get(); n.housePressures=list; this._renderPressures(); this._renderPreview(); },
+  _collectPressures(){
+    const host=document.getElementById('house-rules-body');if(!host)return [];
+    const cards=[...host.querySelectorAll('[data-pr]')];
+    return cards.map(card=>{
+      const i=card.dataset.pr;
+      const get=f=>host.querySelector(`[data-pf="${f}"][data-i="${i}"]`);
+      return {id:Utils.uuid(),statKey:get('statKey')?.value||'',op:get('op')?.value==='above'?'above':'below',atValue:Number(get('atValue')?.value)||0,text:get('text')?.value||''};
+    });
+  },
+  // ════════════════ TAB 3 — WORLD-TURN DRIFT (edits global WorldTurn.DRIFT_RULES) ════════════════
+  _renderDrift(){
+    const host=document.getElementById('house-rules-body');if(!host)return;
+    const E=Utils.escHtml;
+    const rules=(typeof WorldTurn!=='undefined'&&Array.isArray(WorldTurn.DRIFT_RULES))?WorldTurn.DRIFT_RULES:[];
+    const statName=k=>{const c=CORE_STATS.find(x=>x.key===k);return c?c.displayName:k;};
+    let html=`<div class="hr-sectionhint">When a pressure is active, the World Turn drifts these stats each season. Tune the numbers and the prose; the next World Turn uses your version. (Applies to every nation.)</div>`;
+    rules.forEach(r=>{
+      html+=`<div class="hr-card" data-drift="${E(r.ruleId)}">
+        <div class="hr-card__head"><span class="hr-card__title">${E(r.ruleId)}</span></div>`;
+      r.drifts.forEach((d,di)=>{
+        html+=`<div class="hr-row">
+          <div class="hr-field"><label>Stat</label><input type="text" value="${E(statName(d.statKey))}" disabled></div>
+          <div class="hr-field"><label>per-season delta (−10…+10)</label><input type="number" data-df="delta" data-rule="${E(r.ruleId)}" data-di="${di}" value="${Number(d.delta)||0}" min="-10" max="10"></div>
+        </div>`;
+      });
+      html+=`<div class="hr-row"><div class="hr-field hr-field--full"><label>Prose shown in the turn report</label><textarea data-df="ruleText" data-rule="${E(r.ruleId)}" maxlength="400">${E(r.ruleText||'')}</textarea></div></div>`;
+      html+=`<div class="hr-btnrow"><button class="hr-mini hr-mini--primary" data-drift-save="${E(r.ruleId)}">Save</button><button class="hr-mini" data-drift-reset="${E(r.ruleId)}">Reset</button></div>`;
+      html+=`</div>`;
+    });
+    host.innerHTML=html;
+    this._wireDrift();
+  },
+  _wireDrift(){
+    const host=document.getElementById('house-rules-body');if(!host)return;
+    host.querySelectorAll('[data-drift-save]').forEach(b=>b.addEventListener('click',()=>{
+      const ruleId=b.dataset.driftSave;
+      const drifts=[...host.querySelectorAll(`[data-df="delta"][data-rule="${CSS.escape(ruleId)}"]`)].map(inp=>{
+        const di=+inp.dataset.di; const rule=WorldTurn.DRIFT_RULES.find(r=>r.ruleId===ruleId);
+        return {statKey:rule.drifts[di].statKey, delta:Number(inp.value)||0};
+      });
+      const txt=host.querySelector(`[data-df="ruleText"][data-rule="${CSS.escape(ruleId)}"]`)?.value;
+      if(State.setDriftRule(ruleId,{drifts,ruleText:txt})){ showToast('Drift rule saved — the next World Turn uses it.'); this._renderPreview(); }
+    }));
+    host.querySelectorAll('[data-drift-reset]').forEach(b=>b.addEventListener('click',()=>{
+      const ruleId=b.dataset.driftReset;
+      if(State.resetDriftRule(ruleId)){ showToast('Drift rule reset to default.'); this._renderDrift(); this._renderPreview(); }
+    }));
+  },
+  // ════════════════ LIVE PREVIEW ════════════════
+  // "fires at Food<40 — Food is 44 now" style feedback. Pure read of current state + the in-flight
+  // draft. Never mutates. The centrepiece of the no-AI value: you see exactly what will happen.
+  _renderPreview(){
+    const box=document.getElementById('house-rules-preview');if(!box)return;
+    const n=State.get();const E=Utils.escHtml;
+    if(!n){box.innerHTML='';return;}
+    let rows=[];
+    if(this._tab==='thresholds'){
+      const stat=this._stat();
+      const list=this._draft||(stat?stat.thresholds:[])||[];
+      if(!stat){box.innerHTML='<div class="hr-empty">No stat selected.</div>';return;}
+      const cur=stat.value;
+      if(!list.length)rows.push(`<div class="hr-preview__row hr-preview__armed">No thresholds on ${E(stat.displayName)} yet.</div>`);
+      list.forEach(t=>{
+        const at=Number(t.atValue)||0;
+        const sign=t.direction==='falling'?'‹':'›'; // ‹ below / › above
+        const fires=t.direction==='falling'?cur<at:cur>=at;
+        const name=E(t.eventName||'(unnamed)');
+        const dist=t.direction==='falling'?(cur-at):(at-cur);
+        const status=fires
+          ? `<span class="hr-preview__fire">FIRES NOW</span>`
+          : `<span class="hr-preview__armed">armed — ${Math.abs(dist)} to go</span>`;
+        rows.push(`<div class="hr-preview__row">${name} fires at ${E(stat.displayName)}${sign}${at} — ${E(stat.displayName)} is ${cur} now. ${status}</div>`);
+      });
+    }else if(this._tab==='pressures'){
+      const list=this._pressureDraft||(Array.isArray(n.housePressures)?n.housePressures:[]);
+      const statName=k=>{const s=n.stats[k];return s?s.displayName:k;};
+      if(!list.length)rows.push('<div class="hr-preview__row hr-preview__armed">No custom pressures yet.</div>');
+      list.forEach(p=>{
+        const s=n.stats[p.statKey];const cur=s?s.value:null;
+        const active=cur!=null&&(p.op==='below'?cur<p.atValue:cur>p.atValue);
+        const cond=`${E(statName(p.statKey))} ${p.op} ${Number(p.atValue)||0}`;
+        rows.push(`<div class="hr-preview__row">${cond} (now ${cur==null?'?':cur}) — ${active?'<span class="hr-preview__fire">ACTIVE</span>':'<span class="hr-preview__armed">inactive</span>'}</div>`);
+      });
+    }else{
+      const rules=(typeof WorldTurn!=='undefined'&&Array.isArray(WorldTurn.DRIFT_RULES))?WorldTurn.DRIFT_RULES:[];
+      const active=(typeof WorldTurn!=='undefined'&&typeof WorldTurn._activePressures==='function')?WorldTurn._activePressures(n.stats).map(r=>r.ruleId):[];
+      const statName=k=>{const c=CORE_STATS.find(x=>x.key===k);return c?c.displayName:k;};
+      rules.forEach(r=>{
+        const on=active.includes(r.ruleId);
+        const eff=r.drifts.map(d=>`${statName(d.statKey)} ${d.delta>0?'+':''}${d.delta}`).join(', ');
+        rows.push(`<div class="hr-preview__row">${E(r.ruleId)}: ${E(eff)} ${on?'<span class="hr-preview__fire">ACTIVE this season</span>':'<span class="hr-preview__armed">not active now</span>'}</div>`);
+      });
+    }
+    box.innerHTML=rows.join('')||'<div class="hr-empty">—</div>';
+  },
 };
 const Modals={
   _current:null,
@@ -20004,6 +20504,7 @@ const LicenseGateUI={
 
 async function bootstrap(){
   await State.load();
+  applyDriftOverrides(State.data); // P5.1: re-apply persisted House-Rules drift edits onto the live engine array.
   bindEventListeners();
   // Bind front door, sample mode, and tonight module (DOM already exists)
   await LicenseGate.init();
@@ -20058,6 +20559,7 @@ async function bootstrap(){
   if(typeof MobileGate!=='undefined'){MobileGate.bind();MobileGate.check();}
   if(typeof SHSPanels!=='undefined')SHSPanels.bind();
   if(typeof Fronts!=='undefined')Fronts.bind();
+  if(typeof HouseRules!=='undefined')HouseRules.bind(); // P5.1 — own bind, not the bindEventListeners monolith.
   if(typeof Handouts!=='undefined')Handouts.bind();
   if(typeof Bestiary!=='undefined')Bestiary.bind();
   if(typeof Relations!=='undefined')Relations.bind();
