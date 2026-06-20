@@ -3213,6 +3213,16 @@ SECTION 7: MOTION & STATE STYLES
 .cmp-rail__act{background:transparent;border:none;color:var(--color-text-faint);font-size:10px;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;padding:2px 4px;border-radius:4px;font-family:var(--font-body)}
 .cmp-rail__act:hover{color:var(--ember-color)}
 .cmp-rail__pin-badge{font-size:9px;color:var(--ember-color);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px;display:block}
+/* P6.1 — per-session AI opt-in control + AI-suggestion styling. Editorial-dark: AI items
+   carry a faint ember left-rail + a small badge so they read as the AI's voice, not the math. */
+.cmp-rail__ai-ctl{display:flex;flex-direction:column;gap:5px;padding:8px 16px 10px;border-bottom:1px solid var(--color-border-hairline);flex-shrink:0}
+.cmp-rail__ai-toggle{align-self:flex-start;background:transparent;border:1px solid var(--color-border-hairline);color:var(--color-text-primary);font-family:'Cinzel',serif;font-size:9px;letter-spacing:.1em;text-transform:uppercase;padding:5px 10px;border-radius:6px;cursor:pointer}
+.cmp-rail__ai-toggle[aria-pressed="true"]{border-color:var(--ember-color);color:var(--ember-color)}
+.cmp-rail__ai-toggle:hover{border-color:var(--ember-color);color:var(--ember-color)}
+.cmp-rail__ai-hint{font-size:10px;color:var(--color-text-faint);line-height:1.4}
+.cmp-rail__ai-pause{font-size:10px;color:#c08a3a;line-height:1.4;font-style:italic}
+.cmp-rail__item--ai{border-left-color:var(--ember-color);position:relative}
+.cmp-rail__ai-badge{display:inline-block;font-size:8px;font-weight:700;letter-spacing:.1em;color:var(--ember-color);border:1px solid var(--ember-color);border-radius:3px;padding:0 3px;margin-bottom:4px;text-transform:uppercase}
 @media (max-width:980px){.campaign-mode.has-rail .cmp-grid{margin-right:0}.cmp-rail{position:static;width:auto;max-width:100%;border-left:none;border-top:1px solid var(--color-border-hairline)}}
 /* ─── RUN MODE — the at-the-table cockpit (P4.1). Single screen, zero nav, dim-light ── */
 .run-mode{position:fixed;inset:0;background:var(--color-bg);z-index:8000;overflow-y:auto;display:none;flex-direction:column}
@@ -15839,7 +15849,73 @@ const LiveMode={
     this._debounceTimer=setTimeout(()=>this._maybeFire(source),2500);
     this._setState('thinking');
   },
+  // Per-session AI opt-in (IDEAS I7-iii). Default OFF: the master Live toggle turns the
+  // keyless rail on; the GM must SEPARATELY arm the AI fire for the session before any
+  // model call is attempted. Session-scoped on purpose (not a persisted setting) so each
+  // play session starts quiet — UX-6 (offer, never nag). Reset on disable/resume.
+  _aiSessionOn:false,
+  aiArmed(){return !!this._aiSessionOn;},
+  armAi(on){
+    this._aiSessionOn=!!on;
+    if(!this._aiSessionOn){this._lastSuggestions=[];}
+    this._renderRail();
+  },
+  // AI-proposed rail suggestions from the last fire. Same render contract as heuristics
+  // (slot/severity/text/key), dismissible + pinnable identically; cited basis carried for CC-GROUND.
+  _lastSuggestions:[],
+  // COMPACT context for the rail. NOT Copilot.buildContext (that dumps realm stats + full
+  // chronicle — heavy and off-topic for a session board). The rail comments on the COMMITTED
+  // campaign fields + the last local heuristics, so we send exactly those: stakes, beats,
+  // characters at the table, secret bank, clocks, plus the heuristic flags already surfaced.
+  // The ledger of citable world-facts (factions/characters by name) is included so suggestions
+  // can ground any world-fact claim (CC-GROUND) without pulling the whole realm.
+  _compactContext(cp,n,tier){
+    // The liveModeTier knob governs how much realm canon the rail is allowed to see (and thus
+    // cite) — low keeps it tight, high lets it reach further. The committed campaign board is
+    // always sent in full; only the citable ledger scales. Cheap, compact, on-topic by design.
+    const refCap={low:8,mid:16,high:24,max:40}[(typeof Copilot!=='undefined'&&Copilot._normalizeTier)?Copilot._normalizeTier(tier):'mid']||16;
+    const L=[];
+    const trunc=(s,m)=>{s=String(s||'').replace(/\s+/g,' ').trim();return s.length>m?s.slice(0,m-1)+'…':s;};
+    if(cp.stakes&&cp.stakes.trim())L.push('Session stakes: '+trunc(cp.stakes,240));
+    const beats=(cp.beats||[]).filter(b=>b&&(b.text||'').trim());
+    if(beats.length){L.push('\nPlanned beats:');beats.forEach((b,i)=>L.push(`  ${i+1}. ${b.done?'[played] ':''}${trunc(b.text,160)}`));}
+    const here=(cp.npcs||[]).filter(x=>x&&x.here&&(x.name||'').trim());
+    if(here.length){L.push('\nAt the table tonight:');here.forEach(x=>L.push(`  - ${trunc(x.name,60)}${x.role?' ('+trunc(x.role,40)+')':''}${x.motivation?' — wants: '+trunc(x.motivation,80):''}`));}
+    const secrets=(cp.secrets||[]).filter(s=>s&&(s.text||'').trim());
+    if(secrets.length){L.push('\nSecret bank (undelivered):');secrets.filter(s=>!s.delivered).slice(0,8).forEach(s=>L.push('  - '+trunc(s.text,140)));}
+    const clocks=(cp.clocks||[]).filter(c=>c&&(c.name||'').trim());
+    if(clocks.length){L.push('\nClocks:');clocks.forEach(c=>L.push(`  - ${trunc(c.name,60)} (${c.filled||0}/${c.size||0})`));}
+    // Citable world-fact ledger — names the AI may reference and MUST cite as [Realm: name].
+    const refs=[];
+    if(n&&Array.isArray(n.factions))n.factions.forEach(f=>{if(f&&f.name)refs.push('faction '+trunc(f.name,50)+(f.position?' ('+f.position+')':''));});
+    if(n&&Array.isArray(n.characters))n.characters.forEach(c=>{if(c&&c.name&&(c.status==='active'||!c.status))refs.push('character '+trunc(c.name,50)+(c.role?' ('+trunc(c.role,30)+')':''));});
+    if(refs.length){L.push('\nRealm canon you MAY cite (cite as [Realm: <name>] only when you assert one of these as fact):');refs.slice(0,refCap).forEach(r=>L.push('  - '+r));}
+    // The flags the keyless engine already raised — so the AI elevates, never repeats them.
+    const heur=(this._lastHeuristics||[]);
+    if(heur.length){L.push('\nFlags the local engine already raised (do NOT repeat these — go deeper):');heur.slice(0,8).forEach(h=>L.push('  - ['+h.slot+'] '+trunc(h.text,140)));}
+    return L.join('\n');
+  },
+  // System prompt for the rail. Constrains output to ≤2 suggestions in the three existing
+  // slots, demands a cited basis for any world-fact claim (CC-GROUND), and forbids repeating
+  // the local heuristics (elevation, not duplication — UX-6).
+  _firePrompt(){
+    return `You are a session-prep co-pilot reading a tabletop GM's CAMPAIGN BOARD (not a novel). Offer at most TWO short, high-leverage suggestions that improve TONIGHT's session: a connection the GM may have missed, a question worth answering before play, or a risk on the board.
+
+Rules:
+- Return AT MOST 2 suggestions. Fewer is better. If the board is solid, return an empty array.
+- Each suggestion is ONE or TWO sentences, concrete and actionable. No preamble, no flattery.
+- Do NOT repeat any flag already listed under "Flags the local engine already raised". Go deeper or sideways.
+- When you assert a fact about the realm's people or powers, you MUST cite it as [Realm: <name>] using a name from "Realm canon you MAY cite". Never invent a name. If you can't cite it, don't assert it.
+- slot must be one of: "headsup" (act on it now), "questions" (decide before play), "watchouts" (a gap or risk).
+- severity must be one of: "info", "warn", "error".
+
+Return ONLY JSON: {"suggestions":[{"slot":"...","severity":"...","text":"..."}]}`;
+  },
   _maybeFire(source){
+    // OPT-IN GATE (first, before any work): the GM must have armed the AI for this session.
+    // AI off ⇒ do nothing, attempt no call — the keyless rail keeps working untouched (CC-DUAL).
+    if(!this.aiArmed())return;
+    if(!this.isOn()||this.isLocalOnly())return; // no key / Live off ⇒ keyless only (defensive)
     // Rate caps: 6/min (auto-pause + resume), 60/session (hard pause).
     const settings=State.data?.meta?.settings||{};
     const perMin=settings.liveModeCap?.perMin||6;
@@ -15850,17 +15926,84 @@ const LiveMode={
     if(this._recentCalls.length>=perMin){
       this._setState('paused');
       this._lastPauseReason='rate-cap';
+      this._renderRail();
       return;
     }
     if((cp.sessionCallCount||0)>=perSession){
       this._setState('paused');
       this._lastPauseReason='session-cap';
+      this._renderRail();
       return;
     }
-    // Stub: real fire path lands in C6. For C1 skeleton just keep heuristics fresh.
-    this._setState('idle');
-    this._renderRail();
+    // RECORD-THEN-FIRE: book this call against BOTH existing counters BEFORE the network
+    // request leaves, so the verified caps bind even if the call is in-flight, slow, or
+    // fails — and concurrent fires can never slip past the cap. The 6/min and 60/session
+    // limits above are the SAME counters the keyless skeleton already enforced; we do not
+    // add a parallel limiter and we do not bypass them.
+    this._recentCalls.push(now);
+    cp.sessionCallCount=(cp.sessionCallCount||0)+1;
+    try{State.persist&&State.persist();}catch(e){}
+    this._setState('thinking');
+    this._fire(cp,source);
   },
+  // The real model call. One liveModeTier request → ≤2 rail suggestions, rendered into the
+  // EXISTING slots, each dismissible + pinnable exactly like a heuristic. Failures fall back
+  // to the keyless rail (never a dead rail). Already rate-booked by _maybeFire.
+  async _fire(cp,source){
+    let n=null;try{n=State.get();}catch(e){}
+    const tier=(State.data?.meta?.settings?.liveModeTier)||'mid';
+    const context=this._compactContext(cp,n,tier);
+    const messages=[
+      {role:'system',content:this._firePrompt()},
+      {role:'user',content:'# Campaign board\n'+context+'\n\nReturn the JSON now (≤2 suggestions, or an empty array if the board needs nothing).'},
+    ];
+    // Cancel any prior inflight so flurries collapse to the newest board state.
+    if(this._abort){try{this._abort.abort();}catch(e){}}
+    const ctrl=(typeof AbortController!=='undefined')?new AbortController():null;
+    this._abort=ctrl;
+    try{
+      if(typeof TransparencyLog!=='undefined')TransparencyLog._pendingLabel='Live Mode commentary';
+      // Reuse the canonical structured-JSON path (fences/prose-stripping + one strict retry).
+      const out=await Copilot._apiFetchJson(messages,{max_tokens:500,temperature:0.6},ctrl?ctrl.signal:null);
+      if(this._abort!==ctrl)return; // a newer fire superseded this one
+      this._lastSuggestions=this._shapeSuggestions(out);
+      this._setState(this._lastSuggestions.length?'answered':'idle');
+      this._renderRail();
+    }catch(e){
+      if(ctrl&&ctrl.signal&&ctrl.signal.aborted)return; // superseded/cancelled — stay quiet
+      // Keyless fallback: the rail must never go dark because the model failed.
+      this._setState('error');
+      this._lastPauseReason='';
+      this._renderRail();
+    }finally{
+      if(this._abort===ctrl)this._abort=null;
+    }
+  },
+  // Normalize model output into ≤2 rail items matching the heuristic contract. Drops any
+  // suggestion that asserts a world-fact without a citation when one was required (CC-GROUND
+  // is enforced at the prompt; here we only shape + cap + de-dupe against dismissed keys).
+  _shapeSuggestions(out){
+    const raw=Array.isArray(out?.suggestions)?out.suggestions:(Array.isArray(out)?out:[]);
+    const slots={headsup:1,questions:1,watchouts:1};
+    const sevs={info:1,warn:1,error:1};
+    let cp;try{cp=State.cp();}catch(e){cp={};}
+    const dismissed=new Set(cp.dismissedHeuristics||[]);
+    const items=[];
+    for(const s of raw){
+      if(items.length>=2)break; // hard cap: never more than 2 AI items on the rail
+      const text=String(s&&s.text||'').replace(/\s+/g,' ').trim();
+      if(!text)continue;
+      const slot=slots[s&&s.slot]?s.slot:'questions';
+      const severity=sevs[s&&s.severity]?s.severity:'info';
+      // Stable key from content so dismiss persists across re-fires of the same suggestion.
+      const key='ai-'+slot+'-'+this._hashKey(text);
+      if(dismissed.has(key))continue;
+      items.push({slot,severity,text,key,ai:true});
+    }
+    return items;
+  },
+  // Tiny stable string hash (djb2) for dismiss-stable suggestion keys. Not crypto.
+  _hashKey(s){let h=5381;s=String(s||'');for(let i=0;i<s.length;i++){h=((h<<5)+h+s.charCodeAt(i))>>>0;}return h.toString(36);},
   // C4: ensure a session-start baseline exists so the clock-idle heuristic has a
   // reference point. Set once; do not reset on every open (that would erase the
   // "idle since session start" signal mid-session).
@@ -15961,13 +16104,19 @@ const LiveMode={
     rail.hidden=false;root&&root.classList.add('has-rail');
     const E=Utils.escHtml;
     let cp;try{cp=State.cp();}catch(e){cp={};}
-    const items=this._lastHeuristics||[];
+    // Heuristics (keyless) + AI suggestions (only when armed) share the three slots and the
+    // identical item contract — both dismissible and pinnable the same way (CC-DUAL: the rail
+    // is the same rail with or without AI; the AI items are simply additional bullets).
+    const aiItems=this.aiArmed()?(this._lastSuggestions||[]):[];
+    const items=(this._lastHeuristics||[]).concat(aiItems);
     const pinned=(cp.liveModePinned||[]);
     const localOnly=this.isLocalOnly();
-    const sub=localOnly?'local read':'live + local';
+    const aiOn=this.aiArmed()&&!localOnly;
+    const sub=localOnly?'local read':(aiOn?'AI + local':'live + local');
     const slotItems=slot=>items.filter(i=>i.slot===slot);
     const sevClass=sev=>sev==='error'?'cmp-rail__item--error':sev==='warn'?'cmp-rail__item--warn':'cmp-rail__item--info';
-    const renderItem=it=>`<div class="cmp-rail__item ${sevClass(it.severity)}" data-h-key="${E(it.key)}">
+    const renderItem=it=>`<div class="cmp-rail__item ${sevClass(it.severity)}${it.ai?' cmp-rail__item--ai':''}" data-h-key="${E(it.key)}">
+        ${it.ai?'<span class="cmp-rail__ai-badge" title="Proposed by the AI co-pilot — yours to keep or dismiss">AI</span>':''}
         <p class="cmp-rail__item-text">${E(it.text)}</p>
         <div class="cmp-rail__item-actions">
           <button type="button" class="cmp-rail__act" data-h-dismiss="${E(it.key)}">Dismiss</button>
@@ -15985,11 +16134,30 @@ const LiveMode={
         <h3 class="cmp-rail__sec-hd">${E(title)}</h3>
         ${list.length?list.map(renderItem).join(''):`<p class="cmp-rail__empty">${E(emptyMsg)}</p>`}
       </div>`;
+    // Opt-in control: only OFFERED when an AI key is actually configured (UX-6 — never dangle
+    // a control the GM can't use). Default off; the GM arms it per session. When the cap pauses
+    // the fire path, say so plainly under the toggle rather than going silent.
+    const aiConfigurable=!this.isLocalOnly();
+    const armed=this.aiArmed();
+    const paused=this._state==='paused';
+    const pauseNote=paused?(this._lastPauseReason==='rate-cap'
+        ?'AI paused — too many calls this minute. It resumes shortly.'
+        :this._lastPauseReason==='session-cap'
+          ?'AI paused for the session — call budget reached.'
+          :'AI paused.'):'';
+    const aiControl=aiConfigurable?`<div class="cmp-rail__ai-ctl">
+        <button type="button" class="cmp-rail__ai-toggle" data-ai-toggle="${armed?'off':'on'}" aria-pressed="${armed?'true':'false'}">
+          ${armed?'AI co-pilot: on':'Turn AI co-pilot on'}
+        </button>
+        ${armed?'<span class="cmp-rail__ai-hint">Suggestions appear below — keep or dismiss any.</span>':''}
+        ${pauseNote?`<span class="cmp-rail__ai-pause">${E(pauseNote)}</span>`:''}
+      </div>`:'';
     rail.innerHTML=`<div class="cmp-rail__hd">
         <span class="cmp-rail__dot" role="status" aria-live="polite" aria-label="Commentary status: ${E(this._state||'idle')}"></span>
         <h2 class="cmp-rail__title">Commentary</h2>
         <span class="cmp-rail__sub">${E(sub)}</span>
       </div>
+      ${aiControl}
       <div class="cmp-rail__body">
         ${pinned.length?`<div class="cmp-rail__sec"><h3 class="cmp-rail__sec-hd">Pinned</h3>${pinned.map(renderPinned).join('')}</div>`:''}
         ${section('Heads-up',slotItems('headsup'),'Nothing pressing right now.')}
@@ -16004,9 +16172,25 @@ const LiveMode={
     rail.addEventListener('click',e=>{
       const b=e.target.closest('button');if(!b)return;
       const d=b.dataset;
-      if(d.hDismiss){State.cpDismissHeuristic(d.hDismiss);this._refreshHeuristics();this._renderRail();return;}
+      // Per-session AI opt-in. Arming fires immediately off the current board so the GM
+      // sees value at once (debounce is for FLURRIES, not the deliberate opt-in click).
+      if(d.aiToggle){
+        const on=d.aiToggle==='on';
+        this.armAi(on);
+        if(on)this._onTrigger('ai:armed');
+        return;
+      }
+      // Dismiss works identically for heuristics and AI suggestions (dismissed keys persist;
+      // _shapeSuggestions + _refreshHeuristics both filter them). Drop the AI item locally too.
+      if(d.hDismiss){
+        State.cpDismissHeuristic(d.hDismiss);
+        this._lastSuggestions=(this._lastSuggestions||[]).filter(x=>x.key!==d.hDismiss);
+        this._refreshHeuristics();this._renderRail();return;
+      }
+      // Pin works for either source — look in both lists.
       if(d.hPin){
-        const it=(this._lastHeuristics||[]).find(x=>x.key===d.hPin);
+        const it=(this._lastHeuristics||[]).find(x=>x.key===d.hPin)
+              ||(this._lastSuggestions||[]).find(x=>x.key===d.hPin);
         if(it){State.cpPinHeuristic({slot:it.slot,text:it.text,severity:it.severity,key:it.key});this._renderRail();}
         return;
       }
@@ -16020,9 +16204,13 @@ const LiveMode={
   },
   // Public surface used by the toggle + warning modal (lands in C5).
   enable(){State.cpSetLiveOn(true);this._userPaused=false;this._setState('idle');},
-  disable(){State.cpSetLiveOn(false);clearTimeout(this._debounceTimer);if(this._abort){try{this._abort.abort();}catch(e){}}this._setState('idle');},
+  // Turning the master Live toggle OFF also disarms the per-session AI fire and cancels any
+  // inflight call — the rail returns to pure keyless heuristics (CC-DUAL).
+  disable(){State.cpSetLiveOn(false);this._aiSessionOn=false;this._lastSuggestions=[];clearTimeout(this._debounceTimer);if(this._abort){try{this._abort.abort();}catch(e){}}this._setState('idle');},
   pause(){this._userPaused=true;clearTimeout(this._debounceTimer);this._setState('paused');},
-  resume(){this._userPaused=false;this._recentCalls=[];this._setState('idle');this._refreshHeuristics();this._renderRail();},
+  // Manual resume clears the per-minute window so the GM isn't stuck behind a cap they
+  // intentionally cleared. Session count is deliberately NOT reset (that's the hard budget).
+  resume(){this._userPaused=false;this._recentCalls=[];this._lastPauseReason='';this._setState('idle');this._refreshHeuristics();this._renderRail();},
 };
 
 // ─── RUN MODE MODULE (P4.1) ──────────────────────────────────────────────────
