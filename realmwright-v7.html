@@ -2216,6 +2216,21 @@ body.theme-manuscript .mode-dropdown__desc{color:var(--color-text-muted)}
 .tbl-condbody{min-width:0}
 .tbl-statband{display:grid;grid-template-columns:1fr 64px 64px;gap:6px}
 .tbl-condbtns{margin-top:0;grid-column:1 / -1}
+/* ── PRESET PACKS (P5.2 — cross-engine bundles, picker → diff → apply) ────── */
+.pks-pickrow{display:flex;flex-wrap:wrap;gap:var(--space-2);margin-bottom:var(--space-3)}
+.pks-packbtn{display:inline-flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;min-width:160px}
+.pks-packbtn__meta{font-family:var(--font-mono);font-size:var(--text-mono-sm);color:var(--color-text-muted)}
+.pks-halal{font-size:var(--text-label-sm);color:var(--color-gold-deep);background:var(--color-ink-elevated);border:.5px solid var(--color-gold-pale);border-radius:var(--radius-sm);padding:var(--space-2) var(--space-3);margin-bottom:var(--space-3);line-height:1.45}
+.pks-diff{margin-top:var(--space-2)}
+.pks-diff__group{margin-bottom:var(--space-3)}
+.pks-diff__title{font-size:var(--text-label-sm);text-transform:uppercase;letter-spacing:.05em;color:var(--color-gold-deep);margin-bottom:var(--space-2);border-bottom:.5px solid var(--color-gold-pale);padding-bottom:2px}
+.pks-diff__row{font-size:var(--text-body-sm);color:var(--color-ink);line-height:1.5;padding:var(--space-1) 0 var(--space-1) var(--space-3);border-left:2px solid var(--color-gold);margin-bottom:4px}
+.pks-diff__add{color:var(--color-positive,#3a7d44);font-weight:600}
+.pks-diff__chg{color:var(--color-gold-deep);font-weight:600}
+.pks-diff__from{font-family:var(--font-mono);font-size:var(--text-mono-sm);color:var(--color-text-muted);text-decoration:line-through}
+.pks-diff__to{font-family:var(--font-mono);font-size:var(--text-mono-sm);color:var(--color-ink)}
+.pks-diff__none{font-size:var(--text-body-sm);color:var(--color-text-muted);font-style:italic;padding-left:var(--space-3)}
+.pks-applybar{margin-top:var(--space-3);border-top:.5px solid var(--color-gold-pale);padding-top:var(--space-3);display:flex;gap:var(--space-2)}
 /* ── HOLD AUDIENCE (P5.3 — the anti-chatbot flagship) ────────────────────── */
 /* Two panes: the deterministic "What X knows" dossier card (no-AI, left) and the
    in-character chat (AI half, right). Editorial-dark tokens; degrades to one column. */
@@ -4001,6 +4016,7 @@ SECTION 8: DOM STRUCTURE
       <button class="hr-tab is-active" data-hr-tab="thresholds" role="tab">Thresholds</button>
       <button class="hr-tab" data-hr-tab="pressures" role="tab">Pressures</button>
       <button class="hr-tab" data-hr-tab="drift" role="tab">World-Turn Drift</button>
+      <button class="hr-tab" data-hr-tab="packs" role="tab">Packs</button>
     </div>
     <div class="hr-layout">
       <div class="hr-main" id="house-rules-body"></div>
@@ -9642,6 +9658,18 @@ const HouseRules={
   _renderActive(){
     const modal=document.getElementById('modal-house-rules');if(!modal)return;
     modal.querySelectorAll('.hr-tab').forEach(b=>b.classList.toggle('is-active',b.dataset.hrTab===this._tab));
+    // The Packs tab owns its whole pane (picker → diff → apply); the shared live-preview aside is
+    // irrelevant there, so collapse it to the full width while Packs is showing.
+    const preview=document.getElementById('house-rules-preview')?.closest('.hr-preview');
+    const layout=document.querySelector('#modal-house-rules .hr-layout');
+    if(this._tab==='packs'){
+      if(preview)preview.style.display='none';
+      if(layout)layout.style.gridTemplateColumns='1fr';
+      if(typeof Packs!=='undefined')Packs.renderInto(document.getElementById('house-rules-body'));
+      return; // Packs renders its own body; no shared preview.
+    }
+    if(preview)preview.style.display='';
+    if(layout)layout.style.gridTemplateColumns='';
     if(this._tab==='thresholds')this._renderThresholds();
     else if(this._tab==='pressures')this._renderPressures();
     else this._renderDrift();
@@ -11316,6 +11344,353 @@ const Modals={
     <div class="stab-total">Raw: ${(parseFloat(data.ps)+parseFloat(data.ns)).toFixed(2)} | Shifted: ${data.shifted} | Range: ${data.tot} | Final: <strong>${data.final}</strong><br>Formula: shifted/totalRange × 100 = ${data.final}</div>
     <p style="font-size:var(--text-label-sm);color:var(--color-text-muted);margin-top:var(--space-4)">Military Capacity is derived (Manpower×.35 + Raw×.25 + Food×.20 + Trade×.20) and does not contribute to stability.</p>`;
     ctr.innerHTML=html;
+  },
+};
+// ════════════════════════════════════════════════════════════════════════════════════════════
+// P5.2 — PRESET PACKS. Cross-engine RULE BUNDLES (drift + pressures + thresholds + tables) shipped
+//   in-box, loaded through the SHIPPED House-Rules (P5.1) and Table (P5.4) engines — never a fork.
+//
+//   THE FORMAT (data only): PACKS=[{name,version,halalReview, thresholds?,pressures?,driftRules?,tables?}]
+//     • thresholds: [{statKey, rows:[{atValue,direction,eventName,eventDesc,eventWeight,eventType}]}]
+//         — each `rows` entry is the exact editable shape State.setStatThresholds consumes (L7499).
+//     • pressures:  [{statKey,op,atValue,text}] — the exact shape State.setHousePressures consumes (L7540).
+//     • driftRules: [{ruleId, drifts:[{statKey,delta}], ruleText?}] — patches an EXISTING WorldTurn
+//         .DRIFT_RULES entry via State.setDriftRule (L7576). ruleId MUST be one of the 9 shipped
+//         pressure ids (the _PRESSURE_CONDS gate is frozen — a pack amplifies an existing rule's
+//         per-season drift / re-skins its prose; it never invents a new gated condition). setDriftRule
+//         REPLACES rule.drifts, so each pack carries the FULL target drift array (base + amplification).
+//     • tables: [{name,die,entries:[{range,text,conditions?}]}] — the exact shape State.setTables /
+//         Tables.sanitize consume (L7562 / L10045).
+//   halalReview: a short recorded CC-HALAL header. Content is CIVIC / POLITICAL / ECONOMIC fiction —
+//     plague, succession dispute, trade embargo. NO haram themes; NO fate / omen / prophecy / destiny;
+//     no maysir (the tables are task-resolution prompts, nothing wagered — the P5.4 analysis applies).
+//
+//   APPLY REUSES THE ENGINE PATHS (no forks): apply() merges each section into the live nation /
+//     globals through State.setStatThresholds, State.setHousePressures, State.setDriftRule,
+//     State.setTables — the SAME writers the editors call. Merge is idempotent (signature-deduped),
+//     so re-applying a pack is a no-op. Nothing auto-applies: the user picks a pack, reads the DIFF,
+//     and clicks Apply (UX-3 presets-first; CC-DUAL: loading/applying is 100% no-AI).
+//
+//   PURE / EXTRACTABLE: PACKS (data), _diff(), and apply() reach outside only for State.* writers and
+//     WorldTurn.DRIFT_RULES; the P5.2 Node test evals the REAL PACKS + apply-routing logic (re-binding
+//     State.* to spies over a real nation) and proves a pack's drift changes a subsequent
+//     WorldTurn.compute. Wired from HouseRules.bind() (its own 'Packs' tab) — NOT bindEventListeners.
+// ════════════════════════════════════════════════════════════════════════════════════════════
+const Packs={
+  // The 9 frozen drift/pressure ids a pack may target (mirrors WorldTurn.DRIFT_RULES order). A pack
+  // that names anything else is dropped by apply() (forward-safety — same spirit as Tables.sanitize).
+  _DRIFT_IDS:['food-crisis','opposition-rising','unpaid-army','corruption-bleeding','legitimacy-fracture','knowledge-stagnation','cohesion-fracture','urban-strain','trade-collapse'],
+
+  // ── THE IN-BOX PACKS (data; halal-reviewed). Three civic/political/economic scenarios. ─────────
+  PACKS:[
+    // ── PLAGUE YEAR ── a sickness season: harvests and labour fail together, the cities strain,
+    //   the granaries empty. Drift amplifies the existing food-crisis + urban-strain pressures;
+    //   a famine-onset threshold on Food; rumor/notice table reading low Food and the food-crisis pressure.
+    {name:'Plague Year', version:'1.0',
+     halalReview:'CC-HALAL ✓ — civic/epidemic fiction (a sickness year: failed harvests, strained cities, emptying granaries). No haram themes; no fate/omen/prophecy/destiny; tables are task-resolution prompts (no wager). Reviewed 2026-06-20.',
+     driftRules:[
+       {ruleId:'food-crisis',
+        drifts:[{statKey:'food_production',delta:-4},{statKey:'manpower',delta:-2},{statKey:'legitimacy',delta:-1}],
+        ruleText:'Plague year — food crisis: with sickness in the field hands and the harvest left standing, granary reserves fall away (Food −4), the labour force thins as the ill keep to their homes (Manpower −2), and the strain on the regime tells (Legitimacy −1).'},
+       {ruleId:'urban-strain',
+        drifts:[{statKey:'food_production',delta:-2},{statKey:'cohesion',delta:-2}],
+        ruleText:'Plague year — urban strain: the crowded quarters carry the contagion fastest, so reserves are spent on the sick and the dead (Food −2) and the districts turn inward against one another (Cohesion −2).'},
+     ],
+     pressures:[
+       {statKey:'food_production',op:'below',atValue:45,text:'Plague year: the pest-houses are full and the markets thin; bread is rationed and the gates are watched for the sick.'},
+       {statKey:'manpower',op:'below',atValue:45,text:'Plague year: too many beds are empty in the barracks and the workshops; the muster comes up short and the guilds cannot fill their benches.'},
+     ],
+     thresholds:[
+       {statKey:'food_production', rows:[
+         {atValue:35,direction:'falling',eventName:'Famine Sets In',eventDesc:'The sickness has reached the harvest hands, and in {year} the granaries of {nation} run to the bottom of the bins.',eventWeight:-12,eventType:'Natural'},
+       ]},
+       {statKey:'cohesion', rows:[
+         {atValue:30,direction:'falling',eventName:'Quarantine Riots',eventDesc:'The sealed quarters of {nation} break their cordons in {year}; the watch cannot hold every gate at once.',eventWeight:-9,eventType:'Social'},
+       ]},
+     ],
+     tables:[
+       {name:'Plague Year — Notices & Rumors', die:100, entries:[
+         {range:[1,30],text:'A house on the lane has been marked and shuttered; no one will say by whose order.',conditions:[{kind:'stat',stat:'food_production',max:44}]},
+         {range:[31,55],text:'The pest-house has turned away its third cart of the morning; the carters are arguing over where the next is to go.',conditions:[{kind:'pressure',pressureId:'food-crisis'}]},
+         {range:[1,20],text:'A physician of repute has quietly left the city; his shutters are closed and his sign is down.'},
+         {range:[21,40],text:'A new remedy is being hawked at the market for a week’s wages a vial; the magistrates have not moved against it.'},
+         {range:[41,60],text:'The grave-diggers’ guild has petitioned for hazard pay and been refused; they are slowing their rounds.'},
+         {range:[61,80],text:'A neighbouring town has closed its road to travellers from the city; a caravan sits stranded at the boundary.'},
+         {range:[81,100],text:'A charitable order has opened its hall to the sick; the donations it asks for are straining the better families.'},
+       ]},
+     ]},
+
+    // ── SUCCESSION CRISIS ── a contested throne: legitimacy and shared purpose fray, claimants
+    //   bid for the provinces, the army’s loyalty is for sale. Drift amplifies legitimacy-fracture +
+    //   cohesion-fracture; claimant pressures on legitimacy/cohesion; a "rival proclaimed" threshold.
+    {name:'Succession Crisis', version:'1.0',
+     halalReview:'CC-HALAL ✓ — political fiction (a contested succession: rival claimants, divided provinces, an army whose loyalty wavers). No haram themes; no fate/omen/prophecy/destiny; secular legitimacy/cohesion mechanics only. Reviewed 2026-06-20.',
+     driftRules:[
+       {ruleId:'legitimacy-fracture',
+        drifts:[{statKey:'cohesion',delta:-2},{statKey:'legitimacy',delta:-2},{statKey:'opposition',delta:1}],
+        ruleText:'Succession crisis — legitimacy fractured: with the throne disputed and proclamations issued from two halls at once, shared purpose frays (Cohesion −2), authority drains from every office (Legitimacy −2), and the rival faction draws recruits (Opposition +1).'},
+       {ruleId:'cohesion-fracture',
+        drifts:[{statKey:'cohesion',delta:-2},{statKey:'opposition',delta:2}],
+        ruleText:'Succession crisis — cohesion fracturing: the provinces hedge toward whichever claimant looks likeliest to win, common ground narrows sharply (Cohesion −2), and the claimants’ partisans multiply (Opposition +2).'},
+     ],
+     pressures:[
+       {statKey:'legitimacy',op:'below',atValue:45,text:'Succession crisis: a rival claimant has been proclaimed in the provinces; couriers ride day and night and the great houses are choosing which letter to answer.'},
+       {statKey:'cohesion',op:'below',atValue:40,text:'Succession crisis: the army’s captains are weighing their oaths against their pay, and more than one garrison has gone quiet about whose orders it will take.'},
+     ],
+     thresholds:[
+       {statKey:'legitimacy', rows:[
+         {atValue:25,direction:'falling',eventName:'Rival Claimant Proclaimed',eventDesc:'In {year} a rival is proclaimed sovereign of {nation} in the provinces, and the realm has two courts where it had one.',eventWeight:-14,eventType:'Political'},
+       ]},
+       {statKey:'opposition', rows:[
+         {atValue:8,direction:'rising',eventName:'Partisans Take the Streets',eventDesc:'The claimants’ partisans contest the capital of {nation} openly in {year}; the watch can no longer pretend it is a private quarrel.',eventWeight:-8,eventType:'Political'},
+       ]},
+     ],
+     tables:[
+       {name:'Succession Crisis — Court & Country', die:100, entries:[
+         {range:[1,30],text:'A great house has recalled its sons from the capital "for the season"; everyone understands the message.',conditions:[{kind:'stat',stat:'legitimacy',max:44}]},
+         {range:[31,55],text:'A garrison commander has stopped answering letters from the palace and started answering letters from elsewhere.',conditions:[{kind:'pressure',pressureId:'legitimacy-fracture'}]},
+         {range:[1,18],text:'A genealogist has been very well paid to find a flaw in someone’s line of descent.'},
+         {range:[19,36],text:'A betrothal is announced that would join two rival blocs; both sides are furious and neither can say so.'},
+         {range:[37,54],text:'A provincial assembly has voted to "await clarity" before forwarding this year’s revenue.'},
+         {range:[55,72],text:'A herald was turned back at a city gate; the city says its loyalties are "under review."'},
+         {range:[73,90],text:'An old treaty is being read aloud in the wrong places, by people who want a particular clause remembered.'},
+         {range:[91,100],text:'A neutral magnate is hosting both factions at once and charging both for the privilege of not being attacked.'},
+       ]},
+     ]},
+
+    // ── TRADE WAR ── borders close and tariffs bite: commerce contracts, the workshops starve for
+    //   imports, the customs houses turn to graft. Drift amplifies trade-collapse + corruption-bleeding;
+    //   embargo pressures on trade/raw-materials; a market-prices table; a "workshops idle" threshold.
+    {name:'Trade War', version:'1.0',
+     halalReview:'CC-HALAL ✓ — economic fiction (a trade war: closed borders, retaliatory tariffs, import-starved workshops, customs graft). No haram themes; no interest/riba mechanic; no fate/omen/prophecy/destiny. Reviewed 2026-06-20.',
+     driftRules:[
+       {ruleId:'trade-collapse',
+        drifts:[{statKey:'trade',delta:-4},{statKey:'raw_materials',delta:-2},{statKey:'legitimacy',delta:-1}],
+        ruleText:'Trade war — commerce contracting: with the borders closed to one another’s goods and convoys moving only under arms, trade falls away sharply (Trade −4), the workshops ration what they can no longer import (Raw Materials −2), and the merchant houses blame the regime (Legitimacy −1).'},
+       {ruleId:'corruption-bleeding',
+        drifts:[{statKey:'trade',delta:-2},{statKey:'legitimacy',delta:-1}],
+        ruleText:'Trade war — the customs houses bleed: with every cargo now needing a permit, the officials who issue them have found their price, commerce reroutes around the honest gates (Trade −2), and confidence in the administration erodes (Legitimacy −1).'},
+     ],
+     pressures:[
+       {statKey:'trade',op:'below',atValue:50,text:'Trade war: the rival power has answered our tariff with its own, the quays are half-idle, and the factors are quietly asking which neutral flag a cargo might travel under.'},
+       {statKey:'raw_materials',op:'below',atValue:45,text:'Trade war: the workshops are short of the metals and dyes the embargo cut off; masters are laying off journeymen and hoarding what stock remains.'},
+     ],
+     thresholds:[
+       {statKey:'trade', rows:[
+         {atValue:30,direction:'falling',eventName:'The Embargo Bites',eventDesc:'In {year} the rival’s embargo closes the last open route, and the warehouses of {nation} empty faster than the convoys can refill them.',eventWeight:-11,eventType:'Economic'},
+       ]},
+       {statKey:'raw_materials', rows:[
+         {atValue:30,direction:'falling',eventName:'Workshops Fall Idle',eventDesc:'The import-starved workshops of {nation} bank their furnaces in {year}; the journeymen are turned out into a thin labour market.',eventWeight:-9,eventType:'Economic'},
+       ]},
+     ],
+     tables:[
+       {name:'Trade War — Market & Customs', die:100, entries:[
+         {range:[1,30],text:'A staple good has vanished from the open stalls and reappeared, at three times the price, in a back room.',conditions:[{kind:'stat',stat:'trade',max:49}]},
+         {range:[31,55],text:'A cargo cleared customs in a single afternoon while honest merchants waited a fortnight; no one will name the fee.',conditions:[{kind:'pressure',pressureId:'corruption-bleeding'}]},
+         {range:[1,18],text:'A convoy is being assembled under armed escort; berths are being sold for more than the goods are worth.'},
+         {range:[19,36],text:'A workshop master has posted notice that he can no longer take orders requiring imported stock.'},
+         {range:[37,54],text:'A neutral port two weeks’ sail away is suddenly very popular with our factors; rooms there are scarce.'},
+         {range:[55,72],text:'A smuggler’s route has been "discovered" by the customs and promptly leased back to the same smugglers.'},
+         {range:[73,90],text:'A guild is petitioning for a subsidy to keep its furnaces lit through the embargo; the treasury is unmoved.'},
+         {range:[91,100],text:'A rival’s factor has been seen buying up our currency cheap, betting the embargo will not last the year.'},
+       ]},
+     ]},
+  ],
+
+  // ── PURE: signatures used for idempotent merge (re-applying a pack changes nothing). ──────────
+  _thrKey(t){return `${t.direction==='rising'?'rising':'falling'}|${Math.round(Number(t.atValue)||0)}|${String(t.eventName||'').trim().toLowerCase()}`;},
+  _prKey(p){return `${String(p.statKey||'')}|${p.op==='above'?'above':'below'}|${Math.round(Number(p.atValue)||0)}|${String(p.text||'').trim().toLowerCase()}`;},
+
+  // Resolve a pack by index (the UI passes an index; the test passes the object). Defensive.
+  _pack(packOrIndex){
+    if(packOrIndex&&typeof packOrIndex==='object')return packOrIndex;
+    const i=Number(packOrIndex);return Number.isInteger(i)?this.PACKS[i]:null;
+  },
+
+  // ── PURE DIFF: what this pack would ADD or CHANGE vs current state. Reads only; never mutates. ─
+  //   Returns {thresholds:[{statKey,displayName,add:[row…]}], pressures:{add:[…]},
+  //            driftRules:[{ruleId, from:[{statKey,delta}], to:[{statKey,delta}], fromText,toText, changed}],
+  //            tables:{add:[name…], present:[name…]}, empty:bool}.
+  _diff(packOrIndex,n){
+    const pack=this._pack(packOrIndex);
+    const out={thresholds:[],pressures:{add:[]},driftRules:[],tables:{add:[],present:[]},empty:true};
+    if(!pack||!n)return out;
+    // Thresholds — per stat, the rows not already present (by signature) on that stat.
+    (Array.isArray(pack.thresholds)?pack.thresholds:[]).forEach(group=>{
+      const stat=n.stats&&n.stats[group.statKey];
+      if(!stat)return; // a pack targeting a stat this nation lacks contributes nothing for it
+      const have=new Set((Array.isArray(stat.thresholds)?stat.thresholds:[]).map(t=>this._thrKey(t)));
+      const add=(Array.isArray(group.rows)?group.rows:[]).filter(r=>!have.has(this._thrKey(r)));
+      if(add.length){out.thresholds.push({statKey:group.statKey,displayName:stat.displayName||group.statKey,add});out.empty=false;}
+    });
+    // Pressures — the rows not already present (by signature) on the nation.
+    {
+      const have=new Set((Array.isArray(n.housePressures)?n.housePressures:[]).map(p=>this._prKey(p)));
+      const add=(Array.isArray(pack.pressures)?pack.pressures:[]).filter(p=>!have.has(this._prKey(p)));
+      if(add.length){out.pressures.add=add;out.empty=false;}
+    }
+    // Drift rules — the existing global rule vs the pack's target (a CHANGE, not an add).
+    const liveRules=(typeof WorldTurn!=='undefined'&&Array.isArray(WorldTurn.DRIFT_RULES))?WorldTurn.DRIFT_RULES:[];
+    (Array.isArray(pack.driftRules)?pack.driftRules:[]).forEach(pr=>{
+      if(!this._DRIFT_IDS.includes(pr.ruleId))return; // forward-safety: only the frozen ids
+      const live=liveRules.find(r=>r.ruleId===pr.ruleId);if(!live)return;
+      const norm=arr=>(Array.isArray(arr)?arr:[]).map(d=>({statKey:String(d.statKey||''),delta:Math.round(Number(d.delta)||0)})).filter(d=>d.statKey);
+      const from=norm(live.drifts), to=norm(pr.drifts);
+      const fromText=String(live.ruleText||''), toText=(typeof pr.ruleText==='string')?pr.ruleText:fromText;
+      const changed=JSON.stringify(from)!==JSON.stringify(to)||fromText!==toText;
+      out.driftRules.push({ruleId:pr.ruleId,from,to,fromText,toText,changed});
+      if(changed)out.empty=false;
+    });
+    // Tables — by name: which the nation already has, which the pack would add.
+    {
+      const haveNames=new Set((Array.isArray(n.tables)?n.tables:[]).map(t=>String(t.name||'').trim().toLowerCase()));
+      (Array.isArray(pack.tables)?pack.tables:[]).forEach(t=>{
+        const nm=String(t.name||'').trim();
+        if(haveNames.has(nm.toLowerCase()))out.tables.present.push(nm);
+        else {out.tables.add.push(nm);out.empty=false;}
+      });
+    }
+    return out;
+  },
+
+  // ── APPLY: route every section through the SHIPPED engine writers (no forks). Idempotent merge. ─
+  //   Returns a small report {thresholds:n, pressures:n, driftRules:n, tables:n} of what changed.
+  apply(packOrIndex,n){
+    const pack=this._pack(packOrIndex);
+    const report={thresholds:0,pressures:0,driftRules:0,tables:0};
+    if(!pack||!n||typeof State==='undefined')return report;
+
+    // (1) THRESHOLDS — merge the pack's rows into each stat's current thresholds, then write the
+    //     UNION through State.setStatThresholds (the editor's writer; sets customized:true, CC-LM1).
+    (Array.isArray(pack.thresholds)?pack.thresholds:[]).forEach(group=>{
+      const stat=n.stats&&n.stats[group.statKey];if(!stat)return;
+      const current=(Array.isArray(stat.thresholds)?stat.thresholds:[]).slice();
+      const have=new Set(current.map(t=>this._thrKey(t)));
+      let added=0;
+      (Array.isArray(group.rows)?group.rows:[]).forEach(r=>{ if(!have.has(this._thrKey(r))){current.push(r);have.add(this._thrKey(r));added++;} });
+      if(added&&State.setStatThresholds(n.id,group.statKey,current))report.thresholds+=added;
+    });
+
+    // (2) PRESSURES — merge into n.housePressures, write the UNION via State.setHousePressures.
+    {
+      const current=(Array.isArray(n.housePressures)?n.housePressures:[]).slice();
+      const have=new Set(current.map(p=>this._prKey(p)));
+      let added=0;
+      (Array.isArray(pack.pressures)?pack.pressures:[]).forEach(p=>{ if(!have.has(this._prKey(p))){current.push(p);have.add(this._prKey(p));added++;} });
+      if(added&&State.setHousePressures(n.id,current))report.pressures+=added;
+    }
+
+    // (3) DRIFT RULES — patch each existing global rule in place via State.setDriftRule (P5.1 lever).
+    (Array.isArray(pack.driftRules)?pack.driftRules:[]).forEach(pr=>{
+      if(!this._DRIFT_IDS.includes(pr.ruleId))return; // frozen ids only
+      const patch={drifts:pr.drifts};
+      if(typeof pr.ruleText==='string')patch.ruleText=pr.ruleText;
+      if(State.setDriftRule(pr.ruleId,patch))report.driftRules++;
+    });
+
+    // (4) TABLES — append the pack's tables (by name; skip names already present), write the UNION
+    //     via State.setTables (sanitised by Tables.sanitizeAll inside the writer).
+    {
+      const current=(Array.isArray(n.tables)?n.tables:[]).map(t=>JSON.parse(JSON.stringify(t)));
+      const haveNames=new Set(current.map(t=>String(t.name||'').trim().toLowerCase()));
+      let added=0;
+      (Array.isArray(pack.tables)?pack.tables:[]).forEach(t=>{
+        const nm=String(t.name||'').trim().toLowerCase();
+        if(!haveNames.has(nm)){current.push(JSON.parse(JSON.stringify(t)));haveNames.add(nm);added++;}
+      });
+      if(added&&State.setTables(n.id,current))report.tables+=added;
+    }
+    return report;
+  },
+
+  // ════════════════════════════ UI (House-Rules "Packs" tab; UX-3 presets-first) ═══════════════
+  _selected:null, // index of the pack currently previewed (null = picker only)
+  renderInto(host){
+    if(!host)return;
+    const n=(typeof State!=='undefined')?State.get():null;const E=Utils.escHtml;
+    let html=`<div class="hr-sectionhint">Preset packs are bundles of rules — drift, pressures, thresholds, and tables — for a whole scenario. Pick one to <em>preview the exact changes</em>, then Apply. Packs load through the same engines your editors use; nothing applies until you choose Apply, and applying is entirely offline.</div>`;
+    html+=`<div class="pks-pickrow">`;
+    this.PACKS.forEach((p,i)=>{
+      const counts=[];
+      if(p.driftRules&&p.driftRules.length)counts.push(`${p.driftRules.length} drift`);
+      const prCount=(p.pressures||[]).length; if(prCount)counts.push(`${prCount} pressure${prCount===1?'':'s'}`);
+      const thrCount=(p.thresholds||[]).reduce((a,g)=>a+((g.rows||[]).length),0); if(thrCount)counts.push(`${thrCount} threshold${thrCount===1?'':'s'}`);
+      const tblCount=(p.tables||[]).length; if(tblCount)counts.push(`${tblCount} table${tblCount===1?'':'s'}`);
+      html+=`<button class="hr-mini pks-packbtn${i===this._selected?' hr-mini--primary':''}" data-pack="${i}"><span>${E(p.name)}</span><span class="pks-packbtn__meta">${E(counts.join(' · '))}</span></button>`;
+    });
+    html+=`</div>`;
+    if(this._selected==null){
+      html+=`<div class="hr-empty">Pick a pack above to see what it would add or change to <em>${E(n?n.name:'this nation')}</em>.</div>`;
+      host.innerHTML=html;this._wirePicker(host);return;
+    }
+    const pack=this.PACKS[this._selected];
+    html+=`<div class="pks-halal"><strong>Halal review:</strong> ${E(pack.halalReview||'—')}</div>`;
+    html+=this._diffHtml(pack,n);
+    html+=`<div class="pks-applybar">
+      <button class="hr-mini hr-mini--primary" id="pks-apply">Apply “${E(pack.name)}”</button>
+      <button class="hr-mini" id="pks-cancel">Cancel</button>
+    </div>`;
+    host.innerHTML=html;
+    this._wirePicker(host);
+    this._wireApply(host);
+  },
+  _diffHtml(pack,n){
+    const E=Utils.escHtml;const d=this._diff(pack,n);
+    const statName=k=>{const c=(typeof CORE_STATS!=='undefined')?CORE_STATS.find(x=>x.key===k):null;return c?c.displayName:k;};
+    let h=`<div class="pks-diff">`;
+    // Drift
+    h+=`<div class="pks-diff__group"><div class="pks-diff__title">World-Turn drift</div>`;
+    if(!d.driftRules.length)h+=`<div class="pks-diff__none">No drift changes.</div>`;
+    d.driftRules.forEach(r=>{
+      const fromS=r.from.map(x=>`${statName(x.statKey)} ${x.delta>0?'+':''}${x.delta}`).join(', ')||'(none)';
+      const toS=r.to.map(x=>`${statName(x.statKey)} ${x.delta>0?'+':''}${x.delta}`).join(', ')||'(none)';
+      h+=`<div class="pks-diff__row"><span class="${r.changed?'pks-diff__chg':''}">${E(r.ruleId)}</span>: `
+        + (r.changed?`<span class="pks-diff__from">${E(fromS)}</span> → <span class="pks-diff__to">${E(toS)}</span>`:`<span class="pks-diff__to">${E(toS)}</span> <em>(unchanged)</em>`)
+        + `</div>`;
+    });
+    h+=`</div>`;
+    // Pressures
+    h+=`<div class="pks-diff__group"><div class="pks-diff__title">Pressures (added)</div>`;
+    if(!d.pressures.add.length)h+=`<div class="pks-diff__none">Nothing to add (already present).</div>`;
+    d.pressures.add.forEach(p=>{ h+=`<div class="pks-diff__row"><span class="pks-diff__add">+</span> ${E(statName(p.statKey))} ${E(p.op)} ${E(String(p.atValue))} — ${E(p.text)}</div>`; });
+    h+=`</div>`;
+    // Thresholds
+    h+=`<div class="pks-diff__group"><div class="pks-diff__title">Thresholds (added)</div>`;
+    if(!d.thresholds.length)h+=`<div class="pks-diff__none">Nothing to add (already present, or the stat is absent).</div>`;
+    d.thresholds.forEach(g=>{ g.add.forEach(r=>{
+      const arrow=r.direction==='rising'?'rising above':'falling below';
+      h+=`<div class="pks-diff__row"><span class="pks-diff__add">+</span> ${E(g.displayName)} ${E(arrow)} ${E(String(r.atValue))} → <strong>${E(r.eventName||'(unnamed)')}</strong></div>`;
+    }); });
+    h+=`</div>`;
+    // Tables
+    h+=`<div class="pks-diff__group"><div class="pks-diff__title">Tables (added)</div>`;
+    if(!d.tables.add.length)h+=`<div class="pks-diff__none">Nothing to add${d.tables.present.length?` (already present: ${E(d.tables.present.join(', '))})`:''}.</div>`;
+    d.tables.add.forEach(nm=>{ h+=`<div class="pks-diff__row"><span class="pks-diff__add">+</span> ${E(nm)}</div>`; });
+    h+=`</div>`;
+    h+=`</div>`;
+    return h;
+  },
+  _wirePicker(host){
+    host.querySelectorAll('[data-pack]').forEach(b=>b.addEventListener('click',()=>{
+      this._selected=+b.dataset.pack; this.renderInto(host);
+    }));
+  },
+  _wireApply(host){
+    document.getElementById('pks-cancel')?.addEventListener('click',()=>{ this._selected=null; this.renderInto(host); });
+    document.getElementById('pks-apply')?.addEventListener('click',()=>{
+      const n=(typeof State!=='undefined')?State.get():null;if(n==null){if(typeof showToast==='function')showToast('Open a nation first.');return;}
+      const pack=this.PACKS[this._selected];if(!pack)return;
+      const r=this.apply(pack,n);
+      const parts=[];
+      if(r.driftRules)parts.push(`${r.driftRules} drift rule${r.driftRules===1?'':'s'}`);
+      if(r.pressures)parts.push(`${r.pressures} pressure${r.pressures===1?'':'s'}`);
+      if(r.thresholds)parts.push(`${r.thresholds} threshold${r.thresholds===1?'':'s'}`);
+      if(r.tables)parts.push(`${r.tables} table${r.tables===1?'':'s'}`);
+      if(typeof showToast==='function')showToast(parts.length?`Applied “${pack.name}”: ${parts.join(', ')}. They take effect on the next World Turn.`:`“${pack.name}” is already applied — nothing to change.`);
+      if(typeof Render!=='undefined'&&Render.workbench)Render.workbench();
+      // Re-render the diff in place: applied rows now show as already-present, proving idempotence.
+      this.renderInto(host);
+    });
   },
 };
 // ─── EXPORT/IMPORT ───
