@@ -3885,6 +3885,7 @@ SECTION 8: DOM STRUCTURE
       <button type="button" class="char-status-pill is-selected" data-nn-mode="seed">From a seed</button>
       <button type="button" class="char-status-pill" data-nn-mode="describe">Describe in words</button>
       <button type="button" class="char-status-pill" data-nn-mode="conversation">By conversation</button>
+      <button type="button" class="char-status-pill" data-nn-mode="import">Import my notes</button>
     </div>
 
     <!-- Tab: Seed grid -->
@@ -3958,6 +3959,47 @@ SECTION 8: DOM STRUCTURE
   <div class="modal__footer">
     <button class="btn btn--secondary" data-close="interview">Save &amp; close</button>
     <button class="btn btn--ghost" id="iv-restart-btn" style="margin-left:auto">Start over</button>
+  </div>
+</div>
+<!-- Day-One Intake Modal (P5.7): bring an existing campaign in from markdown notes, fully offline —
+     no AI, no network (CC-DUAL). A strict documented convention is parsed locally into candidates
+     that route through the EXISTING canon review (Modals.openCanonReview). Nothing auto-commits. -->
+<div class="modal modal--md" id="modal-intake" role="dialog" aria-modal="true" aria-labelledby="modal-intake-title">
+  <div class="modal__header"><h2 class="modal__title" id="modal-intake-title">Import my notes</h2><button class="modal__close" data-close="intake" aria-label="Close">×</button></div>
+  <div class="modal__body">
+    <p style="font-size:var(--text-label-sm);color:var(--color-text-muted);margin:0 0 12px">Already have a campaign written up? Paste your notes in the documented format below. Everything is read on your device — no AI, no internet. Each thing you wrote becomes a candidate you review and accept; nothing is added until you say so.</p>
+    <textarea class="form-textarea" id="intake-md" rows="12" placeholder="# Faction: The Stonemasons Guild&#10;Type: Economic&#10;Position: gaining&#10;Description: Controls every quarry licence in the river valley.&#10;&#10;# NPC: Mara Veldt&#10;Role: Guildmistress&#10;Description: Pragmatic, owed favours by half the council." style="width:100%;resize:vertical;font-family:var(--font-mono);font-size:var(--text-mono-sm,0.85rem);line-height:1.5"></textarea>
+    <div style="display:flex;gap:8px;align-items:center;margin-top:14px;flex-wrap:wrap">
+      <button class="btn btn--primary" id="intake-read-btn">Read my notes →</button>
+      <button class="btn btn--ghost" id="intake-guide-btn">Show format guide</button>
+      <span id="intake-status" style="font-size:var(--text-label-sm);color:var(--color-text-muted)"></span>
+    </div>
+    <!-- ONE-PAGE FORMAT GUIDE (UX-3: the documented convention, presets-first). Hidden until asked. -->
+    <div id="intake-guide" style="display:none;margin-top:16px;padding:16px;border:1px solid var(--color-border-hairline);border-radius:8px;background:var(--color-surface)">
+      <div style="font-size:var(--text-label-sm);color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">The format — four kinds of heading</div>
+      <p style="font-size:var(--text-body-sm);color:var(--color-text-body);margin:0 0 12px">Start each thing with a <code>#</code> heading. The lines under it fill in the details (<code>Key: value</code>). Anything that isn't one of the four headings is listed back to you as "couldn't read" — never silently dropped, so nothing gets lost.</p>
+      <pre style="margin:0 0 8px;padding:12px;background:var(--color-parchment-warm,rgba(0,0,0,0.04));border:0.5px solid var(--color-gold-pale,var(--color-border-hairline));border-radius:6px;overflow:auto;font-family:var(--font-mono);font-size:var(--text-mono-sm,0.8rem);line-height:1.55;color:var(--color-text-body);white-space:pre-wrap"># Faction: The Stonemasons Guild
+Type: Economic            (Government | Opposition | Religious | Economic | Military)
+Position: gaining         (holding | gaining | losing | fragmenting)
+Description: Controls every quarry licence in the river valley.
+
+# NPC: Mara Veldt
+Role: Guildmistress
+Description: Pragmatic, owed favours by half the council.
+
+# Location: The Lower Cisterns
+Description: Flooded vaults beneath the old mint.
+
+# Event: The Quarry Collapse
+Type: Economic            (Political | Military | Economic | Social | Natural | …)
+Weight: -8                (-30 to 30 — how much it shook the realm)
+Visibility: public        (public | secret)
+Description: A tunnel gave way, halting the eastern works.</pre>
+      <p style="font-size:var(--text-body-sm);color:var(--color-text-muted);margin:8px 0 0">Field names are not case-sensitive. Leave out any line you don't need — only the heading name is required. v1 reads exactly these four kinds.</p>
+    </div>
+  </div>
+  <div class="modal__footer">
+    <button class="btn btn--secondary" data-close="intake">Cancel</button>
   </div>
 </div>
 <!-- Manual Event Modal -->
@@ -17719,6 +17761,174 @@ Event: The Harbor Fire | Military | +3 | public | A fire destroyed three warehou
   },
 };
 
+// ─── DAY-ONE INTAKE (P5.7 — N? ) ─────────────────────────────────────────────
+// Wired from bootstrap via Intake.bind() — NOT the bindEventListeners monolith
+// (code-health rule: a surface owns its listeners, like Press/Brief/Lint/Interview).
+//
+// WHAT THIS IS: the no-AI sibling of P5.6's World Interview. The GM who arrives with 50 pages of
+// Obsidian notes pastes them here. A STRICT, DOCUMENTED markdown convention is parsed LOCALLY —
+// zero AI, zero network (CC-DUAL: the keyless half must stand on its own) — into the SAME candidate
+// shape Parse.canonBlock produces, so the candidates flow through the UNCHANGED canon review/apply
+// pipeline (Modals.openCanonReview → Parse.applyCandidates). Nothing auto-commits (UX-7).
+//
+// THE CONVENTION (v1 — exactly one format, I7 scope freeze; the in-app guide documents it):
+//   A top-level markdown heading declares a candidate; the indented body lines fill its fields.
+//     # Faction: <name>        →  Type: <Government|Opposition|Religious|Economic|Military>
+//                                  Position: <holding|gaining|losing|fragmenting>
+//                                  Description: <free text>
+//     # NPC: <name>            →  Role: <free text>        Description: <free text>
+//     # Location: <name>       →  Description: <free text>   (lands as an artifact, artType "Location")
+//     # Event: <name>          →  Type: <Political|Military|Economic|Social|Natural|…>
+//                                  Weight: <-30..30>   Visibility: <public|secret|hidden|known>
+//                                  Description: <free text>
+//   Field keys are case-insensitive ("type:", "Role:", etc.). Unknown body keys are ignored.
+//   ANY heading that is not one of the four (e.g. "# Wizard:") is a SURFACED FAILURE — listed for
+//   the GM, never silently dropped — so 50 pages don't quietly lose data (C4: never silently wrong).
+//
+// RUNBOOK
+//   Open:   New-Nation → "Import my notes" (or call Intake.open()).
+//   Paste:  drop markdown notes → "Read my notes →".
+//   Review: parsed candidates open in the EXISTING canon-review modal (accept/reject each);
+//           unknown headings show as failures inside that same modal's "Couldn't parse" panel.
+//   Commit: only "Inscribe accepted" writes — and only the active realm's checked candidates.
+//           Nothing is created on parse. Need a realm first (the active nation is the target).
+const Intake={
+  _wired:false,
+
+  // The four supported heading kinds → the canon kind they map to. v1 is frozen to exactly these
+  // (I7). "Location" has no native canon candidate type, so it rides the artifact channel (artType
+  // "Location") — which Modals.openCanonReview and Parse.applyCandidates already consume unchanged.
+  HEADINGS:{faction:'faction', npc:'character', location:'artifact', event:'event'},
+
+  // ── PURE CORE ─────────────────────────────────────────────────────────────────────────────────
+  // Intake.parse(md) → { candidates:[…Parse.canonBlock shape…], failures:[{line,reason}] }.
+  // No DOM, no State, no AI, no network. Deterministic: same string in → same object out.
+  parse(md){
+    const candidates=[];
+    const failures=[];
+    if(typeof md!=='string'||!md.trim())return{candidates,failures};
+    // Normalize line endings; strip code fences the way canonBlock does (notes pasted from editors
+    // sometimes arrive fenced). Keep it conservative — only whole-line ``` fences are removed.
+    const lines=md.replace(/\r\n?/g,'\n').split('\n');
+    let block=null; // the heading currently being filled
+
+    // Pull a "Key: value" body field (case-insensitive key). Returns [key,value] or null.
+    const bodyField=(line)=>{
+      const m=line.match(/^([A-Za-z][A-Za-z _-]*?)\s*:\s*(.*)$/);
+      if(!m)return null;
+      return [m[1].trim().toLowerCase(),m[2].trim()];
+    };
+
+    const flush=()=>{
+      if(!block)return;
+      const f=block.fields;
+      const name=block.name;
+      if(block.kind==='faction'){
+        if(!name){failures.push({line:block.headLine,reason:'faction heading has no name'});block=null;return;}
+        const FAC=['Government','Opposition','Religious','Economic','Military'];
+        const rawType=f.type||'';
+        const facType=FAC.find(t=>t.toLowerCase()===rawType.toLowerCase())||'';
+        const POS=['holding','gaining','losing','fragmenting'];
+        const position=POS.includes((f.position||'').toLowerCase())?(f.position||'').toLowerCase():'';
+        candidates.push({type:'faction',name,facType,position,desc:f.description||''});
+      }else if(block.kind==='character'){
+        if(!name){failures.push({line:block.headLine,reason:'NPC heading has no name'});block=null;return;}
+        candidates.push({type:'character',name,role:f.role||'',desc:f.description||''});
+      }else if(block.kind==='artifact'){ // Location
+        if(!name){failures.push({line:block.headLine,reason:'Location heading has no name'});block=null;return;}
+        // Compose name + description into the single artifact content field (artType carries "Location").
+        const desc=f.description||'';
+        const content=desc?`${name} — ${desc}`:name;
+        candidates.push({type:'artifact',artType:'Location',content});
+      }else if(block.kind==='event'){
+        if(!name){failures.push({line:block.headLine,reason:'event heading has no name'});block=null;return;}
+        candidates.push({type:'event',name,evType:CLAMP.eventType(f.type||'Political'),
+          weight:CLAMP.eventWeight(f.weight!==undefined?f.weight:0),
+          visibility:CLAMP.visibility(f.visibility||'public'),
+          description:f.description||''});
+      }
+      block=null;
+    };
+
+    for(let raw of lines){
+      // A whole-line code fence is structural noise — drop it without ending the current block.
+      if(/^\s*```/.test(raw))continue;
+      const line=raw.replace(/\s+$/,''); // keep leading spaces off; trim trailing
+      const trimmed=line.trim();
+      // A markdown heading (# … ) starts a new candidate. We only recognize the documented kinds.
+      const head=trimmed.match(/^#{1,6}\s+([A-Za-z]+)\s*:\s*(.*)$/);
+      if(head){
+        flush(); // close the previous block before starting a new one
+        const kindWord=head[1].toLowerCase();
+        const canonKind=this.HEADINGS[kindWord];
+        if(!canonKind){
+          // Unknown heading — SURFACED, never silently dropped (C4).
+          failures.push({line:trimmed,reason:`unknown heading "${head[1]}:" — v1 supports # Faction:, # NPC:, # Location:, # Event:`});
+          block=null; // its body lines (until the next heading) are ignored, not misattributed
+          continue;
+        }
+        block={kind:canonKind,name:head[2].trim(),fields:{},headLine:trimmed};
+        continue;
+      }
+      if(!block)continue; // free text outside any recognized heading — ignored (not a failure)
+      if(!trimmed)continue; // blank line within a block — skip
+      const kv=bodyField(trimmed);
+      if(kv){
+        // First write wins for a given field; later duplicates are ignored (deterministic).
+        if(block.fields[kv[0]]===undefined)block.fields[kv[0]]=kv[1];
+      }
+      // A non-"Key: value" body line is treated as description continuation if no description yet.
+      else if(block.fields.description===undefined){block.fields.description=trimmed;}
+    }
+    flush(); // close the final block
+
+    return{candidates,failures};
+  },
+
+  // ── SURFACE ─────────────────────────────────────────────────────────────────────────────────
+  open(){
+    Modals.open('intake');
+    const ta=document.getElementById('intake-md');
+    if(ta){ta.value='';setTimeout(()=>ta.focus(),120);}
+    const status=document.getElementById('intake-status');if(status){status.textContent='';status.style.color='';}
+    const guide=document.getElementById('intake-guide');if(guide)guide.style.display='none';
+  },
+
+  _read(){
+    const status=document.getElementById('intake-status');
+    const md=(document.getElementById('intake-md')||{}).value||'';
+    if(!md.trim()){if(status){status.textContent='Paste your notes first.';status.style.color='var(--color-amber)';}return;}
+    const n=(typeof State!=='undefined')?State.get():null;
+    if(!n){if(status){status.textContent='Create or open a realm first — candidates land in the active realm.';status.style.color='var(--color-amber)';}return;}
+    const {candidates,failures}=this.parse(md);
+    if(!candidates.length&&!failures.length){
+      if(status){status.textContent='Nothing matched the format. Check the guide below.';status.style.color='var(--color-text-muted)';}
+      this._toggleGuide(true);
+      return;
+    }
+    // Route into the EXACT same review surface the AI importers use — not a fork (UX-7, review-gated).
+    Modals.openCanonReview(candidates,n.id,failures);
+  },
+
+  _toggleGuide(force){
+    const guide=document.getElementById('intake-guide');if(!guide)return;
+    const show=force!==undefined?force:guide.style.display==='none';
+    guide.style.display=show?'':'none';
+    const btn=document.getElementById('intake-guide-btn');if(btn)btn.textContent=show?'Hide format guide':'Show format guide';
+  },
+
+  bind(){
+    if(this._wired)return;this._wired=true;
+    document.getElementById('intake-read-btn')?.addEventListener('click',()=>this._read());
+    document.getElementById('intake-guide-btn')?.addEventListener('click',()=>this._toggleGuide());
+    // Ctrl/Cmd+Enter reads the notes.
+    document.getElementById('intake-md')?.addEventListener('keydown',e=>{
+      if((e.metaKey||e.ctrlKey)&&e.key==='Enter'){e.preventDefault();this._read();}
+    });
+    document.getElementById('intake-btn')?.addEventListener('click',()=>this.open());
+  },
+};
+
 // ─── TONIGHT MODULE ──────────────────────────────────────────────────────────
 const Tonight={
   // Stored results for "Save secrets" (activated in Delivery C)
@@ -21572,6 +21782,15 @@ function bindEventListeners(){
         if(descPane)descPane.style.display='none';
         Interview.open();
       }
+      // P5.7: "Import my notes" hands off to the offline Day-One Intake (its own modal). Same reset
+      // dance as conversation so re-opening New-Nation lands on the seed tab, not a dead selection.
+      if(mode==='import'&&typeof Intake!=='undefined'){
+        btn.classList.remove('is-selected');
+        const seedTab=document.querySelector('[data-nn-mode="seed"]');if(seedTab)seedTab.classList.add('is-selected');
+        if(seedPane)seedPane.style.display='';
+        if(descPane)descPane.style.display='none';
+        Intake.open();
+      }
     });
   });
 
@@ -22857,6 +23076,7 @@ async function bootstrap(){
   if(typeof Brief!=='undefined')Brief.bind();
   if(typeof Lint!=='undefined')Lint.bind();
   if(typeof Interview!=='undefined')Interview.bind(); // P5.6 — own bind, not the bindEventListeners monolith.
+  if(typeof Intake!=='undefined')Intake.bind(); // P5.7 — own bind, not the bindEventListeners monolith.
   if(typeof TransparencyLog!=='undefined')TransparencyLog.bind();
   if(typeof CostMeter!=='undefined')CostMeter.bind();
   if(typeof CostGate!=='undefined')CostGate._ensure();
