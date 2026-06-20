@@ -3884,6 +3884,7 @@ SECTION 8: DOM STRUCTURE
     <div class="char-status-group" id="nn-mode-tabs" style="margin:0 0 20px">
       <button type="button" class="char-status-pill is-selected" data-nn-mode="seed">From a seed</button>
       <button type="button" class="char-status-pill" data-nn-mode="describe">Describe in words</button>
+      <button type="button" class="char-status-pill" data-nn-mode="conversation">By conversation</button>
     </div>
 
     <!-- Tab: Seed grid -->
@@ -3920,6 +3921,43 @@ SECTION 8: DOM STRUCTURE
   </div>
   <div class="modal__footer">
     <button class="btn btn--secondary" data-close="new-nation">Cancel</button>
+  </div>
+</div>
+<!-- World Interview Modal (P5.6 — N11): onboarding by conversation. One question at a time;
+     answers route through the EXISTING review machinery (founding pass → importFromText preview;
+     additions → CANON review). Nothing auto-commits (UX-7). AI-only-by-design (declared CC-DUAL). -->
+<div class="modal modal--md" id="modal-interview" role="dialog" aria-modal="true" aria-labelledby="modal-interview-title">
+  <div class="modal__header"><h2 class="modal__title" id="modal-interview-title">Tell me about your world</h2><button class="modal__close" data-close="interview" aria-label="Close">×</button></div>
+  <div class="modal__body">
+    <div id="iv-progress" style="font-size:var(--text-label-sm);color:var(--color-text-muted);letter-spacing:0.04em;margin:0 0 14px"></div>
+    <div id="iv-ask">
+      <p id="iv-question" style="font-family:var(--font-display);font-size:var(--text-display-sm);line-height:1.35;color:var(--color-text-heading);margin:0 0 6px"></p>
+      <p id="iv-hint" style="font-size:var(--text-label-sm);color:var(--color-text-muted);margin:0 0 14px"></p>
+      <textarea class="form-textarea" id="iv-answer" rows="4" placeholder="Say as much or as little as you like…" style="width:100%;resize:vertical"></textarea>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:14px;flex-wrap:wrap">
+        <button class="btn btn--primary" id="iv-answer-btn">Answer →</button>
+        <button class="btn btn--ghost" id="iv-skip-btn">Skip this</button>
+        <span id="iv-status" style="font-size:var(--text-label-sm);color:var(--color-text-muted)"></span>
+      </div>
+    </div>
+    <!-- Founding preview — the FIRST answers draft a realm for your review before anything is created. -->
+    <div id="iv-preview" style="display:none;margin-top:16px;padding:16px;border:1px solid var(--color-border-hairline);border-radius:8px;background:var(--color-surface)">
+      <div style="font-size:var(--text-label-sm);color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">Draft realm — nothing saved yet</div>
+      <div id="iv-preview-content"></div>
+      <div style="display:flex;gap:8px;margin-top:16px;padding-top:12px;border-top:1px solid var(--color-border-hairline);flex-wrap:wrap">
+        <button class="btn btn--primary" id="iv-preview-use">Seed this realm</button>
+        <button class="btn btn--secondary" id="iv-preview-redo">Redo my answer</button>
+      </div>
+    </div>
+    <!-- Done state — the interview is complete; remaining answers land in the canon review. -->
+    <div id="iv-done" style="display:none;margin-top:8px">
+      <p style="font-size:var(--text-body-md);color:var(--color-text-body);margin:0 0 12px">That's the interview. Your realm is taking shape — every answer you gave has been offered up for your review. Accept what fits, reject what doesn't. Nothing was written without your say-so.</p>
+      <button class="btn btn--primary" id="iv-finish-btn">Done</button>
+    </div>
+  </div>
+  <div class="modal__footer">
+    <button class="btn btn--secondary" data-close="interview">Save &amp; close</button>
+    <button class="btn btn--ghost" id="iv-restart-btn" style="margin-left:auto">Start over</button>
   </div>
 </div>
 <!-- Manual Event Modal -->
@@ -17283,6 +17321,404 @@ const Lint={
   },
 };
 
+// ─── WORLD INTERVIEW (P5.6 — N11) ──────────────────────────────────────────────
+// Onboarding by conversation. "Tell me about your world" — one question at a time; each answer
+// becomes structured state THROUGH THE EXISTING REVIEW MACHINERY. Ten minutes of talk yields a
+// seeded realm. The card is AI-ONLY-BY-DESIGN (the no-AI sibling is P5.7, out of scope here).
+//
+// TWO HALVES, cleanly separated:
+//   (1) THE PURE STATE MACHINE — QUESTIONS + start/current/advance/skip/resume/isComplete and the
+//       founding/addition partition. No DOM, no State.*, no localStorage; given the same inputs it
+//       returns the same states, so it is unit-testable standalone (see /tmp/p56.test.mjs). Every
+//       transition is immutable (returns a fresh state) so a snapshot can be persisted safely.
+//   (2) THE WIRING — .bind()/.open()/.render() drive the one-question-at-a-time surface; .save()/
+//       ._load() persist progress to localStorage so a reload RESUMES; the AI routing turns answers
+//       into review candidates. None of this lives in the core.
+//
+// ROUTING (the blueprint contract):
+//   • The FIRST substantive answers (phase:'founding') are concatenated and run through
+//     Copilot.importFromText — the founding pass's structured shape. The result is shown as a DRAFT
+//     the GM explicitly accepts ("Seed this realm") before buildNationFromSeed+addNation. The accept
+//     IS the review gate (mirrors the New-Nation describe pane). Nothing is created silently.
+//   • Subsequent answers (phase:'addition') are structured into a CANON block — REUSING the Decipher
+//     invent-guard verbatim ("ONLY structure what is clearly present … do not invent") — then parsed
+//     by Parse.canonBlock and presented in Modals.openCanonReview. The GM accepts/rejects each
+//     candidate. These are the gated write tools' review path.
+//
+// STANDARDS:
+//   CC-DUAL: declared AI-only exception (the keyless sibling is P5.7). Stated, not hidden.
+//   CC-GROUND: the invent-guard is reused VERBATIM from decipherNotes so the model structures only
+//     what the GM actually said — it cannot invent a faction the GM never named.
+//   CC-HALAL: the 8 prompts are clean world-building questions — era/government/factions/people/
+//     events/tensions/places. No fate, omen, prophecy, or destiny; no haram framing.
+//   UX-7: EVERYTHING lands in review. The founding draft requires an explicit "Seed this realm";
+//     additions require per-candidate acceptance. Nothing auto-commits.
+//
+// Wired from bootstrap via Interview.bind() — NOT the bindEventListeners monolith
+// (code-health rule: a surface owns its listeners, like Press/Brief/Lint/RunMode).
+//
+// RUNBOOK
+//   Open:    call Interview.open() (or the "World Interview" entry). Resumes saved progress if any.
+//   Answer:  type → "Answer →" advances; "Skip this" advances without an answer (recorded skipped).
+//   Founding: after the founding questions are answered, a DRAFT realm card appears → "Seed this
+//            realm" creates it (explicit accept); "Redo my answer" re-asks. Nothing is saved before.
+//   Additions: each later answer opens the CANON review modal with candidates → accept/reject each.
+//   Resume:  close mid-interview (or reload) → re-open → it continues at the next unanswered question.
+//   Finish:  after the last question, the Done panel confirms the realm is built and reviewed.
+const Interview={
+  // CC-DUAL: declared AI-only exception (the keyless sibling is P5.7). CC-GROUND: the invent-guard is
+  // reused verbatim below so the model structures only what the GM said. CC-HALAL: clean prompts.
+  // UX-7: nothing auto-commits — founding needs an explicit accept, additions go through canon review.
+  _wired:false,
+  _state:null,               // the live state-machine snapshot (wiring layer only)
+  _pendingSeed:null,         // the founding importFromText result awaiting the GM's accept
+  STORAGE_KEY:'rw_interview_progress',
+
+  // ── THE SCRIPT — 8 clean world-building prompts (CC-HALAL: era/factions/people/events/tensions/
+  // places; never fate/omen/prophecy/destiny). The FIRST three are the founding pass (they draft the
+  // realm via importFromText); the rest are additions (they land in canon review). Market-default
+  // vocabulary throughout (VOCABULARY STANDARD: "world","faction","forecast"; no haram framing). ──
+  QUESTIONS:[
+    {id:'world',     phase:'founding', prompt:'In a sentence or two, what is your world?',
+     hint:'Give it a name and a feeling — grand, grim, hopeful, strange. Whatever it is to you.'},
+    {id:'era_gov',   phase:'founding', prompt:'What era is it, and how is it governed?',
+     hint:'For example: a late-medieval merchant republic, an industrial empire, a far-future federation.'},
+    {id:'rule',      phase:'founding', prompt:'Who rules it — and who stands against them?',
+     hint:'The seat of power, and the people or forces pushing back.'},
+    {id:'factions',  phase:'addition', prompt:'What major factions or powers shape daily life here?',
+     hint:'Guilds, houses, churches, armies, cartels — name a few and what they want.'},
+    {id:'people',    phase:'addition', prompt:'Name one or two people who matter.',
+     hint:'A leader, a rival, a wildcard. Who they are, what they want.'},
+    {id:'event',     phase:'addition', prompt:'What is one thing that recently happened?',
+     hint:'A war, a discovery, a betrayal, a coronation — something that moved the world.'},
+    {id:'tension',   phase:'addition', prompt:'What problem is simmering under the surface right now?',
+     hint:'A grievance, a shortage, a rivalry about to boil over.'},
+    {id:'extra',     phase:'addition', prompt:'Anything else you want on the map from day one?',
+     hint:'A place, a custom, an artifact, a secret. Optional — skip if nothing comes to mind.'},
+  ],
+
+  // ── PURE CORE ───────────────────────────────────────────────────────────────────────────────
+  // A fresh interview: index 0, no answers, not complete.
+  start(){return{index:0,answers:[],complete:false};},
+  // The question at the cursor, or null once past the last (nothing left to ask).
+  current(s){
+    const i=s&&typeof s.index==='number'?s.index:0;
+    return (i>=0&&i<this.QUESTIONS.length)?this.QUESTIONS[i]:null;
+  },
+  // True only once the cursor has advanced past the LAST question.
+  isComplete(s){
+    if(!s||!Array.isArray(s.answers))return false;
+    return (typeof s.index==='number'?s.index:0)>=this.QUESTIONS.length;
+  },
+  // Record an answer for the current question and advance. Immutable: returns a fresh state.
+  advance(s,text){
+    const cur=this.current(s);
+    if(!cur)return this.resume(s); // already past the end — no-op (normalized)
+    const answers=(Array.isArray(s.answers)?s.answers:[]).slice();
+    answers.push({questionId:cur.id,phase:cur.phase,text:typeof text==='string'?text:String(text==null?'':text),skipped:false});
+    const index=(typeof s.index==='number'?s.index:0)+1;
+    return{index,answers,complete:index>=this.QUESTIONS.length};
+  },
+  // Skip the current question — still advances, recorded as skipped with no text. Immutable.
+  skip(s){
+    const cur=this.current(s);
+    if(!cur)return this.resume(s);
+    const answers=(Array.isArray(s.answers)?s.answers:[]).slice();
+    answers.push({questionId:cur.id,phase:cur.phase,text:null,skipped:true});
+    const index=(typeof s.index==='number'?s.index:0)+1;
+    return{index,answers,complete:index>=this.QUESTIONS.length};
+  },
+  // Rehydrate a persisted snapshot into a trusted state. Defensive: junk/empty → a fresh start;
+  // a wild index is clamped into [0,N]; non-array answers are rejected. Never throws.
+  resume(snap){
+    if(!snap||typeof snap!=='object')return this.start();
+    const answers=Array.isArray(snap.answers)
+      ? snap.answers.filter(a=>a&&typeof a==='object').map(a=>({
+          questionId:String(a.questionId||''),
+          phase:a.phase==='founding'?'founding':'addition',
+          text:a.skipped?null:(typeof a.text==='string'?a.text:(a.text==null?'':String(a.text))),
+          skipped:!!a.skipped,
+        }))
+      : [];
+    let index=typeof snap.index==='number'&&isFinite(snap.index)?Math.floor(snap.index):answers.length;
+    if(index<0)index=0;
+    if(index>this.QUESTIONS.length)index=this.QUESTIONS.length;
+    return{index,answers,complete:index>=this.QUESTIONS.length};
+  },
+  // Routing partitions — the non-skipped answers for each phase. The founding set drives
+  // importFromText; the addition set drives the gated canon-review writes. Skips are excluded
+  // from both (a skip gives nothing to structure).
+  foundingAnswers(s){
+    return(Array.isArray(s&&s.answers)?s.answers:[]).filter(a=>a&&!a.skipped&&a.phase==='founding');
+  },
+  additionAnswers(s){
+    return(Array.isArray(s&&s.answers)?s.answers:[]).filter(a=>a&&!a.skipped&&a.phase==='addition');
+  },
+
+  // ── PERSISTENCE (wiring) — a dedicated key so a reload RESUMES. Decoupled from the core. ───────
+  save(){
+    try{
+      if(this._state)localStorage.setItem(this.STORAGE_KEY,JSON.stringify(this._state));
+    }catch(e){/* storage full / unavailable — interview still works in-session */}
+  },
+  _loadSaved(){
+    try{
+      const raw=localStorage.getItem(this.STORAGE_KEY);
+      if(!raw)return null;
+      return this.resume(JSON.parse(raw));
+    }catch(e){return null;}
+  },
+  _clearSaved(){try{localStorage.removeItem(this.STORAGE_KEY);}catch(e){}},
+
+  // ── THE SAME INVENT-GUARD decipherNotes uses (CC-GROUND). The blueprint requires it VERBATIM; we
+  // build the addition prompt from the same rule so the model structures ONLY what the GM said. ──
+  _additionSystemPrompt(){
+    return `You are a TTRPG world-organizing assistant. The GM is describing their world one answer at a time. Turn this answer into structured changes and output them as a CANON block in RealmWright format so the GM can review and accept each proposed change individually.
+
+Extract all relevant types from the answer: new or updated factions, characters/NPCs, locations, chronicle events (things that happened), secrets and clues, and open hooks.
+
+Rules:
+- ONLY structure what is clearly present in the notes. Do not invent details.
+- If something is ambiguous, mark that field with [Q: your question here] so the GM can clarify.
+- Keep each proposed item minimal and accurate to the source material.
+- Output a single CANON block in standard RealmWright format. This block begins with [CANON] and ends with [/CANON]. Each line uses pipe-delimited format:
+- Characters:  Character: Name | Role | Description or notes
+- Events:      Event: Title | Type | Weight | visibility | Description
+- Factions:    Faction: Name | Description
+- Stats:       Stat: StatName +N  (or -N)
+- Artifacts:   Artifact: type | content
+Use [Q: question here] inline when something is ambiguous.
+
+CANON block format example:
+[CANON]
+Character: Lyra Veyne | Spy | Works for the merchant council. [Q: Which house specifically?]
+Event: The Harbor Fire | Military | +3 | public | A fire destroyed three warehouses on the south dock.
+[/CANON]`;
+  },
+
+  // ── WIRING: open / render / step handling ─────────────────────────────────────────────────────
+  open(){
+    // Resume saved progress if present; otherwise begin fresh.
+    this._state=this._loadSaved()||this.start();
+    this._pendingSeed=null;
+    Modals.open('interview');
+    this.render();
+  },
+  render(){
+    const s=this._state;if(!s)return;
+    const ask=document.getElementById('iv-ask');
+    const preview=document.getElementById('iv-preview');
+    const done=document.getElementById('iv-done');
+    const progress=document.getElementById('iv-progress');
+    const status=document.getElementById('iv-status');
+    if(status)status.textContent='';
+    // Preview is shown only while a founding seed awaits acceptance.
+    if(preview)preview.style.display='none';
+    if(this.isComplete(s)){
+      if(ask)ask.style.display='none';
+      if(done)done.style.display='';
+      if(progress)progress.textContent='Interview complete';
+      return;
+    }
+    if(done)done.style.display='none';
+    if(ask)ask.style.display='';
+    const q=this.current(s);
+    if(!q)return;
+    const num=s.index+1,total=this.QUESTIONS.length;
+    if(progress)progress.textContent=`Question ${num} of ${total}`;
+    const qEl=document.getElementById('iv-question');if(qEl)qEl.textContent=q.prompt;
+    const hEl=document.getElementById('iv-hint');if(hEl)hEl.textContent=q.hint||'';
+    const ta=document.getElementById('iv-answer');if(ta){ta.value='';setTimeout(()=>ta.focus(),120);}
+  },
+  // Answer the current question. Founding questions, once the founding block is complete, draft a
+  // realm for review; addition questions structure straight into canon review.
+  async _submit(){
+    const s=this._state;if(!s||this.isComplete(s))return;
+    const q=this.current(s);if(!q)return;
+    const ta=document.getElementById('iv-answer');
+    const text=(ta?ta.value:'').trim();
+    const status=document.getElementById('iv-status');
+    if(!text){if(status){status.textContent='Type an answer, or Skip this question.';status.style.color='var(--color-amber)';}return;}
+    // Record + persist FIRST (so a crash mid-AI-call still resumes correctly).
+    this._state=this.advance(s,text);
+    this.save();
+    if(q.phase==='founding'){
+      // If the founding block is now fully answered (or this was the last founding question),
+      // draft the realm for review. Otherwise just advance to the next founding question.
+      if(this._foundingBlockReady()){await this._draftFoundingRealm();}
+      else this.render();
+    }else{
+      await this._structureAddition(text);
+      this.render();
+    }
+  },
+  _skip(){
+    const s=this._state;if(!s||this.isComplete(s))return;
+    this._state=this.skip(s);
+    this.save();
+    // If skipping just completed the founding block and we have founding answers, draft now.
+    const q=this.QUESTIONS[s.index];
+    if(q&&q.phase==='founding'&&this._foundingBlockReady()&&this.foundingAnswers(this._state).length){
+      this._draftFoundingRealm();
+    }else{
+      this.render();
+    }
+  },
+  // The founding block is "ready" once the cursor has passed the last founding question.
+  _foundingBlockReady(){
+    const lastFounding=this.QUESTIONS.reduce((acc,q,i)=>q.phase==='founding'?i:acc,-1);
+    return (this._state.index)>lastFounding;
+  },
+  // FOUNDING PASS: concatenate the founding answers and run importFromText — the structured shape.
+  // The result is a DRAFT shown for the GM's explicit accept (UX-7). Nothing is created here.
+  async _draftFoundingRealm(){
+    const status=document.getElementById('iv-status');
+    if(typeof Copilot==='undefined'||!Copilot.isConfigured()){
+      // AI-only-by-design: be honest when no key. Progress is saved; the GM can add a key and resume.
+      if(status){status.textContent='Add an API key in Settings to draft your realm, then re-open — your answers are saved.';status.style.color='var(--color-amber)';}
+      return;
+    }
+    if(status){status.textContent='Drafting your realm…';status.style.color='var(--color-text-muted)';}
+    const founding=this.foundingAnswers(this._state)
+      .map(a=>{const q=this.QUESTIONS.find(x=>x.id===a.questionId);return `${q?q.prompt:''}\n${a.text}`;})
+      .join('\n\n');
+    try{
+      const seed=await Copilot.importFromText(founding);
+      this._pendingSeed=seed;
+      this._renderFoundingPreview(seed);
+    }catch(err){
+      if(status){status.textContent=(err&&err.message)||'Could not draft the realm. Try Redo.';status.style.color='var(--color-crisis)';}
+    }
+  },
+  _renderFoundingPreview(seed){
+    const ask=document.getElementById('iv-ask');
+    const preview=document.getElementById('iv-preview');
+    const content=document.getElementById('iv-preview-content');
+    const E=Utils.escHtml;
+    if(content){
+      const statCount=Object.keys(seed.stats||{}).length;
+      const factionCount=(seed.factions||[]).length;
+      const charCount=(seed.characters||[]).length;
+      const chronicleCount=(seed.chronicle||[]).length;
+      content.innerHTML=`
+        <div style="font-family:var(--font-display);font-size:var(--text-display-sm);margin-bottom:4px">${E(seed.name||'Unnamed')}</div>
+        <div style="font-size:var(--text-label-sm);color:var(--color-text-muted);margin-bottom:12px">${E(seed.era||'')} · ${E(seed.government||'')} · Year ${E(String(seed.currentYear||'?'))}</div>
+        ${seed.leader?`<div style="font-size:var(--text-label-sm);margin-bottom:4px"><strong>Ruler:</strong> ${E(seed.leader)}</div>`:''}
+        ${seed.rulingClass?`<div style="font-size:var(--text-label-sm);margin-bottom:8px"><strong>Ruling class:</strong> ${E(seed.rulingClass)}</div>`:''}
+        <div style="font-size:var(--text-label-sm);color:var(--color-text-muted)">${statCount} stats · ${factionCount} faction${factionCount!==1?'s':''} · ${charCount} character${charCount!==1?'s':''} · ${chronicleCount} event${chronicleCount!==1?'s':''}</div>`;
+    }
+    if(ask)ask.style.display='none';
+    if(preview)preview.style.display='';
+  },
+  // The GM accepted the draft → create the realm (the only commit, and it was explicitly accepted),
+  // then continue into the addition questions.
+  _useFoundingSeed(){
+    const seed=this._pendingSeed;
+    if(!seed){showToast('No draft to seed. Answer the opening questions first.');return;}
+    const nation=buildNationFromSeed(seed);
+    State.addNation(nation);
+    this._pendingSeed=null;
+    Render.all();
+    showToast(`"${Utils.escHtml(nation.name)}" seeded. Keep going — the rest lands in review.`);
+    // If the whole interview is already done (all founding, additions skipped), finish; else resume.
+    this.render();
+  },
+  // The GM wants to redo the last founding answer — step the cursor back one and re-ask.
+  _redoFounding(){
+    const s=this._state;if(!s)return;
+    const answers=s.answers.slice();
+    answers.pop(); // drop the most recent founding answer
+    this._state={index:Math.max(0,s.index-1),answers,complete:false};
+    this._pendingSeed=null;
+    this.save();
+    this.render();
+  },
+  // ADDITION PASS: structure ONE answer into a CANON block (invent-guard reused) and route it into
+  // the standard canon review. The active realm is the target; the GM accepts/rejects each candidate.
+  async _structureAddition(text){
+    const status=document.getElementById('iv-status');
+    if(typeof Copilot==='undefined'||!Copilot.isConfigured()){
+      if(status){status.textContent='Add an API key to turn this answer into review candidates. Your progress is saved.';status.style.color='var(--color-amber)';}
+      return;
+    }
+    const n=State.get();
+    if(!n){
+      if(status){status.textContent='Seed your realm first (answer the opening questions).';status.style.color='var(--color-amber)';}
+      return;
+    }
+    if(status){status.textContent='Structuring for your review…';status.style.color='var(--color-text-muted)';}
+    try{
+      const ctx=Copilot.buildContext(n,{message:text});
+      const sys=this._additionSystemPrompt();
+      const user=`# World context\n${ctx}\n\n# The GM just said\n${text}\n\nProduce the CANON block now.`;
+      const data=await Copilot._apiFetch([{role:'system',content:sys},{role:'user',content:user}],{stream:false,max_tokens:1500});
+      const raw=(data&&data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content||'').trim();
+      const parsed=Parse.canonBlock(raw,{detail:true});
+      if((parsed.candidates&&parsed.candidates.length)||(parsed.failures&&parsed.failures.length)){
+        // Land in the EXISTING review modal (Modals.open closes the interview surface). When the GM
+        // finishes reviewing — accept, reject, or close — resume the conversation seamlessly.
+        const nid=n.id;
+        Modals.openCanonReview(parsed.candidates||[],nid,parsed.failures||[]);
+        if(status)status.textContent='';
+        this._resumeAfterCanonReview();
+      }else{
+        if(status){status.textContent='Nothing structured from that one — moving on.';status.style.color='var(--color-text-muted)';}
+      }
+    }catch(err){
+      if(status){status.textContent=(err&&err.message)||'Could not structure that answer.';status.style.color='var(--color-crisis)';}
+    }
+  },
+  // The addition path hands off to the canon-review modal (which closes the interview surface).
+  // Once that modal is gone — accepted, rejected, or dismissed — re-open the interview so the
+  // conversation continues. Self-contained: no fork of the review modal, no new global event.
+  // A reload before this fires still resumes, because progress was persisted before the AI call.
+  _resumeAfterCanonReview(){
+    if(this._resumeTimer)clearInterval(this._resumeTimer);
+    let ticks=0;
+    this._resumeTimer=setInterval(()=>{
+      ticks++;
+      const review=document.getElementById('modal-canon-review');
+      const stillOpen=review&&review.classList.contains('is-open');
+      // Stop watching after ~2 minutes regardless (a guard against a stuck timer).
+      if(!stillOpen||ticks>600){
+        clearInterval(this._resumeTimer);this._resumeTimer=null;
+        if(!stillOpen&&this._state&&!this.isComplete(this._state)){
+          // Only resume if nothing else has taken the foreground.
+          if(!Modals._current){Modals.open('interview');this.render();}
+        }
+        // If the interview completed via the review (it can't, but be safe), clear saved progress.
+      }
+    },200);
+  },
+  _restart(){
+    this._clearSaved();
+    this._state=this.start();
+    this._pendingSeed=null;
+    this.render();
+  },
+  _finish(){
+    this._clearSaved();
+    this._state=null;
+    Modals.close('interview');
+    Render.all();
+  },
+  bind(){
+    if(this._wired)return;this._wired=true;
+    document.getElementById('iv-answer-btn')?.addEventListener('click',()=>this._submit());
+    document.getElementById('iv-skip-btn')?.addEventListener('click',()=>this._skip());
+    document.getElementById('iv-preview-use')?.addEventListener('click',()=>this._useFoundingSeed());
+    document.getElementById('iv-preview-redo')?.addEventListener('click',()=>this._redoFounding());
+    document.getElementById('iv-restart-btn')?.addEventListener('click',()=>this._restart());
+    document.getElementById('iv-finish-btn')?.addEventListener('click',()=>this._finish());
+    // Ctrl/Cmd+Enter submits the current answer from the textarea.
+    document.getElementById('iv-answer')?.addEventListener('keydown',e=>{
+      if((e.metaKey||e.ctrlKey)&&e.key==='Enter'){e.preventDefault();this._submit();}
+    });
+    // Any explicit launcher button.
+    document.getElementById('world-interview-btn')?.addEventListener('click',()=>this.open());
+  },
+};
+
 // ─── TONIGHT MODULE ──────────────────────────────────────────────────────────
 const Tonight={
   // Stored results for "Save secrets" (activated in Delivery C)
@@ -21127,6 +21563,15 @@ function bindEventListeners(){
       if(descPane)descPane.style.display=mode==='describe'?'':'none';
       // Reset describe pane when switching away
       if(mode==='seed')_nnResetDescribePane();
+      // P5.6: "By conversation" hands off to the World Interview (its own modal). Reset the pill so
+      // re-opening New-Nation lands on the seed tab, not a dead "conversation" selection.
+      if(mode==='conversation'&&typeof Interview!=='undefined'){
+        btn.classList.remove('is-selected');
+        const seedTab=document.querySelector('[data-nn-mode="seed"]');if(seedTab)seedTab.classList.add('is-selected');
+        if(seedPane)seedPane.style.display='';
+        if(descPane)descPane.style.display='none';
+        Interview.open();
+      }
     });
   });
 
@@ -22411,6 +22856,7 @@ async function bootstrap(){
   if(typeof Press!=='undefined')Press.bind();
   if(typeof Brief!=='undefined')Brief.bind();
   if(typeof Lint!=='undefined')Lint.bind();
+  if(typeof Interview!=='undefined')Interview.bind(); // P5.6 — own bind, not the bindEventListeners monolith.
   if(typeof TransparencyLog!=='undefined')TransparencyLog.bind();
   if(typeof CostMeter!=='undefined')CostMeter.bind();
   if(typeof CostGate!=='undefined')CostGate._ensure();
