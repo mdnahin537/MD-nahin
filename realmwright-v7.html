@@ -2216,6 +2216,46 @@ body.theme-manuscript .mode-dropdown__desc{color:var(--color-text-muted)}
 .tbl-condbody{min-width:0}
 .tbl-statband{display:grid;grid-template-columns:1fr 64px 64px;gap:6px}
 .tbl-condbtns{margin-top:0;grid-column:1 / -1}
+/* ── HOLD AUDIENCE (P5.3 — the anti-chatbot flagship) ────────────────────── */
+/* Two panes: the deterministic "What X knows" dossier card (no-AI, left) and the
+   in-character chat (AI half, right). Editorial-dark tokens; degrades to one column. */
+.aud-layout{display:grid;grid-template-columns:minmax(280px,360px) 1fr;gap:var(--space-4);align-items:start}
+@media(max-width:760px){.aud-layout{grid-template-columns:1fr}}
+.aud-intro{font-size:var(--text-body-sm);color:var(--color-text-muted);margin:0 0 var(--space-3);line-height:1.5}
+/* The printable dossier card — the no-AI value. */
+.aud-dossier{background:var(--color-parchment-warm);border:.5px solid var(--color-gold-pale);border-radius:var(--radius-sm);padding:var(--space-4);font-size:var(--text-body-sm)}
+.aud-dossier__title{font-family:var(--font-display);font-size:var(--text-h4);color:var(--color-ink);margin:0 0 2px}
+.aud-dossier__sub{font-family:var(--font-mono);font-size:var(--text-mono-sm);color:var(--color-text-muted);margin-bottom:var(--space-3)}
+.aud-dossier__deceased{font-family:var(--font-mono);font-size:var(--text-mono-sm);color:var(--color-amber);margin-bottom:var(--space-3);border:.5px dashed var(--color-amber);border-radius:var(--radius-sm);padding:var(--space-2)}
+.aud-sec{margin-top:var(--space-3)}
+.aud-sec__h{font-size:var(--text-label-sm);text-transform:uppercase;letter-spacing:.06em;color:var(--color-gold-deep);margin-bottom:var(--space-1);font-weight:600}
+.aud-sec__body{color:var(--color-text-body);line-height:1.5}
+.aud-line{margin-bottom:6px}
+.aud-line__year{font-family:var(--font-mono);font-size:var(--text-mono-sm);color:var(--color-text-muted);margin-right:6px}
+.aud-grant{background:var(--color-parchment-pale);border-left:2px solid var(--color-gold);padding:var(--space-1) var(--space-2);margin-bottom:6px;border-radius:0 var(--radius-sm) var(--radius-sm) 0}
+.aud-empty{color:var(--color-text-faint);font-style:italic}
+.aud-grants-toolbar{margin-top:var(--space-3);border-top:.5px solid var(--color-gold-pale);padding-top:var(--space-3)}
+.aud-grants-toolbar__h{font-size:var(--text-label-sm);color:var(--color-gold-deep);margin-bottom:var(--space-2);font-weight:600}
+.aud-grant-toggle{display:flex;align-items:flex-start;gap:var(--space-2);margin-bottom:var(--space-2);cursor:pointer;font-size:var(--text-body-sm);color:var(--color-text-body)}
+.aud-grant-toggle input{margin-top:3px;flex:none}
+.aud-print-btn{margin-top:var(--space-3)}
+/* The chat pane (AI half). */
+.aud-chat{display:flex;flex-direction:column;min-height:340px}
+.aud-chat__head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:var(--space-2);gap:var(--space-2);flex-wrap:wrap}
+.aud-chat__model{font-family:var(--font-mono);font-size:var(--text-mono-sm);color:var(--color-text-muted)}
+.aud-chat__log{flex:1;overflow-y:auto;max-height:420px;border:.5px solid var(--color-gold-pale);border-radius:var(--radius-sm);padding:var(--space-3);background:var(--color-surface,var(--color-parchment-pale));display:flex;flex-direction:column;gap:var(--space-3)}
+.aud-msg{font-size:var(--text-body-sm);line-height:1.55}
+.aud-msg__role{font-family:var(--font-mono);font-size:var(--text-mono-sm);color:var(--color-text-muted);margin-bottom:2px}
+.aud-msg--npc .aud-msg__role{color:var(--color-gold-deep)}
+.aud-msg--gm{text-align:right}
+.aud-msg--gm .aud-msg__body{display:inline-block;text-align:left;background:var(--color-parchment-warm);border-radius:var(--radius-sm);padding:var(--space-1) var(--space-3)}
+.aud-msg__body{color:var(--color-text-body);white-space:pre-wrap}
+.aud-margin{font-family:var(--font-mono);font-size:var(--text-mono-sm);color:var(--color-text-faint);margin-top:4px;border-top:.5px dotted var(--color-gold-pale);padding-top:3px}
+.aud-chat__empty{color:var(--color-text-faint);font-style:italic;font-size:var(--text-body-sm);margin:auto;text-align:center;padding:var(--space-4)}
+.aud-chat__inputrow{display:flex;gap:var(--space-2);margin-top:var(--space-3)}
+.aud-chat__input{flex:1;min-height:38px;resize:vertical;font-family:var(--font-body);font-size:var(--text-body-sm)}
+.aud-chat__keyhint{font-size:var(--text-body-sm);color:var(--color-text-muted);margin-top:var(--space-3);text-align:center}
+.aud-canon-btn{margin-top:var(--space-3)}
 /* Characters in workbench */
 .char-list{display:flex;flex-direction:column;gap:var(--space-2)}
 .char-card{background:var(--color-parchment-warm);border:.5px solid var(--color-gold-pale);
@@ -3986,6 +4026,23 @@ SECTION 8: DOM STRUCTURE
   </div>
   <div class="modal__footer">
     <button class="btn btn--primary" data-close="tables">Done</button>
+  </div>
+</div>
+<!-- Hold Audience Modal (P5.3 — N1, the anti-chatbot flagship). Left pane: the deterministic
+     "What X knows" dossier (no-AI). Right pane: in-character chat clamped by that dossier.
+     The chat's system prompt is built FROM THE DOSSIER ONLY — never buildContext — so the model
+     cannot reveal what the engine never gave it. -->
+<div class="modal modal--lg" id="modal-audience" role="dialog" aria-modal="true" aria-labelledby="audience-title">
+  <div class="modal__header">
+    <h2 class="modal__title" id="audience-title">🗣 Hold Audience</h2>
+    <button class="modal__close" data-close="audience" aria-label="Close">×</button>
+  </div>
+  <div class="modal__body">
+    <p class="aud-intro">An in-character conversation clamped by a deterministic dossier. RealmWright compiles exactly what this character knows — public history, their own drives, only the secrets you grant — <em>before</em> any AI call. The model is given only that dossier, so it cannot reveal what it was never told. The card on the left is the proof; it works with no AI at all.</p>
+    <div class="aud-layout" id="audience-body"></div>
+  </div>
+  <div class="modal__footer">
+    <button class="btn btn--primary" data-close="audience">Done</button>
   </div>
 </div>
 <!-- Character Modal -->
@@ -6809,7 +6866,10 @@ function buildNationFromSeed(seed){
     copilotContextDepth:seed.copilotContextDepth||'medium',
     sessions:seed.sessions||[],
     hooks:seed.hooks||[],
-    secrets:seed.secrets||[],
+    // P5.3: secrets carry a stable unique id like every other entity array (chronicle/characters/
+    // artifacts) — the Hold Audience grant gate keys on it, so an id-less secret could otherwise be
+    // unmatchable (or, with the old fail-open gate, ride another's grant). Mirrors the artifacts line.
+    secrets:(seed.secrets||[]).map(s=>({...s,id:s.id||Utils.uuid()})),
     fronts:seed.fronts||[],
     locations:seed.locations||[],
     bestiary:seed.bestiary||[],
@@ -8883,6 +8943,7 @@ const Render={
             <div class="plot-seed-section__heading">Plot Seeds (${seedCount})</div>
             ${(c.plotSeeds||[]).map(s=>`<div class="plot-seed-section__item">${E(s)}</div>`).join('')}
           </div>`:''}
+          <div class="char-card__meta"><span class="char-card__meta-link" data-cid-audience="${E(c.id)}" title="Open an in-character conversation clamped by what this character provably knows">🗣 Hold audience</span></div>
         </div>`;
       });
     }
@@ -8908,6 +8969,13 @@ const Render={
         // Open the first linked event in the detail panel
         const evs=State.get().chronicle.filter(ev=>ch.chronicleLinks.includes(ev.id));
         if(evs.length)Interact.openDetailPanel(evs[0].id);
+      });
+    });
+    // P5.3: Hold Audience — opens the deterministic-dossier-clamped conversation for this NPC.
+    ctr.querySelectorAll('[data-cid-audience]').forEach(link=>{
+      link.addEventListener('click',(e)=>{
+        e.stopPropagation();
+        if(typeof Audience!=='undefined')Audience.open(link.dataset.cidAudience);
       });
     });
     document.getElementById('add-character-btn')?.addEventListener('click',()=>Modals.openNewCharacter());
@@ -10319,6 +10387,509 @@ const Tables={
       this._editId=null; this._view='edit'; this._renderEdit();
       showToast('AI draft loaded — review every entry and condition, then Save to keep it.');
     }catch(err){ showToast('Could not read that as a JSON table object. '+(err.message||'')); }
+  },
+};
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+// P5.3 — N1 HOLD AUDIENCE: the anti-chatbot FLAGSHIP.
+// ──────────────────────────────────────────────────────────────────────────────────────────────
+// THE CONSTITUTIVE IDEA: an in-character NPC conversation clamped by a DETERMINISTIC DOSSIER. The
+// engine compiles exactly what this NPC knows BEFORE any AI call; the model is handed ONLY the
+// dossier, so it cannot reveal what it was never given. The proof is STRUCTURAL — the flagship test
+// asserts on the BUILT PROMPT STRING, not on the model's behaviour.
+//
+// THE #1 RULE (CC-LM2, constitutive): the dossier is a SEPARATE, RESTRICTED compile. It NEVER reuses
+// Copilot.buildContext — that builder dumps ALL secrets (it has includeSecrets at depth) and prints
+// PRIVATE/FORECAST event descriptions (the [secret]/[forecast]-tagged lines). Reusing it would leak
+// everything. So Audience.dossier is a fresh assembler with two hard filters, applied in pure code:
+//     EVENTS:  chronicle.filter(e => e.visibility === 'public')   ← post-P0.8 semantics. A private OR
+//              forecast event NEVER enters. (Then ordered/biased to the NPC's location; refined by
+//              P4.5 knownBy.tier when present — but the PUBLIC gate is the wall, never the bias.)
+//     SECRETS: secrets.filter(s => grants.includes(s.id))         ← grants DEFAULT [] ⇒ NONE.
+//
+// PURITY / DETERMINISM: dossier() and _buildSystemPrompt() are pure. They read only their arguments
+// (the nation snapshot + npcId + grants) — never State, Math.random, or Date — and sort everything
+// with insertion-order risk, so the same inputs yield an identical object AND an identical prompt
+// string. (The chat method _streamReply is the only impure part — it does the network I/O — and it
+// builds its messages FROM the dossier-derived prompt, NOT buildContext.)
+//
+// CC-DUAL: the "What X knows" dossier card is the NO-AI half (printable, useful with zero key). The
+//          chat is the AI half. CC-GROUND: the GM margin shows the active grants + which entities the
+//          NPC could cite. CC-HALAL: a DECEASED NPC is portrayed FROM THE CHRONICLE — a fictional
+//          person reconstructed from the record — explicitly NO séance / necromancy framing, written
+//          into the prompt header the way the existing surfaces declare their guard.
+//
+// Wired from bootstrap via Audience.bind() — NOT the bindEventListeners monolith (code-health rule).
+// ══════════════════════════════════════════════════════════════════════════════════════════════
+const Audience={
+  _bound:false,
+  _npcId:null,      // the NPC currently in audience
+  _grants:[],       // secret ids granted for THIS session (the GM's keys); default none
+  _sending:false,
+  _abort:null,
+
+  // ── PURE DOSSIER — the deterministic compile (the headline claim lives here) ──────────────────
+  // Signature per spec: dossier(n, npcId, grants=[]). Returns a plain object — the exact, restricted
+  // set of facts this NPC may speak from. NEVER calls buildContext; reaches outside its arguments for
+  // nothing. Deterministic: same (n, npcId, grants) → identical object (everything order-stable).
+  dossier(n, npcId, grants){
+    // FAIL-CLOSED grant set: only truthy ids count. A falsy/blank grant token can never match a
+    // secret, and (paired with the id guard below) a secret with no id can never be granted. This
+    // closes the [undefined].includes(undefined)===true fail-open that id-less secrets would open.
+    const G = (Array.isArray(grants) ? grants : []).filter(id => typeof id === 'string' && id.length > 0);
+    const chars = (n && Array.isArray(n.characters)) ? n.characters : [];
+    const npc = chars.find(c => c && c.id === npcId) || null;
+    const factions = (n && Array.isArray(n.factions)) ? n.factions : [];
+    const locations = (n && Array.isArray(n.locations)) ? n.locations : [];
+    const chronicle = (n && Array.isArray(n.chronicle)) ? n.chronicle : [];
+    const secrets = (n && Array.isArray(n.secrets)) ? n.secrets : [];
+
+    // ── IDENTITY — public-facing facts only. Faction + home are resolved to their public names.
+    const faction = npc && npc.factionId ? (factions.find(f => f && f.id === npc.factionId) || null) : null;
+    const home = npc && npc.basedInLocationId ? (locations.find(l => l && l.id === npc.basedInLocationId) || null) : null;
+    const deceased = !!(npc && npc.status === 'dead');
+    const identity = {
+      name: (npc && npc.name) || 'Unknown',
+      role: (npc && npc.role) || '',
+      status: (npc && npc.status) || 'active',
+      deceased,
+      factionName: faction ? (faction.name || '') : '',
+      homeName: home ? (home.name || '') : '',
+    };
+
+    // ── DRIVES / FEARS — the NPC's OWN psychology. Theirs by definition; the voice precedent (the
+    //    letter generator writes "from the writer's drives, fears, status").
+    const drivesFears = {
+      drive: (npc && npc.drive) || '',
+      fear: (npc && npc.fear) || '',
+    };
+
+    // ── FACTION STANCE — public position + primaryInterest (both public-facing; never the secret
+    //    machinery). Absent if the NPC is unaffiliated.
+    const factionStance = faction ? {
+      name: faction.name || '',
+      position: faction.position || 'holding',
+      interest: faction.primaryInterest || '',
+      type: faction.type || '',
+    } : null;
+
+    // ── PUBLIC EVENTS — THE HARD GATE (CC-LM2). visibility==='public' ONLY. A private OR forecast
+    //    event NEVER enters this list. Then BIAS to the NPC's home location: events that happened at
+    //    (or near) the NPC's location sort first; among the rest, more-travelled news (knownBy.tier,
+    //    P4.5 when present) and more recent years rank higher. The bias only ORDERS what already
+    //    passed the public wall — it never admits a non-public event.
+    const homeId = npc && npc.basedInLocationId ? npc.basedInLocationId : null;
+    const tierRank = { common: 3, regional: 2, local: 1 };
+    const publicEvents = chronicle
+      .filter(e => e && e.visibility === 'public')          // ← THE WALL. private/forecast excluded.
+      .map(e => {
+        const here = homeId && e.happenedAtLocationId === homeId ? 1 : 0;
+        const kbTier = e.knownBy && typeof e.knownBy === 'object' ? e.knownBy.tier : null;
+        const reach = tierRank[kbTier] || 0;               // P4.5: how far the news has travelled
+        return { e, here, reach, year: Number(e.year) || 0 };
+      })
+      // Stable, total ordering (no Math.random, no locale): location first, then reach, then recency,
+      // then year, then id — so the same chronicle always serialises identically.
+      .sort((a, b) =>
+        (b.here - a.here) || (b.reach - a.reach) || (b.year - a.year) ||
+        String((a.e && a.e.id) || '').localeCompare(String((b.e && b.e.id) || '')))
+      .map(({ e, here }) => ({
+        id: e.id || '',
+        year: e.year,
+        name: e.name || '',
+        type: e.type || '',
+        description: e.description || '',
+        atHome: !!here,
+      }));
+
+    // ── GRANTED SECRETS — ONLY secrets whose id is in `grants`. DEFAULT NONE. This is the explicit
+    //    GM key: nothing here unless the GM handed this NPC that exact secret for this audience.
+    // Grant-gate keys on a NON-EMPTY id: a secret with no id is unmatchable (fail-closed), so an
+    // id-less or duplicate-id secret can never ride another's grant.
+    const grantedSecrets = secrets
+      .filter(s => s && typeof s.id === 'string' && s.id.length > 0 && G.includes(s.id))
+      .map(s => ({ id: s.id, title: s.title || '', content: s.content || '' }));
+
+    // ── PRIOR TRANSCRIPT — this NPC's own audience log (rides {...c} on import; no whitelist needed).
+    const priorTranscript = (npc && Array.isArray(npc.audienceLog))
+      ? npc.audienceLog.filter(m => m && (m.role === 'gm' || m.role === 'npc'))
+                       .map(m => ({ role: m.role, content: String(m.content || '') }))
+      : [];
+
+    return { identity, drivesFears, factionStance, publicEvents, grantedSecrets, priorTranscript };
+  },
+
+  // ── PURE SYSTEM-PROMPT BUILDER — the string the model is handed. THE PROOF SURFACE. It interpolates
+  //    ONLY dossier fields; it reaches for nothing else. The flagship test asserts that the returned
+  //    string contains the granted secret + public text and ZERO ungranted/private/forecast tokens.
+  _buildSystemPrompt(d){
+    const id = d.identity;
+    const lines = [];
+    // CC-HALAL guard, written into the header. Deceased ⇒ explicit chronicle-portrayal framing,
+    // NO séance / necromancy. This is a rule the model is told, before anything else.
+    if(id.deceased){
+      lines.push(`You are portraying ${id.name}, a fictional character who has died, reconstructed entirely FROM THE CHRONICLE — the written record of their world. This is a literary portrayal of a person from the record, exactly like an author writing a deceased historical figure from documents. It is NOT a séance, a summoning, divination, or contact with the dead; nothing supernatural is occurring. Speak as ${id.name} would have spoken in life, drawing only on what the record below establishes.`);
+    } else {
+      lines.push(`You are portraying ${id.name}, a fictional character in a tabletop roleplaying world. Stay in character and speak in their own voice.`);
+    }
+    lines.push('');
+    // Identity
+    const idBits = [];
+    if(id.role) idBits.push(id.role);
+    if(id.factionName) idBits.push('of ' + id.factionName);
+    if(id.homeName) idBits.push('based in ' + id.homeName);
+    lines.push(`## Who you are`);
+    lines.push(`${id.name}${idBits.length ? ' — ' + idBits.join(', ') : ''}.`);
+    if(d.drivesFears.drive) lines.push(`What drives you: ${d.drivesFears.drive}`);
+    if(d.drivesFears.fear) lines.push(`What you fear: ${d.drivesFears.fear}`);
+    // Faction stance
+    if(d.factionStance){
+      lines.push('');
+      lines.push(`## Your faction's standing`);
+      lines.push(`${d.factionStance.name}${d.factionStance.type ? ' ('+d.factionStance.type+')' : ''} is currently ${d.factionStance.position}.`);
+      if(d.factionStance.interest) lines.push(`What it wants above all: ${d.factionStance.interest}`);
+    }
+    // Public history — the ONLY world-facts the NPC may speak from.
+    lines.push('');
+    lines.push(`## What you know of the world (public history only)`);
+    if(d.publicEvents.length){
+      lines.push(`These are matters of public record. You may speak of them. You know NOTHING beyond what is written here and your own knowledge below — if asked about anything outside it, say plainly that you do not know.`);
+      d.publicEvents.forEach(e => {
+        lines.push(`- [#${String(e.id).slice(0,8)}] Year ${e.year}: ${e.name} (${e.type})${e.atHome ? ' [happened where you live]' : ''} — ${e.description}`);
+      });
+    } else {
+      lines.push(`You know of no public events bearing on the present matter.`);
+    }
+    // Granted secrets — only what the GM handed this character.
+    lines.push('');
+    if(d.grantedSecrets.length){
+      lines.push(`## What you privately know`);
+      lines.push(`You alone carry these truths. Reveal them only as your character would — guardedly, and only if it serves you.`);
+      d.grantedSecrets.forEach(s => {
+        lines.push(`- ${s.title ? s.title + ': ' : ''}${s.content}`);
+      });
+    } else {
+      lines.push(`## What you privately know`);
+      lines.push(`Nothing beyond the public record above. You hold no secret knowledge in this conversation. If pressed for hidden facts, conspiracies, or things not in the public record, you cannot supply them — because you genuinely do not have them.`);
+    }
+    // The clamp, restated as the model's standing instruction (belt-and-braces; the real guarantee is
+    // that the forbidden text is simply ABSENT above — there is nothing here to leak).
+    lines.push('');
+    lines.push(`## How to answer`);
+    lines.push(`- Speak only as ${id.name}. Never break character to describe the simulation.`);
+    lines.push(`- Ground every world-fact in the record above. When you state such a fact, you may cite its [#id].`);
+    lines.push(`- You CANNOT know anything not written above. Do not invent secrets, future events, or hidden plots. If you don't know, say so in character.`);
+    lines.push(`- Keep replies short — a few sentences, the way a person speaks in a room.`);
+    return lines.join('\n');
+  },
+
+  // ── PERSISTENCE: per-NPC log on the character object. Rides {...c} on export→import (buildNationFromSeed
+  //    spreads characters with {...c}), so NO whitelist is needed — verified against L6804.
+  _logFor(npc){ return (npc && Array.isArray(npc.audienceLog)) ? npc.audienceLog : []; },
+  _appendLog(npc, role, content, margin){
+    if(!npc) return;
+    if(!Array.isArray(npc.audienceLog)) npc.audienceLog = [];
+    const entry = { role, content: String(content || ''), at: Utils.now() };
+    if(margin) entry.margin = margin;
+    npc.audienceLog.push(entry);
+  },
+
+  // ── COST: reuse the existing per-message estimate; nudge toward a haiku-class model for talk.
+  _costLabel(){
+    try{ return (typeof Copilot!=='undefined' && Copilot.costEstimateLabel) ? Copilot.costEstimateLabel() : '— ¢ per message'; }
+    catch(e){ return '— ¢ per message'; }
+  },
+  _modelLabel(){
+    try{ return (typeof Copilot!=='undefined' && Copilot.modelLabel) ? Copilot.modelLabel() : ''; }
+    catch(e){ return ''; }
+  },
+
+  // ── ENTRY POINT ──────────────────────────────────────────────────────────────────────────────
+  bind(){
+    if(this._bound) return; this._bound = true;
+    document.addEventListener('sc:modal-open', e => { if(e.detail === 'audience') this._render(); });
+  },
+  open(npcId){
+    const n = State.get();
+    if(!n){ showToast('Create or open a realm first.'); return; }
+    const npc = (n.characters || []).find(c => c.id === npcId);
+    if(!npc){ showToast('Character not found.'); return; }
+    this._npcId = npcId;
+    this._grants = [];                 // N1 I7-i: default NO grants every time an audience opens
+    Modals.open('audience');           // fires sc:modal-open → _render()
+  },
+
+  // ── RENDER — left: the deterministic dossier card (no-AI). right: the chat (AI half) ───────────
+  _render(){
+    const host = document.getElementById('audience-body'); if(!host) return;
+    const n = State.get(); if(!n) return;
+    const npc = (n.characters || []).find(c => c.id === this._npcId);
+    if(!npc){ host.innerHTML = '<div class="aud-empty">Character not found.</div>'; return; }
+    const d = this.dossier(n, this._npcId, this._grants);
+    host.innerHTML =
+      `<div class="aud-dossier" id="aud-dossier-card">${this._dossierCardHtml(n, npc, d)}</div>` +
+      `<div class="aud-chat">${this._chatHtml(npc, d)}</div>`;
+    this._wire(n, npc);
+  },
+
+  // The printable "What {NPC} knows" card — the no-AI value. Renders the dossier verbatim.
+  _dossierCardHtml(n, npc, d){
+    const E = Utils.escHtml;
+    const id = d.identity;
+    const sub = [id.role, id.factionName && ('· ' + id.factionName), id.homeName && ('· ' + id.homeName)].filter(Boolean).join(' ');
+    let h = `<div class="aud-dossier__title">What ${E(id.name)} knows</div>`;
+    if(sub) h += `<div class="aud-dossier__sub">${E(sub)}</div>`;
+    if(id.deceased) h += `<div class="aud-dossier__deceased">Deceased — portrayed from the chronicle. A reconstruction of a fictional person from the record; no séance, nothing supernatural.</div>`;
+    // Drives / fears
+    if(d.drivesFears.drive || d.drivesFears.fear){
+      h += `<div class="aud-sec"><div class="aud-sec__h">Drives &amp; fears</div><div class="aud-sec__body">`;
+      if(d.drivesFears.drive) h += `<div class="aud-line"><strong>Drive:</strong> ${E(d.drivesFears.drive)}</div>`;
+      if(d.drivesFears.fear) h += `<div class="aud-line"><strong>Fear:</strong> ${E(d.drivesFears.fear)}</div>`;
+      h += `</div></div>`;
+    }
+    // Faction stance
+    if(d.factionStance){
+      h += `<div class="aud-sec"><div class="aud-sec__h">Faction standing</div><div class="aud-sec__body">`;
+      h += `<div class="aud-line">${E(d.factionStance.name)} — <em>${E(d.factionStance.position)}</em></div>`;
+      if(d.factionStance.interest) h += `<div class="aud-line">${E(d.factionStance.interest)}</div>`;
+      h += `</div></div>`;
+    }
+    // Public events (the wall)
+    h += `<div class="aud-sec"><div class="aud-sec__h">Public history they can speak of (${d.publicEvents.length})</div><div class="aud-sec__body">`;
+    if(d.publicEvents.length){
+      d.publicEvents.forEach(e => {
+        h += `<div class="aud-line"><span class="aud-line__year">Y${E(String(e.year))}</span>${E(e.name)}${e.atHome ? ' <span class="aud-line__year">(home)</span>' : ''}</div>`;
+      });
+    } else {
+      h += `<div class="aud-empty">No public events bear on them.</div>`;
+    }
+    h += `</div></div>`;
+    // Granted secrets (default none)
+    h += `<div class="aud-sec"><div class="aud-sec__h">Secrets you've granted (${d.grantedSecrets.length})</div><div class="aud-sec__body">`;
+    if(d.grantedSecrets.length){
+      d.grantedSecrets.forEach(s => { h += `<div class="aud-grant">${s.title ? '<strong>'+E(s.title)+'</strong> — ' : ''}${E(s.content)}</div>`; });
+    } else {
+      h += `<div class="aud-empty">None. By default this character knows none of your secrets — only public history. Grant one below to let them speak it.</div>`;
+    }
+    h += `</div></div>`;
+    // Grants toolbar — toggle which secrets THIS character carries into the conversation.
+    const secrets = Array.isArray(n.secrets) ? n.secrets : [];
+    if(secrets.length){
+      h += `<div class="aud-grants-toolbar"><div class="aud-grants-toolbar__h">Grant a secret to ${E(id.name)}</div>`;
+      secrets.forEach(s => {
+        const on = this._grants.includes(s.id);
+        h += `<label class="aud-grant-toggle"><input type="checkbox" data-grant="${E(s.id)}"${on ? ' checked' : ''}><span>${E(s.title || '(untitled secret)')}</span></label>`;
+      });
+      h += `</div>`;
+    }
+    h += `<button class="btn btn--secondary aud-print-btn" id="aud-print" style="width:100%;justify-content:center">🖨 Print this dossier</button>`;
+    return h;
+  },
+
+  // The chat pane (AI half).
+  _chatHtml(npc, d){
+    const E = Utils.escHtml;
+    const configured = (typeof Copilot !== 'undefined' && Copilot.isConfigured && Copilot.isConfigured());
+    let h = `<div class="aud-chat__head"><div><strong>In audience with ${E(npc.name)}</strong></div>`;
+    h += `<div class="aud-chat__model">${configured ? E(this._modelLabel() + ' · ' + this._costLabel()) : 'AI off'}</div></div>`;
+    if(!configured){
+      h += `<div class="aud-chat__log"><div class="aud-chat__empty">The dossier on the left works with no AI — print it and roleplay from it yourself. To talk to ${E(npc.name)} live, add an API key in Settings → Copilot. A haiku-class model is plenty for conversation and the cheapest option.</div></div>`;
+      return h;
+    }
+    h += `<div class="aud-chat__log" id="aud-log">${this._renderMessages(npc, d)}</div>`;
+    h += `<div class="aud-chat__keyhint">Tip: a haiku-class model handles roleplay well at the lowest cost. ${E(this._costLabel())}</div>`;
+    h += `<div class="aud-chat__inputrow"><textarea class="form-input aud-chat__input" id="aud-input" placeholder="Speak to ${E(npc.name)}…" rows="1"></textarea><button class="btn btn--primary" id="aud-send">Speak</button></div>`;
+    h += `<button class="btn btn--secondary aud-canon-btn" id="aud-canon" style="width:100%;justify-content:center">⌘ Make it canon — review this conversation for changes</button>`;
+    return h;
+  },
+
+  _renderMessages(npc, d){
+    const E = Utils.escHtml;
+    const log = this._logFor(npc);
+    if(!log.length){
+      return `<div class="aud-chat__empty">No words yet. Ask ${E(npc.name)} a question. They answer only from the dossier on the left — ask about an ungranted secret and they cannot reveal it.</div>`;
+    }
+    return log.map(m => {
+      if(m.role === 'gm'){
+        return `<div class="aud-msg aud-msg--gm"><div class="aud-msg__role">You</div><div class="aud-msg__body">${E(m.content)}</div></div>`;
+      }
+      const margin = m.margin ? `<div class="aud-margin">${E(m.margin)}</div>` : '';
+      return `<div class="aud-msg aud-msg--npc"><div class="aud-msg__role">${E(npc.name)}</div><div class="aud-msg__body">${E(m.content)}</div>${margin}</div>`;
+    }).join('');
+  },
+
+  _wire(n, npc){
+    const host = document.getElementById('audience-body'); if(!host) return;
+    // Grant toggles — re-derive the dossier each toggle so the card + (next) prompt update live.
+    host.querySelectorAll('[data-grant]').forEach(cb => cb.addEventListener('change', () => {
+      const id = cb.dataset.grant;
+      if(cb.checked){ if(!this._grants.includes(id)) this._grants.push(id); }
+      else { this._grants = this._grants.filter(x => x !== id); }
+      this._render();
+    }));
+    document.getElementById('aud-print')?.addEventListener('click', () => this._print(n, npc));
+    const sendBtn = document.getElementById('aud-send');
+    const input = document.getElementById('aud-input');
+    if(sendBtn) sendBtn.addEventListener('click', () => this._send());
+    if(input) input.addEventListener('keydown', e => { if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); this._send(); } });
+    document.getElementById('aud-canon')?.addEventListener('click', () => this._makeCanon(n, npc));
+  },
+
+  // ── PRINT — the no-AI deliverable: the dossier card as a standalone printable sheet ────────────
+  _print(n, npc){
+    const card = document.getElementById('aud-dossier-card');
+    if(!card){ showToast('Nothing to print yet.'); return; }
+    const w = window.open('', '_blank');
+    if(!w){ showToast('Allow pop-ups to print the dossier.'); return; }
+    w.document.write(`<!doctype html><html><head><title>What ${Utils.escHtml(npc.name)} knows</title>` +
+      `<style>body{font-family:Georgia,serif;max-width:640px;margin:32px auto;padding:0 16px;color:#1a1a1a;line-height:1.5}` +
+      `.aud-dossier__title{font-size:22px;font-weight:700;margin:0 0 2px}.aud-dossier__sub{font-family:monospace;font-size:12px;color:#666;margin-bottom:16px}` +
+      `.aud-dossier__deceased{font-family:monospace;font-size:12px;color:#8a5a00;border:1px dashed #8a5a00;padding:8px;border-radius:4px;margin-bottom:16px}` +
+      `.aud-sec{margin-top:16px}.aud-sec__h{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:#8a6d00;font-weight:700;margin-bottom:4px}` +
+      `.aud-line{margin-bottom:6px}.aud-line__year{font-family:monospace;font-size:12px;color:#666;margin-right:6px}` +
+      `.aud-grant{border-left:2px solid #b8860b;padding:4px 8px;margin-bottom:6px;background:#faf7ef}.aud-empty{color:#999;font-style:italic}` +
+      `.aud-grants-toolbar,.aud-print-btn,.btn{display:none!important}</style></head><body>` +
+      card.innerHTML + `</body></html>`);
+    w.document.close();
+    setTimeout(() => { try{ w.print(); }catch(e){} }, 250);
+  },
+
+  // ── CHAT (the AI half) — builds a persona prompt FROM THE DOSSIER ONLY, then streams a reply.
+  //    Mirrors Copilot.send's streaming primitive (provider-aware URL/headers + the streamOnce SSE
+  //    loop) but NEVER calls buildContext and runs WITHOUT tools (roleplay, not world-mutation).
+  async _send(){
+    if(this._sending){ showToast('A reply is already streaming.'); return; }
+    const n = State.get(); if(!n) return;
+    const npc = (n.characters || []).find(c => c.id === this._npcId); if(!npc) return;
+    if(!(typeof Copilot !== 'undefined' && Copilot.isConfigured && Copilot.isConfigured())){
+      showToast('Add an API key in Settings → Copilot to speak with this character.'); return;
+    }
+    const input = document.getElementById('aud-input');
+    const text = (input && input.value || '').trim();
+    if(!text) return;
+    // The dossier — recompiled now from CURRENT grants. The prompt is built from it ALONE.
+    const d = this.dossier(n, this._npcId, this._grants);
+    const systemPrompt = this._buildSystemPrompt(d);
+    // GM margin (CC-GROUND): which grants are active + which entities the NPC can cite this turn.
+    const citeIds = d.publicEvents.map(e => '#' + String(e.id).slice(0,8)).slice(0,8);
+    const margin = `dossier: ${d.publicEvents.length} public event(s), ${d.grantedSecrets.length} granted secret(s)` +
+      (citeIds.length ? ` · citable: ${citeIds.join(' ')}` : '');
+    // Persist the GM turn immediately (visible + survives reload).
+    this._appendLog(npc, 'gm', text);
+    State._touch(n.id); State.persist();
+    if(input){ input.value=''; input.style.height='auto'; }
+    this._render();
+
+    // Provider-aware URL/headers/model — mirrors Copilot.send's setup.
+    const settings = State.data.meta.settings || {};
+    const provider = settings.copilotProvider || 'openrouter';
+    let url, headers, model;
+    if(provider === 'ollama'){
+      url = `${(settings.ollamaUrl || 'http://localhost:11434').replace(/\/$/, '')}/v1/chat/completions`;
+      headers = { 'Content-Type': 'application/json' };
+      model = settings.ollamaModel || 'llama3.1';
+    } else {
+      url = 'https://openrouter.ai/api/v1/chat/completions';
+      headers = { 'Authorization': `Bearer ${settings.copilotKey}`, 'Content-Type': 'application/json',
+        'HTTP-Referer': window.location.origin || 'https://realmwright.app', 'X-Title': 'RealmWright' };
+      model = settings.copilotModel || 'anthropic/claude-sonnet-latest';
+    }
+    // Message array: the dossier-built system prompt + this NPC's prior turns (mapped gm→user,
+    // npc→assistant) + the new user line. NO buildContext, NO tools.
+    const history = this._logFor(npc)
+      .filter(m => m.role === 'gm' || m.role === 'npc')
+      .map(m => ({ role: m.role === 'gm' ? 'user' : 'assistant', content: String(m.content || '') }));
+    const messages = [{ role: 'system', content: systemPrompt }, ...history];
+
+    this._sending = true;
+    this._abort = new AbortController();
+    const sendBtn = document.getElementById('aud-send'); if(sendBtn){ sendBtn.disabled = true; sendBtn.textContent = '…'; }
+    let acc = '', usage = null, errMsg = null;
+    try{
+      const body = { model, messages, stream: true, max_tokens: 600 };
+      const resp = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body), signal: this._abort.signal });
+      if(!resp.ok){
+        let t = `HTTP ${resp.status}`;
+        try{ const j = await resp.json(); t = j?.error?.message || j?.error || t; }catch(e){}
+        if(resp.status === 401) errMsg = 'Invalid API key. Check Settings → Copilot.';
+        else if(resp.status === 402) errMsg = 'Out of credits. Top up at openrouter.ai/credits.';
+        else if(resp.status === 429) errMsg = 'Rate limited. Wait a moment and try again.';
+        else errMsg = `Request failed: ${t}`;
+        throw new Error(errMsg);
+      }
+      const reader = resp.body.getReader();
+      const dec = new TextDecoder();
+      let buf = '';
+      const logEl = document.getElementById('aud-log');
+      while(true){
+        const { done, value } = await reader.read();
+        if(done) break;
+        buf += dec.decode(value, { stream: true });
+        const ls = buf.split('\n'); buf = ls.pop() || '';
+        for(const raw of ls){
+          const line = raw.trim();
+          if(!line || line.startsWith(':') || !line.startsWith('data:')) continue;
+          const data = line.slice(5).trim();
+          if(data === '[DONE]') continue;
+          try{
+            const p = JSON.parse(data);
+            if(p.usage) usage = p.usage;
+            const ch0 = p.choices && p.choices[0];
+            if(!ch0) continue;
+            const delta = ch0.delta || {};
+            if(typeof delta.content === 'string' && delta.content.length){
+              acc += delta.content;
+              if(logEl) logEl.innerHTML = this._renderMessages(npc, d) +
+                `<div class="aud-msg aud-msg--npc"><div class="aud-msg__role">${Utils.escHtml(npc.name)}</div><div class="aud-msg__body">${Utils.escHtml(acc)}</div></div>`;
+              if(logEl) logEl.scrollTop = logEl.scrollHeight;
+            }
+          }catch(e){ /* skip malformed SSE line */ }
+        }
+      }
+    }catch(err){
+      if(err && err.name === 'AbortError'){ acc += acc ? '\n\n[Stopped]' : '[Stopped]'; }
+      else { errMsg = errMsg || (err && err.message) || 'Unknown error.'; showToast(errMsg, [], 6000); }
+    }finally{
+      this._sending = false; this._abort = null;
+      if(sendBtn){ sendBtn.disabled = false; sendBtn.textContent = 'Speak'; }
+      // Persist the NPC turn (with its CC-GROUND margin) + cost, then re-render the real log.
+      const live = State.get(); const liveNpc = live && (live.characters || []).find(c => c.id === this._npcId);
+      if(liveNpc){
+        this._appendLog(liveNpc, 'npc', acc || (errMsg ? '[Error: ' + errMsg + ']' : '[No response]'), margin);
+        State._touch(live.id); State.persist();
+        // Cost stamp via the existing transparency ledger (estimate if upstream omitted usage).
+        try{
+          if(typeof TransparencyLog !== 'undefined'){
+            let u = usage;
+            if(!u){ const inC = messages.reduce((s,m)=>s+(m.content?m.content.length:0),0); u = { prompt_tokens: Math.round(inC/4), completion_tokens: Math.round((acc?acc.length:0)/4) }; }
+            TransparencyLog.push({ label: 'Hold Audience', model, inputTokens: u.prompt_tokens||0, outputTokens: u.completion_tokens||0 });
+          }
+        }catch(e){}
+      }
+      this._render();
+    }
+  },
+
+  // ── "MAKE IT CANON" — transcript → Decipher → CANON review. Nothing auto-commits (N1 I7-iv).
+  async _makeCanon(n, npc){
+    if(!(typeof Copilot !== 'undefined' && Copilot.isConfigured && Copilot.isConfigured())){
+      showToast('Add an API key in Settings to extract canon from the conversation.'); return;
+    }
+    const log = this._logFor(npc);
+    if(!log.length){ showToast('Have a conversation first, then make it canon.'); return; }
+    const transcript = log.map(m => `${m.role === 'gm' ? 'GM' : npc.name}: ${m.content}`).join('\n');
+    showToast('Reading the conversation for canonical changes…');
+    try{
+      // Route through the SAME Decipher pipeline every other surface uses. It returns a CANON block;
+      // Parse.canonBlock → Modals.openCanonReview presents each candidate for accept/reject. The
+      // Decipher invent-guard ("ONLY structure what is clearly present… do not invent") applies.
+      const canonText = await Copilot.decipherNotes(n, `In-character audience with ${npc.name}:\n\n${transcript}`, 'all');
+      const parsed = Parse.canonBlock(canonText, { detail: true });
+      if(!parsed || (!parsed.candidates.length && !parsed.failures.length)){
+        showToast('Nothing in this conversation read as a canonical change.'); return;
+      }
+      Modals.close('audience');
+      setTimeout(() => Modals.openCanonReview(parsed.candidates || [], n.id, parsed.failures || []), 300);
+    }catch(err){ showToast('Could not extract canon: ' + (err && err.message || 'unknown error')); }
   },
 };
 const Modals={
@@ -21127,6 +21698,7 @@ async function bootstrap(){
   if(typeof Fronts!=='undefined')Fronts.bind();
   if(typeof HouseRules!=='undefined')HouseRules.bind(); // P5.1 — own bind, not the bindEventListeners monolith.
   if(typeof Tables!=='undefined')Tables.bind(); // P5.4 — own bind, not the bindEventListeners monolith.
+  if(typeof Audience!=='undefined')Audience.bind(); // P5.3 — own bind, not the bindEventListeners monolith.
   if(typeof Handouts!=='undefined')Handouts.bind();
   if(typeof Bestiary!=='undefined')Bestiary.bind();
   if(typeof Relations!=='undefined')Relations.bind();
