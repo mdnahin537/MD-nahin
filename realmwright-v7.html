@@ -2193,6 +2193,29 @@ body.theme-manuscript .mode-dropdown__desc{color:var(--color-text-muted)}
 .hr-mini--primary{background:var(--color-gold);border-color:var(--color-gold);color:var(--color-ink)}
 .hr-empty{font-size:var(--text-label-sm);color:var(--color-text-muted);font-style:italic;padding:var(--space-2) 0}
 .hr-sectionhint{font-size:var(--text-label-sm);color:var(--color-text-muted);margin-bottom:var(--space-3);line-height:1.45}
+/* N8 Table Engine (P5.4) — reuses the .hr-* form vocabulary; these are the Tables-only bits. */
+.tbl-main{min-width:0}
+.tbl-packs{border:.5px solid var(--color-gold-pale);border-radius:var(--radius-sm);padding:var(--space-3);margin-bottom:var(--space-4);background:var(--color-ink-elevated)}
+.tbl-packs__title{font-size:var(--text-label-sm);text-transform:uppercase;letter-spacing:.05em;color:var(--color-gold-deep);margin-bottom:var(--space-2)}
+.tbl-packs__grid{display:flex;flex-wrap:wrap;gap:var(--space-2)}
+.tbl-packbtn{display:inline-flex;align-items:center;gap:6px}
+.tbl-packbtn__die{font-family:var(--font-mono);font-size:var(--text-mono-sm);color:var(--color-text-muted)}
+.tbl-listhead{display:flex;justify-content:space-between;align-items:baseline;gap:var(--space-2);margin-bottom:var(--space-2)}
+.tbl-count{font-size:var(--text-label-sm);color:var(--color-text-muted)}
+.tbl-meta{font-family:var(--font-mono);font-size:var(--text-mono-sm);color:var(--color-text-muted);text-align:right}
+.tbl-result{margin-top:var(--space-2)}
+.tbl-result:empty{display:none}
+.tbl-result__text{font-size:var(--text-body-sm);color:var(--color-ink);line-height:1.5;padding:var(--space-2) var(--space-3);border-left:2px solid var(--color-gold);background:var(--color-parchment-warm);border-radius:0 var(--radius-sm) var(--radius-sm) 0}
+.tbl-result__meta{font-family:var(--font-mono);font-size:var(--text-mono-sm);color:var(--color-text-muted);margin-top:4px}
+.tbl-newrow{margin-top:var(--space-3)}
+.tbl-editbar{margin-bottom:var(--space-3)}
+.tbl-editactions{margin-top:var(--space-3);border-top:.5px solid var(--color-gold-pale);padding-top:var(--space-3)}
+.tbl-conds{margin:var(--space-2) 0;padding:var(--space-2);border:.5px dashed var(--color-gold-pale);border-radius:var(--radius-sm)}
+.tbl-conds__title{font-size:var(--text-label-sm);color:var(--color-gold-deep);margin-bottom:var(--space-2)}
+.tbl-cond{align-items:end}
+.tbl-condbody{min-width:0}
+.tbl-statband{display:grid;grid-template-columns:1fr 64px 64px;gap:6px}
+.tbl-condbtns{margin-top:0;grid-column:1 / -1}
 /* Characters in workbench */
 .char-list{display:flex;flex-direction:column;gap:var(--space-2)}
 .char-card{background:var(--color-parchment-warm);border:.5px solid var(--color-gold-pale);
@@ -3949,6 +3972,20 @@ SECTION 8: DOM STRUCTURE
   </div>
   <div class="modal__footer">
     <button class="btn btn--primary" data-close="house-rules">Done</button>
+  </div>
+</div>
+<!-- Tables Modal (P5.4 — N8 Table Engine) — forms-over-data editor: tables that read world state -->
+<div class="modal modal--lg" id="modal-tables" role="dialog" aria-modal="true" aria-labelledby="tables-title">
+  <div class="modal__header">
+    <h2 class="modal__title" id="tables-title">🎲 Tables</h2>
+    <button class="modal__close" data-close="tables" aria-label="Close">×</button>
+  </div>
+  <div class="modal__body">
+    <p class="hr-intro">Roll tables that read your world — entirely offline. The same table surfaces a different result when a stat is in a band, a pressure is active, or the season turns. Every table you make is yours: it survives export and re-import. Rolling is task-resolution prompting; nothing is wagered.</p>
+    <div class="tbl-main" id="tables-body"></div>
+  </div>
+  <div class="modal__footer">
+    <button class="btn btn--primary" data-close="tables">Done</button>
   </div>
 </div>
 <!-- Character Modal -->
@@ -6856,6 +6893,15 @@ function buildNationFromSeed(seed){
   // cannot inject junk). These are GM-facing house rules surfaced in the editor + live preview;
   // the global drift loop (WorldTurn.DRIFT_RULES) is the separately-edited engine lever.
   n.housePressures=Array.isArray(seed.housePressures)?JSON.parse(JSON.stringify(seed.housePressures)):[];
+  // CC-LM1 (P5.4, named landmine): the N8 table store must survive export→import the same way as
+  // housePressures/turnLog/pressArchive. WITHOUT this whitelist every custom or edited rumor/weather
+  // table a GM authored is silently dropped on the next re-import (the exact failure the named
+  // landmine warns about). Deep-copied; non-array → [] so a tampered import cannot inject junk.
+  // Self-contained on purpose: buildNationFromSeed runs at module-init (createDefaultState) before
+  // Tables may be defined, and the P5.4 test extracts this function in isolation — so structural
+  // content sanitation (range/condition/die clamps) is the importer's + State.setTables' job, not
+  // this whitelist's. The whitelist's one contract: the field survives and is always an array.
+  n.tables=Array.isArray(seed.tables)?JSON.parse(JSON.stringify(seed.tables)):[];
   return n;
 }
 function createDefaultState(){const m=buildNationFromSeed(SEED_NATIONS[0]);return{schemaVersion:SCHEMA_VERSION,meta:{activeNationId:m.id,createdAt:Utils.now(),lastUpdatedAt:Utils.now(),settings:{...DEFAULT_SETTINGS},workflowState:{promptPending:null},firstRunComplete:false,preferredMode:null,snapshots:[],lastSnapshotAt:null,campaignPrep:emptyCampaignPrep()},nations:[m]};}
@@ -7444,6 +7490,22 @@ const State={
     this.pushUndo();
     this._touch(nid);
     document.dispatchEvent(new CustomEvent('sc:changed',{detail:{fields:['houseRules'],nid}}));
+    this.persist();
+    return true;
+  },
+  // ── N8 Table Engine (P5.4) — table store writer. ─────────────────────────────────────────────
+  // Custom + edited tables live on the nation as n.tables (whitelisted in buildNationFromSeed —
+  // CC-LM1, the same named landmine as housePressures/turnLog). Sanitised through Tables.sanitize
+  // (single source of truth, also used by the importer) so a tampered import can never inject a
+  // non-numeric range, a forbidden condition kind, or an out-of-frozen-set die. The roller never
+  // touches the DOM and reads only sanitised data; this writer is the only persist path.
+  setTables(nid,tables){
+    const n=this.data.nations.find(n=>n.id===nid);
+    if(!n)return false;
+    n.tables=(typeof Tables!=='undefined'&&Array.isArray(tables))?Tables.sanitizeAll(tables):[];
+    this.pushUndo();
+    this._touch(nid);
+    document.dispatchEvent(new CustomEvent('sc:changed',{detail:{fields:['tables'],nid}}));
     this.persist();
     return true;
   },
@@ -8872,6 +8934,8 @@ const Render={
     html+=`<button class="workbench__add-custom-btn${custom.length>=20?' is-hidden':''}" id="add-custom-btn">+ Add custom stat</button></div>`;
     // P5.1 House Rules entry point — forms-over-data editor for thresholds, pressures, and drift.
     html+=`<div class="workbench__house-rules"><button class="workbench__add-custom-btn" id="open-house-rules-btn" style="width:100%;justify-content:center">⚖ House Rules — thresholds, pressures &amp; drift</button><div class="workbench__house-rules-hint">Tune what events fire, what the World Turn does, and your own pressures. No AI required.</div></div>`;
+    // P5.4 N8 Table Engine entry point — tables-as-data that read world state (rumors, weather, prices…).
+    html+=`<div class="workbench__house-rules"><button class="workbench__add-custom-btn" id="open-tables-btn" style="width:100%;justify-content:center">🎲 Tables — rumors, weather &amp; more that read the world</button><div class="workbench__house-rules-hint">Roll tables whose results shift with your stats, pressures, and seasons. Shipped packs included. No AI required.</div></div>`;
     ctr.innerHTML=html;
     const advNid=n.id;
     ['pop','ter','cap'].forEach(f=>{
@@ -8890,6 +8954,7 @@ const Render={
     const addBtn=document.getElementById('add-custom-btn');
     if(addBtn)addBtn.addEventListener('click',()=>Modals.open('custom-stat'));
     document.getElementById('open-house-rules-btn')?.addEventListener('click',()=>{if(typeof HouseRules!=='undefined')HouseRules.open();});
+    document.getElementById('open-tables-btn')?.addEventListener('click',()=>{if(typeof Tables!=='undefined')Tables.open();});
     ctr.querySelectorAll('[data-del]').forEach(b=>b.addEventListener('click',()=>{const k=b.dataset.del;if(confirm(`Delete "${State.get().stats[k]?.displayName}"?`)){State.removeCustomStat(State.get().id,k);Render.workbench();}}));
     ctr.querySelectorAll('[data-edit]').forEach(b=>b.addEventListener('click',()=>{const k=b.dataset.edit;const s=State.get().stats[k];if(s)Modals.openEditCustomStat(s);}));
   },
@@ -9753,6 +9818,507 @@ const HouseRules={
       });
     }
     box.innerHTML=rows.join('')||'<div class="hr-empty">—</div>';
+  },
+};
+// ════════════════════════════════════════════════════════════════════════════════════════════
+// N8 TABLE ENGINE (P5.4) — tables as data that READ the world. The engine's third leg.
+//   A table = {id, name, die, entries:[{range:[lo,hi], text, conditions?:[…]}]}. An entry may carry
+//   world-state CONDITIONS; the roller honours them, so the same "rumors" table surfaces different
+//   results when Food is low or a pressure is active or the season has turned.
+//
+//   CC-DUAL: the roller + editor are 100% no-AI (deterministic, pure). ONE optional thin generator
+//     (Tables._draftAI) returns the SAME editable table shape into review — never auto-applied.
+//   CC-HALAL — NO-MAYSIR ANALYSIS (documented per the build standard):
+//     A roll here is TASK RESOLUTION, not a wager. Maysir (the prohibited game of chance) requires
+//     a STAKE put at risk for a contingent gain at another's loss. This engine has none: nothing is
+//     bet, nothing is won or lost, no money/value transfers, no opposing party forfeits anything.
+//     It is a fiction-prompt generator — "what rumor is in the market this season?" — identical in
+//     kind to rolling for a random encounter in tabletop prep. It mirrors Solo._rollD100/_rollD10's
+//     plain Math.random shape (no odds-for-payout). Therefore: not maysir. Naming rule (also CC-HALAL):
+//     a table is NEVER named "fortune/omen/fate/prophecy/destiny" and NO occult pack ships — every
+//     shipped pack is meteorological / civic / economic fiction (weather, market, rumors, names…).
+//
+//   THE CONDITION-GATE RULE (deterministic; v1 FROZEN condition types ONLY — N8 I7-ii):
+//     Three condition kinds, nothing else: stat-band {kind:'stat',stat,min?,max?} (value in [min,max],
+//     either bound optional); pressure-active {kind:'pressure',pressureId} (that PRESSURE_RULES id is
+//     active now); season {kind:'season',seasonIndex} (current ALMANAC season index === N).
+//     An entry is ELIGIBLE iff EVERY one of its conditions passes against current world facts (AND
+//     semantics; absent/empty conditions ⇒ always eligible). roll() rolls the die ONCE, then walks the
+//     ELIGIBLE entries IN ARRAY ORDER and returns the first whose [lo,hi] contains the roll. If the
+//     roll lands where no eligible entry covers it (e.g. the covering entry was gated out), the result
+//     is {roll, entry:null, text:'—', gated:true} — "no eligible result for this roll under the current
+//     world." This is what makes the world-reads PROVABLE: same roll + same table, Food inside a gated
+//     entry's band ⇒ that entry returns; Food outside the band ⇒ the entry is filtered, the roll lands
+//     in the gap ⇒ entry:null. Determinism: eligibility + the ordered range-walk are pure functions of
+//     (table, world-facts, roll) — no Math.random once a roll is injected.
+//
+//   PURE / EXTRACTABLE: roll() + _facts() + sanitize() reach OUTSIDE the module for NOTHING. _facts()
+//     re-implements the PRESSURE_RULES predicates and the ALMANAC season math inline (the exact idiom
+//     WorldTurn._PRESSURE_CONDS already established, L8334) so the P5.4 Node test can eval the REAL
+//     Tables source in isolation and inject a fixed roll. CC-LM1: storage is n.tables, whitelisted in
+//     buildNationFromSeed.
+// Wired from bootstrap via Tables.bind() — NOT the bindEventListeners monolith (code-health rule:
+//     a surface keeps its own listeners, like HouseRules/RunMode/Campaign).
+// ════════════════════════════════════════════════════════════════════════════════════════════
+const Tables={
+  // The dice a table may use. Frozen polyhedral set (N8 I7-ii) — the die is factored out of roll()
+  // so the test can inject a fixed roll independent of which die a table declares.
+  _DICE:[100,20,12,10,8,6,4],
+  // The three frozen v1 condition kinds. Anything else is dropped by sanitize (forward-safety).
+  _COND_KINDS:['stat','pressure','season'],
+  _bound:false,
+
+  // ── PURE world-facts adapter ────────────────────────────────────────────────────────────────
+  // Self-contained: the same PRESSURE_RULES predicates (mirrored verbatim from WorldTurn._PRESSURE_CONDS
+  // / Compute.pressures, L8334) and the same ALMANAC season math (floor((year%1)*4), L8643), inlined so
+  // roll() never reaches outside the module and the test can eval Tables alone. Returns the plain facts
+  // the gate consumes: a stat→value reader, the set of active pressure ids, and the season index.
+  _PRESSURE_CONDS:{
+    'food-crisis':s=>(s.food_production?.value)<40,
+    'opposition-rising':s=>(s.opposition?.value)>=6&&(s.legitimacy?.value)<50,
+    'unpaid-army':s=>(s.manpower?.value)<50&&(s.trade?.value)<60,
+    'corruption-bleeding':s=>(s.corruption?.value)>=7,
+    'legitimacy-fracture':s=>(s.legitimacy?.value)<30,
+    'knowledge-stagnation':s=>(s.knowledge?.value)<35,
+    'cohesion-fracture':s=>(s.cohesion?.value)<35,
+    'urban-strain':s=>(s.urbanization?.value)>75&&(s.food_production?.value)<60,
+    'trade-collapse':s=>(s.trade?.value)<30,
+  },
+  _facts(n){
+    const stats=(n&&n.stats)||{};
+    const activePressureIds=Object.keys(this._PRESSURE_CONDS).filter(id=>{
+      const c=this._PRESSURE_CONDS[id];return typeof c==='function'&&!!c(stats);
+    });
+    const yr=Number(n&&n.currentYear)||0;
+    const seasonIndex=Math.max(0,Math.min(3,Math.floor((((yr%1)+1)%1)*4))); // (year%1) can be negative in JS; normalise
+    return {
+      statValue:(key)=>{const s=stats[key];return s&&typeof s.value==='number'?s.value:null;},
+      activePressureIds,
+      seasonIndex,
+    };
+  },
+
+  // ── PURE condition gate ─────────────────────────────────────────────────────────────────────
+  // One condition. AND-composed by _eligible. Unknown kinds were dropped at sanitize, but a defensive
+  // default of `false` (an unrecognised condition can never silently pass) is kept anyway (C4).
+  _condPasses(cond,facts){
+    if(!cond||typeof cond!=='object')return false;
+    if(cond.kind==='stat'){
+      const v=facts.statValue(cond.stat);
+      if(v===null)return false; // the stat doesn't exist on this nation ⇒ cannot satisfy
+      if(typeof cond.min==='number'&&v<cond.min)return false;
+      if(typeof cond.max==='number'&&v>cond.max)return false;
+      return true;
+    }
+    if(cond.kind==='pressure'){return facts.activePressureIds.includes(cond.pressureId);}
+    if(cond.kind==='season'){return facts.seasonIndex===cond.seasonIndex;}
+    return false;
+  },
+  _eligible(entry,facts){
+    const conds=Array.isArray(entry.conditions)?entry.conditions:[];
+    if(!conds.length)return true; // no conditions ⇒ always eligible
+    return conds.every(c=>this._condPasses(c,facts)); // AND semantics
+  },
+
+  // ── THE PURE ROLLER ─────────────────────────────────────────────────────────────────────────
+  // Signature per spec: roll(table, n, injectedRoll?). `n` is the nation-state snapshot (read for
+  // facts). injectedRoll factors the die out for the test — when omitted, a fair die in [1,die] is
+  // rolled (Math.random, mirroring Solo._rollD100/_rollD10; task-resolution, no stakes — CC-HALAL).
+  // Returns {roll, die, entry, text, gated, eligibleCount}. Deterministic given (table, n-facts, roll).
+  roll(table,n,injectedRoll){
+    const die=this._normDie(table&&table.die);
+    const roll=(injectedRoll!==undefined&&injectedRoll!==null)
+      ? Math.max(1,Math.min(die,Math.floor(Number(injectedRoll)||1)))
+      : (Math.floor(Math.random()*die)+1);
+    const facts=this._facts(n);
+    const entries=(table&&Array.isArray(table.entries))?table.entries:[];
+    const eligible=entries.filter(e=>this._eligible(e,facts));
+    // Walk the ELIGIBLE entries IN ARRAY ORDER; first whose [lo,hi] contains the roll wins.
+    const hit=eligible.find(e=>{
+      const r=Array.isArray(e.range)?e.range:[];
+      const lo=Number(r[0]),hi=Number(r[1]);
+      return Number.isFinite(lo)&&Number.isFinite(hi)&&roll>=Math.min(lo,hi)&&roll<=Math.max(lo,hi);
+    });
+    if(hit){return {roll,die,entry:hit,text:String(hit.text||''),gated:false,eligibleCount:eligible.length};}
+    // No eligible entry covers this roll (a covering entry may have been gated out, or there is a gap).
+    return {roll,die,entry:null,text:'—',gated:true,eligibleCount:eligible.length};
+  },
+
+  // ── SANITATION (single source of truth — used by State.setTables AND the importer) ───────────
+  _normDie(d){const v=parseInt(d,10);return this._DICE.includes(v)?v:100;},
+  _normRange(range,die){
+    const r=Array.isArray(range)?range:[];
+    let lo=Math.round(Number(r[0])),hi=Math.round(Number(r[1]));
+    if(!Number.isFinite(lo))lo=1; if(!Number.isFinite(hi))hi=lo;
+    lo=Math.max(1,Math.min(die,lo)); hi=Math.max(1,Math.min(die,hi));
+    if(lo>hi){const t=lo;lo=hi;hi=t;}
+    return [lo,hi];
+  },
+  _normCond(c){
+    if(!c||typeof c!=='object'||!this._COND_KINDS.includes(c.kind))return null; // drop unknown kinds
+    if(c.kind==='stat'){
+      const out={kind:'stat',stat:String(c.stat||'')};
+      if(c.stat==null||out.stat==='')return null;
+      if(Number.isFinite(Number(c.min)))out.min=Math.round(Number(c.min));
+      if(Number.isFinite(Number(c.max)))out.max=Math.round(Number(c.max));
+      if(out.min===undefined&&out.max===undefined)return null; // a band with no bound is meaningless
+      return out;
+    }
+    if(c.kind==='pressure'){
+      const id=String(c.pressureId||'');
+      return Object.keys(this._PRESSURE_CONDS).includes(id)?{kind:'pressure',pressureId:id}:null;
+    }
+    if(c.kind==='season'){
+      const i=Math.round(Number(c.seasonIndex));
+      return (i>=0&&i<=3)?{kind:'season',seasonIndex:i}:null;
+    }
+    return null;
+  },
+  sanitize(table){
+    const die=this._normDie(table&&table.die);
+    const entries=(table&&Array.isArray(table.entries)?table.entries:[]).map(e=>{
+      const conds=(Array.isArray(e&&e.conditions)?e.conditions:[]).map(c=>this._normCond(c)).filter(Boolean);
+      const out={range:this._normRange(e&&e.range,die),text:String((e&&e.text)||'').slice(0,400)};
+      if(conds.length)out.conditions=conds;
+      return out;
+    });
+    return {
+      id:(table&&table.id)||Utils.uuid(),
+      name:String((table&&table.name)||'Untitled table').slice(0,80),
+      die,
+      entries,
+    };
+  },
+  sanitizeAll(list){return (Array.isArray(list)?list:[]).map(t=>this.sanitize(t));},
+
+  // ── SHIPPED PACKS (in-box data; UX-3 presets-first) ─────────────────────────────────────────
+  // 6–8 packs, ALL meteorological / civic / economic fiction. NO occult pack; no table named
+  // fortune/omen/fate/prophecy/destiny (CC-HALAL naming rule). Several entries carry world-state
+  // conditions to demonstrate the third leg: low Food surfaces bread/grain rumors, the food-crisis
+  // pressure surfaces hunger weather, the season gates the market and the festival lines.
+  // OVERLAY-ORDERING INVARIANT (matches the condition-gate rule): roll() walks ELIGIBLE entries in
+  // array order and returns the FIRST whose range contains the roll. So a conditioned OVERLAY must be
+  // listed BEFORE the unconditioned base entry it overrides — otherwise the base always matches first
+  // and the overlay is dead. Every pack below puts its world-aware overlays at the TOP, with a full
+  // unconditioned base layer beneath that tiles the whole die (so the table never gaps).
+  _PACKS:[
+    {name:'Market Rumors',die:100,entries:[
+      {range:[1,30],text:'Bread queues formed before dawn again; the bakers blame the price of flour, not their ovens.',conditions:[{kind:'stat',stat:'food_production',max:39}]},
+      {range:[31,60],text:'The granary clerks are turning buyers away — "reserved stock," they say, and will not meet your eye.',conditions:[{kind:'pressure',pressureId:'food-crisis'}]},
+      {range:[1,18],text:'A grain caravan was turned back at the western gate; the cause is disputed.'},
+      {range:[19,34],text:'The mint is said to be short of silver; the moneychangers have widened their spread.'},
+      {range:[35,50],text:'A guildmaster has quietly bought up every cart of timber in the lower yards.'},
+      {range:[51,66],text:'Two rival houses are bidding against each other for the same warehouse on the quay.'},
+      {range:[67,82],text:'The toll on the river road is rumoured to double before the next market day.'},
+      {range:[83,100],text:'A foreign factor arrived with letters of credit no one in the city recognises.'},
+    ]},
+    {name:'Weather & Sky',die:20,entries:[
+      {range:[1,10],text:'Thin haze of woodsmoke over the lean quarter; every hearth that can be lit, is.',conditions:[{kind:'pressure',pressureId:'food-crisis'}]},
+      {range:[11,20],text:'High summer heat presses on the city; the wells are watched and the cisterns guarded.',conditions:[{kind:'season',seasonIndex:1}]},
+      {range:[1,4],text:'A flat grey overcast; the light never quite arrives. The roads hold.'},
+      {range:[5,9],text:'Fine and clear, a cold wind out of the north drying the last of the mud.'},
+      {range:[10,13],text:'Intermittent rain, heavy enough to slick the cobbles and slow the carts.'},
+      {range:[14,16],text:'A bank of fog off the water that does not burn off until past noon.'},
+      {range:[17,19],text:'Sudden squall — canvas torn at the market, awnings down, tempers short.'},
+      {range:[20,20],text:'The first hard frost of the season silvers the rooftops by dawn.'},
+    ]},
+    {name:'Street Complications',die:12,entries:[
+      {range:[1,6],text:'A near-riot at a shuttered bakery; the watch is badly outnumbered and knows it.',conditions:[{kind:'stat',stat:'food_production',max:35}]},
+      {range:[1,2],text:'A press of bodies at a narrow turn; a purse is cut, a cry goes up, the crowd closes.'},
+      {range:[3,4],text:'A draft animal has bolted and overturned a cart across the only way through.'},
+      {range:[5,6],text:'Two watchmen are arguing jurisdiction while the matter they were called for worsens.'},
+      {range:[7,8],text:'A preacher has drawn a knot of listeners and will not be moved on.'},
+      {range:[9,10],text:'A debt is being collected loudly and publicly; bystanders are choosing sides.'},
+      {range:[11,12],text:'A child is lost in the throng and a frantic parent is grabbing strangers by the sleeve.'},
+    ]},
+    {name:'Tavern Names',die:20,entries:[
+      {range:[1,2],text:'The Broken Anchor'},{range:[3,4],text:'The Salt & Tallow'},
+      {range:[5,6],text:'The Quiet Magistrate'},{range:[7,8],text:'The Three Coppers'},
+      {range:[9,10],text:'The Drowned Lantern'},{range:[11,12],text:'The Last Toll'},
+      {range:[13,14],text:'The Mended Net'},{range:[15,16],text:'The Grey Mare'},
+      {range:[17,18],text:'The Cooper’s Rest'},{range:[19,20],text:'The Wayward Scrivener'},
+    ]},
+    {name:'Travelers’ Names',die:12,entries:[
+      {range:[1,1],text:'Coriane of the river towns'},{range:[2,2],text:'Mattias Velk, factor'},
+      {range:[3,3],text:'Old Senna, who keeps bees'},{range:[4,4],text:'Doran Hale, out of work'},
+      {range:[5,5],text:'Imeret the cartographer'},{range:[6,6],text:'Brother Aldous, walking'},
+      {range:[7,7],text:'Yusa, a drover’s daughter'},{range:[8,8],text:'Pell the tinsmith'},
+      {range:[9,9],text:'Magistrate-emerita Orlu'},{range:[10,10],text:'Kessa, a courier'},
+      {range:[11,11],text:'Tomas, a discharged sergeant'},{range:[12,12],text:'Vane, who sells maps that lie'},
+    ]},
+    {name:'Market Prices Today',die:10,entries:[
+      {range:[1,5],text:'Flour is hoarded and dear; what reaches the stalls is gone by mid-morning.',conditions:[{kind:'stat',stat:'food_production',max:40}]},
+      {range:[6,10],text:'The harvest tide swells the stalls; grain, fruit, and salt-fish are all in season and cheap.',conditions:[{kind:'season',seasonIndex:2}]},
+      {range:[1,2],text:'Grain is cheap and plentiful; the bakers are undercutting one another.'},
+      {range:[3,5],text:'Prices hold steady at the customary rate; trade is unremarkable.'},
+      {range:[6,7],text:'A mild scarcity of cloth and oil; vendors are firm and will not haggle far.'},
+      {range:[8,9],text:'Prices are up across the board; the cause is rumour, not fact, but it spreads.'},
+      {range:[10,10],text:'A sudden glut from an arrived convoy collapses the price of one staple by half.'},
+    ]},
+    {name:'Civic Events',die:8,entries:[
+      // A season-0 OVERLAY sits BEFORE the face-8 base entry: in season 0 a roll of 8 surfaces the
+      // festival; in any other season it surfaces the base civic event below. The base layer tiles
+      // all 8 faces, so this pack never gaps — the condition only swaps face 8's flavour by season.
+      {range:[8,8],text:'A festival of the season opens the markets late and keeps the lamps lit past curfew.',conditions:[{kind:'season',seasonIndex:0}]},
+      {range:[1,1],text:'A public works begins — a road, a culvert, a wall — and the levy that funds it is announced.'},
+      {range:[2,2],text:'A magistrate is rotated out; the handover is awkward and the docket backs up.'},
+      {range:[3,3],text:'A guild holds its annual procession; the main thoroughfares are closed for the day.'},
+      {range:[4,4],text:'A census-taker works the district, and not everyone is glad to be counted.'},
+      {range:[5,5],text:'A grain dole is opened at the public granary to steady prices and tempers.'},
+      {range:[6,6],text:'A foreign embassy arrives; lodging is requisitioned and rumours multiply.'},
+      {range:[7,7],text:'A fire-watch ordinance is read out; thatch roofs in the old quarter must be replaced.'},
+      {range:[8,8],text:'A new market charter is granted to a rising guild; the older houses are unhappy.'},
+    ]},
+  ],
+  packs(){return this._PACKS.map(p=>this.sanitize(JSON.parse(JSON.stringify(p))));},
+
+  // ════════════════════════════════════ EDITOR (no-AI; UX-3 presets-first) ═══════════════════
+  // Reuses the House-Rules forms-over-data vocabulary (.hr-card/.hr-row/.hr-field/.hr-mini, P5.1).
+  // _view: 'list' (all tables on the nation) | 'edit' (one table's name/die/entries/conditions).
+  _view:'list',
+  _editId:null,
+  _draft:null, // in-flight table being edited (committed to n.tables on Save)
+  bind(){
+    if(this._bound)return; this._bound=true;
+    document.addEventListener('sc:modal-open',e=>{ if(e.detail==='tables'){ this._view='list'; this._editId=null; this._draft=null; this._render(); } });
+  },
+  open(){
+    if(!State.get()){showToast('Create or open a nation first.');return;}
+    this._view='list'; this._editId=null; this._draft=null;
+    Modals.open('tables'); // fires sc:modal-open → _render()
+  },
+  _tables(){ const n=State.get(); return n&&Array.isArray(n.tables)?n.tables:[]; },
+  _render(){ if(this._view==='edit')this._renderEdit(); else this._renderList(); },
+
+  // ── LIST VIEW ──
+  _renderList(){
+    const host=document.getElementById('tables-body');if(!host)return;
+    const n=State.get();const E=Utils.escHtml;
+    const list=this._tables();
+    let html=`<div class="hr-sectionhint">Tables are data: a die, and ranges of text. An entry can read your world — surface a different result when a stat is in a band, a pressure is active, or the season has turned. Rolling here is task-resolution prompting, nothing is wagered. Edits are saved to <em>this</em> nation and survive export.</div>`;
+    // Presets-first (UX-3): the shipped packs, addable in one click, before the blank editor.
+    html+=`<div class="tbl-packs"><div class="tbl-packs__title">Add a shipped pack</div><div class="tbl-packs__grid">`;
+    this._PACKS.forEach((p,i)=>{
+      html+=`<button class="hr-mini tbl-packbtn" data-pack="${i}" title="d${this._normDie(p.die)} · ${p.entries.length} entries">+ ${E(p.name)} <span class="tbl-packbtn__die">d${this._normDie(p.die)}</span></button>`;
+    });
+    html+=`</div></div>`;
+    html+=`<div class="tbl-listhead"><span class="hr-card__title">Your tables</span><span class="tbl-count">${list.length} table${list.length===1?'':'s'}</span></div>`;
+    if(!list.length){
+      html+=`<div class="hr-empty">No tables yet. Add a pack above, or build one from scratch.</div>`;
+    }else{
+      list.forEach((t,i)=>{
+        const condCount=(t.entries||[]).reduce((a,e)=>a+(Array.isArray(e.conditions)?e.conditions.length:0),0);
+        html+=`<div class="hr-card tbl-row" data-tbl="${i}">
+          <div class="hr-card__head">
+            <span class="hr-card__title">${E(t.name)}</span>
+            <span class="tbl-meta">d${this._normDie(t.die)} · ${(t.entries||[]).length} entries${condCount?` · ${condCount} world-condition${condCount===1?'':'s'}`:''}</span>
+          </div>
+          <div class="hr-btnrow">
+            <button class="hr-mini hr-mini--primary" data-roll="${i}">🎲 Roll</button>
+            <button class="hr-mini" data-edit="${i}">Edit</button>
+            <button class="hr-mini hr-mini--danger" data-del="${i}">Delete</button>
+          </div>
+          <div class="tbl-result" id="tbl-result-${i}" aria-live="polite"></div>
+        </div>`;
+      });
+    }
+    html+=`<div class="hr-btnrow tbl-newrow"><button class="hr-mini" id="tbl-new">+ New blank table</button></div>`;
+    host.innerHTML=html;
+    this._wireList();
+  },
+  _wireList(){
+    const host=document.getElementById('tables-body');if(!host)return;
+    host.querySelectorAll('[data-pack]').forEach(b=>b.addEventListener('click',()=>{
+      const p=this._PACKS[+b.dataset.pack]; if(!p)return;
+      const list=this._tables().map(t=>JSON.parse(JSON.stringify(t)));
+      list.push(this.sanitize(JSON.parse(JSON.stringify(p))));
+      this._save(list,`Added "${p.name}".`);
+    }));
+    host.querySelectorAll('[data-roll]').forEach(b=>b.addEventListener('click',()=>{
+      const i=+b.dataset.roll; const t=this._tables()[i]; const n=State.get(); if(!t)return;
+      const res=this.roll(t,n); // live roll (Math.random), reads current world facts
+      const out=document.getElementById('tbl-result-'+i); if(!out)return;
+      const E=Utils.escHtml;
+      const f=this._facts(n);
+      const ctx=`d${res.die} → ${res.roll}` + (res.gated?` · no eligible entry`:``)
+        + (f.activePressureIds.length?` · pressures: ${E(f.activePressureIds.join(', '))}`:``);
+      out.innerHTML=`<div class="tbl-result__text">${res.entry?E(res.text):'<em>— no eligible result for this roll under the current world. Roll again, or check this entry’s conditions.</em>'}</div><div class="tbl-result__meta">${ctx}</div>`;
+    }));
+    host.querySelectorAll('[data-edit]').forEach(b=>b.addEventListener('click',()=>{
+      const i=+b.dataset.edit; const t=this._tables()[i]; if(!t)return;
+      this._draft=JSON.parse(JSON.stringify(t)); this._editId=t.id; this._view='edit'; this._renderEdit();
+    }));
+    host.querySelectorAll('[data-del]').forEach(b=>b.addEventListener('click',()=>{
+      const i=+b.dataset.del; const t=this._tables()[i]; if(!t)return;
+      if(!confirm(`Delete the table "${t.name}"? This removes it from this nation.`))return;
+      const list=this._tables().map(x=>JSON.parse(JSON.stringify(x))); list.splice(i,1);
+      this._save(list,'Table deleted.');
+    }));
+    document.getElementById('tbl-new')?.addEventListener('click',()=>{
+      this._draft={id:Utils.uuid(),name:'New table',die:100,entries:[{range:[1,100],text:''}]};
+      this._editId=null; this._view='edit'; this._renderEdit();
+    });
+  },
+
+  // ── EDIT VIEW ──
+  _renderEdit(){
+    const host=document.getElementById('tables-body');if(!host)return;
+    const n=State.get();const E=Utils.escHtml;
+    const t=this._draft; if(!t){this._view='list';this._renderList();return;}
+    const stats=n?Object.values(n.stats):[];
+    const seasonNames=(typeof ALMANAC!=='undefined'&&ALMANAC.seasonsByEra)
+      ? (ALMANAC.seasonsByEra[n&&n.era]||ALMANAC.seasonsByEra.default)
+      : ['Q1','Q2','Q3','Q4'];
+    const pressureIds=Object.keys(this._PRESSURE_CONDS);
+    let html=`<div class="hr-btnrow tbl-editbar"><button class="hr-mini" id="tbl-back">← All tables</button></div>`;
+    html+=`<div class="hr-row">
+      <div class="hr-field hr-field--full"><label>Table name</label><input type="text" id="tbl-name" value="${E(t.name||'')}" maxlength="80" placeholder="e.g. Market Rumors"></div>
+    </div>
+    <div class="hr-row">
+      <div class="hr-field"><label>Die</label><select id="tbl-die">${this._DICE.map(d=>`<option value="${d}"${this._normDie(t.die)===d?' selected':''}>d${d}</option>`).join('')}</select></div>
+      <div class="hr-field"></div>
+    </div>`;
+    html+=`<div class="hr-sectionhint">Each entry covers a range of the die. An entry with world-conditions only appears when ALL its conditions are true; if a roll lands where no eligible entry covers it, you’ll get “no eligible result” — that is the world filtering the table.</div>`;
+    const entries=Array.isArray(t.entries)?t.entries:[];
+    entries.forEach((e,i)=>{
+      const r=Array.isArray(e.range)?e.range:[1,1];
+      html+=`<div class="hr-card tbl-entry" data-ent="${i}">
+        <div class="hr-row">
+          <div class="hr-field"><label>From</label><input type="number" data-ef="lo" data-i="${i}" value="${Number(r[0])||1}" min="1" max="${this._normDie(t.die)}"></div>
+          <div class="hr-field"><label>To</label><input type="number" data-ef="hi" data-i="${i}" value="${Number(r[1])||1}" min="1" max="${this._normDie(t.die)}"></div>
+        </div>
+        <div class="hr-row"><div class="hr-field hr-field--full"><label>Result text</label><textarea data-ef="text" data-i="${i}" maxlength="400" placeholder="What happens / what is rumored / the name…">${E(e.text||'')}</textarea></div></div>
+        <div class="tbl-conds" data-conds="${i}">`;
+      const conds=Array.isArray(e.conditions)?e.conditions:[];
+      if(conds.length){
+        html+=`<div class="tbl-conds__title">Only when (all must be true):</div>`;
+        conds.forEach((c,ci)=>{
+          html+=`<div class="hr-row tbl-cond" data-cond="${ci}">
+            <div class="hr-field"><label>Condition</label><select data-cf="kind" data-i="${i}" data-ci="${ci}">
+              <option value="stat"${c.kind==='stat'?' selected':''}>stat in band</option>
+              <option value="pressure"${c.kind==='pressure'?' selected':''}>pressure active</option>
+              <option value="season"${c.kind==='season'?' selected':''}>season is</option>
+            </select></div>
+            <div class="hr-field tbl-condbody">`;
+          if(c.kind==='stat'){
+            html+=`<label>stat / min / max</label><div class="tbl-statband">
+              <select data-cf="stat" data-i="${i}" data-ci="${ci}">${stats.map(s=>`<option value="${E(s.key)}"${s.key===c.stat?' selected':''}>${E(s.displayName)}</option>`).join('')||`<option value="">(no stats)</option>`}</select>
+              <input type="number" data-cf="min" data-i="${i}" data-ci="${ci}" placeholder="min" value="${c.min!=null?Number(c.min):''}">
+              <input type="number" data-cf="max" data-i="${i}" data-ci="${ci}" placeholder="max" value="${c.max!=null?Number(c.max):''}">
+            </div>`;
+          }else if(c.kind==='pressure'){
+            html+=`<label>which pressure</label><select data-cf="pressureId" data-i="${i}" data-ci="${ci}">${pressureIds.map(id=>`<option value="${E(id)}"${id===c.pressureId?' selected':''}>${E(id)}</option>`).join('')}</select>`;
+          }else{
+            html+=`<label>which season</label><select data-cf="seasonIndex" data-i="${i}" data-ci="${ci}">${seasonNames.map((nm,si)=>`<option value="${si}"${si===c.seasonIndex?' selected':''}>${E(nm)} (${si})</option>`).join('')}</select>`;
+          }
+          html+=`</div><div class="hr-btnrow tbl-condbtns"><button class="hr-mini hr-mini--danger" data-cond-del="${i}:${ci}">remove condition</button></div></div>`;
+        });
+      }
+      html+=`<div class="hr-btnrow"><button class="hr-mini" data-cond-add="${i}">+ Add world-condition</button></div>`;
+      html+=`</div>
+        <div class="hr-btnrow"><button class="hr-mini hr-mini--danger" data-ent-del="${i}">Remove entry</button></div>
+      </div>`;
+    });
+    html+=`<div class="hr-btnrow tbl-editactions">
+      <button class="hr-mini" id="tbl-ent-add">+ Add entry</button>
+      <button class="hr-mini hr-mini--primary" id="tbl-save">Save table</button>
+      <button class="hr-mini" id="tbl-ai" title="Optional: drafts an editable table with AI, then you review">✨ Draft with AI</button>
+    </div>`;
+    host.innerHTML=html;
+    this._wireEdit();
+  },
+  _wireEdit(){
+    const host=document.getElementById('tables-body');if(!host)return;
+    const readFromForm=()=>{ this._draft=this._collectEdit(); };
+    document.getElementById('tbl-back')?.addEventListener('click',()=>{ this._view='list'; this._draft=null; this._editId=null; this._renderList(); });
+    document.getElementById('tbl-name')?.addEventListener('input',readFromForm);
+    document.getElementById('tbl-die')?.addEventListener('change',()=>{ this._draft=this._collectEdit(); this._renderEdit(); });
+    host.querySelectorAll('[data-ef]').forEach(el=>el.addEventListener('input',readFromForm));
+    host.querySelectorAll('[data-cf]').forEach(el=>el.addEventListener('change',()=>{ this._draft=this._collectEdit(); this._renderEdit(); }));
+    host.querySelectorAll('[data-ent-del]').forEach(b=>b.addEventListener('click',()=>{ this._draft=this._collectEdit(); this._draft.entries.splice(+b.dataset.entDel,1); this._renderEdit(); }));
+    host.querySelectorAll('[data-cond-add]').forEach(b=>b.addEventListener('click',()=>{
+      this._draft=this._collectEdit(); const i=+b.dataset.condAdd; const e=this._draft.entries[i];
+      e.conditions=Array.isArray(e.conditions)?e.conditions:[];
+      const firstStat=(State.get()&&Object.values(State.get().stats)[0])||null;
+      e.conditions.push({kind:'stat',stat:firstStat?firstStat.key:'',max:40}); // sensible starter (UX-3)
+      this._renderEdit();
+    }));
+    host.querySelectorAll('[data-cond-del]').forEach(b=>b.addEventListener('click',()=>{
+      this._draft=this._collectEdit(); const [i,ci]=b.dataset.condDel.split(':').map(Number);
+      if(this._draft.entries[i]&&Array.isArray(this._draft.entries[i].conditions))this._draft.entries[i].conditions.splice(ci,1);
+      this._renderEdit();
+    }));
+    document.getElementById('tbl-ent-add')?.addEventListener('click',()=>{ this._draft=this._collectEdit(); this._draft.entries.push({range:[1,this._normDie(this._draft.die)],text:''}); this._renderEdit(); });
+    document.getElementById('tbl-save')?.addEventListener('click',()=>this._saveTable());
+    document.getElementById('tbl-ai')?.addEventListener('click',()=>this._draftAI());
+  },
+  // Read the edit form back into a table object (no persistence — used live + on Save).
+  _collectEdit(){
+    const host=document.getElementById('tables-body');
+    const die=this._normDie(document.getElementById('tbl-die')?.value);
+    const name=document.getElementById('tbl-name')?.value||'';
+    const entries=[];
+    host?.querySelectorAll('[data-ent]').forEach(card=>{
+      const i=card.dataset.ent;
+      const get=(f)=>host.querySelector(`[data-ef="${f}"][data-i="${i}"]`);
+      const lo=Number(get('lo')?.value), hi=Number(get('hi')?.value);
+      const text=get('text')?.value||'';
+      const conds=[];
+      card.querySelectorAll('[data-cond]').forEach(cc=>{
+        const ci=cc.dataset.cond;
+        const cg=(f)=>host.querySelector(`[data-cf="${f}"][data-i="${i}"][data-ci="${ci}"]`);
+        const kind=cg('kind')?.value;
+        if(kind==='stat'){
+          const c={kind:'stat',stat:cg('stat')?.value||''};
+          const mn=cg('min')?.value, mx=cg('max')?.value;
+          if(mn!==''&&mn!=null&&Number.isFinite(Number(mn)))c.min=Number(mn);
+          if(mx!==''&&mx!=null&&Number.isFinite(Number(mx)))c.max=Number(mx);
+          conds.push(c);
+        }else if(kind==='pressure'){
+          conds.push({kind:'pressure',pressureId:cg('pressureId')?.value||''});
+        }else if(kind==='season'){
+          conds.push({kind:'season',seasonIndex:Number(cg('seasonIndex')?.value)||0});
+        }
+      });
+      const e={range:[Number.isFinite(lo)?lo:1,Number.isFinite(hi)?hi:1],text};
+      if(conds.length)e.conditions=conds;
+      entries.push(e);
+    });
+    return {id:this._editId||this._draft?.id||Utils.uuid(),name,die,entries};
+  },
+  _saveTable(){
+    const n=State.get();if(!n)return;
+    const draft=this.sanitize(this._collectEdit());
+    const list=this._tables().map(t=>JSON.parse(JSON.stringify(t)));
+    const idx=list.findIndex(t=>t.id===draft.id);
+    if(idx>=0)list[idx]=draft; else list.push(draft);
+    if(State.setTables(n.id,list)){
+      showToast('Table saved — it will survive export and re-import.');
+      this._editId=draft.id; this._draft=null; this._view='list'; this._renderList();
+    }
+  },
+  _save(list,msg){
+    const n=State.get();if(!n)return;
+    if(State.setTables(n.id,list)){ if(msg)showToast(msg); this._view='list'; this._draft=null; this._editId=null; this._renderList(); }
+  },
+  // ── CC-DUAL: thin optional AI generator. Builds a copy-paste prompt returning the SAME editable
+  //   table shape; the user pastes the JSON, we load it as a DRAFT in the editor (NEVER auto-saved).
+  //   Mirrors HouseRules._draftThresholdsAI verbatim in spirit. The prompt forbids the haram naming.
+  _draftAI(){
+    const n=State.get();if(!n)return;
+    const stats=Object.values(n.stats).map(s=>s.key).join('", "');
+    const pressureIds=Object.keys(this._PRESSURE_CONDS).join('", "');
+    const prompt=`You are drafting a worldbuilding ROLL TABLE for a fictional nation. All content is fiction; this is task-resolution prompting, never a wager and never about luck/fate.\nReturn ONLY a JSON object EXACTLY of this shape:\n{"name":"<short, civic/economic/weather theme — NEVER fortune/omen/fate/prophecy/destiny>","die":100,"entries":[{"range":[lo,hi],"text":"<one line>","conditions":[ ... optional ... ]}]}\nRules:\n- "die" must be one of 100,20,12,10,8,6,4. Ranges are within [1,die] and should tile the die.\n- A condition (optional, makes an entry world-aware) is ONE of EXACTLY:\n    {"kind":"stat","stat":"<one of: \\"${stats}\\">","min":<int>,"max":<int>}  (either min or max optional)\n    {"kind":"pressure","pressureId":"<one of: \\"${pressureIds}\\">"}\n    {"kind":"season","seasonIndex":0|1|2|3}\n- Keep prose grounded and secular (civic, economic, meteorological — no occult, no destiny, no luck).\nNo prose, no markdown — just the JSON object.`;
+    const pasted=window.prompt(`Copy this prompt into your AI, then paste its JSON object back here.\n\n${prompt}\n\nPaste the AI's JSON object:`);
+    if(!pasted)return;
+    try{
+      const obj=JSON.parse(pasted.trim());
+      if(!obj||typeof obj!=='object'||Array.isArray(obj))throw new Error('Expected a JSON object.');
+      // Load as a DRAFT only — sanitised, but the GM still reviews every entry and must click Save.
+      this._draft=this.sanitize({id:Utils.uuid(),name:obj.name,die:obj.die,entries:obj.entries});
+      this._editId=null; this._view='edit'; this._renderEdit();
+      showToast('AI draft loaded — review every entry and condition, then Save to keep it.');
+    }catch(err){ showToast('Could not read that as a JSON table object. '+(err.message||'')); }
   },
 };
 const Modals={
@@ -20560,6 +21126,7 @@ async function bootstrap(){
   if(typeof SHSPanels!=='undefined')SHSPanels.bind();
   if(typeof Fronts!=='undefined')Fronts.bind();
   if(typeof HouseRules!=='undefined')HouseRules.bind(); // P5.1 — own bind, not the bindEventListeners monolith.
+  if(typeof Tables!=='undefined')Tables.bind(); // P5.4 — own bind, not the bindEventListeners monolith.
   if(typeof Handouts!=='undefined')Handouts.bind();
   if(typeof Bestiary!=='undefined')Bestiary.bind();
   if(typeof Relations!=='undefined')Relations.bind();
