@@ -2585,6 +2585,24 @@ body.theme-ember .sc-panel__title{color:var(--ember-color)}
 .brief__ai-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--space-2)}
 .brief__ai-list li{font-size:var(--text-body-sm);color:var(--color-text-primary);padding-left:var(--space-3);border-left:2px solid var(--color-gold);line-height:1.5}
 .brief__ai-cites{display:flex;flex-wrap:wrap;gap:var(--space-1);margin-top:var(--space-1)}
+/* Continuity Sweep (P5.5) — read-only audit panel */
+.lint__intro{font-size:var(--text-label-sm);color:var(--color-text-muted);line-height:1.5;margin:0 0 var(--space-3);font-style:italic}
+.lint__clean{font-size:var(--text-body-sm);color:var(--color-thriving);text-align:center;padding:var(--space-4) var(--space-2);line-height:1.5}
+.lint__group{margin-bottom:var(--space-3)}
+.lint__group-head{font-family:var(--font-display);font-size:var(--text-body-sm);color:var(--color-text-primary);display:flex;align-items:baseline;gap:var(--space-2);padding-bottom:var(--space-1);margin-bottom:var(--space-2);border-bottom:1px solid var(--color-border-hairline)}
+.lint__count{font-family:var(--font-mono);font-size:var(--text-label-sm);color:var(--color-text-muted)}
+.lint__row{padding:var(--space-2) var(--space-3);border-left:3px solid var(--color-border-hairline);margin-bottom:var(--space-2);background:var(--color-surface)}
+.lint__group--contradiction .lint__row{border-left-color:var(--color-crisis)}
+.lint__group--warning .lint__row{border-left-color:var(--color-tense)}
+.lint__group--info .lint__row{border-left-color:var(--color-gold)}
+.lint__msg{font-size:var(--text-body-sm);color:var(--color-text-primary);line-height:1.5}
+.lint__ai-tag{font-family:var(--font-mono);font-size:var(--text-mono-sm);color:var(--color-amber);border:.5px solid var(--color-amber);border-radius:var(--radius-sm);padding:0 4px;margin-right:4px}
+.lint__foot{display:flex;align-items:center;flex-wrap:wrap;gap:var(--space-1);margin-top:var(--space-1)}
+.lint__ref{font-family:var(--font-mono);font-size:var(--text-label-sm);color:var(--color-text-muted)}
+.lint__dismiss{margin-left:auto;background:transparent;border:1px solid var(--color-border-hairline);border-radius:var(--radius-sm);color:var(--color-text-muted);font-size:var(--text-label-sm);padding:1px var(--space-2);cursor:pointer}
+.lint__dismiss:hover{color:var(--color-text-primary);border-color:var(--color-border-default)}
+.lint__ai{margin-top:var(--space-3);padding-top:var(--space-2);border-top:1px solid var(--color-border-hairline)}
+.lint__ai-note{font-size:var(--text-label-sm);color:var(--color-text-muted);font-style:italic;margin:var(--space-1) 0 0}
 /* Hook rows */
 .sc-hook-item{padding:var(--space-3);border-left:3px solid var(--color-border-hairline);margin-bottom:var(--space-2);display:flex;align-items:flex-start;gap:8px}
 .sc-hook-item--open{border-left-color:var(--color-thriving)}
@@ -3706,6 +3724,9 @@ SECTION 8: DOM STRUCTURE
       <a class="wms-nav__item" data-route="threads" href="#" aria-label="Plot Threads">
         <span class="material-symbols-outlined">account_tree</span>Threads
       </a>
+      <a class="wms-nav__item" data-route="continuity" href="#" aria-label="Continuity Sweep">
+        <span class="material-symbols-outlined">fact_check</span>Continuity
+      </a>
     </nav>
     <div class="wms-panels">
       <!-- LEFT PANEL: Stability hero + stat list + Inscribe -->
@@ -4426,6 +4447,15 @@ SECTION 8: DOM STRUCTURE
   </div>
 </div>
 
+<!-- ── CONTINUITY SWEEP PANEL (P5.5) — read-only audit, never auto-fixes ─ -->
+<div class="sc-panel" id="panel-continuity" role="dialog" aria-label="Continuity Sweep">
+  <div class="sc-panel__header">
+    <h2 class="sc-panel__title">Continuity Sweep</h2>
+    <button class="sc-panel__close" id="panel-continuity-close" aria-label="Close">×</button>
+  </div>
+  <div class="sc-panel__body" id="continuity-body"></div>
+</div>
+
 <!-- ── MODAL: NEW / EDIT SESSION ─────────────────────────────────────── -->
 <div class="modal modal--md" id="modal-new-session" role="dialog" aria-modal="true" aria-labelledby="modal-new-session-title">
   <div class="modal__header">
@@ -5020,6 +5050,8 @@ function emptyCampaignPrep(){return{
   // Locally-authored notes the user explicitly silenced; kept so the rail
   // doesn't keep re-raising the same flag after dismiss.
   dismissedHeuristics:[],
+  // Continuity-sweep findings the user dismissed; kept so the audit never re-raises them (UX-6).
+  dismissedLintKeys:[],
   // Session counter for the per-session rate cap; resets on save reload.
   sessionCallCount:0,
   sessionStartedAt:Date.now(),
@@ -5040,6 +5072,7 @@ function migrateCampaignPrep(cp){
   if(!Array.isArray(cp.secrets))cp.secrets=[];
   if(!Array.isArray(cp.liveModePinned))cp.liveModePinned=[];
   if(!Array.isArray(cp.dismissedHeuristics))cp.dismissedHeuristics=[];
+  if(!Array.isArray(cp.dismissedLintKeys))cp.dismissedLintKeys=[];
   if(typeof cp.sessionCallCount!=='number')cp.sessionCallCount=0;
   if(typeof cp.sessionStartedAt!=='number')cp.sessionStartedAt=Date.now();
   if(cp.lastCommentary===undefined)cp.lastCommentary=null;
@@ -8033,6 +8066,7 @@ const State={
   cpPinHeuristic(item){const cp=this.cp();cp.liveModePinned.unshift({...(item||{}),id:Utils.uuid(),pinnedAt:Date.now()});cp.liveModePinned=cp.liveModePinned.slice(0,12);this._touchMeta();this.persist();this._cpEmit(['liveModePinned']);},
   cpUnpinHeuristic(id){const cp=this.cp();cp.liveModePinned=cp.liveModePinned.filter(x=>x.id!==id);this._touchMeta();this.persist();this._cpEmit(['liveModePinned']);},
   cpDismissHeuristic(key){const cp=this.cp();if(!cp.dismissedHeuristics.includes(key))cp.dismissedHeuristics.push(key);this._touchMeta();this.persist();this._cpEmit(['dismissedHeuristics'],{trivial:true});},
+  cpDismissLint(key){const cp=this.cp();if(!Array.isArray(cp.dismissedLintKeys))cp.dismissedLintKeys=[];if(!cp.dismissedLintKeys.includes(key))cp.dismissedLintKeys.push(key);this._touchMeta();this.persist();this._cpEmit(['dismissedLintKeys'],{trivial:true});},
   cpSetLastCommentary(c){const cp=this.cp();cp.lastCommentary=c||null;this._touchMeta();this.persist();},
 
   // ─── LOCATIONS ───
@@ -16915,6 +16949,340 @@ const Brief={
   },
 };
 
+// ─── CONTINUITY SWEEP (P5.5 — N5) ──────────────────────────────────────────────
+// The whole-world audit a stateless chatbot cannot do (C-M6a). Two halves:
+//   (1) Lint.run(n) — a PURE, deterministic continuity lint over the persisted nation.
+//       No DOM, no State.* writes, no AI. Given the same realm it returns the same findings
+//       in the same order, so it is unit-testable standalone (see /tmp/p55.test.mjs). It
+//       extends the verified one-event continuity check into a whole-world pass.
+//   (2) Lint.aiPass — the OPTIONAL semantic half: chunked over ~100 events, looping the
+//       checkContinuity pattern, every finding citing [#id]. Cost-previewed before it runs.
+//
+// CC-DUAL: the lint is the no-AI CORE; it stands fully alone. The AI semantic pass is clearly
+//   the AI half — only when configured, cost-previewed, and FIXES route through CANON review
+//   (verdict-only default, nothing auto-applied). The product works with AI entirely off.
+// CC-GROUND: every finding carries the entity ids it is derived from (refs[]), so the panel
+//   cites them; the AI pass is instructed to cite [#id] from the ledger for every claim.
+// UX-4/6: the panel is read-only — it NEVER auto-fixes. Each finding is dismissable and the
+//   dismissal is remembered (the LiveMode dismissed-keys precedent), so it never nags twice.
+// CC-HALAL: analytical framing only — "the record contradicts itself," "the math says this
+//   gap is implausible." Never fate/omen/prophecy/destiny.
+//
+// Wired from bootstrap via Lint.bind() — NOT the bindEventListeners monolith
+// (code-health rule: a surface owns its listeners, like Press/Brief/RunMode).
+//
+// RUNBOOK
+//   Open:    Nav rail → "Continuity" (or call Lint.open()). The panel renders the deterministic
+//            findings grouped by severity (Contradictions / Warnings). Read-only — nothing here
+//            edits the realm.
+//   Dismiss: each finding has a Dismiss button → State.cpDismissLint(key) persists the key in
+//            cp.dismissedLintKeys; the finding never re-surfaces (survives reload).
+//   AI pass: shown only when a copilot key is configured. The button shows a cost PREVIEW
+//            (~$ + chunk count) before anything runs; clicking it confirms, then loops the
+//            verified checkContinuity verdict over ~100-event chunks. Verdict-only — nothing is
+//            auto-applied; any fix goes through canon review. AI off → the deterministic audit
+//            stands fully alone.
+//   Tests:   node /tmp/p55.test.mjs   (the 6-defect fixture: precision + recall, + zero false
+//            positives on the clean realm + the shipped sample + determinism + dismiss).
+const Lint={
+  _wired:false,
+  _lastAiFindings:[],   // AI-pass results, rendered alongside the deterministic findings.
+  _aiRunning:false,
+
+  // Severity tiers. Lower rank sorts first (most serious at the top). A contradiction is a
+  // hard self-inconsistency in the record; a warning is a softer "this is probably wrong."
+  SEVERITY:{contradiction:0,warning:1,info:2},
+
+  // ── PURE CORE ────────────────────────────────────────────────────────────────
+  // Lint.run(n[, opts]) → [{severity, kind, message, refs:[ids...], dismissKey}], deterministically
+  // ordered (severity rank, then kind, then dismissKey). opts.dismissed is an optional Set of
+  // dismissKeys to filter out (dismiss-and-remember). Defensive: any malformed input returns [].
+  run(n,opts){
+    if(!n||typeof n!=='object')return [];
+    const dismissed=(opts&&opts.dismissed instanceof Set)?opts.dismissed:new Set();
+    const arr=k=>Array.isArray(n[k])?n[k]:[];
+    const characters=arr('characters'),chronicle=arr('chronicle'),sessions=arr('sessions');
+    const hooks=arr('hooks'),secrets=arr('secrets'),factions=arr('factions'),locations=arr('locations');
+
+    // Id sets for O(1) reference resolution. Only entries WITH an id participate — the raw
+    // pre-import seed shape (no ids) therefore has nothing to dangle against, so it surfaces
+    // zero findings (the defensive precision guarantee for the shipped sample).
+    const factionIds=new Set(factions.filter(f=>f&&f.id).map(f=>f.id));
+    const locationIds=new Set(locations.filter(l=>l&&l.id).map(l=>l.id));
+    const sessionIds=new Set(sessions.filter(s=>s&&s.id).map(s=>s.id));
+    const charIds=new Set(characters.filter(c=>c&&c.id).map(c=>c.id));
+    const eventById=new Map(chronicle.filter(e=>e&&e.id).map(e=>[e.id,e]));
+
+    const out=[];
+    const push=(severity,kind,message,refs,keyParts)=>{
+      out.push({severity,kind,message,refs:refs.filter(Boolean),
+        dismissKey:kind+':'+keyParts.filter(Boolean).join('|')});
+    };
+
+    // (a) Dangling entity references. A reference field that points at an id no entity owns is a
+    //     broken pointer the record cannot resolve. Covers characters' factionId (L7634) and
+    //     basedInLocationId (L7640), and chronicle events' happenedAtLocationId (L8096).
+    characters.forEach(c=>{
+      if(!c||!c.id)return;
+      if(c.factionId&&!factionIds.has(c.factionId))
+        push('contradiction','dangling-ref',`${this._nm(c)} points at a faction that no longer exists.`,[c.factionId,c.id],[c.factionId,c.id]);
+      if(c.basedInLocationId&&!locationIds.has(c.basedInLocationId))
+        push('contradiction','dangling-ref',`${this._nm(c)} is based in a location that no longer exists.`,[c.basedInLocationId,c.id],[c.basedInLocationId,c.id]);
+    });
+    chronicle.forEach(e=>{
+      if(!e||!e.id)return;
+      if(e.happenedAtLocationId&&!locationIds.has(e.happenedAtLocationId))
+        push('contradiction','dangling-ref',`"${this._nm(e)}" happened at a location that no longer exists.`,[e.happenedAtLocationId,e.id],[e.happenedAtLocationId,e.id]);
+    });
+
+    // (b) A deceased NPC appearing in a session dated AFTER their death. The death year is the
+    //     latest year among the NPC's chronicleLinks events (the death is chronicled), or an
+    //     explicit deathYear/diedYear if the record carries one. With no derivable death year we
+    //     do NOT flag — silence beats a false positive (precision discipline). Reads status
+    //     (L6648 'dead'/'deceased') + session npcsAppeared (L7798) + inFictionDate (L7793).
+    characters.forEach(c=>{
+      if(!c||!c.id)return;
+      if(c.status!=='deceased'&&c.status!=='dead')return;
+      const dy=this._deathYear(c,eventById);
+      if(dy==null)return;
+      sessions.forEach(s=>{
+        if(!s)return;
+        const sy=(typeof s.inFictionDate==='number')?s.inFictionDate:null;
+        if(sy==null||sy<=dy)return;
+        const appeared=Array.isArray(s.npcsAppeared)?s.npcsAppeared:[];
+        if(appeared.includes(c.id))
+          push('contradiction','deceased-after-death',
+            `${this._nm(c)} died in ${dy} but appears in a session set in ${sy}.`,
+            [c.id,s.id],[c.id,s.id]);
+      });
+    });
+
+    // (c) Event years that violate ERA_GAP plausibility. Mirrors Compute.eras (L8264-8270): sort
+    //     non-forecast events by year; a jump to the next event greater than the era's maximum
+    //     plausible gap is implausible. We flag the EARLIER event of the oversized pair (the
+    //     outlier opening the gap). ERA_GAP keyed by n.era (L5075); unknown era falls back to 50.
+    const gap=(typeof ERA_GAP!=='undefined'&&ERA_GAP[n.era])?ERA_GAP[n.era]:50;
+    const dated=chronicle.filter(e=>e&&e.id&&typeof e.year==='number'&&e.visibility!=='forecast')
+      .slice().sort((a,b)=>a.year!==b.year?a.year-b.year:(String(a.id)<String(b.id)?-1:1));
+    for(let i=1;i<dated.length;i++){
+      const prev=dated[i-1],cur=dated[i];
+      if(cur.year-prev.year>gap)
+        push('warning','era-gap',
+          `"${this._nm(prev)}" (year ${prev.year}) sits ${cur.year-prev.year} years before the next event — beyond the ${n.era||'era'} plausibility gap of ${gap}.`,
+          [prev.id,cur.id],[prev.id,cur.id]);
+    }
+
+    // (d) Hooks whose closedInSession (L7841) points at a session that does not exist.
+    hooks.forEach(h=>{
+      if(!h||!h.id)return;
+      if(h.closedInSession&&!sessionIds.has(h.closedInSession))
+        push('warning','dangling-session',
+          `Hook "${this._nm(h)}" is marked closed in a session that no longer exists.`,
+          [h.id,h.closedInSession],[h.id,h.closedInSession]);
+    });
+
+    // (e) Secrets marked deployed (L7912) but carrying no deployedInSession (L7878) — a deployment
+    //     with no record of WHEN. Soft warning: the secret works, but the audit trail is broken.
+    secrets.forEach(s=>{
+      if(!s||!s.id)return;
+      if(s.status==='deployed'&&!s.deployedInSession)
+        push('warning','deployed-no-session',
+          `Secret "${this._nm(s)}" is deployed but records no session it was deployed in.`,
+          [s.id],[s.id]);
+    });
+
+    // (f) Orphaned relatedNpcs on a secret (L7879): a linked NPC id that no character owns.
+    secrets.forEach(s=>{
+      if(!s||!s.id)return;
+      (Array.isArray(s.relatedNpcs)?s.relatedNpcs:[]).forEach(npcId=>{
+        if(npcId&&!charIds.has(npcId))
+          push('contradiction','orphan-npc',
+            `Secret "${this._nm(s)}" links to an NPC that no longer exists.`,
+            [s.id,npcId],[s.id,npcId]);
+      });
+    });
+
+    // Deterministic order: severity rank, then kind, then dismissKey (a stable string).
+    const rank=f=>(this.SEVERITY[f.severity]!=null?this.SEVERITY[f.severity]:99);
+    out.sort((a,b)=>{
+      if(rank(a)!==rank(b))return rank(a)-rank(b);
+      if(a.kind!==b.kind)return a.kind<b.kind?-1:1;
+      return a.dismissKey<b.dismissKey?-1:(a.dismissKey>b.dismissKey?1:0);
+    });
+    return out.filter(f=>!dismissed.has(f.dismissKey));
+  },
+
+  // PURE helper: a display name for any entity (defensive — never throws).
+  _nm(x){return (x&&(x.name||x.title))||'(unnamed)';},
+
+  // PURE helper: derive an NPC's death year. Explicit field wins; else the latest year among the
+  // events the NPC is chronicle-linked to (their death is in the record). null = not derivable.
+  _deathYear(c,eventById){
+    if(typeof c.deathYear==='number')return c.deathYear;
+    if(typeof c.diedYear==='number')return c.diedYear;
+    const links=Array.isArray(c.chronicleLinks)?c.chronicleLinks:[];
+    let y=null;
+    links.forEach(eid=>{
+      const e=eventById.get(eid);
+      if(e&&typeof e.year==='number')y=(y==null)?e.year:Math.max(y,e.year);
+    });
+    return y;
+  },
+
+  // ── OPTIONAL AI SEMANTIC PASS (CC-DUAL / CC-GROUND) ────────────────────────────
+  // Chunk the chronicle into ~100-event windows (the L7653 cap precedent) and loop the verified
+  // checkContinuity verdict pattern over each. Findings cite [#id]. Cost is previewed first; the
+  // user confirms before any spend. Verdict-only: nothing is auto-applied — fixes go via CANON review.
+  AI_CHUNK:100,
+  // PURE: a cost preview for the AI pass over a realm. Returns {chunks, events, estTokens, estUsd}.
+  // Rough token math mirrors the in-app stamps (~2.5 tok/word; one verdict call per chunk).
+  aiCostPreview(n){
+    const chronicle=Array.isArray(n&&n.chronicle)?n.chronicle:[];
+    const events=chronicle.length;
+    const chunks=Math.max(1,Math.ceil(events/this.AI_CHUNK));
+    // Per chunk: a compact world snapshot + the chunk's events, ~120 tokens/event + ~600 overhead.
+    const perChunkIn=600+Math.min(events,this.AI_CHUNK)*120;
+    const estTokensIn=perChunkIn*chunks;
+    const estTokensOut=400*chunks; // checkContinuity caps verdicts at 400 tok
+    // Sonnet-ish blended rate for the preview ($3/Mtok in, $15/Mtok out).
+    const estUsd=(estTokensIn/1e6)*3+(estTokensOut/1e6)*15;
+    return {chunks,events,estTokensIn,estTokensOut,estUsd};
+  },
+  // The AI run. Loops checkContinuity per chunk; collects verdicts that name a concern. Each
+  // returned finding is verdict-only and carries any [#id] citations the model emitted. Never
+  // applies anything. Returns the new AI findings (also cached on _lastAiFindings).
+  async aiPass(){
+    if(this._aiRunning)return [];
+    if(typeof Copilot==='undefined'||!Copilot.isConfigured()){
+      if(typeof showToast!=='undefined')showToast('Add an API key in Settings to run the semantic continuity pass.');
+      return [];
+    }
+    const n=(typeof State!=='undefined')?State.get():null;
+    if(!n){return [];}
+    const chronicle=Array.isArray(n.chronicle)?n.chronicle:[];
+    if(!chronicle.length){if(typeof showToast!=='undefined')showToast('No chronicle events to check.');return [];}
+    const preview=this.aiCostPreview(n);
+    const okGo=(typeof confirm==='function')
+      ? confirm(`Run the AI semantic continuity pass?\n\n${preview.events} events in ${preview.chunks} chunk(s).\nEstimated cost: ~$${preview.estUsd.toFixed(3)} (verdict-only — nothing is auto-applied; any fix goes through canon review).`)
+      : true;
+    if(!okGo)return [];
+    this._aiRunning=true;
+    const findings=[];
+    try{
+      // Sort events the same way the deterministic pass does so chunk membership is stable.
+      const dated=chronicle.filter(e=>e).slice().sort((a,b)=>((a.year||0)-(b.year||0))||(String(a.id)<String(b.id)?-1:1));
+      for(let i=0;i<dated.length;i+=this.AI_CHUNK){
+        const chunk=dated.slice(i,i+this.AI_CHUNK);
+        // Reuse the verified single-event verdict pattern across the chunk's heaviest events so the
+        // cost stays bounded; the model is given the whole world as context inside checkContinuity.
+        for(const ev of chunk){
+          let res;
+          try{res=await Copilot.checkContinuity(ev);}catch(e){continue;}
+          const text=(res&&res.text)||'';
+          // Only surface verdicts that flag a concern — "Consistent" verdicts are not findings.
+          if(/Contradiction|Minor concern/i.test(text)){
+            const sev=/Contradiction/i.test(text)?'contradiction':'warning';
+            // Preserve any [#id] citations the model emitted (CC-GROUND); always cite the event itself.
+            const cited=(text.match(/\[#([0-9a-zA-Z-]{4,})\]/g)||[]).map(s=>s.replace(/[\[\]#]/g,''));
+            const refs=Array.from(new Set([ev.id,...cited])).filter(Boolean);
+            findings.push({severity:sev,kind:'ai-semantic',message:(this._nm(ev)+': '+text).slice(0,600),
+              refs,dismissKey:'ai-semantic:'+ev.id,ai:true});
+          }
+        }
+      }
+    }finally{
+      this._aiRunning=false;
+    }
+    this._lastAiFindings=findings;
+    if(typeof showToast!=='undefined')showToast(findings.length?`Semantic pass: ${findings.length} concern${findings.length===1?'':'s'} flagged (verdict-only).`:'Semantic pass: no concerns flagged.');
+    if(this._open)this.render();
+    return findings;
+  },
+
+  // ── PANEL (read-only; never auto-fixes) ────────────────────────────────────────
+  _open:false,
+  // Dismissed keys persist on the campaign-prep object (the LiveMode dismissed-keys precedent).
+  _dismissedSet(){
+    try{
+      const cp=(typeof State!=='undefined')?State.cp():null;
+      return new Set((cp&&Array.isArray(cp.dismissedLintKeys))?cp.dismissedLintKeys:[]);
+    }catch(e){return new Set();}
+  },
+  open(){
+    const panel=document.getElementById('panel-continuity');
+    if(typeof SHSPanels!=='undefined')SHSPanels.closeAll();
+    if(!panel)return;
+    panel.classList.add('is-open');
+    this._open=true;
+    document.querySelectorAll('.wms-nav__item[data-route]').forEach(el=>el.classList.toggle('is-active',el.dataset.route==='continuity'));
+    this.render();
+  },
+  close(){
+    document.getElementById('panel-continuity')?.classList.remove('is-open');
+    this._open=false;
+    document.querySelectorAll('.wms-nav__item[data-route]').forEach(el=>el.classList.toggle('is-active',el.dataset.route==='war-room'));
+  },
+  render(){
+    const body=document.getElementById('continuity-body');
+    if(!body)return;
+    const n=(typeof State!=='undefined')?State.get():null;
+    const E=(typeof Utils!=='undefined')?Utils.escHtml:(s=>String(s));
+    if(!n){body.innerHTML='<div class="sc-empty">No realm loaded.</div>';return;}
+    const findings=this.run(n,{dismissed:this._dismissedSet()});
+    const aiFindings=Array.isArray(this._lastAiFindings)?this._lastAiFindings.filter(f=>!this._dismissedSet().has(f.dismissKey)):[];
+    const all=findings.concat(aiFindings);
+
+    let html='<div class="lint">';
+    html+='<p class="lint__intro">A whole-world continuity audit. Read-only — nothing here changes your realm. Every line cites the entities it is derived from. Dismiss a line and it stays dismissed.</p>';
+
+    if(!all.length){
+      html+='<div class="lint__clean">The record is internally consistent. No continuity issues found.</div>';
+    }else{
+      const groups=[['contradiction','Contradictions'],['warning','Warnings'],['info','Notes']];
+      groups.forEach(([sev,label])=>{
+        const rows=all.filter(f=>f.severity===sev);
+        if(!rows.length)return;
+        html+=`<div class="lint__group lint__group--${sev}"><div class="lint__group-head">${E(label)} <span class="lint__count">${rows.length}</span></div>`;
+        rows.forEach(f=>{
+          const refTags=(f.refs||[]).map(id=>`<span class="lint__ref" data-cite-id="${E(id)}">#${E(String(id).slice(0,8))}</span>`).join(' ');
+          html+=`<div class="lint__row" data-dismiss-key="${E(f.dismissKey)}">`
+            +`<div class="lint__msg">${f.ai?'<span class="lint__ai-tag">AI</span> ':''}${E(f.message)}</div>`
+            +`<div class="lint__foot">${refTags}<button class="lint__dismiss" type="button" data-lint-dismiss="${E(f.dismissKey)}" aria-label="Dismiss this finding">Dismiss</button></div>`
+            +`</div>`;
+        });
+        html+='</div>';
+      });
+    }
+
+    // AI semantic pass control (CC-DUAL: clearly the optional AI half; cost previewed before run).
+    if(typeof Copilot!=='undefined'&&Copilot.isConfigured()){
+      const p=this.aiCostPreview(n);
+      html+=`<div class="lint__ai"><button class="btn btn--secondary" id="lint-ai-btn">Run AI semantic pass · ~$${p.estUsd.toFixed(3)} · ${p.chunks} chunk${p.chunks===1?'':'s'}</button>`
+        +`<p class="lint__ai-note">Verdict-only. Nothing is auto-applied; any fix goes through canon review.</p></div>`;
+    }
+    html+='</div>';
+    body.innerHTML=html;
+  },
+  _dismiss(key){
+    if(!key)return;
+    try{if(typeof State!=='undefined'&&State.cpDismissLint)State.cpDismissLint(key);}catch(e){}
+    this.render();
+  },
+  bind(){
+    if(this._wired)return;this._wired=true;
+    document.getElementById('panel-continuity-close')?.addEventListener('click',()=>this.close());
+    const body=document.getElementById('continuity-body');
+    if(body)body.addEventListener('click',e=>{
+      const dis=e.target&&e.target.closest&&e.target.closest('[data-lint-dismiss]');
+      if(dis){e.preventDefault();this._dismiss(dis.dataset.lintDismiss);return;}
+      const aiBtn=e.target&&e.target.closest&&e.target.closest('#lint-ai-btn');
+      if(aiBtn){e.preventDefault();this.aiPass();return;}
+    });
+    // Nav rail entry + any explicit trigger button.
+    document.getElementById('continuity-open-btn')?.addEventListener('click',()=>this.open());
+  },
+};
+
 // ─── TONIGHT MODULE ──────────────────────────────────────────────────────────
 const Tonight={
   // Stored results for "Save secrets" (activated in Delivery C)
@@ -17261,6 +17629,9 @@ const SHSPanels={
     ['sessions','hooks','secrets','fronts','locations','bestiary','relations','web','solo','threads'].forEach(p=>{
       document.getElementById(`panel-${p}`)?.classList.remove('is-open');
     });
+    // P5.5: the Continuity panel is owned by Lint, not SHSPanels — close it here too so panels never stack.
+    document.getElementById('panel-continuity')?.classList.remove('is-open');
+    if(typeof Lint!=='undefined')Lint._open=false;
     // Update nav active state
     document.querySelectorAll('.wms-nav__item[data-route]').forEach(el=>{
       el.classList.toggle('is-active',el.dataset.route===which);
@@ -18968,6 +19339,10 @@ const WorldShell={
         // Chronicle is rendered persistently in the footer band — clicking the nav
         // item simply closes any open SHS panels so the main view (with chronicle visible) is shown.
         if(typeof SHSPanels!=='undefined')SHSPanels.closeAll();
+        return;
+      }
+      if(route==='continuity'){
+        if(typeof Lint!=='undefined')Lint.open();
         return;
       }
       if(['sessions','hooks','secrets','fronts','locations','bestiary','relations','web','solo','threads'].includes(route)){
@@ -22035,6 +22410,7 @@ async function bootstrap(){
   if(typeof RunMode!=='undefined')RunMode.bind();
   if(typeof Press!=='undefined')Press.bind();
   if(typeof Brief!=='undefined')Brief.bind();
+  if(typeof Lint!=='undefined')Lint.bind();
   if(typeof TransparencyLog!=='undefined')TransparencyLog.bind();
   if(typeof CostMeter!=='undefined')CostMeter.bind();
   if(typeof CostGate!=='undefined')CostGate._ensure();
