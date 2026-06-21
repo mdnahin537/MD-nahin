@@ -14127,6 +14127,74 @@ Return ONLY the paragraph as plain text. No preamble, no formatting.`;
       this._summarizing=false;
     }
   },
+
+  // ─── P6.3 — NARRATION (the "AI telling" below the deterministic math) ───
+  // CC-GROUND render-gate (PURE, no DOM/State/net). Turns model prose into safe HTML:
+  // every non-token span is escaped via the injected `esc` (Utils.escHtml in the app),
+  // and every citation token is classified against the diff allowlist IN CODE — never
+  // by trusting the model. A token that names a real diff entity becomes a visible chip;
+  // a token that does NOT (a hallucinated id/name) is rendered INERT muted text that
+  // cannot masquerade as a real citation (product rule C4 — never silently wrong).
+  // Tokens recognised: `[#xxxxxxxx]` (event, first-8-of-uuid grammar) and `[NPC: name]`.
+  renderNarrationCitations(prose,allowedEventIds,allowedNpcNames,esc){
+    const E=(typeof esc==='function')?esc:((typeof Utils!=='undefined')?Utils.escHtml:(s=>String(s==null?'':s)));
+    const ids=new Set((allowedEventIds||[]).map(x=>String(x)));
+    const npcLc=new Set((allowedNpcNames||[]).map(x=>String(x).toLowerCase()));
+    const re=/\[#([0-9A-Za-z-]+)\]|\[NPC:\s*([^\]]+)\]/g;
+    let out='',last=0,m;
+    while((m=re.exec(String(prose||'')))){
+      out+=E(String(prose).slice(last,m.index));   // escaped prose between tokens
+      last=m.index+m[0].length;
+      if(m[1]!==undefined){
+        const id=m[1];
+        if(ids.has(id)){
+          out+='<sup class="rw-cite" data-event-id="'+E(id)+'">[#'+E(id)+']</sup>';
+        }else{
+          out+='<span class="rw-cite-inert" title="reference not in this turn">[#'+E(id)+']</span>';
+        }
+      }else{
+        const name=String(m[2]).trim();
+        if(npcLc.has(name.toLowerCase())){
+          out+='<sup class="rw-cite" data-npc-name="'+E(name)+'">'+E(name)+'</sup>';
+        }else{
+          out+='<span class="rw-cite-inert" title="reference not in this turn">'+E(name)+'</span>';
+        }
+      }
+    }
+    out+=E(String(prose||'').slice(last));
+    return out;
+  },
+
+  // ONE generator narrates BOTH surfaces (turn report + Sandtable). Input is the pure
+  // facts ({lines,eventIds,npcNames}) computed by the caller's _narrationFacts; output
+  // is era-voice prose + ≤2 follow-up hooks in a JSON envelope. The deterministic math
+  // is the truth — this is elevation, gated behind isConfigured(). CC-HALAL: the prompt
+  // forbids prophecy/foretell/fate/omen/destiny and uses market-default framing. The
+  // model is told to cite world-facts using ONLY the [#id] tokens / [NPC: name] names in
+  // the facts; renderNarrationCitations then ENFORCES that regardless of what comes back.
+  async generateTurnNarration({nation,facts,mode}={}){
+    if(!this.isConfigured())throw new Error('Copilot not configured. Add an API key in Settings.');
+    const f=facts||{lines:[],eventIds:[],npcNames:[]};
+    const where=mode==='sandtable'?'a forecast of how a hypothetical choice diverges from the baseline':'the turn the world just took on its own';
+    const tone=(nation&&typeof this.buildContext==='function')?this.buildContext(nation):'';
+    const sys=`You are the chronicler of a fictional tabletop realm, writing the era-voice telling of ${where}. You are given the deterministic facts the game already computed — that math is the TRUTH and is shown to the GM above your prose. Your job is to render those facts as 2-4 short paragraphs of grounded, evocative narration (the realm's voice — Rumi's clarity, not Tolkien's grandeur), then offer at most two concrete follow-up hooks for the GM.
+
+Hard rules:
+- Assert ONLY facts present in the FACTS list below. Invent nothing — no new events, NPCs, places, or numbers.
+- Cite every world-fact you assert using ONLY the [#id] tokens and [NPC: name] names exactly as they appear in the FACTS. Never invent an id or a name. If a fact has a [#id], carry that token when you state it.
+- Forbidden words (do not use any of them, in any form): prophecy, foretell, fate, omen, destiny. Frame everything as the world moving by its rules — tensions, pressures, what the math says, forecasts, hooks.
+- Keep it tight. No headers, no bullet lists in the prose. Hooks are short imperatives.
+
+Return JSON only: {"prose":"<2-4 short paragraphs>","hooks":["<hook>","<hook>"]}. At most 2 hooks.`;
+    const factBlock=(f.lines||[]).map(l=>'- '+l).join('\n')||'- (no changes)';
+    const ctxBlock=tone?`\n\n# Realm tone (for voice only — do not cite from here)\n${tone}`:'';
+    const user=`# FACTS (the computed truth — narrate and cite ONLY these)\n${factBlock}${ctxBlock}\n\nWrite the telling now.`;
+    const parsed=await this._apiFetchJson([{role:'system',content:sys},{role:'user',content:user}],{stream:false,max_tokens:600});
+    const prose=String(parsed&&parsed.prose||'').trim();
+    let hooks=Array.isArray(parsed&&parsed.hooks)?parsed.hooks:[];
+    hooks=hooks.map(h=>String(h||'').trim()).filter(Boolean).slice(0,2);
+    return{prose,hooks};
+  },
 };
 // ─── SAMPLE REALM DATA ───────────────────────────────────────────────────────
 const SAMPLE_REALM_HEIST={name:'Solis Prime',era:'Near-Future',government:'Corporate Sovereignty',archetype:'technocratic',leader:'Director-Emerita Iolanthe Marr',rulingClass:'Board of Synthesists',currentYear:2188,population:4200000,territory:9800,capital:'The Spire District',template:'city-state',stats:{legitimacy:44,corruption:7,opposition:6,food_production:70,trade:82,raw_materials:38,manpower:55,knowledge:79,cohesion:32,urbanization:94},factions:[{name:'The Shadowclaw Clan',type:'Opposition',position:'gaining',primaryInterest:'Control of the Lower Markets redistribution network',description:"A tightly-knit smuggling fraternity that moves contraband, unregistered persons, and grey-market bioware through Solis Prime's sub-tier conduits. Loyalty is enforced through shared risk, not hierarchy.",leaderName:'Dust (operational alias)'},{name:'Spire Security Directorate',type:'Government',position:'holding',primaryInterest:'Enforcement of the Corporate Charter and protection of Board assets',description:"The Board's sanctioned enforcement arm. Funded by Synthesist levies. Prosecutions are routed through Directorate-aligned magistrates — including Magistrate Vell, whose standing orders are classified.",leaderName:'Commandant Pyrren Ash'}],chronicle:[{name:'The Lower Markets Charter',type:'Economic',weight:12,year:2179,visibility:'public',description:"The Board of Synthesists granted provisional trade licenses to seventeen Lower Market guilds — a concession wrested after the Three-Week Blockade of the Spire elevators. Cedric Vell's grandfather co-signed the original petition.",relatedStats:['trade','cohesion']},{name:'The Conduit Raids',type:'Military',weight:-9,year:2181,visibility:'public',description:'The Spire Security Directorate swept seventeen sub-tier conduit nodes, seizing unlicensed bioware and arresting forty-two persons. Shadowclaw Clan lost two veteran runners. Dust was wounded in the escape. Cedric Vell\'s stall was not raided — a fact that was noticed.',relatedStats:['opposition','cohesion']},{name:'The Marr Appointment',type:'Political',weight:14,year:2183,visibility:'public',description:"Iolanthe Marr was elevated to the Board of Synthesists as its youngest-ever seat-holder, overseeing the Logistics and Transit vertical. Her first act was reclassifying six Lower Market trade corridors as Board property — effectively voiding the 2179 charter concessions.",relatedStats:['legitimacy','trade']},{name:'The Vell Estrangement',type:'Social',weight:-6,year:2184,visibility:'public',description:"Magistrate Sera Vell issued standing enforcement orders against unlicensed market activity in the Lower Markets — orders that directly targeted her brother Cedric's fence operation. Cedric has not spoken to his sister since. The Directorate uses his silence as leverage.",relatedStats:['cohesion']},{name:'The Marr Heist of 2185',type:'Political',weight:-11,year:2185,visibility:'public',description:"A Shadowclaw Clan operation penetrated a Spire transit vault and extracted a crate of pre-charter corporate land titles — documents that would, if published, invalidate the Board's authority over three Lower Market districts. Dust coordinated the extraction. Cedric Vell moved the titles to a safehouse in Sub-Tier 7. The crate has not surfaced publicly.",relatedStats:['opposition','legitimacy']},{name:"The Magistrate's Sealed Warrants",type:'Political',weight:-8,year:2187,visibility:'private',description:"Magistrate Sera Vell filed seventeen sealed warrants targeting Shadowclaw distribution nodes — including two that bracket the Sub-Tier 7 safehouse where the Marr Heist titles are stored. Whether she knows the titles are there, or whether she is simply cleaning the grid, is unknown. The warrants execute on the third of next month.",relatedStats:['opposition','legitimacy']},{name:'The Listening Device Contract',type:'Political',weight:6,year:2188,visibility:'private',description:"An anonymous party (suspected: a rival Board faction) has contracted the Shadowclaw Clan to plant a deep-signal listening device inside Director-Emerita Marr's private office on Spire Level 41. Dust has accepted. The operation requires inside access — which only Cedric Vell's network of licensed market vendors can provide.",relatedStats:['trade','knowledge']}],characters:[{name:'Cedric Vell',role:'Fence, Lower Markets broker',status:'active',drive:'Protect the Sub-Tier 7 network his grandfather built',fear:"His sister finds the land titles before he can broker their safe release",plotSeeds:["Cedric holds the 2185 land titles. He wants them off his hands — but only to someone who won't burn the Lower Markets with them.","He knows about the sealed warrants. He won't say how."],chronicleLinks:[]},{name:'Magistrate Sera Vell',role:'Spire Security Directorate prosecutor',status:'active',drive:'Advance within the Directorate by delivering measurable enforcement results',fear:"That her estrangement from Cedric has made her complicit — that she signed warrants she did not fully read",plotSeeds:['Her standing orders are classified at Level 3. The party cannot legally read them.','She is not corrupt — but she is ambitious enough to have stopped asking certain questions.'],chronicleLinks:[]},{name:'Dust',role:'Shadowclaw Clan operative, party contact',status:'active',drive:'Execute the listening-device contract before the sealed warrants execute',fear:'Cedric gets burned by his sister before the operation is complete',plotSeeds:['Dust was wounded in the 2181 Conduit Raids. The scar runs along her left forearm. She does not explain it.','She has a source inside the Spire — unconfirmed, never named in front of the party.'],chronicleLinks:[]},{name:'Iolanthe Marr',role:'Board of Synthesists member, Logistics and Transit vertical',status:'active',drive:'Consolidate the reclassified trade corridors before a Board vote can reverse the Marr Appointment',fear:'The 2185 land titles surface — they would undo everything she built since 2183',plotSeeds:['She is aware her office may be surveilled. She varies her route. She does not vary her assistant.','She once had a relationship with Dust, before either of them were who they are now. Dust has never mentioned it.'],chronicleLinks:[]}],hooks:[{title:'The Sealed Warrants',description:"Magistrate Vell's seventeen sealed warrants execute in twenty-two days. Two of them bracket the Sub-Tier 7 safehouse. The Shadowclaw Clan does not know Cedric is in the blast radius. Does the party warn him — and if so, how do they explain how they know?",resolved:false,relatedFactions:[]},{title:"The Land Titles' Buyer",description:'Three parties want the 2185 land titles: the Shadowclaw Clan (to use them), Magistrate Vell (to destroy them), and an unknown fourth party who has offered Cedric more money than he has ever seen. The fourth party\'s identity is the question.',resolved:false,relatedFactions:[]},{title:"Dust's Spire Source",description:"Someone inside the Spire is feeding Dust operational intelligence. The quality of the information implies Level 2 clearance at minimum. If the source is burned — by the party's actions or by accident — the listening-device operation collapses.",resolved:false,relatedFactions:[]}],secrets:[{title:'The Warrants Were Written Blind',content:"Magistrate Vell signed the sealed warrants without reading the full targeting appendix. A Directorate aide inserted the Sub-Tier 7 coordinates after her signature. She does not know. Someone does.",visibility:'private',relatedFactions:[]},{title:'Marr Ordered the 2181 Raids',content:"The Conduit Raids of 2181 were not routine enforcement. Iolanthe Marr — then a Board junior analyst — provided the Directorate with the conduit maps. She traded the intelligence for her seat on the Logistics vertical. Two Shadowclaw runners died because of those maps. Dust knows one of them was her cousin.",visibility:'private',relatedFactions:[]}],sessions:[],locations:[{name:"Cedric's Stall, Sub-Tier 7",description:'A licensed secondhand goods stall in the Lower Markets. The back room connects to three conduit nodes. The 2185 land titles are sealed inside a polymer case beneath the third floorboard.',type:'Interior',status:'active'},{name:"Spire Level 41 — Marr's Office",description:"Director-Emerita Marr's private office. Accessed via credentialed lift only. The listening-device drop point is behind the ventilation panel on the north wall — accessible from the service corridor, which requires a licensed vendor pass to enter.",type:'Restricted',status:'active'}],_preBaked:{strongStart:"The service corridor on Level 41 smells of recycled air and corporate patience. Dust pressed the vendor pass into your hand three minutes ago — Cedric's network, good for one trip up the Spire's maintenance spine. The listening device is a flat disc, nine grams, held against your palm. Behind the north wall panel is a ventilation cavity forty centimetres deep; the disc clips to the second strut from the left. You have eleven minutes before the shift rotation brings a Directorate sweep team through Sub-Tier 6 and someone starts asking why Cedric's vendor pass is showing activity two hundred floors above the Lower Markets. The panel screws are already loose. Someone came this way before.",hooks:["The sealed warrants execute in twenty-two days — and two of them bracket Cedric's Sub-Tier 7 safehouse where the 2185 land titles are hidden. If the Directorate finds those titles, everything Dust's operation was built on burns overnight.","An unknown fourth party has offered Cedric more money than he has seen in his life for the 2185 land titles. Cedric says he doesn't know who they are. Dust says Cedric is lying. Both might be right.","Magistrate Sera Vell is Cedric's estranged sister. She signed the sealed warrants without reading the targeting appendix. Whether that makes her a victim or a weapon depends entirely on who tells her first — and what they say."],secrets:["The 2181 Conduit Raids were not routine enforcement. Iolanthe Marr provided the conduit maps to the Directorate in exchange for her seat on the Logistics vertical. Two Shadowclaw runners died. Dust's cousin was one of them. Dust does not know the source. Yet.","The sealed warrants were altered after Magistrate Vell signed them. A Directorate aide inserted the Sub-Tier 7 coordinates into the targeting appendix post-signature. Someone inside the Directorate is playing both sides.","Cedric's vendor pass shows four prior uses on Level 40 and 41 — none of them his. His pass has been borrowed. He has not reported the discrepancy because doing so would require explaining his network to the Directorate.","Iolanthe Marr knows her office may be under surveillance. She varies her route to work. She does not vary her assistant — and her assistant has been accepting off-cycle payments from an anonymous transfer account for eleven months.","The 2185 land titles, if authenticated, would void the Board's authority over three Lower Market districts and retroactively invalidate the Marr Appointment itself. The Board's legal division has a draft counter-argument ready. It was written in 2183 — two years before the Heist."],encounter:{title:"Sweep Team Arrives",setup:"The service corridor on Level 41 goes quiet in the wrong way — a half-beat of recycled air before footsteps resolve into boots. Three Directorate officers round the sub-junction: a sweep team, manifests in hand, systematic. The lead officer — Sweep Officer Kael Thorn, by the insignia — clocks your group before you clock him. His expression does not change. His hand does not move toward his sidearm. He says, politely: 'Vendor pass validation. Standard sweep. Please hold.'",adversaries:[{name:"Sweep Officer Kael Thorn",notes:"By-the-book, unhurried, suspicious of inconsistencies — specifically Cedric's pass showing Level 41 activity"},{name:"Officer Mira Vass",notes:"Checking the manifest terminal; methodical, eyes on the screen not the group"},{name:"Officer Pol Cray",notes:"Watching the exits; hands free, relaxed but positioned to block the forward corridor"}],terrain:"Service corridor, Level 41 maintenance spine. Low ceiling (1.8m), two exits (forward to Marr's office block, back to the vendor lift), a wall-mounted terminal Vass is already using.",complication:"Mid-sweep, Thorn's terminal flags Cedric's pass for four prior unregistered uses on Level 40 and 41. He looks up slowly and says: 'These aren't your first visits, are they?'",tactical_objective:"Get past the sweep team without triggering a Level 3 alert — either by talking Thorn down, invalidating the manifest flag, or reaching the exit before Vass completes the terminal check.",loot:"If resolved without incident: Vass's unlocked terminal session shows the names and clearance levels of all vendor passes active on Level 41 today — including one belonging to Marr's assistant."}},fronts:[],bestiary:[],relations:[],copilotConversation:[],glossary:null,notes:'',oracleLog:[],metadata:{soloMode:false}};
@@ -14593,6 +14661,55 @@ const WorldTurnReport={
     const stats=Object.keys(statTouched).map(k=>({statKey:k,finalValue:running[k]}));
     return{stats,events,frontTicks,whispers};
   },
+  // ── P6.3 NARRATION FACTS (CC-GROUND core, pure) ───────────────────────────
+  // Builds the ground-truth handed to the model for the "AI telling": one readable
+  // sentence per reviewable line (EVENT lines end with their [#id] citation token,
+  // the same first-8-of-uuid convention buildContext uses), plus the ALLOWLIST of
+  // event ids + NPC names the prose is permitted to cite. No DOM, no State, no net.
+  // The id token is `[#${ev.id.slice(0,8)}]` so it matches the existing chronicle
+  // citation grammar the model is already trained on via buildContext.
+  _narrationFacts(result,nation){
+    const cite=id=>'[#'+String(id||'').slice(0,8)+']';
+    const lines=[];
+    const eventIds=[];
+    const chars=(nation&&Array.isArray(nation.characters))?nation.characters:[];
+    const stats=(nation&&nation.stats)||{};
+    const fronts=(nation&&Array.isArray(nation.fronts))?nation.fronts:[];
+    const npcSet=new Set();          // de-duped, preserves first-seen order via array below
+    const npcNames=[];
+    const noteNpc=name=>{const nm=String(name||'').trim();if(nm&&!npcSet.has(nm.toLowerCase())){npcSet.add(nm.toLowerCase());npcNames.push(nm);}};
+    this.enumerateLines(result).forEach(line=>{
+      if(line.kind==='event'){
+        const ev=line.event;
+        const id8=String(ev.id||'').slice(0,8);
+        if(id8&&eventIds.indexOf(id8)===-1)eventIds.push(id8);
+        const desc=ev.description?(' — '+ev.description):'';
+        lines.push(ev.name+desc+' '+cite(ev.id));
+        // NPC link is carried by the CHARACTER (chronicleLinks includes the event id),
+        // not by the event — mirror the renderer at L9509. This is the robust link:
+        // it survives import/export and does not depend on the engine stamping ids onto events.
+        chars.forEach(c=>{if(Array.isArray(c.chronicleLinks)&&c.chronicleLinks.indexOf(ev.id)!==-1)noteNpc(c.name);});
+      }else if(line.kind==='stat'){
+        const nm=(stats[line.statKey]&&stats[line.statKey].displayName)||line.statKey;
+        const sign=line.delta>0?'+':'';
+        lines.push(nm+' '+sign+line.delta+' — '+(line.ruleText||''));
+      }else if(line.kind==='front'){
+        const front=fronts.find(f=>f.id===line.frontId);
+        const fname=(front&&front.name)||'a front';
+        let s=fname+' clock '+(line.delta>0?'+':'')+line.delta+' — '+(line.ruleText||'');
+        if(line.resolvedEvent){
+          const rid8=String(line.resolvedEvent.id||'').slice(0,8);
+          if(rid8&&eventIds.indexOf(rid8)===-1)eventIds.push(rid8);
+          s+=' → resolves: '+line.resolvedEvent.name+' '+cite(line.resolvedEvent.id);
+        }
+        lines.push(s);
+      }else if(line.kind==='whisper'){
+        const w=line.whisper;
+        lines.push('Word of "'+(w.eventName||'an event')+'" has spread — now '+(w.toTier||'')+'.');
+      }
+    });
+    return{lines,eventIds,npcNames};
+  },
   // ── OPEN / RENDER ─────────────────────────────────────────────────────────
   open(elapsedDays,opts={}){
     const n=State.get();
@@ -14657,8 +14774,16 @@ const WorldTurnReport={
       }
       html+='</div>';
     });
+    // P6.3 — narration is STRICTLY additive and ONLY when AI is configured (CC-DUAL).
+    // With AI off, neither the button nor the container is emitted, so the deterministic
+    // report renders byte-for-byte as before — no code path here touches the lines above.
+    const aiOn=(typeof Copilot!=='undefined'&&Copilot.isConfigured&&Copilot.isConfigured());
+    if(aiOn){
+      html+='<div id="wtr-narration" class="rw-narration" hidden></div>';
+    }
     body.innerHTML=html;
     footer.innerHTML='<button class="btn btn--secondary" type="button" data-close="world-turn">Not now</button>'
+      +(aiOn?'<button class="btn btn--secondary" type="button" id="wtr-narrate">✦ Narrate this turn (AI)</button>':'')
       +'<button class="btn btn--primary" type="button" id="wtr-commit">Commit the turn</button>';
     this._bind();
   },
@@ -14727,6 +14852,53 @@ const WorldTurnReport={
     });
     const commit=modal.querySelector('#wtr-commit');
     if(commit)commit.addEventListener('click',()=>this.commit());
+    // P6.3 — these modals are injected dynamically; the init-time bindEventListeners
+    // monolith does NOT cover them, so the Narrate button is wired here (the _bind pattern).
+    const narrate=modal.querySelector('#wtr-narrate');
+    if(narrate)narrate.addEventListener('click',()=>this._narrate());
+  },
+  // ── P6.3 — Narrate this turn (the "AI telling", below the deterministic report) ──
+  // Thin shell over the pure core: facts via _narrationFacts (CC-GROUND allowlist),
+  // prose via Copilot.generateTurnNarration, rendered through the gate so only diff
+  // entities can become live citations. The math above stays the truth; this is below it.
+  async _narrate(){
+    const cur=this._current;
+    if(!cur)return;
+    const box=document.getElementById('wtr-narration');
+    const btn=document.getElementById('wtr-narrate');
+    if(!box)return;
+    if(!Copilot.isConfigured()){
+      box.hidden=false;
+      box.innerHTML='<p class="rw-narration__gate">Add your API key in Settings to use AI here.</p>';
+      return;
+    }
+    box.hidden=false;
+    box.innerHTML='<p class="rw-narration__pending">Telling the story…</p>';
+    if(btn)btn.disabled=true;
+    try{
+      const n=State.get();
+      const facts=this._narrationFacts(cur.result,n);
+      const out=await Copilot.generateTurnNarration({nation:n,facts,mode:'turn'});
+      box.innerHTML=this._narrationHtml(out,facts);
+    }catch(e){
+      box.innerHTML='<p class="rw-narration__gate">'+Utils.escHtml(e&&e.message?e.message:'Could not generate the telling. Try again.')+'</p>';
+    }finally{
+      if(btn)btn.disabled=false;
+    }
+  },
+  // Shared narration markup (the exact truth-anchor label is mandatory and verbatim).
+  _narrationHtml(out,facts){
+    const prose=Copilot.renderNarrationCitations(out.prose||'',facts.eventIds,facts.npcNames,Utils.escHtml);
+    let h='<div class="rw-narration__inner">';
+    h+='<div class="rw-narration__label">AI telling — the math above is the truth.</div>';
+    h+='<div class="rw-narration__prose">'+prose+'</div>';
+    if(out.hooks&&out.hooks.length){
+      h+='<div class="rw-narration__hooks"><span class="rw-narration__hooks-label">Hooks</span><ul>';
+      out.hooks.slice(0,2).forEach(hook=>{h+='<li>'+Copilot.renderNarrationCitations(hook,facts.eventIds,facts.npcNames,Utils.escHtml)+'</li>';});
+      h+='</ul></div>';
+    }
+    h+='</div>';
+    return h;
   },
   _vetoedIds(){
     const modal=document.getElementById('modal-world-turn');
@@ -15113,7 +15285,108 @@ const Sandtable = {
       html += '<p class="st-capped-warn">This span is long — the simulation covers the first ' + WorldTurn.MAX_TURNS + ' seasons.</p>';
     }
 
+    // ── P6.3 — narration (strictly additive; only when AI is configured: CC-DUAL) ──
+    const aiOn=(typeof Copilot!=='undefined'&&Copilot.isConfigured&&Copilot.isConfigured());
+    if(aiOn){
+      html+='<div class="st-narrate-row"><button class="btn btn--secondary" id="st-narrate" type="button">✦ Narrate (AI)</button></div>';
+      html+='<div id="st-narration" class="rw-narration" hidden></div>';
+    }
+
     area.innerHTML = html;
+
+    // Dynamically-injected diff area — wire the Narrate button at render time (the
+    // module's existing inline-listener pattern; the init-time monolith does not cover it).
+    if(aiOn){
+      const nb=document.getElementById('st-narrate');
+      if(nb)nb.addEventListener('click',()=>this._narrate(n,result));
+    }
+  },
+
+  // ── P6.3 — Narrate the Sandtable forecast (the "AI telling", below the diff) ──
+  // Same shell shape as the turn report: pure facts (diverging-only allowlist) →
+  // generator → gate. The diff above stays the truth; this is elevation below it.
+  async _narrate(n,result){
+    const box=document.getElementById('st-narration');
+    const btn=document.getElementById('st-narrate');
+    if(!box)return;
+    if(!Copilot.isConfigured()){
+      box.hidden=false;
+      box.innerHTML='<p class="rw-narration__gate">Add your API key in Settings to use AI here.</p>';
+      return;
+    }
+    box.hidden=false;
+    box.innerHTML='<p class="rw-narration__pending">Telling the story…</p>';
+    if(btn)btn.disabled=true;
+    try{
+      const facts=this._narrationFacts(n,result);
+      const out=await Copilot.generateTurnNarration({nation:n,facts,mode:'sandtable'});
+      const prose=Copilot.renderNarrationCitations(out.prose||'',facts.eventIds,facts.npcNames,Utils.escHtml);
+      let h='<div class="rw-narration__inner">';
+      h+='<div class="rw-narration__label">AI telling — the math above is the truth.</div>';
+      h+='<div class="rw-narration__prose">'+prose+'</div>';
+      if(out.hooks&&out.hooks.length){
+        h+='<div class="rw-narration__hooks"><span class="rw-narration__hooks-label">Hooks</span><ul>';
+        out.hooks.slice(0,2).forEach(hook=>{h+='<li>'+Copilot.renderNarrationCitations(hook,facts.eventIds,facts.npcNames,Utils.escHtml)+'</li>';});
+        h+='</ul></div>';
+      }
+      h+='</div>';
+      box.innerHTML=h;
+    }catch(e){
+      box.innerHTML='<p class="rw-narration__gate">'+Utils.escHtml(e&&e.message?e.message:'Could not generate the telling. Try again.')+'</p>';
+    }finally{
+      if(btn)btn.disabled=false;
+    }
+  },
+
+  // ── P6.3 NARRATION FACTS (CC-GROUND core, pure) ───────────────────────────
+  // The ground-truth handed to the model for the Sandtable "AI telling". Built from
+  // ONLY what diverges between the two timelines — exactly the rows _renderDiff shows:
+  // changed stats, hypo-only / base-only rules, and hypo-only / base-only events. An
+  // event present in BOTH timelines did not diverge, so it is never cited (CC-GROUND:
+  // the prose may reference only what the diff itself surfaces). Mirrors _renderDiff's
+  // own set math (changedStats L15053, hypoOnly/baseOnly rules L15078-79, diverging
+  // events L15096-97) so the allowlist and the visible diff never drift apart.
+  _narrationFacts(n,result){
+    const cite=id=>'[#'+String(id||'').slice(0,8)+']';
+    const lines=[];
+    const eventIds=[];
+    const stats=(n&&n.stats)||{};
+    const chars=(n&&Array.isArray(n.characters))?n.characters:[];
+    const hypo=result.hypothetical,base=result.baseline;
+
+    // (1) Diverging stats — same predicate the diff table uses.
+    const allStatKeys=Array.from(new Set([
+      ...Object.keys(hypo.proposed.statFinal),
+      ...Object.keys(base.proposed.statFinal),
+    ]));
+    allStatKeys.filter(k=>hypo.proposed.statFinal[k]!==base.proposed.statFinal[k]).forEach(k=>{
+      const nm=(stats[k]&&stats[k].displayName)||k;
+      const bv=base.proposed.statFinal[k],hv=hypo.proposed.statFinal[k];
+      lines.push(nm+': baseline ends '+bv+', hypothetical ends '+hv+'.');
+    });
+
+    // (2) Diverging rules — hypo-only and base-only rule citations.
+    const hypoRules=new Map(),baseRules=new Map();
+    (hypo.turns||[]).forEach(t=>(t.deltas||[]).forEach(d=>{if(!hypoRules.has(d.ruleId))hypoRules.set(d.ruleId,d.ruleText);}));
+    (base.turns||[]).forEach(t=>(t.deltas||[]).forEach(d=>{if(!baseRules.has(d.ruleId))baseRules.set(d.ruleId,d.ruleText);}));
+    [...hypoRules.keys()].filter(id=>!baseRules.has(id)).forEach(id=>lines.push('Hypothetical-only rule: '+hypoRules.get(id)));
+    [...baseRules.keys()].filter(id=>!hypoRules.has(id)).forEach(id=>lines.push('Baseline-only rule: '+baseRules.get(id)));
+
+    // (3) Diverging events — keyed by name (the diff's own key), then cited by [#id].
+    const npcSet=new Set();const npcNames=[];
+    const noteNpc=name=>{const nm=String(name||'').trim();if(nm&&!npcSet.has(nm.toLowerCase())){npcSet.add(nm.toLowerCase());npcNames.push(nm);}};
+    const hypoEventNames=new Set((hypo.proposed.newEvents||[]).map(e=>e.name));
+    const baseEventNames=new Set((base.proposed.newEvents||[]).map(e=>e.name));
+    const noteEvent=(ev,side)=>{
+      const id8=String(ev.id||'').slice(0,8);
+      if(id8&&eventIds.indexOf(id8)===-1)eventIds.push(id8);
+      lines.push(side+' event: '+ev.name+(ev.description?(' — '+ev.description):'')+' '+cite(ev.id));
+      chars.forEach(c=>{if(Array.isArray(c.chronicleLinks)&&c.chronicleLinks.indexOf(ev.id)!==-1)noteNpc(c.name);});
+    };
+    (hypo.proposed.newEvents||[]).filter(e=>!baseEventNames.has(e.name)).forEach(ev=>noteEvent(ev,'Hypothetical'));
+    (base.proposed.newEvents||[]).filter(e=>!hypoEventNames.has(e.name)).forEach(ev=>noteEvent(ev,'Baseline'));
+
+    return{lines,eventIds,npcNames};
   },
 };
 
@@ -15159,6 +15432,20 @@ const Sandtable = {
 .st-capped-warn{font-size:var(--text-body-sm);color:var(--color-text-muted);margin-top:12px;font-style:italic}
 .st-footer-label{font-size:var(--text-body-sm);color:var(--color-text-muted);flex:1;font-style:italic}
 #modal-sandtable .modal__footer{display:flex;align-items:center;gap:12px;padding-top:12px;border-top:1px solid var(--color-border-hairline)}
+.st-narrate-row{margin-top:16px}
+/* P6.3 — shared narration ("AI telling") styling, used by both WTR + Sandtable. */
+.rw-narration{margin-top:16px}
+.rw-narration__inner{border-top:1px solid var(--color-border-hairline);padding-top:14px;margin-top:4px}
+.rw-narration__label{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:10px}
+.rw-narration__prose{font-size:var(--text-body-sm);line-height:1.6;color:var(--color-ink)}
+.rw-narration__prose p{margin:0 0 10px}
+.rw-narration__hooks{margin-top:12px}
+.rw-narration__hooks-label{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--color-text-muted)}
+.rw-narration__hooks ul{margin:6px 0 0;padding-left:18px}
+.rw-narration__hooks li{font-size:var(--text-body-sm);line-height:1.5;color:var(--color-ink);margin-bottom:4px}
+.rw-narration__gate,.rw-narration__pending{font-size:var(--text-body-sm);color:var(--color-text-muted);font-style:italic;margin:0}
+.rw-cite{font-size:.7em;color:var(--color-gold);cursor:default;font-family:var(--font-mono);margin-left:1px}
+.rw-cite-inert{color:var(--color-text-muted);opacity:.7;font-style:italic;cursor:help}
   `.trim();
   document.head.appendChild(el);
 })();
