@@ -6090,6 +6090,57 @@ const EffortPicker={
 // Format: `Sending: 20 of 47 events · realm snapshot · ~1.8k tok`.
 // Color: green ≤2k, amber 2-8k, red >8k. Click → tier picker for the active surface.
 const AccuracyChip={
+  // ── P6.8 listener-leak fix ──────────────────────────────────────────────────
+  // The two document listeners (rw:effort-changed, sc:changed) are bound ONCE for
+  // the whole app — NOT once per mount(). Mount only registers the chip element in
+  // _chips; the two global handlers iterate that registry, prune chips whose element
+  // has been detached (e.g. Solo replaces #solo-accuracy-chip every ask), and refresh
+  // the survivors. Result: AccuracyChip contributes at most 2 document listeners ever,
+  // regardless of how many times mount() runs. The per-chip click handler inside
+  // refresh dies with its element, so it never leaks either.
+  _chips:[],          // [{el, refresh, surface}] — registry of mounted chips
+  _global:{bound:false},
+  // Add an entry to `list`, deduping by el (re-mounting the SAME element updates its
+  // handlers in place instead of appending a duplicate row → no unbounded growth).
+  _registerChip(list, entry) {
+    if (!entry || !entry.el) return list;
+    const existing = list.find(e => e.el === entry.el);
+    if (existing) {
+      existing.refresh = entry.refresh;
+      existing.surface = entry.surface;
+      return list;
+    }
+    list.push(entry);
+    return list;
+  },
+  // Return only entries whose el passes isAttached(el). Pure — caller swaps the
+  // returned array in as the new registry (drops detached/destroyed chips).
+  _liveChips(list, isAttached) {
+    return list.filter(e => e.el && isAttached(e.el));
+  },
+  // True only when the global listeners have never been bound. Caller sets bound=true.
+  _shouldBindGlobal(state) {
+    return !(state && state.bound);
+  },
+  // Prune dead chips, then refresh the survivors. Called by both global handlers.
+  _refreshLive(){
+    this._chips=this._liveChips(this._chips,el=>document.contains(el));
+    this._chips.forEach(e=>{try{e.refresh();}catch(_){}});
+  },
+  _bindGlobal(){
+    if(!this._shouldBindGlobal(this._global))return;
+    this._global.bound=true;
+    document.addEventListener('rw:effort-changed',e=>{
+      const key=e.detail?.key;
+      this._chips=this._liveChips(this._chips,el=>document.contains(el));
+      this._chips.forEach(c=>{if(c.surface&&this._settingKeyFor(c.surface)===key){try{c.refresh();}catch(_){}}});
+    });
+    document.addEventListener('sc:changed',e=>{
+      const f=e.detail?.fields||[];
+      if(f.includes('chronicle')||f.includes('nation'))this._refreshLive();
+    });
+  },
+  // ── end P6.8 ────────────────────────────────────────────────────────────────
   _settingKeyFor(surface){
     const map={copilot:'copilotContextDepth',live:'liveModeTier',tonight:'tonightTier',
       solo:'soloTier',handout:'handoutTier',bestiary:'bestiaryTier',encounter:'encounterTier',
@@ -6172,15 +6223,15 @@ const AccuracyChip={
       const chip=containerEl.querySelector('.rw-acc-chip');
       if(chip)chip.addEventListener('click',()=>this._openTierPicker(chip,surface,refresh));
     };
+    // Keep the direct-refresh hook for the copilot persistent-element fast path.
     containerEl._refreshAccChip=refresh;
+    // Register this chip; the global handlers (bound once, below) will refresh it
+    // and prune it when its element is detached. Dedupe by element means a fresh
+    // element each render does not pile up duplicates beyond the live one.
+    this._registerChip(this._chips,{el:containerEl,refresh,surface});
     refresh();
-    document.addEventListener('rw:effort-changed',e=>{
-      if(e.detail?.key===this._settingKeyFor(surface))refresh();
-    });
-    document.addEventListener('sc:changed',e=>{
-      const f=e.detail?.fields||[];
-      if(f.includes('chronicle')||f.includes('nation'))refresh();
-    });
+    // Bind the two document listeners ONCE for the whole app — never per mount.
+    this._bindGlobal();
   },
   _openTierPicker(anchor,surface,onChange){
     const key=this._settingKeyFor(surface);
@@ -20899,6 +20950,7 @@ const WorldShell={
 // ─── PRINT PREVIEW ─────────────────────────────────────────────
 const PrintPreview={
   _el:null,
+  _onKey:null,
   open(contentNode,title='Preview'){
     this.close();
     const wrap=document.createElement('div');
@@ -20936,10 +20988,16 @@ const PrintPreview={
     document.body.appendChild(wrap);
     this._el=wrap;
     closeBtn.focus();
-    const onKey=e=>{if(e.key==='Escape'){this.close();document.removeEventListener('keydown',onKey);}};
+    // P6.8: keep the handler ref on `this` so close() can remove it no matter which
+    // path closed the preview (Escape OR the Close button). open() calls this.close()
+    // at the top, so any stale handler from a prior open is removed before this new
+    // one is created → the keydown listener nets to 0 after close, never accumulates.
+    const onKey=e=>{if(e.key==='Escape')this.close();};
+    this._onKey=onKey;
     document.addEventListener('keydown',onKey);
   },
   close(){
+    if(this._onKey){document.removeEventListener('keydown',this._onKey);this._onKey=null;}
     if(this._el){this._el.remove();this._el=null;}
   },
 };
