@@ -5137,6 +5137,10 @@ const IDB_KEY_FINGERPRINT='rw_device_fp';
 const IDB_KEY_DEVICE_TOKEN='rw_device_token'; // server-issued opaque UUID (Phase 1a P1.3)
 
 const SCHEMA_VERSION='2.5.0';
+// Every schemaVersion the migrateIfNeeded chain (L7166) has an explicit block for.
+// Used by the recovery guard to tell a known-old save (route it back to the start
+// of the chain) from a genuinely unknown/future one (which must NOT be migrated).
+const KNOWN_SCHEMA_VERSIONS=['1.2.0','2.0.0','2.1.0','2.2.0','2.3.0','2.4.0','2.4.1','2.4.2','2.5.0'];
 // Empty Campaign prep board. Lives at meta level (one board per save) so it
 // survives nation switches and reloads. Self-contained: its own session clocks,
 // distinct from the per-nation `fronts` model that feeds the stability engine.
@@ -7163,8 +7167,43 @@ function buildNationFromSeed(seed){
   return n;
 }
 function createDefaultState(){const m=buildNationFromSeed(SEED_NATIONS[0]);return{schemaVersion:SCHEMA_VERSION,meta:{activeNationId:m.id,createdAt:Utils.now(),lastUpdatedAt:Utils.now(),settings:{...DEFAULT_SETTINGS},workflowState:{promptPending:null},firstRunComplete:false,preferredMode:null,snapshots:[],lastSnapshotAt:null,campaignPrep:emptyCampaignPrep()},nations:[m]};}
+// P6.10 — pure semver compare. Splits on '.', compares numerically part-by-part,
+// missing parts count as 0 (so '1.2' == '1.2.0'). Returns 1 / 0 / -1.
+function _cmpVer(a,b){
+  const pa=String(a).split('.').map(Number);
+  const pb=String(b).split('.').map(Number);
+  const len=Math.max(pa.length,pb.length);
+  for(let i=0;i<len;i++){
+    const x=pa[i]||0,y=pb[i]||0;
+    if(x>y)return 1;
+    if(x<y)return -1;
+  }
+  return 0;
+}
+// P6.10 — pure: decide what migrateIfNeeded should do with a save's schemaVersion.
+//   newer than us            -> flag-newer (warn, never migrate forward, never lose data)
+//   not in the known chain   -> route back to '1.2.0' and re-run the whole chain
+//                               (safe: every step uses ||/?? idempotent guards)
+//   a known, current-or-older version -> proceed (today's exact-match fall-through)
+function _migrationDecision(version,schemaVersion,knownVersions){
+  if(_cmpVer(version,schemaVersion)>0)return{action:'flag-newer'};
+  if(!knownVersions.includes(version))return{action:'route',to:'1.2.0'};
+  return{action:'proceed'};
+}
 function migrateIfNeeded(d){
   if(!d.schemaVersion)d.schemaVersion='1.2.0';
+  // P6.10 DEFECT-1 guard: the chain below is exact-match fall-through, so a version
+  // matching no block (import fallback '1.0', a future '9.9.9') would slip through
+  // UNMIGRATED with fields silently missing. Decide before entering the chain.
+  const _dec=_migrationDecision(d.schemaVersion,SCHEMA_VERSION,KNOWN_SCHEMA_VERSIONS);
+  if(_dec.action==='flag-newer'){
+    // Save is from a newer RealmWright. Migrating forward could drop data we don't
+    // understand — so we DON'T. Warn (non-blocking; migrateIfNeeded also runs on
+    // import clones in non-UI paths) and hand the data back untouched.
+    if(typeof showToast!=='undefined')showToast('This save is from a newer version of RealmWright — export a backup before continuing.',[],8000);
+    return d;
+  }
+  if(_dec.action==='route')d.schemaVersion=_dec.to; // unknown/old -> re-enter chain at the top
   // v1.2.0 → v2.0.0: add template, ensure characters/copilot fields, settings expansion
   if(d.schemaVersion==='1.2.0'){
     (d.nations||[]).forEach(n=>{
@@ -7299,7 +7338,43 @@ function migrateIfNeeded(d){
   }
   return d;
 }
-function handleCorruptStorage(raw){const k=`realmwright_corrupt_${Date.now()}`;try{localStorage.setItem(k,raw);}catch(e){}State.data=createDefaultState();setTimeout(()=>showToast('Could not read saved data. Emergency backup preserved as: '+k+'. Starting fresh.',[{label:'Export now',handler:()=>exportJSON()}],10000),500);}
+// P6.10 — pure: rebuild the snapshot index from raw IDB keys. Auto-snapshot DATA
+// survives a corrupt main blob (keys 'rw_snapshot_<ts>'); only the in-blob INDEX
+// is lost. Filter to those keys, parse the trailing ms timestamp, return
+// [{key, at:<ISO>}] sorted NEWEST FIRST. Pure — does not touch IDB.
+function _rebuildSnapshotIndex(keys){
+  return (keys||[])
+    .filter(k=>typeof k==='string'&&/^rw_snapshot_\d+$/.test(k))
+    .map(k=>{
+      const ts=Number(k.slice('rw_snapshot_'.length));
+      return {key:k,at:new Date(ts).toISOString()};
+    })
+    .sort((a,b)=>new Date(b.at)-new Date(a.at));
+}
+function handleCorruptStorage(raw){
+  const k=`realmwright_corrupt_${Date.now()}`;
+  try{localStorage.setItem(k,raw);}catch(e){}
+  // The app must still start and be usable — keep the existing fresh-start behaviour.
+  State.data=createDefaultState();
+  setTimeout(()=>showToast('Could not read saved data. Emergency backup preserved as: '+k+'. Starting fresh.',[{label:'Export now',handler:()=>exportJSON()}],10000),500);
+  // P6.10 DEFECT-2: the main blob is gone but auto-snapshots in IDB may not be.
+  // Asynchronously rebuild the snapshot index so the EXISTING restore UI can list
+  // and restore them. Any IDB failure falls back to the plain fresh-start above.
+  (async()=>{
+    try{
+      const idx=_rebuildSnapshotIndex(await IDB.keys());
+      if(!idx.length)return;
+      State.data.meta=State.data.meta||{};
+      // Stamp version so getSnapshotList()/the panel render don't choke on a missing field.
+      State.data.meta.snapshots=idx.map(s=>({key:s.key,at:s.at,version:'',nations:[]}));
+      setTimeout(()=>showToast(
+        `Found ${idx.length} recoverable snapshot(s) — open Settings ▸ Snapshots to restore.`,
+        [{label:'Open snapshots',handler:()=>{try{Modals.open('settings');SnapshotManager.renderList();}catch(e){}}}],
+        12000
+      ),1200);
+    }catch(e){/* recovery is best-effort: stay on the plain fresh-start path */}
+  })();
+}
 // ─── IndexedDB persistence (primary, with localStorage fallback) ───
 const IDB={
   _db:null,
@@ -7326,6 +7401,12 @@ const IDB={
   async remove(key){
     const db=await this.open();if(!db)return;
     return new Promise(r=>{const tx=db.transaction('kv','readwrite');const st=tx.objectStore('kv');const rq=st.delete(key);rq.onsuccess=()=>r();rq.onerror=()=>r();});
+  },
+  // P6.10 — enumerate every key in the kv store. Resolves [] on any error / no DB,
+  // so callers (corrupt-save recovery) can treat it as best-effort and never throw.
+  async keys(){
+    const db=await this.open();if(!db)return [];
+    return new Promise(r=>{try{const tx=db.transaction('kv','readonly');const st=tx.objectStore('kv');const rq=st.getAllKeys();rq.onsuccess=()=>r(rq.result||[]);rq.onerror=()=>r([]);}catch(e){r([]);}});
   }
 };
 const STORAGE_KEY='realmwright_data';
