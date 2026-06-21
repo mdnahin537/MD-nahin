@@ -13928,6 +13928,32 @@ Return ONLY the paragraph as plain text. No preamble, no formatting.`;
     return (data?.choices?.[0]?.message?.content||'').trim();
   },
 
+  // ─── CAMPAIGN NOTES — real generators (P6.2) ───
+  // The Notes panel's two "AI" actions. Both read the realm via buildContext and
+  // run through the canonical JSON-parse-retry path (_apiFetchJson) with a tiny
+  // {"text":...} envelope — same retry/fence-strip behaviour every other generator
+  // gets, no fork. Prose lands in the GM's Notes via cpSetText (insert-or-copy, UX-7).
+  async generateNotesSummary(nation){
+    if(!this.isConfigured())throw new Error('Copilot not configured. Add an API key in Settings.');
+    const n=nation||State.get();
+    if(!n)throw new Error('No active realm.');
+    const context=this.buildContext(n);
+    const sys=`You are summarizing a fictional tabletop realm for its game master, for their private session notes. Read the realm state and write a tight summary of NO MORE THAN 4 lines (4 short sentences, each on its own line). Capture the realm by name, its current dramatic situation, and the one or two tensions that matter most right now. Plain prose, no headers, no bullet markers, no preamble. Return JSON only: {"text":"<line 1>\\n<line 2>\\n<line 3>\\n<line 4>"}.`;
+    const user=`# Realm State\n${context}\n\nWrite the 4-line summary now.`;
+    const parsed=await this._apiFetchJson([{role:'system',content:sys},{role:'user',content:user}],{stream:false,max_tokens:300});
+    return String(parsed&&parsed.text||'').trim();
+  },
+  async generateNotesGaps(nation){
+    if(!this.isConfigured())throw new Error('Copilot not configured. Add an API key in Settings.');
+    const n=nation||State.get();
+    if(!n)throw new Error('No active realm.');
+    const context=this.buildContext(n);
+    const sys=`You are a tabletop game master's prep assistant. Read the realm state and surface what the GM may have FORGOTTEN to think about: loose threads, unresolved hooks, factions or characters introduced but never developed, dangling tensions, and questions the world raises but does not answer. Be concrete — name the specific entities and threads. Write 3-6 short bullet lines, each starting with "- ", each a single actionable observation. No preamble, no closing summary. Return JSON only: {"text":"- <observation>\\n- <observation>\\n..."}.`;
+    const user=`# Realm State\n${context}\n\nList the loose threads and unaddressed elements now.`;
+    const parsed=await this._apiFetchJson([{role:'system',content:sys},{role:'user',content:user}],{stream:false,max_tokens:600});
+    return String(parsed&&parsed.text||'').trim();
+  },
+
   // Delivery H: Glossary Builder
   async generateGlossary(nation,opts={}){
     if(!this.isConfigured())throw new Error('No API key configured');
@@ -15642,10 +15668,11 @@ const Campaign={
     }else if(section==='secrets'){
       A.push({label:'Generate 5 secrets',kind:'variants',run:async()=>{const arr=await Copilot.generateSecrets(State.get(),5);return {variants:Array.isArray(arr)?arr:[]};},apply:v=>{State.cpInsertSecret({text:typeof v==='string'?v:String(v||'')});},multi:true});
     }else if(section==='notes'){
-      // Free-text generation — no dedicated generator; route the GM to the Copilot
-      // panel which answers with full world context, then they paste into Notes.
-      A.push({label:'Summarize the realm in 4 lines',kind:'single',prompt:'notes-summary'});
-      A.push({label:'What did I forget to think about?',kind:'single',prompt:'notes-forgot'});
+      // Real generators (P6.2): each reads the realm via buildContext, runs through the
+      // shared JSON-parse-retry path, and APPENDS into Notes via cpSetText — never clobbers
+      // existing notes. copyable:true gives the GM the insert-or-copy choice (UX-7).
+      A.push({label:'Summarize the realm in 4 lines',kind:'single',copyable:true,run:()=>Copilot.generateNotesSummary(State.get()),apply:txt=>{State.cpSetText('notes',this._appendNotes(State.cp().notes,String(txt||'')));}});
+      A.push({label:'What did I forget to think about?',kind:'single',copyable:true,run:()=>Copilot.generateNotesGaps(State.get()),apply:txt=>{State.cpSetText('notes',this._appendNotes(State.cp().notes,String(txt||'')));}});
     }
     return A;
   },
@@ -15720,11 +15747,6 @@ const Campaign={
     if(!action)return;
     const out=pop.querySelector('[data-ai-out]');
     if(out)out.innerHTML='';
-    // Notes free-text prompts have no dedicated generator — guide the GM to Copilot.
-    if(action.prompt){
-      if(out)out.innerHTML=`<p class="cmp-ai-pop__hint">Open the Copilot panel and ask: <em>${Utils.escHtml(action.label)}</em> — it answers with full world context, then you paste into Notes.</p>`;
-      return;
-    }
     if(typeof Copilot==='undefined'||!Copilot.isConfigured||!Copilot.isConfigured()){
       if(out)out.innerHTML=`<p class="cmp-ai-pop__err">Add your API key in Settings to use AI here. Manual entry always works without one.</p>`;
       return;
@@ -15750,11 +15772,40 @@ const Campaign={
       btn.disabled=false;btn.textContent=label;
     }
   },
+  // Append AI text to existing notes without ever clobbering them (UX-7). Pure: trims the
+  // addition, drops a blank-line separator only when prior notes exist, dedupes a trailing
+  // identical block so repeated runs don't stack the same text.
+  _appendNotes(existing,addition){
+    const prev=String(existing||'').replace(/\s+$/,'');
+    const add=String(addition||'').trim();
+    if(!add)return prev;
+    if(!prev)return add;
+    if(prev.endsWith(add))return prev;
+    return prev+'\n\n'+add;
+  },
   _renderSingleOut(out,txt,action){
     if(!out)return;
     if(!txt){out.innerHTML=`<p class="cmp-ai-pop__err">Empty result. Try again.</p>`;return;}
     const E=Utils.escHtml;
-    out.innerHTML=`<div class="cmp-ai-pop__single">${(typeof Markdown!=='undefined')?Markdown.render(txt):E(txt).replace(/\n/g,'<br>')}</div>
+    const body=`<div class="cmp-ai-pop__single">${(typeof Markdown!=='undefined')?Markdown.render(txt):E(txt).replace(/\n/g,'<br>')}</div>`;
+    if(action.copyable){
+      // Insert-or-copy choice (UX-7): the GM decides whether this lands in their Notes
+      // (append, never overwrite) or just goes to the clipboard. Discard leaves notes untouched.
+      out.innerHTML=`${body}<p class="cmp-ai-pop__hint">Insert appends to your Notes — it never overwrites what's there.</p>
+        <div class="cmp-ai-pop__row"><button type="button" class="btn btn--secondary btn--sm" data-ai-discard>Discard</button><button type="button" class="btn btn--secondary btn--sm" data-ai-copy>Copy</button><button type="button" class="btn btn--primary btn--sm" data-ai-insert>Insert into Notes</button></div>`;
+      out.querySelector('[data-ai-discard]')?.addEventListener('click',()=>{out.innerHTML='';});
+      out.querySelector('[data-ai-copy]')?.addEventListener('click',()=>{
+        try{Utils.copyToClipboard(txt);}catch(e){}
+        this._closeAiPop();
+      });
+      out.querySelector('[data-ai-insert]')?.addEventListener('click',()=>{
+        try{action.apply(txt);}catch(e){}
+        this._closeAiPop();this.render();
+        showToast?showToast('Added to Notes.'):0;
+      });
+      return;
+    }
+    out.innerHTML=`${body}
       <div class="cmp-ai-pop__row"><button type="button" class="btn btn--secondary btn--sm" data-ai-discard>Discard</button><button type="button" class="btn btn--primary btn--sm" data-ai-accept>Accept</button></div>`;
     out.querySelector('[data-ai-discard]')?.addEventListener('click',()=>{out.innerHTML='';});
     out.querySelector('[data-ai-accept]')?.addEventListener('click',()=>{
