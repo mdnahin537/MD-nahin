@@ -21913,7 +21913,52 @@ const GlobalSearch = {
     }
     const lq=q.toLowerCase();
     const E=Utils.escHtml;
+
+    // Pure index build is delegated to _buildGroups so the same logic is unit-testable in
+    // Node (no DOM, no State reads beyond the realm-set it's handed). search() owns only the
+    // DOM render + click-binding below.
+    const groups=this._buildGroups(nation,lq);
+
+    this._results=groups.flatMap(g=>g.items);
+    this._hilite=-1;
+
+    const container=document.getElementById('search-results');
+    if(!container)return;
+    if(!groups.length){
+      container.innerHTML=`<div class="search-empty">No results for "${E(q)}"</div>`;
+      return;
+    }
+
+    let html='';
+    groups.forEach(g=>{
+      html+=`<div class="search-group-label">${E(g.label)}</div>`;
+      g.items.forEach(item=>{
+        html+=`<div class="search-result-item" data-rid="${E(item.id)}" role="option" tabindex="-1">
+          <span class="search-result-icon material-symbols-outlined">${E(g.icon)}</span>
+          <span class="search-result-name">${E(item.name)}</span>
+          <span class="search-result-meta">${E(item.meta)}</span>
+        </div>`;
+      });
+    });
+    container.innerHTML=html;
+
+    container.querySelectorAll('.search-result-item').forEach(el=>{
+      el.addEventListener('click',()=>this._activate(el.getAttribute('data-rid')));
+    });
+  },
+
+  // PURE index builder — no DOM, no side effects. Takes the active realm and the lowercased
+  // query, returns groups of {type,label,icon,items:[{id,name,meta,type,entityId}]}. Every row
+  // keeps the `<prefix>:id` id convention other code keys off (_results.find(x=>x.id===rid)).
+  // All 12 entity types are indexed; empty/absent collections drop out via the trailing filter.
+  _buildGroups(nation,lq){
+    if(!nation)return [];
     const match=(str)=>str&&str.toLowerCase().includes(lq);
+    const snip=(str,n)=>{const s=String(str||'');return s.length>n?s.substring(0,n)+'…':s;};
+    // Resolve a sibling realm's display name for relation rows (relations are keyed by
+    // toNationId, with the "from" being the active realm).
+    const allNations=(typeof State!=='undefined'&&State.data&&State.data.nations)||[];
+    const realmName=(id)=>{const r=allNations.find(x=>x.id===id);return r?(r.name||'Unnamed realm'):'Unknown realm';};
 
     const groups=[
       {
@@ -21949,7 +21994,7 @@ const GlobalSearch = {
         items:(nation.secrets||[])
           .filter(s=>match(s.content)||match(s.notes))
           .slice(0,5)
-          .map(s=>({id:'sec:'+s.id,name:s.content?s.content.substring(0,60)+(s.content.length>60?'…':''):'(no content)',meta:s.status||'',type:'secrets',entityId:s.id}))
+          .map(s=>({id:'sec:'+s.id,name:s.content?snip(s.content,60):'(no content)',meta:s.status||'',type:'secrets',entityId:s.id}))
       },
       {
         type:'hooks',label:'Hooks',icon:'flag',
@@ -21972,34 +22017,58 @@ const GlobalSearch = {
           .slice(0,5)
           .map(b=>({id:'bst:'+b.id,name:b.name||'Unnamed',meta:b.type||'',type:'bestiary',entityId:b.id}))
       },
+      {
+        type:'fronts',label:'Fronts',icon:'schedule',
+        items:(nation.fronts||[])
+          .filter(f=>match(f.name)||match(f.description))
+          .slice(0,5)
+          .map(f=>({id:'frt:'+f.id,name:f.name||'Unnamed front',meta:`${f.clockFilled??0}/${f.clockSize??0}${f.status?' · '+f.status:''}`,type:'fronts',entityId:f.id}))
+      },
+      {
+        type:'relations',label:'Relations',icon:'hub',
+        items:(nation.relations||[])
+          .filter(r=>match(r.posture)||match(r.notes)||match(realmName(r.toNationId)))
+          .slice(0,5)
+          .map(r=>({id:'rel:'+r.toNationId,name:`${nation.name||'This realm'} → ${realmName(r.toNationId)}`,meta:r.posture||'',type:'relations',entityId:r.toNationId}))
+      },
+      {
+        type:'artifacts',label:'Artifacts',icon:'auto_awesome',
+        items:(nation.artifacts||[])
+          .filter(a=>match(a.type)||match(a.content))
+          .slice(0,5)
+          .map(a=>({id:'art:'+a.id,name:a.content?snip(a.content,60):'(no content)',meta:a.type||'',type:'artifacts',entityId:a.id}))
+      },
+      {
+        type:'glossary',label:'Glossary',icon:'menu_book',
+        // glossary is an object-or-null field: entries live at nation.glossary.glossary[].
+        items:((nation.glossary&&Array.isArray(nation.glossary.glossary)?nation.glossary.glossary:[])
+          .filter(g=>match(g.term)||match(g.definition))
+          .slice(0,5)
+          .map(g=>({id:'gls:'+(g.term||''),name:g.term||'(untitled)',meta:snip(g.definition,60),type:'glossary',entityId:g.term||''})))
+      },
     ].filter(g=>g.items.length>0);
+    return groups;
+  },
 
-    this._results=groups.flatMap(g=>g.items);
-    this._hilite=-1;
-
-    const container=document.getElementById('search-results');
-    if(!container)return;
-    if(!groups.length){
-      container.innerHTML=`<div class="search-empty">No results for "${E(q)}"</div>`;
-      return;
-    }
-
-    let html='';
-    groups.forEach(g=>{
-      html+=`<div class="search-group-label">${E(g.label)}</div>`;
-      g.items.forEach(item=>{
-        html+=`<div class="search-result-item" data-rid="${E(item.id)}" role="option" tabindex="-1">
-          <span class="search-result-icon material-symbols-outlined">${E(g.icon)}</span>
-          <span class="search-result-name">${E(item.name)}</span>
-          <span class="search-result-meta">${E(item.meta)}</span>
-        </div>`;
-      });
-    });
-    container.innerHTML=html;
-
-    container.querySelectorAll('.search-result-item').forEach(el=>{
-      el.addEventListener('click',()=>this._activate(el.getAttribute('data-rid')));
-    });
+  // type → navigator. EVERY type _buildGroups can emit MUST have an entry here so no result is
+  // ever a silent no-op. Each navigator opens a surface that actually exists and is visible.
+  // Primitives are guarded at call time; a missing surface falls back through _activate's toast.
+  _navigators:{
+    characters:item=>{const n=State.get();const ch=n&&(n.characters||[]).find(c=>c.id===item.entityId);if(ch&&typeof Modals!=='undefined'&&Modals.openEditCharacter)Modals.openEditCharacter(ch);else return false;},
+    factions:item=>{if(typeof Interact!=='undefined'&&Interact.expandDomain)Interact.expandDomain('political');else if(typeof SHSPanels!=='undefined')SHSPanels.openPanel('fronts');else return false;},
+    locations:item=>{if(typeof SHSPanels!=='undefined')SHSPanels.openPanel('locations');else return false;},
+    events:item=>{if(typeof Interact!=='undefined'&&Interact.openDetailPanel)Interact.openDetailPanel(item.entityId);else return false;},
+    secrets:item=>{if(typeof SHSPanels!=='undefined')SHSPanels.openPanel('secrets');else return false;},
+    hooks:item=>{if(typeof SHSPanels!=='undefined')SHSPanels.openPanel('hooks');else return false;},
+    sessions:item=>{if(typeof SHSPanels!=='undefined')SHSPanels.openPanel('sessions');else return false;},
+    bestiary:item=>{if(typeof SHSPanels!=='undefined')SHSPanels.openPanel('bestiary');else return false;},
+    fronts:item=>{if(typeof SHSPanels!=='undefined')SHSPanels.openPanel('fronts');else return false;},
+    relations:item=>{if(typeof SHSPanels!=='undefined')SHSPanels.openPanel('relations');else return false;},
+    // Artifacts have no standalone live panel — they surface in the Story Bible export. Open the
+    // export-options modal (where artifacts are included) and name the matched artifact.
+    artifacts:item=>{if(typeof Modals!=='undefined'&&Modals.open){Modals.open('export-opts');if(typeof showToast!=='undefined')showToast('Find "'+(item.name||'this artifact')+'" in the Story Bible export.');}else return false;},
+    // Glossary surfaces in its builder modal (gm-glossary-btn → Modals.open('glossary')).
+    glossary:item=>{if(typeof Modals!=='undefined'&&Modals.open){Modals.open('glossary');if(typeof showToast!=='undefined')showToast('Glossary term: '+(item.name||''));}else return false;},
   },
 
   _activate(rid){
@@ -22007,15 +22076,17 @@ const GlobalSearch = {
     const item=this._results.find(x=>x.id===rid);
     this.close();
     if(!item)return;
-    // Navigate to the right panel
-    if(typeof SHSPanels==='undefined')return;
-    const panelMap={
-      characters:'war-room',factions:'war-room',events:'chronicle',
-      secrets:'secrets',hooks:'hooks',sessions:'sessions',
-      locations:'locations',bestiary:'bestiary',
-    };
-    const route=panelMap[item.type];
-    if(route)SHSPanels.openPanel(route);
+    // Route by type via the navigator map. Every type the index can emit has a navigator, so a
+    // result is NEVER a silent no-op. If a navigator is somehow absent OR signals it could not
+    // open its surface (returns false), fall back to a visible toast naming the result.
+    const nav=this._navigators[item.type];
+    let handled=false;
+    if(typeof nav==='function'){
+      try{handled=nav(item)!==false;}catch(e){handled=false;}
+    }
+    if(!handled&&typeof showToast!=='undefined'){
+      showToast('Opening "'+(item.name||'result')+'"…');
+    }
   },
 
   _moveHighlight(dir){
