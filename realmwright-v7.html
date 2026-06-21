@@ -12427,6 +12427,8 @@ const Copilot={
   renderMessages(){
     const ctr=document.getElementById('copilot-messages');
     if(!ctr)return;
+    // P6.5 — bind the delegated citation-click listener once (idempotent guard inside).
+    if(typeof this._bindCitationClicks==='function')this._bindCitationClicks();
     const n=State.get();
     if(!n){ctr.innerHTML='<div class="copilot-panel__empty">No active nation.</div>';return;}
     const conv=n.copilotConversation||[];
@@ -12472,7 +12474,11 @@ const Copilot={
       const body=document.createElement('div');body.className='cp-msg__body';
       // Render assistant content as markdown; user content as plain text to preserve their phrasing.
       if(m.role==='assistant'&&m.content){
-        try{body.innerHTML=Markdown.render(m.content);}
+        try{
+          body.innerHTML=Markdown.render(m.content);
+          // P6.5 — linkify [#id] citations into clickable event links (inert if unresolvable).
+          if(typeof Copilot._linkifyCitations==='function'&&n)Copilot._linkifyCitations(body,n);
+        }
         catch(e){body.textContent=m.content||'';}
       }else{
         body.textContent=m.content||'';
@@ -13067,7 +13073,10 @@ const Copilot={
       fullSet.forEach(e=>{
         const w=e.weight>0?`+${e.weight}`:String(e.weight);
         const vis=e.visibility==='private'?' [secret]':e.visibility==='forecast'?' [forecast]':'';
-        lines.push(`- Year ${e.year}: ${e.name} (${e.type}, weight ${w})${vis}: ${e.description||''}`);
+        // P6.5 — every in-window event carries its citable 8-char id (same convention
+        // as the ledger below) so the copilot can ground claims with [#id8] tokens.
+        const cid=e.id?` [#${String(e.id).slice(0,8)}]`:'';
+        lines.push(`- Year ${e.year}:${cid} ${e.name} (${e.type}, weight ${w})${vis}: ${e.description||''}`);
       });
     }
     let ledgerBlock='';
@@ -13075,7 +13084,8 @@ const Copilot={
       const rows=ledgerSet.map(e=>{
         const w=e.weight>0?`+${e.weight}`:String(e.weight);
         const tags=Array.isArray(e.relatedStats)&&e.relatedStats.length?e.relatedStats.join(','):'';
-        const idPart=e.id?`#${String(e.id).slice(0,8)} · `:'';
+        // P6.5 — align ledger ids to the same [#id8] citation grammar as in-window events.
+        const idPart=e.id?`[#${String(e.id).slice(0,8)}] · `:'';
         return `${idPart}Year ${e.year} · ${e.name} · ${e.type||'?'} ${w}${tags?' · '+tags:''}`;
       });
       ledgerBlock='\n## Chronicle Ledger\n_Events outside the current window. Ask if you need any expanded._\n'+rows.join('\n');
@@ -13199,6 +13209,9 @@ const Copilot={
     const focus=(this._SURFACE_FOCUS&&this._SURFACE_FOCUS[surface])||'';
     const focusLine=focus?focus+'\n\n':'';
     const intro=`${focusLine}You are the Copilot for RealmWright, a worldbuilding tool for Game Masters and writers. Your role is to help the user develop their fictional nation by answering questions, suggesting plot hooks, generating characters and events, and exploring "what if" scenarios — all grounded in the world-state below.`;
+    // P6.5 — the grounding rule: when the copilot asserts a fact drawn from the
+    // chronicle, it must cite it inline so the claim is traceable to the exact event.
+    const groundingRule=(surface==='copilot')?`\n\nGROUNDING RULE: When you assert a specific fact drawn from the chronicle (an event that happened, when, or what it changed), cite it inline as [#id] using the exact 8-character id shown in brackets beside that event in the world-state above (e.g. write [#a1b2c3d4] right after the claim). Cite only ids that appear in the world-state — never invent or guess an id. If you are speaking generally or not drawing on a specific chronicled event, simply do not attach a citation.`:'';
     const tail=`\n\nKeep responses concise and grounded. If you don't know, say so. If the user asks for something unrelated to the world, decline politely.`;
     if(toolsEnabled){
       // Fix #3: tools are the single canonical mutation channel. The model must NOT
@@ -13209,7 +13222,7 @@ const Copilot={
 
 To change the simulation, call the provided function tools (update_nation_stat, add_chronicle_entry, add_npc, add_plot_seed, mark_hook_resolved, update_faction_stance). These are the ONLY way to apply changes — they go through a review queue or auto-apply per the user's settings.
 
-Do NOT emit a [CANON] block. The CANON text format is legacy and is ignored in this mode; emitting one wastes tokens and applies nothing. Use the tools instead. If you have no change to make, just answer conversationally.${tail}`;
+Do NOT emit a [CANON] block. The CANON text format is legacy and is ignored in this mode; emitting one wastes tokens and applies nothing. Use the tools instead. If you have no change to make, just answer conversationally.${groundingRule}${tail}`;
     }
     // No tools available (e.g. local Ollama): fall back to the legacy [CANON] text channel.
     return `${intro}
@@ -13230,7 +13243,7 @@ Where:
 - Event visibility: public, private, or forecast
 - Lines are optional — only include what you propose to change
 
-Without a CANON block, your response is conversational only — no simulation effect. With a CANON block, the user will see a review modal and can accept or reject each proposal.${tail}`;
+Without a CANON block, your response is conversational only — no simulation effect. With a CANON block, the user will see a review modal and can accept or reject each proposal.${groundingRule}${tail}`;
   },
   // Send a message via OpenRouter (streaming, with tool-calling loop — Phase 5C).
   async send(){
@@ -13549,6 +13562,13 @@ Without a CANON block, your response is conversational only — no simulation ef
     const lastMsg=ctr.querySelector('.cp-msg:last-child .cp-msg__body');
     if(lastMsg){
       lastMsg.innerHTML=Markdown.render(text);
+      // P6.5 — re-linkify each streamed chunk. Markdown.render rebuilds the full
+      // tree from the accumulated text every chunk, so this never double-wraps;
+      // partial tokens (no 8 chars + `]`) don't match, so mid-stream stays clean.
+      if(typeof Copilot._linkifyCitations==='function'){
+        const sn=State.get();
+        if(sn)Copilot._linkifyCitations(lastMsg,sn);
+      }
       ctr.scrollTop=ctr.scrollHeight;
     }
   },
@@ -14319,6 +14339,102 @@ Return ONLY the paragraph as plain text. No preamble, no formatting.`;
     }
     out+=E(String(prose||'').slice(last));
     return out;
+  },
+
+  // ─── P6.5 — THE GROUNDING RULE (conversational copilot citations) ───
+  // The AI half's brand: every world-fact the copilot asserts is traceable. The
+  // model is told (buildSystemPrompt addendum) to cite chronicled facts inline as
+  // `[#id8]`, using the 8-char id shown beside each event in the world state
+  // (buildContext). These helpers turn that token into a CLICKABLE link to the
+  // exact event — and an id that does NOT resolve renders visibly INERT, never a
+  // dead link and never removed (product rule C4 — never silently wrong).
+  //
+  // _chronicleIdMap — PURE. 8-char prefix → full event id, from nation.chronicle.
+  // First-writer-wins on collisions so the mapping is deterministic.
+  _chronicleIdMap(nation){
+    const map=new Map();
+    const chron=(nation&&Array.isArray(nation.chronicle))?nation.chronicle:[];
+    for(const e of chron){
+      if(!e||e.id==null)continue;
+      const full=String(e.id);
+      const prefix=full.slice(0,8);
+      if(prefix&&!map.has(prefix))map.set(prefix,full);
+    }
+    return map;
+  },
+  // _citeReplace — PURE (no DOM/State/net). Given a plain TEXT segment, the id map,
+  // and an escape fn, return HTML where each `[#xxxxxxxx]` (EXACTLY 8 chars of the
+  // [0-9A-Za-z-] grammar) becomes: known → clickable <a class="cp-cite"> carrying
+  // the FULL id; unknown → inert <span class="cp-cite-inert">. All non-token text
+  // is passed through esc (XSS-safe). A partial token (e.g. `[#abc12` or `[#]`)
+  // does NOT match the 8-char grammar, so truncated streaming chunks stay clean.
+  _citeReplace(text,idMap,esc){
+    const E=(typeof esc==='function')?esc:((typeof Utils!=='undefined')?Utils.escHtml:(s=>String(s==null?'':s)));
+    const src=String(text==null?'':text);
+    const re=/\[#([0-9A-Za-z-]{8})\]/g;
+    let out='',last=0,m;
+    while((m=re.exec(src))){
+      out+=E(src.slice(last,m.index));
+      last=m.index+m[0].length;
+      const prefix=m[1];
+      const full=idMap&&(idMap.get?idMap.get(prefix):idMap[prefix]);
+      if(full){
+        out+='<a class="cp-cite" data-event-id="'+E(full)+'" title="Open this event">[#'+E(prefix)+']</a>';
+      }else{
+        out+='<span class="cp-cite-inert" title="Referenced event not found">[#'+E(prefix)+']</span>';
+      }
+    }
+    out+=E(src.slice(last));
+    return out;
+  },
+  // _linkifyCitations — DOM pass over ALREADY-rendered Markdown HTML. Walks the
+  // TEXT NODES of `el` (never string-replaces innerHTML), so Markdown's existing
+  // tags/attributes can never be corrupted. Any text node containing `[#` is
+  // rebuilt from _citeReplace(...). Idempotent under streaming: each chunk re-runs
+  // Markdown.render on the full accumulated text, producing a fresh tree, so
+  // re-linkifying never double-wraps.
+  _linkifyCitations(el,nation){
+    if(!el||typeof document==='undefined')return;
+    const idMap=this._chronicleIdMap(nation);
+    const escFn=(typeof Utils!=='undefined'&&Utils.escHtml)?Utils.escHtml:(s=>String(s==null?'':s));
+    const walker=document.createTreeWalker(el,NodeFilter.SHOW_TEXT,null);
+    const targets=[];
+    let node;
+    while((node=walker.nextNode())){
+      // Skip text already inside a citation wrapper (defensive — a fresh markdown
+      // render won't contain one, but never re-process our own output).
+      const pe=node.parentElement;
+      if(pe&&(pe.classList.contains('cp-cite')||pe.classList.contains('cp-cite-inert')))continue;
+      if(node.nodeValue&&node.nodeValue.indexOf('[#')!==-1)targets.push(node);
+    }
+    for(const tn of targets){
+      const html=this._citeReplace(tn.nodeValue,idMap,escFn);
+      const span=document.createElement('span');
+      span.innerHTML=html;
+      const frag=document.createDocumentFragment();
+      while(span.firstChild)frag.appendChild(span.firstChild);
+      if(tn.parentNode)tn.parentNode.replaceChild(frag,tn);
+    }
+  },
+  // One delegated click listener on the copilot messages container. Bound ONCE
+  // (guarded by a dataset flag on the container) so renderMessages can call it
+  // every render without stacking listeners. A click on a live citation opens the
+  // exact event; inert spans carry no data-event-id, so they do nothing.
+  _bindCitationClicks(){
+    if(typeof document==='undefined')return;
+    const ctr=document.getElementById('copilot-messages');
+    if(!ctr||ctr.dataset.citeBound==='1')return;
+    ctr.dataset.citeBound='1';
+    ctr.addEventListener('click',(ev)=>{
+      const a=ev.target&&ev.target.closest?ev.target.closest('a.cp-cite[data-event-id]'):null;
+      if(!a)return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      const id=a.dataset.eventId;
+      if(id&&typeof Interact!=='undefined'&&typeof Interact.openDetailPanel==='function'){
+        Interact.openDetailPanel(id);
+      }
+    });
   },
 
   // ONE generator narrates BOTH surfaces (turn report + Sandtable). Input is the pure
@@ -15602,6 +15718,10 @@ const Sandtable = {
 .rw-narration__gate,.rw-narration__pending{font-size:var(--text-body-sm);color:var(--color-text-muted);font-style:italic;margin:0}
 .rw-cite{font-size:.7em;color:var(--color-gold);cursor:default;font-family:var(--font-mono);margin-left:1px}
 .rw-cite-inert{color:var(--color-text-muted);opacity:.7;font-style:italic;cursor:help}
+/* P6.5 — conversational copilot citations: live link vs inert (unresolvable) reference. */
+.cp-cite{color:var(--color-gold-deep);font-family:var(--font-mono);font-size:.85em;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px;cursor:pointer;white-space:nowrap}
+.cp-cite:hover{color:var(--color-gold);text-decoration-style:solid}
+.cp-cite-inert{color:var(--color-text-muted);font-family:var(--font-mono);font-size:.85em;opacity:.65;cursor:help;white-space:nowrap}
   `.trim();
   document.head.appendChild(el);
 })();
