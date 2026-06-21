@@ -654,6 +654,14 @@ body.theme-ember .gm-badge{
   .wms-panels>.wms-lp,.wms-panels>.wms-cp,.wms-panels>.wms-rp{grid-column:1 / -1;min-height:0;overflow-y:visible}}
 /* Faction grid — keeps the 3D tilt, refines the chrome */
 .wms-fgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+/* P6.4 — Faction Council convene button (opt-in; spans the grid) */
+.wms-council-btn{grid-column:1/-1;margin-top:6px;width:100%;padding:11px 16px;cursor:pointer;
+  font-family:'Cinzel',serif;font-size:11px;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--color-text-muted);background:rgba(255,185,100,.04);
+  border:1px solid var(--color-border-hairline);transition:color .15s,border-color .15s,background .2s}
+.wms-council-btn:hover{color:var(--color-text);border-color:rgba(255,185,100,.34);
+  background:rgba(255,185,100,.08);box-shadow:0 0 16px rgba(255,185,100,.08)}
+.wms-council-btn:focus-visible{outline:2px solid rgba(255,185,100,.5);outline-offset:2px}
 .wms-fc{background:rgba(255,185,100,.025);border:1px solid var(--color-border-hairline);
   padding:18px;cursor:pointer;transform-style:preserve-3d;
   transition:box-shadow .15s,border-color .15s,background .2s;position:relative}
@@ -12334,6 +12342,7 @@ const COPILOT_TOOLS=[
   {type:'function',function:{name:'mark_hook_resolved',description:'Mark an unresolved plot hook as resolved.',parameters:{type:'object',properties:{hookId:{type:'string'}},required:['hookId']}}},
   {type:'function',function:{name:'update_faction_stance',description:'Adjust a faction\'s position (gaining / holding / losing). Restricted to copilotScope=full.',parameters:{type:'object',properties:{factionId:{type:'string'},position:{type:'string',enum:['gaining','holding','losing']}},required:['factionId','position']}}},
   {type:'function',function:{name:'update_nation_stat',description:'Apply a delta to a nation stat (e.g. legitimacy -3). Restricted to copilotScope=full.',parameters:{type:'object',properties:{stat:{type:'string'},delta:{type:'integer'}},required:['stat','delta']}}},
+  {type:'function',function:{name:'add_front_tick',description:'Nudge a front\'s clock by one segment (delta +1 or -1; clamped to ±1). Use when a developing threat advances or eases. Restricted to copilotScope=full.',parameters:{type:'object',properties:{frontId:{type:'string',description:'Front id (or name if id unknown)'},delta:{type:'integer',description:'+1 or -1'}},required:['frontId']}}},
 ];
 // Write tools allowed when copilotScope='standard'. Others require 'full'.
 const COPILOT_TOOLS_STANDARD_ALLOWED=['add_chronicle_entry','add_npc','add_plot_seed','mark_hook_resolved'];
@@ -12675,6 +12684,18 @@ const Copilot={
       if(!s)return {error:`No stat named '${args.stat}'. Available: ${Object.keys(n.stats||{}).join(', ')}`};
       return {kind:'statDelta',data:{stat:args.stat,statName:s.displayName,delta:args.delta,oldValue:s.value,newValue:Utils.clamp(s.value+args.delta,s.min,s.max)},summary:`${s.displayName}: ${s.value} ${args.delta>=0?'+':''}${args.delta} → ${Utils.clamp(s.value+args.delta,s.min,s.max)}`};
     }
+    if(name==='add_front_tick'){
+      // P6.4 Faction Council: a single proposed nudge of a front's clock. Resolve the
+      // front by id OR by name (mirrors the other builders) and clamp the delta to ±1 —
+      // a council move advances a clock by ONE, never more. Apply routes through
+      // State.tickFront, which writes its own catastrophe event if the tick fills the clock.
+      if(!args.frontId)return {error:'Missing required field: frontId.'};
+      const f=(n.fronts||[]).find(x=>x.id===args.frontId)||(n.fronts||[]).find(x=>(x.name||'').toLowerCase()===String(args.frontId).toLowerCase());
+      if(!f)return {error:`No front matching '${args.frontId}'.`};
+      const rawDelta=Number(args.delta);
+      const delta=Number.isFinite(rawDelta)?Utils.clamp(Math.round(rawDelta),-1,1)||1:1;
+      return {kind:'frontTick',data:{frontId:f.id,frontName:f.name,delta},summary:`${f.name} clock ${delta>=0?'+':''}${delta}`};
+    }
     return {error:`Unknown tool: ${name}`};
   },
   // Apply a proposal to the active nation. Caller must have already pushUndo'd.
@@ -12729,7 +12750,142 @@ const Copilot={
       finally{State._suppressUndo=prevSuppress;}
       return `${s.displayName} = ${s.value}.`;
     }
+    if(p.kind==='frontTick'){
+      // P6.4: route through State.tickFront so the clock clamp + (clock-fill) catastrophe
+      // event + ticks log all fire exactly once. silent:true folds the change; the caller
+      // (_approveQueueItem) already pushUndo'd, so tickFront's own pushUndo is the single
+      // revertible step for this one-click undo. We do NOT add a separate event here —
+      // tickFront writes the catastrophe event itself when a tick fills the clock.
+      State.tickFront(n.id,p.data.frontId,p.data.delta,{by:'faction-council',silent:true});
+      return `${p.data.frontName||'Front'} clock ${p.data.delta>=0?'+':''}${p.data.delta}.`;
+    }
     return 'Applied.';
+  },
+  // ════════════════════════════════════════════════════════════════════════
+  // P6.4 — N10 FACTION COUNCIL: "AI plays the opposition; the GM signs everything."
+  // Each faction whose position is gaining/losing gets ONE proposed move per turn,
+  // routed through the EXISTING review queue. The GM approves or rejects each; nothing
+  // auto-applies. CC-HALAL: factions act from their INTERESTS — the GM decides the world.
+  // ════════════════════════════════════════════════════════════════════════
+  // PURE CC-GROUND VALIDITY GATE. No DOM, no State, no network — the Node test drives it
+  // directly. A proposal that fails to cite (a) the faction's primaryInterest AND (b) one
+  // REAL chronicle event id is auto-rejected here, IN CODE — the model is never trusted to
+  // self-police. Returns {ok:true, proposal:{kind,data,summary}} or {ok:false, reason}.
+  _validateCouncilProposal(raw,faction,nation){
+    if(!raw||typeof raw!=='object')return {ok:false,reason:'Empty proposal.'};
+    // (a) the faction MUST carry a non-empty interest — a faction with no interest cannot be grounded.
+    const interest=(faction&&typeof faction.primaryInterest==='string'?faction.primaryInterest:'').trim();
+    if(!interest)return {ok:false,reason:`${(faction&&faction.name)||'This faction'} has no stated interest to act on.`};
+    // (b) the motivating event MUST resolve to a REAL chronicle event — match by full id OR
+    //     by the 8-char prefix the codebase prints as `[#id8]`. This is the CC-GROUND wall.
+    const cite=String(raw.motivatingEventId||'').trim();
+    if(!cite)return {ok:false,reason:'No motivating event cited.'};
+    const chron=(nation&&Array.isArray(nation.chronicle))?nation.chronicle:[];
+    const ev=chron.find(e=>e&&e.id===cite)||chron.find(e=>e&&String(e.id||'').slice(0,8)===cite.slice(0,8));
+    if(!ev)return {ok:false,reason:`Cited event "${cite}" is not in the chronicle (citation-less moves are rejected).`};
+    const eid8=String(ev.id||'').slice(0,8);
+    const moveType=String(raw.moveType||'').toLowerCase();
+    // Build the WHY the GM sees, e.g. Council · The Reform Coalition: <move> — acting on "<interest>" [#abc12345]
+    const why=move=>`Council · ${(faction&&faction.name)||'Faction'}: ${move} — acting on "${interest}" [#${eid8}]`;
+    if(moveType==='event'){
+      const evName=String(raw.name||'').trim(),evDesc=String(raw.description||'').trim();
+      if(!evName||!evDesc)return {ok:false,reason:'Event move is missing a name or description.'};
+      return {ok:true,proposal:{
+        kind:'chronicle',
+        data:{name:evName,description:evDesc,type:CLAMP.eventType(raw.eventType||raw.type||'Political'),
+          weight:CLAMP.eventWeight(raw.weight),visibility:'private'},
+        summary:why(`private event "${evName}"`),
+      }};
+    }
+    if(moveType==='stance'){
+      const pos=String(raw.position||'').toLowerCase();
+      if(!['gaining','holding','losing'].includes(pos))return {ok:false,reason:`Stance "${raw.position}" is not one of gaining/holding/losing.`};
+      const old=(faction&&faction.position)||'holding';
+      if(pos===String(old).toLowerCase())return {ok:false,reason:'Stance move does not actually change the faction\'s position.'};
+      return {ok:true,proposal:{
+        kind:'factionStance',
+        data:{factionId:faction.id,factionName:faction.name,oldPosition:faction.position,position:pos},
+        summary:why(`stance ${old} → ${pos}`),
+      }};
+    }
+    if(moveType==='front'){
+      // Reuse the registered builder so the ±1 clamp + id/name resolution live in ONE place.
+      const built=this._buildProposal('add_front_tick',{frontId:raw.frontId,delta:raw.delta},nation);
+      if(!built||built.error)return {ok:false,reason:built&&built.error?built.error:`Front "${raw.frontId}" not found.`};
+      return {ok:true,proposal:{
+        kind:'frontTick',data:built.data,
+        summary:why(`${built.data.frontName} clock ${built.data.delta>=0?'+':''}${built.data.delta}`),
+      }};
+    }
+    return {ok:false,reason:`Unknown move type "${raw.moveType}".`};
+  },
+  // GENERATOR (impure: network). Asks the model for ONE move per eligible faction and
+  // returns the RAW parsed proposals array — the gate is a separate, testable step. Eligible:
+  // position ∈ {gaining,losing} AND a non-empty primaryInterest. Returns [] when none qualify.
+  async generateFactionCouncil(nation){
+    if(!this.isConfigured())throw new Error('Copilot not configured. Add an API key in Settings.');
+    const n=nation||State.get();
+    if(!n)return [];
+    const eligible=(n.factions||[]).filter(f=>f&&(f.position==='gaining'||f.position==='losing')&&(f.primaryInterest||'').trim());
+    if(!eligible.length)return [];
+    // Real realm/chronicle context (prints faction primaryInterest + chronicle). We also hand
+    // the model an explicit ledger of REAL event ids so it can only cite ids that exist.
+    const ctx=this.buildContext(n,{tier:'high'});
+    const eventLedger=this._sortedChronicle(n.chronicle).map(e=>`[#${String(e.id).slice(0,8)}] Year ${e.year}: ${e.name} — ${e.description||''}`).join('\n')||'(the chronicle is empty)';
+    const facList=eligible.map(f=>`- id "${f.id}" — ${f.name} (${f.type||'faction'}, ${f.position}) · interest: ${f.primaryInterest}`).join('\n');
+    const fronts=(n.fronts||[]).filter(f=>f.status==='active').map(f=>`- id "${f.id}" — ${f.name} (clock ${f.clockFilled||0}/${f.clockSize||0})`).join('\n')||'(no active fronts)';
+    const sys=[
+      'You are the opposition strategist for a tabletop game master. Each listed faction is advancing ITS OWN INTEREST against the realm — you propose its next move; the GM signs or rejects everything. Never frame a move as inevitable or predetermined: a faction is choosing to act, weighing its own advantage.',
+      'For EACH faction, propose EXACTLY ONE move. Return JSON: {"proposals":[{"factionId","moveType","motivatingEventId","interest","rationale", ...move fields}]}.',
+      'moveType is one of: "event" (a private development the faction sets in motion — needs "name" and "description", optional "type" and "weight" -30..30), "stance" (the faction\'s position shifts — needs "position": gaining|holding|losing), or "front" (the faction nudges a developing threat — needs "frontId" and "delta": +1 or -1).',
+      'HARD RULES — a move that breaks any of these will be rejected: (1) "motivatingEventId" MUST be one of the [#id] codes from the chronicle ledger below — copy it exactly; NEVER invent an id. (2) "interest" MUST echo the faction\'s stated interest verbatim. (3) Forbidden words — do NOT use prophecy, foretell, fate, omen, or destiny anywhere; these factions scheme and calculate, they do not divine.',
+      'Keep each move small, grounded, and a plausible next step from the cited event.',
+    ].join('\n');
+    const user=`# Realm context\n${ctx}\n\n# Chronicle event ledger (cite ONE id per move, exactly)\n${eventLedger}\n\n# Active fronts (for "front" moves)\n${fronts}\n\n# Factions to move (one proposal each)\n${facList}\n\nReturn the JSON now.`;
+    if(typeof TransparencyLog!=='undefined')TransparencyLog._pendingLabel='Faction Council';
+    const parsed=await this._apiFetchJson([{role:'system',content:sys},{role:'user',content:user}],{stream:false,max_tokens:1400});
+    return Array.isArray(parsed&&parsed.proposals)?parsed.proposals:[];
+  },
+  // WIRE-UP (impure orchestrator): generate → run each raw through the pure gate → push ONLY
+  // survivors onto n.copilotQueue. ALWAYS queues — never auto-applies, even if copilotAutoApply
+  // is on: adversarial moves require a signature. One move per faction (dedupe by factionId).
+  // Once-per-turn guard via n.councilToken keyed on the current turn token.
+  async convFactionCouncil(nation){
+    const n=nation||State.get();
+    if(!n){showToast('No active realm.');return;}
+    if(!this.isConfigured()){showToast('Add your API key in Settings to convene the Faction Council.');return;}
+    // Once-per-turn: refuse a second convene against the same turn token. Use the current
+    // World-Turn token if a turn was taken, else a stable 'no-turn' sentinel for this realm.
+    const turnToken=(n.turnAppliedAt&&n.turnAppliedAt.token)?String(n.turnAppliedAt.token):'no-turn';
+    if(n.councilToken===turnToken){showToast('The council has already convened this turn. Take a World Turn before convening again.');return;}
+    showToast('Convening the Faction Council…');
+    let raws;
+    try{raws=await this.generateFactionCouncil(n);}
+    catch(e){showToast('Faction Council failed: '+(e&&e.message?e.message:'unknown error'));return;}
+    const byId=new Map((n.factions||[]).map(f=>[f.id,f]));
+    const survivors=[];const seen=new Set();
+    (raws||[]).forEach(raw=>{
+      const fid=raw&&raw.factionId;
+      if(!fid||seen.has(fid))return; // at most one survivor per faction
+      const fac=byId.get(fid)||(n.factions||[]).find(f=>(f.name||'').toLowerCase()===String(fid).toLowerCase());
+      if(!fac)return;
+      const res=this._validateCouncilProposal(raw,fac,n);
+      if(res.ok){seen.add(fac.id);survivors.push({fac,raw,proposal:res.proposal});}
+    });
+    if(!survivors.length){
+      n.councilToken=turnToken; // a quiet council still counts as convened this turn
+      State._touch(n.id);State.persist();
+      showToast('The council convened — no grounded moves this turn.');
+      return;
+    }
+    n.copilotQueue=Array.isArray(n.copilotQueue)?n.copilotQueue:[];
+    survivors.forEach(s=>{
+      n.copilotQueue.push({id:Utils.uuid(),tool:'faction_council',args:{factionId:s.fac.id,raw:s.raw},proposal:s.proposal,createdAt:Utils.now()});
+    });
+    n.councilToken=turnToken;
+    State._touch(n.id);State.persist();
+    this._renderQueue();
+    showToast(`Faction Council: ${survivors.length} move${survivors.length>1?'s':''} proposed. Review and sign in the queue.`);
   },
   // ─── REVIEW QUEUE UI (Phase 5C) ───
   // Renders pending Copilot-proposed changes under the panel header. Approve
@@ -20309,8 +20465,20 @@ const WorldShell={
     if(hiddenCount>0){
       html+=`<div class="wms-empty" style="grid-column:1/-1;text-align:center;padding:10px 0;font-family:'Cinzel',serif;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--color-text-faint);cursor:pointer" id="wms-fac-showall">+ ${hiddenCount} more faction${hiddenCount>1?'s':''} — open Workbench</div>`;
     }
+    // P6.4 — opt-in Faction Council. Each gaining/losing faction proposes ONE grounded move,
+    // routed through the existing review queue for the GM to sign. Only offered when at least
+    // one faction is gaining/losing AND has a stated interest (otherwise nothing can be grounded).
+    const councilEligible=factions.some(f=>f&&(f.position==='gaining'||f.position==='losing')&&(f.primaryInterest||'').trim());
+    if(councilEligible){
+      html+=`<button class="wms-council-btn" id="wms-council-btn" type="button" aria-label="Convene the Faction Council" title="Each gaining or losing faction proposes one grounded move for you to approve or reject">⚖ Convene the Faction Council</button>`;
+    }
     ctr.innerHTML=html;
     document.getElementById('wms-fac-showall')?.addEventListener('click',()=>Interact?.expandDomain?.('political'));
+    document.getElementById('wms-council-btn')?.addEventListener('click',()=>{
+      if(typeof Copilot==='undefined')return;
+      if(!Copilot.isConfigured()){showToast('Add your API key in Settings to convene the Faction Council.');return;}
+      Copilot.convFactionCouncil(State.get());
+    });
     // 3D tilt + click. Click goes on .wms-fc-inner (not the card) to survive hit-test shift from transform.
     ctr.querySelectorAll('.wms-fc').forEach(card=>{
       const inner=card.querySelector('.wms-fc-inner');
