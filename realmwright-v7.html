@@ -80,6 +80,28 @@ SECTION 3: DESIGN TOKENS
   /* Semantic aliases used by new UI (Mode Picker, Tonight Mode) */
   --color-bg:var(--color-parchment);
   --color-surface:var(--color-parchment-warm);
+  /* P6.7 Theme parity — semantic aliases used by audit/event-builder/forge/handout
+     surfaces. Each maps to a base token that every theme already overrides, so one
+     :root definition tracks all three themes (no per-theme duplication needed). */
+  --color-text:var(--color-text-primary);        /* primary/body text colour */
+  --color-text-body:var(--color-text-primary);   /* paragraph body copy */
+  --color-text-heading:var(--color-text-primary);/* heading colour (size lives in --text-h*) */
+  --color-border:var(--color-border-default);    /* default UI border */
+  --color-danger:var(--color-crisis);            /* destructive / error */
+  --color-warning:var(--color-tense);            /* caution (amber/ochre) */
+  --color-success:var(--color-thriving);         /* success / positive state */
+  --color-positive:var(--color-thriving);        /* positive diff / gain */
+  --color-surface-1:var(--color-parchment-warm); /* card / field surface */
+  --color-surface-raised:var(--color-parchment-pale); /* elevated row / sheet */
+  /* P6.7 — type-scale aliases mapped to the nearest existing step. */
+  --text-body-md:var(--text-body);               /* 1rem body */
+  --text-h4:var(--text-h3);                       /* smallest heading step (1.125rem) */
+  --text-heading-sm:var(--text-h3);               /* small panel/section title */
+  --text-label-md:var(--text-label);              /* 0.8125rem (13px) small-caps label */
+  /* P6.7 — fixed dimension. Live height is set by SampleMode via setProperty when the
+     sample-mode banner mounts and removed when it closes; 0px matches the no-banner
+     state (identical to the previous var(...,0px) fallbacks — a true no-op default). */
+  --sample-banner-height:0px;
   /* Display scale — existing --text-display is h1-level; lg/sm extend the ramp */
   --text-display-lg:2.5rem;
   --text-display-sm:1.5rem;
@@ -20476,7 +20498,7 @@ const WorldShell={
     const numEl=document.getElementById('wms-stab-num');
     if(numEl&&numEl.textContent!==String(stab))numEl.textContent=stab;
     const stateEl=document.getElementById('wms-stab-state');
-    if(stateEl){stateEl.textContent=status;stateEl.style.color=`var(--color-${Utils.statusClass(status)})`;}
+    if(stateEl){stateEl.textContent=status;const statusVar=`--color-${Utils.statusClass(status)}`;stateEl.style.color=`var(${statusVar})`;}
     // Poetic one-liner instead of technical breakdown. Priority:
     // 1) First active pressure's prose (if any) — already engine-generated narrative
     // 2) Status-keyed evocative fallback
