@@ -1042,6 +1042,68 @@ body.theme-ember .wms-chr-label-text{font-family:'Cinzel',serif;font-size:9px;
 body.theme-ember .wms-particles{position:absolute;left:0;right:0;
   bottom:100%;height:64px;pointer-events:none;z-index:0;overflow:visible}
 
+/* ──────────────────────────────────────────────────────────────────────────
+   P6.7 part 2 — base structure for ex-Ember-only WorldShell classes (theme parity)
+   ----------------------------------------------------------------------------
+   These 21 internals (pressure-card eyebrow/dot/head/body, faction loyalty meter,
+   avatar frame, faction glyph, arsenal title row + lock, chronicle label row) were
+   ONLY styled under `body.theme-ember`, so Manuscript and Modern rendered them
+   unstructured. Each base rule below carries STRUCTURE ONLY (layout, dimensions,
+   spacing, neutral tokens) so the data reads in every theme. Status modifiers map
+   to the codebase's existing semantic convention (matching .wms-fdot--* /
+   .wms-flabel--*):  --a = thriving · --h = crisis · --w = tense · --n = stable.
+   Ember keeps all decorative chrome (glows, gradients, ornaments, Cinzel/orange)
+   because `body.theme-ember .wms-X` outranks these unscoped rules on specificity —
+   so Ember is visually unchanged; these only take effect under Manuscript/Modern.
+   The two corner ornaments (.wms-corner--bl/--tr) are pure Ember decoration, so
+   their base rule is explicitly inert (display:none) — they never draw L-corners
+   outside the Ember skin. (See L924–L932 for the Ember corner chrome.) */
+/* Pressure-card internals */
+.wms-pc-eyebrow{display:flex;align-items:center;gap:6px;
+  font-family:var(--font-mono);font-size:9px;letter-spacing:.22em;
+  text-transform:uppercase;font-weight:500;color:var(--color-text-faint);
+  position:relative;z-index:1}
+.wms-pc-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;
+  background:var(--color-text-faint)}
+.wms-pc--crit{border-left-color:var(--color-crisis)}
+.wms-pc--tense{border-left-color:var(--color-tense)}
+.wms-pc--oppo{border-left-color:var(--color-stable)}
+.wms-pc--crit .wms-pc-dot{background:var(--color-crisis)}
+.wms-pc--tense .wms-pc-dot{background:var(--color-tense)}
+.wms-pc--oppo .wms-pc-dot{background:var(--color-stable)}
+.wms-pc-head{font-size:14px;font-weight:500;color:var(--color-ink);
+  letter-spacing:.03em;line-height:1.3;position:relative;z-index:1}
+.wms-pc-body{font-size:12px;color:var(--color-text-muted);line-height:1.5;
+  font-weight:400;position:relative;z-index:1;
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden}
+/* Faction avatar frame */
+.wms-fc-avatar{width:60px;height:60px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  border:1px solid var(--color-border-default);background:var(--color-surface-1)}
+/* Faction loyalty meter */
+.wms-fc-loyalty{margin-top:10px}
+.wms-fc-loyalty-head{display:flex;justify-content:space-between;
+  font-family:var(--font-mono);font-size:9px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--color-text-faint);margin-bottom:4px}
+.wms-fc-loyalty-track{height:2px;background:var(--color-border-default);overflow:hidden}
+.wms-fc-loyalty-fill{height:100%;transition:width .4s var(--ease-out)}
+.wms-fc-loyalty-fill--a{background:var(--color-thriving);width:85%}
+.wms-fc-loyalty-fill--n{background:var(--color-stable);width:55%}
+.wms-fc-loyalty-fill--w{background:var(--color-tense);width:38%}
+.wms-fc-loyalty-fill--h{background:var(--color-crisis);width:18%}
+/* Faction colorblind glyph — shape redundancy alongside the colored dot */
+.wms-fglyph{font-size:10px;opacity:.85;line-height:1}
+/* Arsenal entry title row + lock icon */
+.wms-ae-title-row{display:flex;justify-content:space-between;align-items:center;gap:6px}
+.wms-ae-lock{font-size:13px;color:var(--color-text-faint);flex-shrink:0}
+/* Chronicle bar floating label cluster */
+.wms-chr-label-row{position:absolute;top:10px;left:28px;
+  display:flex;align-items:center;gap:6px;z-index:1;pointer-events:none}
+.wms-chr-label-text{font-size:9px;font-style:italic;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--color-text-faint)}
+/* Corner ornaments — Ember-only decoration; inert (no L-corners) in other themes */
+.wms-corner--tr,.wms-corner--bl{display:none}
+
 /* Reduce motion — kill WorldShell ambient animations */
 .force-reduced-motion .wms-stab-num,.force-reduced-motion .wms-cn-dot--now,
 .force-reduced-motion .wms-chr-fill{animation:none!important;transition:none!important}
