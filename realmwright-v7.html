@@ -2765,6 +2765,10 @@ body.theme-ember .sc-panel__title{color:var(--ember-color)}
 .copilot-show-context{margin-top:6px;font-size:var(--text-label-sm);color:var(--color-text-faint)}
 .copilot-show-context summary{cursor:pointer;user-select:none;padding:4px 8px;border:1px solid var(--color-border-hairline);border-radius:3px;display:inline-block}
 .copilot-show-context__pre{margin-top:8px;padding:10px;background:rgba(0,0,0,.15);border-radius:3px;max-height:300px;overflow:auto;font-family:var(--font-mono);font-size:11px;white-space:pre-wrap;color:var(--color-text-muted)}
+/* Reasoning panel — the free Nemotron model's visible "thinking" while it reasons. */
+.cp-msg__thinking{margin:0 0 6px;font-size:var(--text-label-sm);color:var(--color-text-muted)}
+.cp-msg__thinking summary{cursor:pointer;user-select:none;font-style:italic;color:var(--color-text-faint);letter-spacing:.02em}
+.cp-msg__thinking-body{margin-top:6px;padding:8px 10px;background:rgba(0,0,0,.12);border-left:2px solid var(--color-border-hairline);border-radius:3px;font-style:italic;line-height:1.45;color:var(--color-text-muted);max-height:240px;overflow:auto}
 /* Phase 5C: Review queue */
 #copilot-review-queue{flex-shrink:0;padding:var(--space-2) var(--space-4);background:rgba(0,0,0,.08);border-bottom:.5px solid var(--color-gold-pale)}
 .cp-queue__header{font-family:var(--font-mono);font-size:var(--text-mono-sm);color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:var(--space-2)}
@@ -4375,7 +4379,16 @@ Description: A tunnel gave way, halting the eastern works.</pre>
       <div id="copilot-openrouter-fields">
         <div class="settings-row">
           <div style="flex:1">
-            <div class="settings-label">OpenRouter API key</div>
+            <div class="settings-label">Recommended: connect in one click</div>
+            <div class="settings-desc">Authorize once in your browser and a free key comes back automatically — no copy-paste. Needs the app served over http(s); if you opened it as a downloaded file, paste a key below instead.</div>
+            <div style="margin-top:var(--space-2)">
+              <button class="btn btn--primary" id="copilot-or-connect" style="font-size:var(--text-label-sm)">Connect to OpenRouter — free, one click</button>
+            </div>
+          </div>
+        </div>
+        <div class="settings-row">
+          <div style="flex:1">
+            <div class="settings-label">Or paste an API key (fallback)</div>
             <div class="settings-desc">Stored locally only — never sent anywhere except OpenRouter. Get one free at <a href="https://openrouter.ai/keys" target="_blank" rel="noopener" style="color:var(--color-gold-deep)">openrouter.ai/keys</a></div>
             <div style="position:relative;margin-top:var(--space-2)">
               <input class="form-input" type="password" id="copilot-key-input" placeholder="sk-or-v1-..." style="width:100%;padding-right:38px;font-family:var(--font-mono);font-size:var(--text-mono-sm)">
@@ -4392,10 +4405,11 @@ Description: A tunnel gave way, halting the eastern works.</pre>
         <div class="settings-row">
           <div style="flex:1">
             <div class="settings-label">Model</div>
-            <div class="settings-desc">Sonnet is the recommended balance of cost and reasoning. Haiku for fast/cheap; Opus for hard problems.</div>
+            <div class="settings-desc">Nemotron Ultra is free to run, but it's a slow shared reasoning model — it can be busy and may occasionally not answer. Free tier caps at ~20 requests/minute and ~50/day (1000/day once you've bought $10 of credits). For speed or reliability, the paid models below cost a few cents per message: Sonnet balances cost and reasoning, Haiku is fast/cheap, Opus is for hard problems.</div>
             <select class="form-select" id="copilot-model-select" style="width:100%;margin-top:var(--space-2)">
+              <option value="nvidia/nemotron-3-ultra-550b-a55b:free" selected>NVIDIA Nemotron Ultra — Free (via OpenRouter) · slow, reasons deeply</option>
               <option value="anthropic/claude-haiku-latest">Claude Haiku (latest) — Fast &amp; Cheap (~$1 / $5 per Mtok)</option>
-              <option value="anthropic/claude-sonnet-latest" selected>Claude Sonnet (latest) — Balanced (~$3 / $15 per Mtok)</option>
+              <option value="anthropic/claude-sonnet-latest">Claude Sonnet (latest) — Balanced (~$3 / $15 per Mtok)</option>
               <option value="anthropic/claude-opus-latest">Claude Opus (latest) — Deep Reasoning (~$15 / $75 per Mtok)</option>
               <option value="openai/gpt-4o-mini">GPT-4o mini — Fast & Cheap (~$0.15 / $0.60 per Mtok)</option>
               <option value="openai/gpt-4o">GPT-4o — Balanced (~$2.50 / $10 per Mtok)</option>
@@ -5280,7 +5294,7 @@ function migrateCampaignPrep(cp){
   });
   return cp;
 }
-const DEFAULT_SETTINGS={theme:'ember',respectMotionPref:true,showForecasts:false,showSecrets:false,onboardingComplete:false,copilotProvider:'openrouter',copilotModel:'anthropic/claude-sonnet-latest',copilotKey:null,ollamaUrl:'http://localhost:11434',ollamaModel:'llama3.1',copilotScope:'standard',copilotAutoApply:false,gmMode:true,ambient:false,
+const DEFAULT_SETTINGS={theme:'ember',respectMotionPref:true,showForecasts:false,showSecrets:false,onboardingComplete:false,copilotProvider:'openrouter',copilotModel:'nvidia/nemotron-3-ultra-550b-a55b:free',copilotKey:null,ollamaUrl:'http://localhost:11434',ollamaModel:'llama3.1',copilotScope:'standard',copilotAutoApply:false,gmMode:true,ambient:false,
 // F7 — cost system. Both null = passive meter only. User opt-in turns on warn/cap.
 costWarnUSD:null,costCapUSD:null,
 // F8 — per-surface effort knobs. Each surface owns its own; no shared global tier.
@@ -11183,14 +11197,14 @@ const Audience={
     const sendBtn = document.getElementById('aud-send'); if(sendBtn){ sendBtn.disabled = true; sendBtn.textContent = '…'; }
     let acc = '', usage = null, errMsg = null;
     try{
-      const body = { model, messages, stream: true, max_tokens: 600 };
+      const body = { model, messages, stream: true, max_tokens: 600, ...Copilot._reasoningParamFor(model) };
       const resp = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body), signal: this._abort.signal });
       if(!resp.ok){
         let t = `HTTP ${resp.status}`;
         try{ const j = await resp.json(); t = j?.error?.message || j?.error || t; }catch(e){}
         if(resp.status === 401) errMsg = 'Invalid API key. Check Settings → Copilot.';
         else if(resp.status === 402) errMsg = 'Out of credits. Top up at openrouter.ai/credits.';
-        else if(resp.status === 429) errMsg = 'Rate limited. Wait a moment and try again.';
+        else if(resp.status === 429) errMsg = 'Rate limited — wait a moment and retry. Free models cap at ~50 requests/day (1000/day after $10 of credits); a persistent 429 means the daily limit, not a hiccup.';
         else errMsg = `Request failed: ${t}`;
         throw new Error(errMsg);
       }
@@ -12568,6 +12582,106 @@ const COPILOT_TOOLS_STANDARD_ALLOWED=['add_chronicle_entry','add_npc','add_plot_
 const Copilot={
   _open:false,
   _lastNationId:null,
+  // OpenRouter free reasoning model. Slow shared 550B; ~20 req/min, 50/day free
+  // (1000/day after $10 of credits). Reasoning streams as delta.reasoning.
+  NEMOTRON_FREE:'nvidia/nemotron-3-ultra-550b-a55b:free',
+  // Only the Nemotron-free model takes OpenRouter's reasoning control. Paid
+  // Claude/GPT/Gemini ids return {} so no `reasoning` key ever attaches to them.
+  _reasoningParamFor(model){
+    return model===Copilot.NEMOTRON_FREE?{reasoning:{effort:'high'}}:{};
+  },
+  // ─── OPENROUTER ONE-CLICK OAUTH (PKCE) ───────────────────────────────────────
+  // Authorize once in the browser; OpenRouter sends back a free key via PKCE. The
+  // key is routed into settings.copilotKey (the single source of truth) — NOT a
+  // separate slot — so it flows through the existing Secrets fork + scrub on persist.
+  _OR_VERIFIER_KEY:'rw_or_pkce_verifier',
+  _OR_REOPEN_KEY:'rw_or_reopen_settings',
+  // base64url of raw bytes: base64 then +→- /→_ and strip trailing '='.
+  _orB64url(bytes){
+    let bin='';
+    for(let i=0;i<bytes.length;i++)bin+=String.fromCharCode(bytes[i]);
+    return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  },
+  async _orSha256(str){
+    const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(str));
+    return new Uint8Array(buf);
+  },
+  // Same lesson as the Ollama P6.9 copy: a downloaded file:// page (or any insecure
+  // context) sends a null origin and has no crypto.subtle, so one-click cannot work.
+  // Detect it and refuse loudly instead of redirecting into a dead end.
+  _orCanOneClick(){
+    if(typeof location!=='undefined'&&location.protocol==='file:')return false;
+    if(typeof window!=='undefined'&&!window.isSecureContext)return false;
+    if(typeof crypto==='undefined'||!crypto.subtle)return false;
+    return true;
+  },
+  async orConnect(){
+    if(!this._orCanOneClick()){
+      showToast('One-click connect needs the app served over http(s). You opened it as a downloaded file (null origin), so paste a key below instead — or serve this file from a local web server and reload.',[],9000);
+      return;
+    }
+    try{
+      const verifierBytes=new Uint8Array(32);
+      crypto.getRandomValues(verifierBytes);
+      const verifier=this._orB64url(verifierBytes);
+      sessionStorage.setItem(this._OR_VERIFIER_KEY,verifier);
+      // Reopen Settings when OpenRouter sends us back, so the user lands where they left.
+      sessionStorage.setItem(this._OR_REOPEN_KEY,'1');
+      const challengeBytes=await this._orSha256(verifier);
+      const challenge=this._orB64url(challengeBytes);
+      // The callback strips its own query, so hand OpenRouter the clean page URL.
+      const callback=location.origin+location.pathname;
+      // Persist first — the redirect navigates away and unsaved work would otherwise be lost.
+      await State.persist();
+      location.href='https://openrouter.ai/auth?callback_url='+encodeURIComponent(callback)
+        +'&code_challenge='+challenge+'&code_challenge_method=S256';
+    }catch(e){
+      showToast('Couldn\'t start OpenRouter sign-in: '+(e&&e.message||e),[],6000);
+    }
+  },
+  // Runs on every page load. No-op unless OpenRouter redirected back with ?code=.
+  async orInit(){
+    let code=null;
+    try{code=new URLSearchParams(location.search).get('code');}catch(e){return;}
+    if(!code)return;
+    const verifier=(()=>{try{return sessionStorage.getItem(this._OR_VERIFIER_KEY);}catch(e){return null;}})();
+    const reopen=(()=>{try{return sessionStorage.getItem(this._OR_REOPEN_KEY);}catch(e){return null;}})();
+    // Scrub ?code from the URL immediately so a refresh can't replay the exchange.
+    try{history.replaceState({},document.title,location.origin+location.pathname);}catch(e){}
+    try{sessionStorage.removeItem(this._OR_VERIFIER_KEY);}catch(e){}
+    try{sessionStorage.removeItem(this._OR_REOPEN_KEY);}catch(e){}
+    if(!verifier){showToast('OpenRouter sign-in didn\'t complete (the verifier was lost). Try Connect again.',[],7000);return;}
+    try{
+      const resp=await fetch('https://openrouter.ai/api/v1/auth/keys',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({code,code_verifier:verifier,code_challenge_method:'S256'}),
+      });
+      if(!resp.ok){
+        let t='HTTP '+resp.status;
+        try{const j=await resp.json();t=j?.error?.message||j?.error||t;}catch(e){}
+        showToast('OpenRouter sign-in failed: '+t+'. Paste a key manually instead.',[],7000);
+        return;
+      }
+      const data=await resp.json();
+      const key=data&&data.key;
+      if(!key){showToast('OpenRouter returned no key. Paste one manually instead.',[],6000);return;}
+      // Route through setSetting → Secrets fork + persist, the existing single path.
+      State.setSetting('copilotKey',key);
+      State.setSetting('copilotProvider','openrouter');
+      // Default a fresh connector to the free model, but never overwrite a chosen one.
+      const cur=State.data?.meta?.settings?.copilotModel;
+      if(!cur||cur===Copilot.NEMOTRON_FREE)State.setSetting('copilotModel',Copilot.NEMOTRON_FREE);
+      await State.persist();
+      if(reopen&&typeof Modals!=='undefined')Modals.open('settings');
+      if(typeof this._refreshKeySettingsUI==='function')this._refreshKeySettingsUI();
+      this.updateStatus();
+      if(typeof this.renderMessages==='function')this.renderMessages();
+      showToast('Connected to OpenRouter — a free key was saved. You\'re ready to chat.',[],5000);
+    }catch(e){
+      showToast('OpenRouter sign-in failed: '+(e&&e.message||e)+'. Paste a key manually instead.',[],7000);
+    }
+  },
   // Per-nation conversation history is stored on n.copilotConversation as an array of {role, content, timestamp}.
   // Roles: 'user' | 'assistant' | 'system' (system messages are local meta — not sent to provider in delivery 2).
   isConfigured(){
@@ -12579,6 +12693,7 @@ const Copilot={
   },
   costEstimateLabel(){
     const model=State.data?.meta?.settings?.copilotModel||'anthropic/claude-sonnet-latest';
+    if(model===Copilot.NEMOTRON_FREE)return 'Free (slow shared model)';
     // Rough per-message estimate at standard scope (~2K input + ~600 output tokens)
     // Format: "≈ X¢ per message"
     const rates={
@@ -12701,7 +12816,22 @@ const Copilot={
       }else{
         body.textContent=m.content||'';
       }
-      wrap.appendChild(role);wrap.appendChild(body);
+      // Reasoning panel (Nemotron-free): collapsible "💭 Thinking…" ABOVE the answer.
+      // Open while still streaming so the slow first-token wait shows activity;
+      // collapses once finished. Rendered safely through Markdown like the answer body.
+      let thinkDet=null;
+      if(m.role==='assistant'&&typeof m.reasoning==='string'&&m.reasoning.trim()){
+        thinkDet=document.createElement('details');
+        thinkDet.className='cp-msg__thinking';
+        thinkDet.open=!!m._streaming;
+        const sum=document.createElement('summary');sum.textContent='💭 Thinking…';
+        const tbody=document.createElement('div');tbody.className='cp-msg__thinking-body';
+        try{tbody.innerHTML=Markdown.render(m.reasoning);}catch(e){tbody.textContent=m.reasoning;}
+        thinkDet.appendChild(sum);thinkDet.appendChild(tbody);
+      }
+      wrap.appendChild(role);
+      if(thinkDet)wrap.appendChild(thinkDet);
+      wrap.appendChild(body);
       // Phase 5F: per-call inline cost stamp on completed assistant turns
       if(m.role==='assistant'&&m._costStamp&&!m._streaming){
         const stamp=document.createElement('div');stamp.innerHTML=m._costStamp;
@@ -13541,6 +13671,10 @@ Without a CANON block, your response is conversational only — no simulation ef
     // Set up abort controller for cancellation
     this._abortController=new AbortController();
     let accumulated='';
+    // Nemotron-free reasons before it answers; its thinking streams as delta.reasoning.
+    // Accumulate it separately so the UI can show "💭 Thinking…" during the slow
+    // first-token wait, then collapse it once the real answer arrives.
+    let reasoningAcc='';
     let receivedAnything=false;
     let errorMessage=null;
     let finalUsage=null;
@@ -13552,7 +13686,7 @@ Without a CANON block, your response is conversational only — no simulation ef
     // Inner helper: stream one round-trip. Accumulates content into `accumulated`
     // (visible to the UI) and returns {toolCalls, usage, finishReason}.
     const streamOnce=async (msgs)=>{
-      const body={model,messages:msgs,stream:true,max_tokens:1500};
+      const body={model,messages:msgs,stream:true,max_tokens:1500,...Copilot._reasoningParamFor(model)};
       if(toolsEnabled){body.tools=COPILOT_TOOLS;body.tool_choice='auto';}
       const resp=await fetch(streamUrl,{
         method:'POST',
@@ -13566,7 +13700,7 @@ Without a CANON block, your response is conversational only — no simulation ef
         catch(e){try{errText=(await resp.text()).slice(0,200)||errText;}catch(_){}}
         if(resp.status===401)errorMessage='Invalid API key. Check Settings → Copilot.';
         else if(resp.status===402)errorMessage='Out of credits. Top up at openrouter.ai/credits.';
-        else if(resp.status===429)errorMessage='Rate limited. Wait a moment and try again.';
+        else if(resp.status===429)errorMessage='Rate limited — wait a moment and retry. Free models cap at ~50 requests/day (1000/day after $10 of credits); a persistent 429 means the daily limit, not a hiccup.';
         else errorMessage=`Request failed: ${errText}`;
         throw new Error(errorMessage);
       }
@@ -13600,6 +13734,20 @@ Without a CANON block, your response is conversational only — no simulation ef
             if(!ch0)continue;
             if(ch0.finish_reason)finishReason=ch0.finish_reason;
             const delta=ch0.delta||{};
+            // Capture reasoning BEFORE content so the "Thinking…" panel fills during
+            // the slow first-token wait. delta.reasoning is a plain string; some
+            // builds also send delta.reasoning_details[] (handle both defensively).
+            let _gotReasoning=false;
+            if(typeof delta.reasoning==='string'&&delta.reasoning.length){reasoningAcc+=delta.reasoning;_gotReasoning=true;}
+            if(Array.isArray(delta.reasoning_details)){
+              for(const rd of delta.reasoning_details){
+                if(rd&&typeof rd.text==='string')reasoningAcc+=rd.text;
+                else if(rd&&typeof rd.reasoning==='string')reasoningAcc+=rd.reasoning;
+                else if(typeof rd==='string')reasoningAcc+=rd;
+              }
+              if(delta.reasoning_details.length)_gotReasoning=true;
+            }
+            if(_gotReasoning)this._updateStreamingReasoning(reasoningAcc);
             if(typeof delta.content==='string'&&delta.content.length){
               accumulated+=delta.content;
               receivedAnything=true;
@@ -13790,6 +13938,38 @@ Without a CANON block, your response is conversational only — no simulation ef
       ctr.scrollTop=ctr.scrollHeight;
     }
   },
+  // Live-patch the reasoning panel during streaming (sibling of _updateStreamingMessage).
+  // The "💭 Thinking…" <details> is built lazily because the placeholder turn renders
+  // before any reasoning has arrived — on the first reasoning chunk we inject it ABOVE
+  // the answer body so the slow first token reads as activity, not a hang.
+  _updateStreamingReasoning(text){
+    const targetNation=State.data.nations.find(x=>x.id===this._streamingNationId);
+    if(targetNation){
+      const last=targetNation.copilotConversation[targetNation.copilotConversation.length-1];
+      if(last&&last._streaming)last.reasoning=text;
+    }
+    if(!this._open)return;
+    if(this._streamingNationId!==State.data.meta.activeNationId)return;
+    const ctr=document.getElementById('copilot-messages');
+    if(!ctr)return;
+    const wrap=ctr.querySelector('.cp-msg:last-child');
+    if(!wrap)return;
+    let det=wrap.querySelector('.cp-msg__thinking');
+    if(!det){
+      det=document.createElement('details');
+      det.className='cp-msg__thinking';
+      det.open=true; // open while thinking so the user sees movement
+      const sum=document.createElement('summary');sum.textContent='💭 Thinking…';
+      const tbody=document.createElement('div');tbody.className='cp-msg__thinking-body';
+      det.appendChild(sum);det.appendChild(tbody);
+      // Sit above the answer body but below the role label — matches the final render order.
+      const bodyEl=wrap.querySelector('.cp-msg__body');
+      if(bodyEl)wrap.insertBefore(det,bodyEl);else wrap.appendChild(det);
+    }
+    const tbody=det.querySelector('.cp-msg__thinking-body');
+    if(tbody)tbody.innerHTML=Markdown.render(text);
+    ctr.scrollTop=ctr.scrollHeight;
+  },
   // Cancel an in-flight request.
   //  - Plain Stop (no opts): abort the fetch; finalize still writes the partial
   //    "_[Stopped]_" message back into the (unchanged) active nation.
@@ -13827,7 +14007,7 @@ Without a CANON block, your response is conversational only — no simulation ef
       };
       model=settings.copilotModel||'anthropic/claude-sonnet-latest';
     }
-    let finalExtras={...bodyExtras};
+    let finalExtras={...bodyExtras,...Copilot._reasoningParamFor(model)};
     if(provider==='ollama'&&finalExtras.response_format?.type==='json_object'){
       delete finalExtras.response_format;
       finalExtras.format='json';
@@ -13855,7 +14035,7 @@ Without a CANON block, your response is conversational only — no simulation ef
       try{const j=await resp.json();errText=j?.error?.message||j?.error||errText;}catch(e){}
       if(resp.status===401)throw new Error('Invalid API key. Check Settings → Copilot.');
       if(resp.status===402)throw new Error('Out of credits. Top up at openrouter.ai/credits.');
-      if(resp.status===429)throw new Error('Rate limited. Wait a moment and try again.');
+      if(resp.status===429)throw new Error('Rate limited — wait a moment and retry. Free models cap at ~50 requests/day (1000/day after $10 of credits); a persistent 429 means the daily limit, not a hiccup.');
       throw new Error(errText);
     }
     const data=await resp.json();
@@ -23269,6 +23449,8 @@ function bindEventListeners(){
       }
     });
   }
+  // OpenRouter one-click OAuth — primary connect button (PKCE redirect).
+  document.getElementById('copilot-or-connect')?.addEventListener('click',()=>Copilot.orConnect());
   // Settings: API key save/clear
   // Clear masked placeholder on focus so user can paste a new key cleanly
   document.getElementById('copilot-key-input')?.addEventListener('focus',(e)=>{
@@ -24183,6 +24365,8 @@ async function bootstrap(){
   await State.load();
   applyDriftOverrides(State.data); // P5.1: re-apply persisted House-Rules drift edits onto the live engine array.
   bindEventListeners();
+  // OpenRouter one-click OAuth callback — no-op unless we returned with ?code=.
+  if(typeof Copilot!=='undefined')Copilot.orInit().catch(e=>console.error('[copilot:orInit]',e));
   // Bind front door, sample mode, and tonight module (DOM already exists)
   await LicenseGate.init();
   // Fire-and-forget: drain any license operations that failed network calls
