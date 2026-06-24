@@ -2808,17 +2808,24 @@ body.theme-ember .sc-panel__title{color:var(--ember-color)}
 .copilot-panel__clear{background:none;border:none;color:var(--color-text-faint);
   text-decoration:underline;cursor:pointer;font-size:9px;font-family:var(--font-mono);padding:0}
 .copilot-panel__clear:hover{color:var(--color-text-muted)}
-/* Copilot launcher button — floats above the nation card */
-.copilot-launch{position:absolute;bottom:var(--space-4);right:var(--space-4);
+/* Copilot launcher — fixed FAB above the 140px chronicle band, bottom-right.
+   Was position:absolute inside the scrolling .living-nation column, so it scrolled
+   out of view and only existed on the dashboard. Fixed floats it over every surface
+   where a world is active. z-index 120 clears page content + the top-left cost meter
+   (90) but stays under modals (1010) and the full-screen modes (8000) by design. */
+.copilot-launch{position:fixed;bottom:calc(140px + var(--space-4));right:var(--space-4);
   background:var(--color-ink);color:var(--color-parchment);
   padding:var(--space-2) var(--space-4);border-radius:var(--radius-pill);
   border:1px solid var(--color-gold);cursor:pointer;
   font-family:var(--font-display);font-size:var(--text-body-sm);
   display:flex;align-items:center;gap:var(--space-2);
   transition:all var(--duration-instant);
-  box-shadow:0 2px 8px rgba(13,27,42,.12);z-index:calc(var(--z-sticky) - 1)}
-.copilot-launch:hover{background:var(--color-ink-elevated);border-color:var(--color-gold-deep)}
+  box-shadow:0 4px 14px rgba(13,27,42,.28);z-index:120}
+.copilot-launch:hover{background:var(--color-ink-elevated);border-color:var(--color-gold-deep);
+  box-shadow:0 6px 18px rgba(13,27,42,.34);transform:translateY(-1px)}
 .copilot-launch__mark{color:var(--color-gold);font-size:1.1em}
+/* Hidden while onboarding (no world yet) and while the Copilot panel is open. */
+.is-onboarding-active .copilot-launch,
 .copilot-launch.is-hidden{display:none}
 /* GM Mode — visible in identity strip + toolbar below it */
 .gm-badge{display:none;align-items:center;gap:4px;padding:2px 8px;margin-left:var(--space-3);
@@ -3760,7 +3767,7 @@ SECTION 8: DOM STRUCTURE
       <div class="nation-card" id="nation-card"></div>
       <div class="pressure-points" id="pressure-points"></div>
       <div class="recent-pulse" id="recent-pulse"></div>
-      <button class="copilot-launch" id="copilot-launch" aria-label="Open Copilot"><span class="copilot-launch__mark">⌘</span> Copilot</button>
+      <button class="copilot-launch" id="copilot-launch" aria-label="Open the Copilot — ask anything or tell it to change your world" title="Ask anything, or tell the Copilot to change your world (every change is yours to approve)"><span class="copilot-launch__mark">⌘</span> Ask &amp; Command</button>
     </main>
     <aside class="arsenal" aria-label="Arsenal"><div class="arsenal__inner" id="arsenal-inner"></div></aside>
   </div>
@@ -3970,7 +3977,7 @@ SECTION 8: DOM STRUCTURE
   <div class="copilot-panel__messages" id="copilot-messages"></div>
   <div class="copilot-panel__compose">
     <div class="copilot-panel__compose-row">
-      <textarea class="copilot-panel__textarea" id="copilot-input" placeholder="Ask the Copilot about your world..." rows="2"></textarea>
+      <textarea class="copilot-panel__textarea" id="copilot-input" placeholder="Ask anything — or tell me to change your world…" rows="2"></textarea>
       <button class="copilot-panel__send" id="copilot-send" disabled>Send</button>
     </div>
     <div class="copilot-panel__compose-meta">
@@ -12735,6 +12742,8 @@ const Copilot={
   open(){
     this._open=true;
     document.getElementById('copilot-panel')?.classList.add('is-open');
+    // Hide the floating launcher so it never overlaps the open panel (bottom-right).
+    document.getElementById('copilot-launch')?.classList.add('is-hidden');
     this._lastNationId=State.data?.meta?.activeNationId;
     this.renderHeader();
     this.renderMessages();
@@ -12744,6 +12753,7 @@ const Copilot={
   close(){
     this._open=false;
     document.getElementById('copilot-panel')?.classList.remove('is-open');
+    document.getElementById('copilot-launch')?.classList.remove('is-hidden');
   },
   toggle(){this._open?this.close():this.open();},
   isOpen(){return this._open;},
@@ -12783,13 +12793,16 @@ const Copilot={
     }
     if(!conv.length){
       const gm=isGMMode();
+      // Lead with mutation commands so it's obvious the Copilot can change the world,
+      // not just answer. Mix in one question. GM/non-GM keep their own framing.
       const examples=gm
-        ?`<em>"Where would the party encounter a riot in ${Utils.escHtml(n.name)}?"</em><br>or <em>"Suggest a character who might betray the leadership."</em>`
-        :`<em>"What's happening in ${Utils.escHtml(n.name)} right now?"</em><br>or <em>"Suggest three plot hooks for tonight's session."</em>`;
+        ?`<em>"Add a rival power to the north of ${Utils.escHtml(n.name)}."</em><br><em>"Give a key character a hidden agenda."</em><br><em>"Where would the party encounter a riot?"</em>`
+        :`<em>"Add a rival power to the north of ${Utils.escHtml(n.name)}."</em><br><em>"Advance the war by a season."</em><br><em>"What's happening here right now?"</em>`;
       ctr.innerHTML=`<div class="copilot-panel__empty">
         <div class="copilot-panel__empty-mark">⌘</div>
-        <div class="copilot-panel__empty-title">${gm?'Your Game Master assistant':'Ask the Copilot'}</div>
+        <div class="copilot-panel__empty-title">Ask, or command your world</div>
         <div>${examples}</div>
+        <div style="margin-top:var(--space-4);font-size:var(--text-label-sm);color:var(--color-text-faint)">Every change I propose is yours to approve or reject — nothing touches your world without your sign-off.</div>
       </div>`;
       return;
     }
