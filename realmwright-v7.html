@@ -4359,7 +4359,7 @@ Description: A tunnel gave way, halting the eastern works.</pre>
       <div class="settings-row">
         <div style="flex:1">
           <div class="settings-label">Provider</div>
-          <div class="settings-desc">OpenRouter routes to any cloud model. Ollama runs a model locally on your machine — no API key, no data sent to any server.</div>
+          <div class="settings-desc">OpenRouter routes to any cloud model (needs an API key). Ollama runs a model locally on your machine — free, and no data leaves your computer — but needs a one-time setup so the page can reach it (the Ollama fields below explain how).</div>
           <div style="display:flex;gap:16px;margin-top:var(--space-2)">
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:var(--text-body-sm)">
               <input type="radio" name="copilot-provider" id="provider-openrouter" value="openrouter" style="accent-color:var(--ember-color)"> OpenRouter
@@ -4407,10 +4407,12 @@ Description: A tunnel gave way, halting the eastern works.</pre>
       </div>
       <!-- Ollama fields (shown when provider = ollama) -->
       <div id="copilot-ollama-fields" style="display:none">
+        <!-- P6.9 — probe failures explain themselves here instead of failing silently. -->
+        <div id="ollama-probe-msg" class="settings-desc" style="display:none;margin-bottom:var(--space-2);padding:8px 10px;border-radius:6px;border:0.5px solid var(--color-tense);background:rgba(0,0,0,0.10);color:var(--color-text-body);line-height:1.5"></div>
         <div class="settings-row">
           <div style="flex:1">
             <div class="settings-label">Ollama base URL</div>
-            <div class="settings-desc">Default is <code style="font-family:var(--font-mono);font-size:0.9em">http://localhost:11434</code>. Make sure Ollama is running and CORS is open (<code style="font-family:var(--font-mono);font-size:0.9em">OLLAMA_ORIGINS=*</code>).</div>
+            <div class="settings-desc">Default is <code style="font-family:var(--font-mono);font-size:0.9em">http://localhost:11434</code>. If you opened this app as a downloaded file, the browser sends a &quot;null&quot; origin that Ollama blocks by default — start Ollama with <code style="font-family:var(--font-mono);font-size:0.9em">OLLAMA_ORIGINS=* ollama serve</code>, or serve the file from a local web server.</div>
             <input class="form-input" type="text" id="ollama-url-input" placeholder="http://localhost:11434" style="width:100%;margin-top:var(--space-2);font-family:var(--font-mono);font-size:var(--text-mono-sm)">
           </div>
         </div>
@@ -23370,19 +23372,35 @@ function bindEventListeners(){
     showToast('Ollama settings saved.',[],2500);
   });
 
-  // Phase 5F: one-shot Ollama auto-detect probe (called when Settings opens).
+  // P6.9 — pure guidance selector. Verified on a real desktop: a double-clicked
+  // file:// page sends Origin: null, which Ollama rejects by default (403). So the
+  // common failure is silent — we explain it instead. Kept pure (protocol in →
+  // text out) so it's unit-tested in /tmp/p69.test.mjs.
+  Copilot._ollamaHelpMsg=function(protocol){
+    if(protocol==='file:'){
+      return 'This app was opened directly as a downloaded file, so the browser sends a "null" origin that Ollama rejects by default — local AI can\'t connect. Two fixes: (1) start Ollama with CORS open by setting OLLAMA_ORIGINS=* before running it (for example: OLLAMA_ORIGINS=* ollama serve); or (2) serve this file from a local web server, so the origin becomes http://localhost and Ollama accepts it by default. Re-open Settings to re-check.';
+    }
+    return 'Couldn\'t reach Ollama at the address above. Make sure Ollama is running (ollama serve) and your model is pulled (ollama pull <model>), then re-open Settings to re-check.';
+  };
+  // P6.9 — Ollama auto-detect probe. Re-probes until it SUCCEEDS (so the user can
+  // open CORS / start a local server and re-open Settings to re-check live), and on
+  // any failure shows the protocol-aware guidance instead of failing silently.
   Copilot._probeOllama=async function(){
-    if(this._ollamaProbed)return;
-    this._ollamaProbed=true;
+    if(this._ollamaProbed)return;   // only blocks AFTER a successful detect
+    const msgEl=document.getElementById('ollama-probe-msg');
+    const badge=document.getElementById('ollama-detected-badge');
+    const warn=()=>{ if(msgEl){msgEl.textContent=this._ollamaHelpMsg((typeof location!=='undefined'&&location.protocol)||'');msgEl.style.display='block';} };
     const url=(State.data?.meta?.settings?.ollamaUrl||'http://localhost:11434').replace(/\/$/,'')+'/api/tags';
     try{
       const opts={};
       if(typeof AbortSignal!=='undefined'&&AbortSignal.timeout){opts.signal=AbortSignal.timeout(800);}
       const res=await fetch(url,opts);
-      if(!res.ok)return;
+      if(!res.ok){warn();return;}
       const data=await res.json();
-      if(!Array.isArray(data.models))return;
-      const badge=document.getElementById('ollama-detected-badge');
+      if(!Array.isArray(data.models)){warn();return;}
+      // SUCCESS — lock the probe, clear any warning, show the badge + model list.
+      this._ollamaProbed=true;
+      if(msgEl)msgEl.style.display='none';
       if(badge){badge.textContent=`Ollama detected ✓ — ${data.models.length} model${data.models.length===1?'':'s'}`;badge.style.display='inline';}
       let dl=document.getElementById('ollama-models-datalist');
       if(!dl){
@@ -23393,7 +23411,7 @@ function bindEventListeners(){
         if(input)input.setAttribute('list','ollama-models-datalist');
       }
       dl.innerHTML=data.models.map(m=>`<option value="${Utils.escHtml(m.name)}">`).join('');
-    }catch(e){/* silent — Ollama not running */}
+    }catch(e){ warn(); }
   };
   // Helper to update the Settings UI (key indicator, button visibility)
   Copilot._refreshKeySettingsUI=function(){
