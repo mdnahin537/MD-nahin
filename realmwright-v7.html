@@ -3048,6 +3048,22 @@ body.gm-mode .world-mode-shell{top:104px}
 .settings-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:var(--space-3)}
 .settings-label{font-size:var(--text-body-sm);color:var(--color-ink)}
 .settings-desc{font-size:var(--text-label-sm);color:var(--color-text-muted);margin-top:2px}
+/* "Free by NVIDIA" recommended card + advanced disclosure (theme-aware via tokens) */
+.rw-ai-rec{border:1px solid var(--ember-color);border-radius:var(--radius-md,6px);
+  background:color-mix(in srgb,var(--ember-color) 8%,transparent);
+  padding:var(--space-4);margin-bottom:var(--space-4);position:relative}
+.rw-ai-rec__badge{display:inline-block;font-family:var(--font-display);font-size:var(--text-label-sm);
+  letter-spacing:.16em;text-transform:uppercase;color:var(--ember-color);
+  border:1px solid var(--ember-color);border-radius:var(--radius-pill,99px);
+  padding:2px 10px;margin-bottom:var(--space-2)}
+.rw-ai-rec__title{font-family:var(--font-display);font-size:var(--text-h3);color:var(--color-ink);margin-bottom:4px}
+.rw-ai-rec__sub{font-size:var(--text-body-sm);color:var(--color-text-body,var(--color-ink));margin-bottom:var(--space-3);line-height:1.5}
+.rw-ai-rec__btn{font-size:var(--text-label-sm)}
+.rw-ai-rec__note{font-size:var(--text-label-sm);color:var(--color-text-muted);margin-top:var(--space-2);line-height:1.5}
+.rw-ai-advanced{margin-top:var(--space-2)}
+.rw-ai-advanced__summary{cursor:pointer;font-size:var(--text-body-sm);color:var(--color-text-muted);
+  padding:var(--space-2) 0;list-style:revert}
+.rw-ai-advanced__summary:hover{color:var(--color-ink)}
 /* Toggle */
 .toggle{width:32px;height:18px;background:var(--color-gold-pale);border-radius:var(--radius-pill);
   position:relative;cursor:pointer;transition:background var(--duration-default);border:none;flex-shrink:0}
@@ -4366,6 +4382,16 @@ Description: A tunnel gave way, halting the eastern works.</pre>
       </div>
     </div>
     <div class="settings-section"><div class="settings-section__title">Copilot</div>
+      <!-- RECOMMENDED: one-click free AI for non-technical GMs. Wraps OpenRouter PKCE + free Nemotron. -->
+      <div class="rw-ai-rec">
+        <div class="rw-ai-rec__badge">Recommended</div>
+        <div class="rw-ai-rec__title">✨ Free by NVIDIA</div>
+        <div class="rw-ai-rec__sub">Free 550B AI · one click, free sign-in (via OpenRouter, no card).</div>
+        <button class="btn btn--primary rw-ai-rec__btn" id="copilot-free-nvidia">Use Free by NVIDIA</button>
+        <div class="rw-ai-rec__note">Opens a quick OpenRouter sign-in (Google works) and saves a free key for you — nothing to copy or paste.</div>
+      </div>
+      <details class="rw-ai-advanced">
+        <summary class="rw-ai-advanced__summary">Other options (advanced) — bring your own key, any model, or run locally</summary>
       <!-- B39: Provider picker -->
       <div class="settings-row">
         <div style="flex:1">
@@ -4449,6 +4475,7 @@ Description: A tunnel gave way, halting the eastern works.</pre>
           </div>
         </div>
       </div>
+      </details>
     </div>
     <div class="settings-section"><div class="settings-section__title">Cost guardrails</div>
       <p style="font-size:var(--text-body-sm);color:var(--color-text-muted);margin-bottom:12px">The meter (top-left) always shows session spend. Both fields below are opt-in — leave blank to disable. Soft warn fires once per session. Hard cap pauses AI until you resume from the meter or raise the limit here.</p>
@@ -12687,6 +12714,37 @@ const Copilot={
       showToast('Connected to OpenRouter — a free key was saved. You\'re ready to chat.',[],5000);
     }catch(e){
       showToast('OpenRouter sign-in failed: '+(e&&e.message||e)+'. Paste a key manually instead.',[],7000);
+    }
+  },
+  // ── "FREE BY NVIDIA" — the one-click free path for non-technical GMs ─────────
+  // Wraps the existing OpenRouter PKCE login + the free Nemotron model into one
+  // friendly action. Does NOT re-implement auth: if a working key already exists we
+  // just switch the model; otherwise we pin provider+model and hand off to orConnect,
+  // which owns the honesty gate (file:// / insecure context) and the PKCE redirect.
+  async useFreeNvidia(){
+    try{
+      // Decide on an OpenRouter KEY, not isConfigured() — that returns true for
+      // Ollama too, which would leave provider='ollama' and the free model never runs.
+      const s=State.data?.meta?.settings;
+      const hasOrKey=!!(s&&s.copilotKey&&s.copilotKey.length>10);
+      if(hasOrKey){
+        // Already have a key — no sign-in needed. Force the OpenRouter free path
+        // (even over an existing Ollama setup) so the model actually runs.
+        State.setSetting('copilotProvider','openrouter');
+        State.setSetting('copilotModel',Copilot.NEMOTRON_FREE);
+        await State.persistNow();
+        if(typeof this._refreshKeySettingsUI==='function')this._refreshKeySettingsUI();
+        this.updateStatus();
+        if(typeof this.renderMessages==='function')this.renderMessages();
+        showToast('You\'re set — using the free NVIDIA model.',[],4000);
+        return;
+      }
+      // No key yet — pin the free OpenRouter path, then let orConnect do the sign-in.
+      State.setSetting('copilotProvider','openrouter');
+      State.setSetting('copilotModel',Copilot.NEMOTRON_FREE);
+      await this.orConnect();
+    }catch(e){
+      showToast('Couldn\'t start the free NVIDIA setup: '+(e&&e.message||e)+'. You can paste a key under Other options instead.',[],7000);
     }
   },
   // Per-nation conversation history is stored on n.copilotConversation as an array of {role, content, timestamp}.
@@ -23464,6 +23522,8 @@ function bindEventListeners(){
   }
   // OpenRouter one-click OAuth — primary connect button (PKCE redirect).
   document.getElementById('copilot-or-connect')?.addEventListener('click',()=>Copilot.orConnect());
+  // "Free by NVIDIA" — recommended one-click free path (wraps orConnect + free Nemotron).
+  document.getElementById('copilot-free-nvidia')?.addEventListener('click',()=>Copilot.useFreeNvidia());
   // Settings: API key save/clear
   // Clear masked placeholder on focus so user can paste a new key cleanly
   document.getElementById('copilot-key-input')?.addEventListener('focus',(e)=>{
