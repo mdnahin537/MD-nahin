@@ -3343,52 +3343,243 @@ SECTION 7: MOTION & STATE STYLES
 .cmp-rail__item--ai{border-left-color:var(--ember-color);position:relative}
 .cmp-rail__ai-badge{display:inline-block;font-size:8px;font-weight:700;letter-spacing:.1em;color:var(--ember-color);border:1px solid var(--ember-color);border-radius:3px;padding:0 3px;margin-bottom:4px;text-transform:uppercase}
 @media (max-width:980px){.campaign-mode.has-rail .cmp-grid{margin-right:0}.cmp-rail{position:static;width:auto;max-width:100%;border-left:none;border-top:1px solid var(--color-border-hairline)}}
-/* ─── RUN MODE — the at-the-table cockpit (P4.1). Single screen, zero nav, dim-light ── */
-.run-mode{position:fixed;inset:0;background:var(--color-bg);z-index:8000;overflow-y:auto;display:none;flex-direction:column}
+/* ═══ RUN MODE — the at-the-table cockpit (P4.1 → P4.x redesign). ════════════════
+   One screen, one job: run tonight without breaking flow. The DOOM CLOCK on the
+   center stage is the single anchor and the through-line — the cast (left) and the
+   GM desk (right) both read and write the same world state, and every region can
+   push the clock. Color is information: ember is structural; status / faction /
+   crit / doom-heat are the only color moments. Inherits body.theme-* (ember /
+   modern / manuscript) — no own switcher. Motion is transform/opacity only and
+   honors reduced-motion. Target ≥768px (tablet-landscape, laptop, desktop). */
+.run-mode{position:fixed;inset:0;background:var(--color-bg);z-index:8000;display:none;flex-direction:column;overflow:hidden}
 .run-mode.is-open{display:flex}
-.run-mode__header{display:flex;justify-content:space-between;align-items:center;gap:var(--space-4);padding:var(--space-4) var(--space-6);border-bottom:1px solid var(--color-border-default);position:sticky;top:0;background:var(--color-bg);z-index:10;flex-shrink:0}
-.run-mode__title{font-family:var(--font-display),'Cinzel',serif;font-size:var(--text-h1);margin:0;color:var(--color-ink);letter-spacing:.02em}
-.run-mode__title small{display:block;font-family:var(--font-body);font-size:var(--text-label-sm);color:var(--color-text-faint);font-weight:400;letter-spacing:.04em;margin-top:2px}
+/* whisper-faint atmosphere from the theme's ambient glow; static, reduced-motion-safe */
+.run-mode::before{content:'';position:absolute;inset:0;pointer-events:none;z-index:0;background:var(--amb-glow,transparent);opacity:.7}
+
+/* ── top bar ── */
+.run-mode__header{position:relative;z-index:30;display:flex;align-items:center;gap:var(--space-5);padding:0 var(--space-6);height:58px;border-bottom:1px solid var(--color-border-default);background:var(--color-surface);flex-shrink:0}
+.run-mode__brand{display:flex;align-items:center;gap:var(--space-3);min-width:0}
+.run-mode__title{font-family:var(--font-display),'Cinzel',serif;font-size:var(--text-h3);margin:0;color:var(--color-ink);letter-spacing:.02em;white-space:nowrap}
+.run-mode__title b{color:var(--ember-color);font-weight:inherit}
+.run-mode__badge{font-family:var(--font-mono);font-size:var(--text-label-sm);letter-spacing:.18em;text-transform:uppercase;color:var(--ember-color);padding:4px 9px;border:1px solid var(--ember-color-pale);border-radius:var(--radius-none);background:var(--ember-glow-soft);white-space:nowrap}
+.run-mode__session{display:flex;align-items:center;gap:var(--space-3);min-width:0}
+.run-mode__pip{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:var(--text-label-sm);letter-spacing:.12em;text-transform:uppercase;color:var(--color-text-faint);white-space:nowrap}
+.run-mode__pip-dot{width:7px;height:7px;border-radius:50%;background:var(--color-thriving);flex-shrink:0}
+.run-mode__ses-name{font-family:var(--font-display),'Cinzel',serif;font-size:var(--text-body-sm);color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.01em}
+.run-mode__head-spacer{margin-left:auto}
 .run-mode__head-actions{display:flex;align-items:center;gap:var(--space-3);flex-shrink:0}
-.run-mode__dice-toggle{background:transparent;border:1px solid var(--color-border-default);border-radius:var(--radius-none);padding:10px 16px;color:var(--color-text-muted);cursor:pointer;font-size:var(--text-label);font-family:var(--font-body);letter-spacing:.04em;transition:border-color var(--duration-instant),color var(--duration-instant);min-height:44px}
-.run-mode__dice-toggle:hover{border-color:var(--ember-color);color:var(--ember-color)}
+.run-mode__dice-toggle,.run-mode__exit{background:transparent;border:1px solid var(--color-border-default);border-radius:var(--radius-none);padding:0 16px;color:var(--color-text-muted);cursor:pointer;font-size:var(--text-label);font-family:var(--font-body);letter-spacing:.04em;transition:border-color var(--duration-instant),color var(--duration-instant);min-height:40px;white-space:nowrap}
+.run-mode__dice-toggle:hover,.run-mode__exit:hover{border-color:var(--ember-color);color:var(--ember-color)}
 .run-mode.is-dice-only .run-mode__dice-toggle{border-color:var(--ember-color);color:var(--ember-color)}
-.run-mode__exit{background:transparent;border:1px solid var(--color-border-default);border-radius:var(--radius-none);padding:10px 18px;color:var(--color-text-muted);cursor:pointer;font-size:var(--text-label);font-family:var(--font-body);letter-spacing:.04em;transition:border-color var(--duration-instant),color var(--duration-instant);min-height:44px}
-.run-mode__exit:hover{border-color:var(--ember-color);color:var(--ember-color)}
-.run-mode__grid{flex:1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--space-5);padding:var(--space-6);align-items:start;max-width:1600px;width:100%;margin:0 auto}
-.run-mode.is-dice-only .run-mode__grid{grid-template-columns:1fr;max-width:760px}
-.run-mode.is-dice-only .run-mode__col--clocks,.run-mode.is-dice-only .run-mode__col--secrets{display:none}
-.run-mode__col{background:var(--color-parchment-warm);border:1px solid var(--color-border-default);border-radius:var(--radius-none);padding:var(--space-5);min-width:0}
-.run-mode__col-title{font-family:var(--font-display),'Cinzel',serif;font-size:var(--text-label);color:var(--ember-color);text-transform:uppercase;letter-spacing:.10em;margin:0 0 var(--space-4);border-bottom:1px solid var(--color-border-hairline);padding-bottom:var(--space-2)}
-.run-mode__clock{display:grid;grid-template-columns:72px 1fr;gap:var(--space-3);align-items:center;padding:var(--space-3) 0;border-bottom:1px solid var(--color-border-hairline)}
-.run-mode__clock:last-child{border-bottom:none}
-.run-mode__clock .cmp-clock__svg{width:72px;height:72px;cursor:pointer}
-.run-mode__clock-name{font-size:var(--text-body);color:var(--color-ink);font-weight:500;line-height:1.3}
-.run-mode__clock-count{font-size:var(--text-label-sm);color:var(--color-text-faint);font-variant-numeric:tabular-nums;margin-top:var(--space-1);letter-spacing:.05em}
-.run-mode__secret{display:flex;align-items:flex-start;gap:var(--space-3);padding:var(--space-3) 0;border-bottom:1px solid var(--color-border-hairline);cursor:pointer}
-.run-mode__secret:last-child{border-bottom:none}
-.run-mode__secret-check{flex-shrink:0;width:28px;height:28px;border:2px solid var(--color-border-default);border-radius:var(--radius-none);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--ember-color);font-size:16px;line-height:1;padding:0;transition:border-color var(--duration-instant),background var(--duration-instant)}
-.run-mode__secret-check:hover{border-color:var(--ember-color)}
-.run-mode__secret[aria-checked="true"] .run-mode__secret-check{border-color:var(--ember-color);background:var(--ember-glow-soft)}
-.run-mode__secret-text{font-size:var(--text-body);color:var(--color-ink);line-height:1.45;min-width:0;word-break:break-word}
-.run-mode__secret[aria-checked="true"] .run-mode__secret-text{color:var(--color-text-faint);text-decoration:line-through;text-decoration-color:var(--color-border-default)}
-.run-mode__dice-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-3);margin-bottom:var(--space-5)}
-.run-mode.is-dice-only .run-mode__dice-pad{grid-template-columns:repeat(3,1fr);gap:var(--space-4)}
-.run-mode__die{background:var(--color-parchment-pale);border:1px solid var(--color-gold-pale);border-radius:var(--radius-none);color:var(--color-gold);cursor:pointer;font-family:var(--font-display),'Cinzel',serif;font-size:var(--text-h2);letter-spacing:.04em;min-height:64px;display:flex;align-items:center;justify-content:center;transition:border-color var(--duration-instant),background var(--duration-instant),color var(--duration-instant)}
-.run-mode.is-dice-only .run-mode__die{min-height:96px;font-size:var(--text-display)}
-.run-mode__die:hover{border-color:var(--ember-color);background:var(--color-parchment-warm);color:var(--ember-color-bright)}
+
+/* ── the cockpit grid: cast · stage · desk. The center is deliberately NARROW
+   (it holds only the clock) so the freed width goes to the rail and the desk and
+   nothing is ever cut. ── */
+.run-mode__grid{position:relative;z-index:10;flex:1;min-height:0;display:grid;grid-template-columns:minmax(300px,340px) minmax(340px,1fr) minmax(360px,400px);gap:1px;background:var(--color-border-hairline)}
+.run-mode.is-dice-only .run-mode__grid{grid-template-columns:1fr}
+.run-mode.is-dice-only .run-mode__region--cast,.run-mode.is-dice-only .run-mode__region--stage{display:none}
+.run-mode__region{background:var(--color-bg);min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.run-mode__region-head{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);height:44px;padding:0 var(--space-4);border-bottom:1px solid var(--color-border-hairline);background:var(--color-surface)}
+.run-mode__region-head h2{font-family:var(--font-mono);font-size:var(--text-label-sm);letter-spacing:.16em;text-transform:uppercase;color:var(--color-text-faint);font-weight:500;margin:0}
+.run-mode__region-body{flex:1;min-height:0;overflow-y:auto;padding:var(--space-4)}
+.run-mode__chip{font-family:var(--font-mono);font-size:var(--text-label-sm);letter-spacing:.08em;color:var(--color-text-faint);padding:2px 8px;border:1px solid var(--color-border-hairline);border-radius:var(--radius-none);white-space:nowrap;font-variant-numeric:tabular-nums}
+
+/* scrollbars — quiet, consistent across regions */
+.run-mode__region-body::-webkit-scrollbar,.run-mode__roll-log::-webkit-scrollbar,.run-mode__ask-answer::-webkit-scrollbar{width:8px}
+.run-mode__region-body::-webkit-scrollbar-thumb,.run-mode__roll-log::-webkit-scrollbar-thumb,.run-mode__ask-answer::-webkit-scrollbar-thumb{background:var(--color-border-default);border-radius:4px;border:2px solid var(--color-bg)}
+
+/* ═══ LEFT — THE CAST (the moat: who's at the table, grounded NPCs) ═══ */
+.run-mode__cast{display:flex;flex-direction:column;gap:var(--space-2)}
+.run-mode__npc{display:grid;grid-template-columns:42px 1fr auto;align-items:center;gap:var(--space-3);width:100%;text-align:left;padding:11px 12px;border:1px solid var(--color-border-hairline);border-radius:var(--radius-none);background:var(--color-surface);cursor:pointer;position:relative;transition:border-color var(--duration-instant),background var(--duration-instant)}
+.run-mode__npc:hover{background:var(--color-parchment-warm);border-color:var(--color-border-default)}
+.run-mode__npc.is-active{border-color:var(--ember-color-pale);background:var(--color-parchment-warm)}
+.run-mode__npc.is-active::before{content:'';position:absolute;left:-1px;top:9px;bottom:9px;width:3px;background:var(--ember-color)}
+.run-mode__npc-face{width:42px;height:42px;border-radius:var(--radius-none);background:var(--color-parchment-pale);display:grid;place-items:center;font-family:var(--font-display),'Cinzel',serif;font-size:var(--text-h3);color:var(--ember-color);border:1px solid var(--color-border-hairline)}
+.run-mode__npc.is-active .run-mode__npc-face{border-color:var(--ember-color-pale)}
+.run-mode__npc-main{min-width:0}
+.run-mode__npc-name{font-family:var(--font-display),'Cinzel',serif;font-size:var(--text-body);color:var(--color-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.25}
+.run-mode__npc-role{font-size:var(--text-body-sm);color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;margin-top:1px}
+.run-mode__npc-stance{width:10px;height:10px;border-radius:50%;flex-shrink:0;background:var(--_stance,var(--color-text-faint))}
+.run-mode__cast-foot{margin-top:var(--space-4);padding-top:var(--space-4);border-top:1px solid var(--color-border-hairline)}
+.run-mode__legend{display:flex;flex-wrap:wrap;gap:var(--space-2) var(--space-4)}
+.run-mode__legend span{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:var(--text-label-sm);letter-spacing:.04em;color:var(--color-text-faint)}
+.run-mode__legend i{width:8px;height:8px;border-radius:50%}
+
+/* ═══ CENTER — THE STAGE (the Doom Clock, the signature anchor) ═══ */
+.run-mode__region--stage{background:var(--color-parchment);align-items:stretch}
+.run-mode__stage{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--space-5);padding:var(--space-6) var(--space-5);text-align:center}
+.run-mode__stage-eyebrow{font-family:var(--font-mono);font-size:var(--text-label-sm);letter-spacing:.22em;text-transform:uppercase;color:var(--color-text-faint)}
+.run-mode__stage-title{font-family:var(--font-display),'Cinzel',serif;font-size:var(--text-h2);line-height:1.18;color:var(--color-ink);letter-spacing:.01em;max-width:22ch}
+/* the doom clock: the reused Campaign ring, scaled up and re-skinned by heat */
+.run-mode__doom{position:relative;width:min(42vh,300px);aspect-ratio:1;flex-shrink:0}
+.run-mode__doom .cmp-clock__svg{width:100%;height:100%}
+.run-mode__doom .cmp-clock__svg-wrap{cursor:pointer;display:block;width:100%;height:100%}
+/* DOOM HEAT — a dedicated danger ramp (NOT the theme's pastel --color-crisis): the
+   filled segments climb from a structural ember → warm amber → hot orange-red → deep
+   blood-red as the threat fills, so the clock reads DANGER in every theme. Tokens are
+   theme-overridden below the base. Empty segments stay a faint ring. */
+.run-mode{--run-doom-low:var(--ember-color);--run-doom-mid:#ff9d3c;--run-doom-high:#ff5b2e;--run-doom-max:#e02612;--run-doom-empty:var(--color-surface)}
+.run-mode__doom .cmp-clock__seg{transition:fill var(--duration-default) ease,stroke var(--duration-default) ease}
+.run-mode__doom .cmp-clock__seg--empty{fill:var(--run-doom-empty);stroke:var(--color-border-default);stroke-width:.75}
+.run-mode__doom .cmp-clock__seg--filled{fill:var(--run-doom-low);stroke:var(--color-bg);stroke-width:.75}
+.run-mode__doom[data-heat="mid"] .cmp-clock__seg--filled{fill:var(--run-doom-mid)}
+.run-mode__doom[data-heat="high"] .cmp-clock__seg--filled{fill:var(--run-doom-high)}
+.run-mode__doom[data-heat="max"] .cmp-clock__seg--filled{fill:var(--run-doom-max)}
+/* heat colors the count + state too, so the center reads danger at a glance */
+.run-mode__doom[data-heat="high"] .run-mode__doom-count,.run-mode__doom[data-heat="max"] .run-mode__doom-count{color:var(--run-doom-high)}
+body.theme-modern .run-mode{--run-doom-mid:#ffa53d;--run-doom-high:#ff6a3d;--run-doom-max:#f5341a}
+body.theme-manuscript .run-mode{--run-doom-low:var(--color-amber);--run-doom-mid:#d2691e;--run-doom-high:#c0341c;--run-doom-max:#8f1f10;--run-doom-empty:#e3e8ec}
+.run-mode__doom-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
+.run-mode__doom-count{font-family:var(--font-display),'Cinzel',serif;font-size:var(--text-display-lg);line-height:1;color:var(--color-ink);font-variant-numeric:tabular-nums}
+.run-mode__doom-count em{font-style:normal;color:var(--color-text-faint);font-size:.5em}
+.run-mode__doom-state{margin-top:6px;font-family:var(--font-mono);font-size:var(--text-label-sm);letter-spacing:.18em;text-transform:uppercase;color:var(--color-text-faint)}
+.run-mode__doom[data-heat="mid"] .run-mode__doom-state{color:var(--run-doom-mid)}
+.run-mode__doom[data-heat="high"] .run-mode__doom-state,.run-mode__doom[data-heat="max"] .run-mode__doom-state{color:var(--run-doom-high)}
+.run-mode__doom-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--space-3);color:var(--color-text-faint);font-size:var(--text-body-sm);line-height:1.5;max-width:30ch;padding:var(--space-6) 0}
+.run-mode__stage-caption{font-size:var(--text-body-sm);color:var(--color-text-muted);line-height:1.55;max-width:40ch}
+.run-mode__stage-caption b{color:var(--color-ink);font-weight:600}
+.run-mode__stage-switch{display:flex;gap:var(--space-2);flex-wrap:wrap;justify-content:center}
+.run-mode__stage-switch button{font-family:var(--font-mono);font-size:var(--text-label-sm);letter-spacing:.04em;color:var(--color-text-muted);padding:7px 12px;border:1px solid var(--color-border-hairline);border-radius:var(--radius-none);background:var(--color-surface);cursor:pointer;min-height:34px;max-width:14ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;transition:border-color var(--duration-instant),color var(--duration-instant)}
+.run-mode__stage-switch button:hover{border-color:var(--ember-color-pale);color:var(--color-ink)}
+.run-mode__stage-switch button.is-active{border-color:var(--ember-color);color:var(--ember-color)}
+.run-mode__stage-controls{display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap;justify-content:center}
+.run-mode__btn{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 var(--space-5);border:1px solid var(--color-border-default);border-radius:var(--radius-none);background:var(--color-surface);font-family:var(--font-body);font-size:var(--text-body-sm);letter-spacing:.02em;color:var(--color-ink);cursor:pointer;transition:background var(--duration-instant),border-color var(--duration-instant)}
+.run-mode__btn:hover{background:var(--color-parchment-warm);border-color:var(--ember-color-pale)}
+.run-mode__btn:active{transform:translateY(1px)}
+.run-mode__btn--primary{background:var(--ember-color);color:var(--color-ink-elevated);border-color:var(--ember-color)}
+.run-mode__btn--primary:hover{background:var(--ember-color-bright);border-color:var(--ember-color-bright)}
+.run-mode__btn-key{font-family:var(--font-mono);font-size:var(--text-label-sm);opacity:.7;border:1px solid currentColor;border-radius:2px;padding:0 4px;line-height:1.5}
+
+/* ═══ RIGHT — THE GM DESK (Ask the NPC · Dice · Oracle) ═══ */
+.run-mode__desk{display:flex;flex-direction:column;gap:var(--space-4)}
+.run-mode__panel{border:1px solid var(--color-border-hairline);border-radius:var(--radius-none);background:var(--color-surface);display:flex;flex-direction:column;overflow:hidden}
+.run-mode__panel-head{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);padding:10px var(--space-4);border-bottom:1px solid var(--color-border-hairline)}
+.run-mode__panel-head h3{font-family:var(--font-mono);font-size:var(--text-label-sm);letter-spacing:.16em;text-transform:uppercase;color:var(--color-text-muted);font-weight:500;margin:0}
+.run-mode__panel-tag{font-family:var(--font-mono);font-size:var(--text-label-sm);letter-spacing:.08em;color:var(--color-text-faint);white-space:nowrap}
+.run-mode__panel-body{padding:var(--space-4)}
+
+/* Ask the NPC — the moat, grounded by Audience.dossier */
+.run-mode__ask-who{display:flex;align-items:center;gap:10px;margin-bottom:var(--space-3)}
+.run-mode__ask-face{width:34px;height:34px;border-radius:var(--radius-none);background:var(--color-parchment-pale);display:grid;place-items:center;font-family:var(--font-display),'Cinzel',serif;font-size:var(--text-body);color:var(--ember-color);border:1px solid var(--color-border-hairline);flex-shrink:0}
+.run-mode__ask-who-main{min-width:0}
+.run-mode__ask-name{font-family:var(--font-display),'Cinzel',serif;font-size:var(--text-body-sm);color:var(--color-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.run-mode__ask-role{font-family:var(--font-mono);font-size:var(--text-label-sm);letter-spacing:.04em;color:var(--color-text-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.run-mode__ask-full{margin-left:auto;font-family:var(--font-mono);font-size:var(--text-label-sm);letter-spacing:.04em;color:var(--color-text-muted);background:transparent;border:none;cursor:pointer;white-space:nowrap;padding:4px 2px}
+.run-mode__ask-full:hover{color:var(--ember-color)}
+.run-mode__ask-field{display:flex;gap:var(--space-2)}
+.run-mode__ask-input{flex:1;min-width:0;min-height:44px;padding:0 12px;background:var(--color-parchment-pale);border:1px solid var(--color-border-hairline);border-radius:var(--radius-none);color:var(--color-ink);font-family:var(--font-body);font-size:var(--text-body-sm)}
+.run-mode__ask-input::placeholder{color:var(--color-text-faint)}
+.run-mode__ask-input:focus{border-color:var(--ember-color-pale);outline:none}
+.run-mode__ask-send{min-height:44px;min-width:48px;padding:0 14px;background:var(--ember-color);color:var(--color-ink-elevated);border:none;border-radius:var(--radius-none);font-family:var(--font-mono);font-size:var(--text-label-sm);letter-spacing:.06em;text-transform:uppercase;cursor:pointer;transition:background var(--duration-instant)}
+.run-mode__ask-send:hover{background:var(--ember-color-bright)}
+.run-mode__ask-send:disabled{opacity:.5;cursor:default}
+.run-mode__ask-suggest{display:flex;flex-wrap:wrap;gap:6px;margin-top:var(--space-3)}
+.run-mode__ask-suggest button{font-family:var(--font-mono);font-size:var(--text-label-sm);letter-spacing:.02em;color:var(--color-text-muted);padding:5px 10px;border:1px solid var(--color-border-hairline);border-radius:var(--radius-none);background:var(--color-parchment-pale);cursor:pointer;transition:border-color var(--duration-instant),color var(--duration-instant)}
+.run-mode__ask-suggest button:hover{border-color:var(--ember-color-pale);color:var(--color-ink)}
+/* the LABELED, SCROLLABLE answer area — a long reply scrolls HERE and never pushes
+   the dice/oracle down. Always shows where the reply lands. */
+.run-mode__ask-out{margin-top:var(--space-4);border-top:1px solid var(--color-border-hairline);padding-top:var(--space-3)}
+.run-mode__ask-out-label{display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);font-family:var(--font-mono);font-size:var(--text-label-sm);letter-spacing:.1em;text-transform:uppercase;color:var(--color-text-faint);margin-bottom:8px}
+.run-mode__ask-answer{max-height:168px;overflow-y:auto;padding:10px 12px;background:var(--color-parchment-pale);border:1px solid var(--color-border-hairline);border-left:3px solid var(--ember-color-pale)}
+.run-mode__ask-q{font-family:var(--font-mono);font-size:var(--text-label-sm);color:var(--color-text-faint);margin-bottom:6px;line-height:1.4}
+.run-mode__ask-voice{font-family:var(--font-display),'Cinzel',serif;font-size:var(--text-body-sm);line-height:1.6;color:var(--color-ink);white-space:pre-wrap;word-break:break-word}
+.run-mode__ask-voice em{color:var(--color-text-faint);font-style:italic;font-family:var(--font-body)}
+.run-mode__ask-meta{display:flex;align-items:center;gap:var(--space-2);margin-top:var(--space-3);flex-wrap:wrap}
+.run-mode__ask-capture{font-family:var(--font-mono);font-size:var(--text-label-sm);letter-spacing:.04em;text-transform:uppercase;color:var(--ember-color);padding:5px 10px;border:1px solid var(--ember-color-pale);border-radius:var(--radius-none);background:var(--ember-glow-soft);cursor:pointer;transition:background var(--duration-instant),color var(--duration-instant)}
+.run-mode__ask-capture:hover{background:var(--ember-color);color:var(--color-ink-elevated)}
+.run-mode__ask-toclock{font-family:var(--font-mono);font-size:var(--text-label-sm);letter-spacing:.04em;text-transform:uppercase;color:var(--color-text-muted);padding:5px 10px;border:1px solid var(--color-border-hairline);border-radius:var(--radius-none);background:transparent;cursor:pointer}
+.run-mode__ask-toclock:hover{border-color:var(--color-crisis);color:var(--color-crisis)}
+
+/* Dice — the readout slams, the set is always fully visible (incl. d20 + d100) */
+.run-mode__dice{display:flex;flex-direction:column;align-items:center;gap:var(--space-3)}
+.run-mode__roll-now{font-family:var(--font-display),'Cinzel',serif;font-size:var(--text-display-lg);line-height:1;color:var(--ember-color);text-align:center;margin:0;min-height:1.15em;font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.run-mode__roll-now.is-crit{color:var(--crit-color,var(--color-tense))}
+.run-mode__roll-now small{display:block;font-family:var(--font-mono);font-size:var(--text-label-sm);color:var(--color-text-faint);font-weight:400;letter-spacing:.08em;text-transform:uppercase;margin-top:var(--space-1)}
+.run-mode__dice-pad{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-2);width:100%}
+.run-mode.is-dice-only .run-mode__dice-pad{grid-template-columns:repeat(4,1fr);gap:var(--space-3)}
+.run-mode__die{background:var(--color-parchment-pale);border:1px solid var(--color-border-default);border-radius:var(--radius-none);color:var(--color-text-muted);cursor:pointer;font-family:var(--font-mono);font-size:var(--text-body-sm);font-variant-numeric:tabular-nums;min-height:48px;display:flex;align-items:center;justify-content:center;transition:border-color var(--duration-instant),color var(--duration-instant),background var(--duration-instant)}
+.run-mode.is-dice-only .run-mode__die{min-height:84px;font-family:var(--font-display),'Cinzel',serif;font-size:var(--text-h1)}
+.run-mode__die:hover{border-color:var(--ember-color-pale);background:var(--color-parchment-warm);color:var(--ember-color-bright)}
 .run-mode__die:active{background:var(--ember-glow-soft)}
-.run-mode__roll-now{font-size:var(--text-display-lg);font-family:var(--font-display),'Cinzel',serif;color:var(--ember-color);text-align:center;margin:0 0 var(--space-4);min-height:1.2em;font-variant-numeric:tabular-nums;letter-spacing:.02em}
-.run-mode__roll-now small{display:block;font-family:var(--font-body);font-size:var(--text-label);color:var(--color-text-faint);font-weight:400;letter-spacing:.05em;text-transform:uppercase;margin-top:var(--space-1)}
-.run-mode__roll-log{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:var(--space-1);max-height:46vh;overflow-y:auto}
-.run-mode__roll-log li{display:flex;align-items:baseline;gap:var(--space-2);padding:var(--space-2) var(--space-3);background:var(--color-surface);border:1px solid var(--color-border-hairline);border-radius:var(--radius-none);font-size:var(--text-body-sm);color:var(--color-text-muted)}
-.run-mode__roll-log .rl-die{font-family:var(--font-mono);color:var(--color-text-faint);min-width:3ch}
-.run-mode__roll-log .rl-result{font-family:var(--font-display),'Cinzel',serif;color:var(--color-gold);font-size:var(--text-body);font-variant-numeric:tabular-nums}
-.run-mode__end{display:flex;flex-direction:column;align-items:center;gap:var(--space-2);padding:var(--space-5) var(--space-6) var(--space-8);flex-shrink:0}
+.run-mode__roll-log{list-style:none;padding:0;margin:var(--space-4) 0 0;display:flex;flex-direction:column;gap:var(--space-1);max-height:26vh;overflow-y:auto}
+.run-mode.is-dice-only .run-mode__roll-log{max-height:46vh}
+.run-mode__roll-log li{display:flex;align-items:baseline;gap:var(--space-2);padding:6px var(--space-3);background:var(--color-parchment-pale);border:1px solid var(--color-border-hairline);border-radius:var(--radius-none);font-size:var(--text-body-sm);color:var(--color-text-muted)}
+.run-mode__roll-log .rl-die{font-family:var(--font-mono);color:var(--color-text-faint);min-width:4ch}
+.run-mode__roll-log .rl-result{margin-left:auto;font-family:var(--font-display),'Cinzel',serif;color:var(--ember-color);font-size:var(--text-body);font-variant-numeric:tabular-nums}
+.run-mode__roll-log-title{font-family:var(--font-mono);font-size:var(--text-label-sm);letter-spacing:.16em;text-transform:uppercase;color:var(--color-text-faint);margin:var(--space-4) 0 0}
+/* DICE-ONLY — collapse to just the big dice pad for fast at-the-table rolling. The
+   Ask/Oracle panels and the desk head step aside; the dice panel takes the stage. */
+.run-mode.is-dice-only .run-mode__region--desk .run-mode__region-head{display:none}
+.run-mode.is-dice-only .run-mode__panel--ask,.run-mode.is-dice-only .run-mode__panel--oracle{display:none}
+.run-mode.is-dice-only .run-mode__region--desk{max-height:none}
+.run-mode.is-dice-only .run-mode__desk{align-items:center;justify-content:flex-start;padding-top:var(--space-8)}
+.run-mode.is-dice-only .run-mode__panel--dice{max-width:760px;width:100%;margin:0 auto}
+.run-mode.is-dice-only .run-mode__roll-now{font-size:calc(var(--text-display-lg) * 1.6)}
+
+/* Oracle — a held question + persistent chaos, resolved through Solo._rollFateChart */
+.run-mode__oracle-verdict{font-family:var(--font-display),'Cinzel',serif;font-size:var(--text-h1);color:var(--color-ink);text-align:center;min-height:1.2em;line-height:1.15}
+.run-mode__oracle-verdict.v-yes{color:var(--color-thriving)}
+.run-mode__oracle-verdict.v-no{color:var(--color-crisis)}
+.run-mode__oracle-verdict.v-strong{color:var(--ember-color)}
+.run-mode__oracle-sub{font-family:var(--font-body);font-size:var(--text-body-sm);color:var(--color-text-muted);text-align:center;min-height:1.3em;font-style:italic;margin-top:4px}
+.run-mode__oracle-twist{font-family:var(--font-body);font-size:var(--text-body-sm);color:var(--ember-color);text-align:center;margin-top:6px;line-height:1.45}
+.run-mode__oracle-q{margin-top:var(--space-3);width:100%;min-height:42px;padding:0 12px;background:var(--color-parchment-pale);border:1px solid var(--color-border-hairline);border-radius:var(--radius-none);color:var(--color-ink);font-family:var(--font-body);font-size:var(--text-body-sm)}
+.run-mode__oracle-q::placeholder{color:var(--color-text-faint)}
+.run-mode__oracle-q:focus{border-color:var(--ember-color-pale);outline:none}
+.run-mode__oracle-odds{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:var(--space-3)}
+.run-mode__oracle-odds button{font-family:var(--font-mono);font-size:var(--text-label-sm);letter-spacing:.04em;color:var(--color-text-muted);padding:8px 4px;border:1px solid var(--color-border-hairline);border-radius:var(--radius-none);background:var(--color-parchment-pale);cursor:pointer;min-height:38px;transition:border-color var(--duration-instant),color var(--duration-instant)}
+.run-mode__oracle-odds button:hover{border-color:var(--ember-color-pale);color:var(--color-ink)}
+.run-mode__oracle-odds button.is-active{border-color:var(--ember-color);color:var(--ember-color);background:var(--ember-glow-soft)}
+.run-mode__chaos{margin-top:var(--space-4)}
+.run-mode__chaos-label{display:flex;justify-content:space-between;align-items:baseline;font-family:var(--font-mono);font-size:var(--text-label-sm);letter-spacing:.1em;text-transform:uppercase;color:var(--color-text-faint);margin-bottom:8px}
+.run-mode__chaos-label .v{color:var(--ember-color);letter-spacing:.04em;font-variant-numeric:tabular-nums}
+.run-mode__chaos-track{display:flex;align-items:center;gap:var(--space-2)}
+.run-mode__chaos-step{width:30px;height:30px;flex-shrink:0;border:1px solid var(--color-border-default);border-radius:var(--radius-none);background:var(--color-parchment-pale);color:var(--color-text-muted);cursor:pointer;font-family:var(--font-mono);font-size:var(--text-body-sm);line-height:1;display:grid;place-items:center;transition:border-color var(--duration-instant),background var(--duration-instant)}
+.run-mode__chaos-step:hover{border-color:var(--ember-color-pale);color:var(--ember-color)}
+.run-mode__chaos-bar{flex:1;height:6px;background:var(--color-parchment-pale);border:1px solid var(--color-border-hairline);position:relative;overflow:hidden}
+.run-mode__chaos-fill{position:absolute;inset:0 auto 0 0;width:var(--_chaos,40%);background:var(--ember-color);transition:width var(--duration-default) ease,background var(--duration-default) ease}
+.run-mode__chaos[data-hot="true"] .run-mode__chaos-fill{background:var(--color-crisis)}
+.run-mode__oracle-ask{margin-top:var(--space-4);width:100%;min-height:44px;border:1px solid var(--ember-color-pale);border-radius:var(--radius-none);background:var(--ember-glow-soft);color:var(--ember-color);font-family:var(--font-mono);font-size:var(--text-body-sm);letter-spacing:.06em;text-transform:uppercase;cursor:pointer;transition:background var(--duration-instant),color var(--duration-instant)}
+.run-mode__oracle-ask:hover{background:var(--ember-color);color:var(--color-ink-elevated)}
+
+/* ── footer: end session ── */
+.run-mode__end{position:relative;z-index:10;display:flex;flex-direction:column;align-items:center;gap:var(--space-2);padding:var(--space-4) var(--space-6) var(--space-5);border-top:1px solid var(--color-border-hairline);background:var(--color-surface);flex-shrink:0}
 .run-mode.is-dice-only .run-mode__end{display:none}
-.run-mode__end-btn{background:var(--color-gold);border:1px solid var(--color-gold);border-radius:var(--radius-none);color:var(--color-ink-elevated);cursor:pointer;font-family:var(--font-display),'Cinzel',serif;font-size:var(--text-h3);letter-spacing:.06em;text-transform:uppercase;padding:18px 48px;min-height:60px;transition:background var(--duration-instant),box-shadow var(--duration-instant)}
-.run-mode__end-btn:hover{background:var(--color-gold-pale);box-shadow:0 0 24px var(--ember-glow)}
-.run-mode__end-note{font-size:var(--text-label-sm);color:var(--color-text-faint);letter-spacing:.03em;text-align:center;max-width:520px}
+.run-mode__end-btn{background:var(--ember-color);border:1px solid var(--ember-color);border-radius:var(--radius-none);color:var(--color-ink-elevated);cursor:pointer;font-family:var(--font-display),'Cinzel',serif;font-size:var(--text-h3);letter-spacing:.06em;text-transform:uppercase;padding:12px 44px;min-height:50px;transition:background var(--duration-instant),box-shadow var(--duration-instant)}
+.run-mode__end-btn:hover{background:var(--ember-color-bright);box-shadow:0 0 24px var(--ember-glow)}
+.run-mode__end-note{font-size:var(--text-label-sm);color:var(--color-text-faint);letter-spacing:.03em;text-align:center;max-width:560px}
+.run-mode__empty{font-size:var(--text-body-sm);color:var(--color-text-faint);padding:var(--space-3) 0;line-height:1.5}
+
+/* ── motion (transform/opacity only; disabled under reduced-motion below) ── */
+@media (prefers-reduced-motion:no-preference){
+  .run-mode__pip-dot{animation:run-pip 2.6s ease-in-out infinite}
+  @keyframes run-pip{0%,100%{box-shadow:0 0 0 0 var(--ember-glow)}50%{box-shadow:0 0 0 4px transparent}}
+  .run-mode__doom[data-heat="high"] .run-mode__doom-count,.run-mode__doom[data-heat="max"] .run-mode__doom-count{animation:run-doom-pulse 1.9s ease-in-out infinite}
+  @keyframes run-doom-pulse{0%,100%{opacity:1}50%{opacity:.74}}
+  .run-mode__roll-now.is-slam{animation:run-slam .26s cubic-bezier(0.16,1,0.3,1)}
+  @keyframes run-slam{0%{transform:scale(1.16);opacity:.5}60%{transform:scale(.97)}100%{transform:scale(1)}}
+  .run-mode__oracle-verdict.is-in{animation:run-fade-up var(--duration-default) cubic-bezier(0.16,1,0.3,1)}
+  @keyframes run-fade-up{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  .run-mode__ask-voice.is-in{animation:run-fade-up var(--duration-default) cubic-bezier(0.16,1,0.3,1)}
+}
+
+/* ── responsive: stage column drops the desk underneath; below tablet, cast collapses ── */
+@media (max-width:1180px){
+  .run-mode__grid{grid-template-columns:minmax(280px,320px) minmax(320px,1fr) minmax(340px,380px)}
+}
+@media (max-width:1024px){
+  .run-mode__grid{grid-template-columns:minmax(260px,300px) 1fr;grid-template-rows:1fr}
+  .run-mode__region--desk{grid-column:1 / -1;border-top:1px solid var(--color-border-hairline);max-height:46vh}
+  .run-mode.is-dice-only .run-mode__grid{grid-template-columns:1fr}
+}
+@media (max-width:760px){
+  .run-mode__grid{grid-template-columns:1fr;grid-auto-rows:auto}
+  .run-mode__region{max-height:none}
+  .run-mode__region--cast{max-height:30vh}
+  .run-mode__region--desk{max-height:none}
+  .run-mode__header{flex-wrap:wrap;height:auto;padding:var(--space-2) var(--space-4)}
+  .run-mode__session{display:none}
+}
 /* ── CANON QUICK-CHIPS (P4.2) — post-save summary -> tappable chips ───────── */
 .canon-chips{display:none;margin:0 var(--space-5) var(--space-4);padding:var(--space-4);background:var(--color-parchment-pale);border:1px solid var(--ember-color);border-radius:var(--radius-none)}
 .canon-chips.is-open{display:block}
@@ -3404,8 +3595,6 @@ SECTION 7: MOTION & STATE STYLES
 .canon-chip__dismiss{flex-shrink:0;background:transparent;border:none;border-left:1px solid var(--color-gold-pale);color:var(--color-text-faint);cursor:pointer;width:40px;font-size:18px;line-height:1;padding:0;transition:background var(--duration-instant),color var(--duration-instant)}
 .canon-chip__dismiss:hover{background:var(--color-parchment-warm);color:var(--ember-color)}
 .canon-chips__count{margin-top:var(--space-3);font-size:var(--text-label-sm);color:var(--color-text-faint);letter-spacing:.04em;font-variant-numeric:tabular-nums}
-.run-mode__empty{font-size:var(--text-body-sm);color:var(--color-text-faint);padding:var(--space-3) 0;line-height:1.5}
-@media (max-width:1080px){.run-mode__grid{grid-template-columns:1fr;max-width:760px}}
 /* ─── FRONTS PANEL ─── */
 .fronts-list{padding:0 0 80px}
 .front-card{background:var(--color-parchment-warm);border:1px solid var(--color-border-hairline);border-radius:8px;padding:16px;margin:12px 16px;display:grid;grid-template-columns:80px 1fr;gap:12px;align-items:start}
@@ -5647,7 +5836,11 @@ const Solo={
   setChaosFactor(v){
     const n=State.get();
     if(!n)return;
-    const clamped=Math.max(1,Math.min(9,parseInt(v,10)||5));
+    // Parse once; only a non-numeric value falls back to neutral 5. A real 0 (or any
+    // out-of-range int) must reach the Math.max/min clamp — using `||5` here turned a
+    // legitimate 0 into 5 (0 is falsy), so the cockpit's "−" at chaos 1 jumped to 5.
+    const _p=parseInt(v,10);
+    const clamped=Math.max(1,Math.min(9,Number.isFinite(_p)?_p:5));
     if(!n.metadata)n.metadata={};
     n.metadata.chaosFactor=clamped;
     State.pushUndo();
@@ -11006,6 +11199,98 @@ const Audience={
     lines.push(`- You CANNOT know anything not written above. Do not invent secrets, future events, or hidden plots. If you don't know, say so in character.`);
     lines.push(`- Keep replies short — a few sentences, the way a person speaks in a room.`);
     return lines.join('\n');
+  },
+
+  // ── INLINE ASK (P4.x Run Mode) — the moat, served compactly to the cockpit's Ask panel.
+  //    Reuses the SAME pure grounding (dossier + _buildSystemPrompt) and the SAME provider-aware
+  //    streaming shape as _send, but is DOM-decoupled (callbacks instead of #aud-* nodes) so the
+  //    Run-Mode desk can stream a reply into its own scrollable answer box. FAIL-CLOSED: grants is
+  //    always [] here (no inline grant UI), so the NPC speaks only from public history — never a
+  //    secret. The deep audience (grants, transcript, make-canon) stays at Audience.open(npcId).
+  //    cbs: { onToken(acc), onDone(text), onError(msg) }. Returns false fast if it cannot run.
+  askInline(npcId, text, cbs){
+    cbs = cbs || {};
+    const fail = m => { if(typeof cbs.onError === 'function') cbs.onError(m); return false; };
+    const n = State.get();
+    if(!n) return fail('Open a realm first.');
+    const npc = (n.characters || []).find(c => c && c.id === npcId);
+    if(!npc) return fail('That character is not in the world yet.');
+    const q = String(text || '').trim();
+    if(!q) return fail('Type a question first.');
+    if(!(typeof Copilot !== 'undefined' && Copilot.isConfigured && Copilot.isConfigured())){
+      return fail('AI is off. Add a key in Settings → Copilot, or open the full audience to print this character’s dossier and voice them yourself.');
+    }
+    // Grounding: dossier (no grants) → system prompt, built from it ALONE.
+    const d = this.dossier(n, npcId, []);
+    const systemPrompt = this._buildSystemPrompt(d);
+    // Persist the GM turn so the inline ask and the full audience share one transcript.
+    this._appendLog(npc, 'gm', q);
+    State._touch(n.id); State.persist();
+    // Provider-aware URL/headers/model — mirrors _send / Copilot.send.
+    const settings = (State.data && State.data.meta && State.data.meta.settings) || {};
+    const provider = settings.copilotProvider || 'openrouter';
+    let url, headers, model;
+    if(provider === 'ollama'){
+      url = `${(settings.ollamaUrl || 'http://localhost:11434').replace(/\/$/, '')}/v1/chat/completions`;
+      headers = { 'Content-Type': 'application/json' };
+      model = settings.ollamaModel || 'llama3.1';
+    } else {
+      url = 'https://openrouter.ai/api/v1/chat/completions';
+      headers = { 'Authorization': `Bearer ${settings.copilotKey}`, 'Content-Type': 'application/json',
+        'HTTP-Referer': window.location.origin || 'https://realmwright.app', 'X-Title': 'RealmWright' };
+      model = settings.copilotModel || 'anthropic/claude-sonnet-latest';
+    }
+    const history = this._logFor(npc)
+      .filter(m => m.role === 'gm' || m.role === 'npc')
+      .map(m => ({ role: m.role === 'gm' ? 'user' : 'assistant', content: String(m.content || '') }));
+    const messages = [{ role: 'system', content: systemPrompt }, ...history];
+    (async () => {
+      let acc = '';
+      try{
+        const body = { model, messages, stream: true, max_tokens: 600,
+          ...((Copilot && Copilot._reasoningParamFor) ? Copilot._reasoningParamFor(model) : {}) };
+        const resp = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
+        if(!resp.ok){
+          let t = `HTTP ${resp.status}`;
+          try{ const j = await resp.json(); t = (j && j.error && (j.error.message || j.error)) || t; }catch(e){}
+          if(resp.status === 401) t = 'Invalid API key. Check Settings → Copilot.';
+          else if(resp.status === 402) t = 'Out of credits. Top up at openrouter.ai/credits.';
+          else if(resp.status === 429) t = 'Rate limited — wait a moment and retry.';
+          throw new Error(t);
+        }
+        const reader = resp.body.getReader();
+        const dec = new TextDecoder();
+        let buf = '';
+        while(true){
+          const { done, value } = await reader.read();
+          if(done) break;
+          buf += dec.decode(value, { stream: true });
+          const ls = buf.split('\n'); buf = ls.pop() || '';
+          for(const raw of ls){
+            const line = raw.trim();
+            if(!line || line.startsWith(':') || !line.startsWith('data:')) continue;
+            const data = line.slice(5).trim();
+            if(data === '[DONE]') continue;
+            try{
+              const p = JSON.parse(data);
+              const ch0 = p.choices && p.choices[0];
+              const delta = ch0 && ch0.delta;
+              if(delta && typeof delta.content === 'string' && delta.content.length){
+                acc += delta.content;
+                if(typeof cbs.onToken === 'function') cbs.onToken(acc);
+              }
+            }catch(e){}
+          }
+        }
+        // Persist the NPC's reply into the SAME transcript the full audience reads.
+        this._appendLog(npc, 'npc', acc);
+        State._touch(n.id); State.persist();
+        if(typeof cbs.onDone === 'function') cbs.onDone(acc);
+      }catch(e){
+        if(typeof cbs.onError === 'function') cbs.onError(e.message || 'The character could not answer.');
+      }
+    })();
+    return true;
   },
 
   // ── PERSISTENCE: per-NPC log on the character object. Rides {...c} on export→import (buildNationFromSeed
@@ -17314,7 +17599,7 @@ Return ONLY JSON: {"suggestions":[{"slot":"...","severity":"...","text":"..."}]}
 // (code-health rule: keep Run Mode's listeners in its own module, like Campaign/Tonight).
 const RunMode={
   // The dice this cockpit offers. Polyhedral set; pure-rolled, no wagering.
-  _DICE:[4,6,8,10,12,20],
+  _DICE:[4,6,8,10,12,20,100],
   _ROLL_LOG_CAP:100,
   _wired:false,
 
@@ -17413,7 +17698,14 @@ const RunMode={
     // Trivial commit: a dice roll is not undo-worthy and shouldn't spam the rail.
     State.cpSetText&&State.cpSetText('runRollLogTouch',Date.now());
     const now=document.getElementById('run-roll-now');
-    if(now)now.innerHTML=`${value}<small>d${n}</small>`;
+    if(now){
+      now.innerHTML=`${value}<small>d${n}</small>`;
+      // Re-trigger the slam pop (the CSS keyframe is gated under prefers-reduced-motion:
+      // no-preference, so this is inert when the GM has reduced motion on).
+      now.classList.remove('is-slam');void now.offsetWidth;now.classList.add('is-slam');
+    }
+    const lastTag=document.getElementById('run-dice-last');
+    if(lastTag)lastTag.textContent=`d${n} → ${value}`;
     this._renderRollLog();
     return value;
   },
@@ -17499,41 +17791,217 @@ const RunMode={
     this._renderCanonChips();
   },
 
+  // ── COCKPIT STATE (in-memory, per open) ──────────────────────────────────
+  //   _focusClockId : which clock the stage shows + the controls/oracle/ask push.
+  //   _askNpcId     : the cp().npcs id selected on the left → targets the Ask panel.
+  //   _odds         : Solo odds index for the oracle (2 Unlikely / 3 50-50 / 5 Likely).
+  //   _asking       : a reply is streaming (one at a time).
+  _focusClockId:null,
+  _askNpcId:null,
+  _odds:3,
+  _asking:false,
+
+  // Chaos lives in the WORLD, not here — reuse the persistent per-nation factor the
+  // Solo oracle already keeps (State.get().metadata.chaosFactor, 1..9, default 5). So
+  // it carries across the whole session and rises/falls; it does not reset each consult.
+  _chaos(){
+    const n=(typeof State!=='undefined'&&State.get)?State.get():null;
+    const v=(n&&n.metadata&&n.metadata.chaosFactor!=null)?n.metadata.chaosFactor:5;
+    const p=parseInt(v,10);
+    return Math.max(1,Math.min(9,Number.isFinite(p)?p:5));
+  },
+  _setChaos(v){
+    // `||5` would coerce a real 0 to 5 (0 is falsy); keep 0 so the floor clamps it to 1.
+    const p=parseInt(v,10);
+    const c=Math.max(1,Math.min(9,Number.isFinite(p)?p:5));
+    // Prefer the shipped setter so Solo's own panel stays in sync and it persists.
+    if(typeof Solo!=='undefined'&&Solo.setChaosFactor){Solo.setChaosFactor(c);}
+    else{const n=State.get&&State.get();if(n){if(!n.metadata)n.metadata={};n.metadata.chaosFactor=c;State.persist&&State.persist();}}
+    this._renderOracle();
+  },
+  _CHAOS_WORD:{1:'Calm',2:'Calm',3:'Settled',4:'Charged',5:'Charged',6:'Volatile',7:'Volatile',8:'Unbound',9:'Unbound'},
+
+  // Heat label from fill ratio — drives the orange-red intensify on the doom clock.
+  _heat(filled,size){
+    if(!size)return 'low';
+    const r=filled/size;
+    if(filled>=size)return 'max';
+    if(r>=0.75)return 'high';
+    if(r>=0.5)return 'mid';
+    return 'low';
+  },
+  _focusClock(){
+    const clocks=State.cp().clocks||[];
+    if(!clocks.length)return null;
+    let c=clocks.find(x=>x&&x.id===this._focusClockId);
+    if(!c){c=clocks[0];this._focusClockId=c.id;}
+    return c;
+  },
+
   // ── RENDER ──
   render(){
     if(!this.isOpen())return;
-    this._renderClocks();
+    this._renderSessionName();
+    this._renderCast();
+    this._renderClocks();      // the doom stage (kept name: bind/cp:changed call this)
     this._renderSecrets();
     this._renderDicePad();
     this._renderRollLog();
+    this._renderAsk();
+    this._renderOracle();
   },
 
+  _renderSessionName(){
+    const el=document.getElementById('run-ses-name');if(!el)return;
+    const n=(typeof State!=='undefined'&&State.get)?State.get():null;
+    el.textContent=(n&&n.name)?n.name:'Session in progress';
+  },
+
+  // LEFT — the cast present tonight. Sourced from cp().npcs (the GM's prepped roster);
+  // each maps to a real world character via linkedCharacterId for the grounded Ask.
+  _renderCast(){
+    const host=document.getElementById('run-cast');if(!host)return;
+    const cp=State.cp();const E=Utils.escHtml;
+    const n=(typeof State!=='undefined'&&State.get)?State.get():null;
+    const chars=(n&&Array.isArray(n.characters))?n.characters:[];
+    // Present tonight first; within that, keep prep order. If none flagged present, show all.
+    let cast=(cp.npcs||[]).filter(x=>x&&(x.name||x.role));
+    const present=cast.filter(x=>x.here);
+    if(present.length)cast=present;
+    const countEl=document.getElementById('run-cast-count');
+    if(countEl)countEl.textContent=cast.length?`${cast.length} present`:'none';
+    if(!cast.length){
+      host.innerHTML=`<div class="run-mode__empty">No cast yet. Add the people at tonight's table in Campaign prep — mark who's present — and they appear here to question live.</div>`;
+      this._askNpcId=null;
+      return;
+    }
+    if(!cast.find(x=>x.id===this._askNpcId))this._askNpcId=null;
+    host.innerHTML=cast.map(npc=>{
+      const ch=npc.linkedCharacterId?chars.find(c=>c&&c.id===npc.linkedCharacterId):null;
+      const nm=(npc.name||(ch&&ch.name)||'Unnamed').trim();
+      const role=(npc.role||(ch&&ch.role)||'').trim();
+      const initial=(nm.replace(/[^\p{L}\p{N}]/u,'').charAt(0)||'·').toUpperCase();
+      const stance=this._stanceColor(ch,n);
+      const active=npc.id===this._askNpcId?' is-active':'';
+      const grounded=ch?'':' title="Not linked to a world character — link them in prep to ask them live"';
+      return `<button class="run-mode__npc${active}" type="button" data-npc="${E(npc.id)}"${grounded}>
+        <span class="run-mode__npc-face">${E(initial)}</span>
+        <span class="run-mode__npc-main">
+          <span class="run-mode__npc-name">${E(nm)}</span>
+          <span class="run-mode__npc-role">${E(role||'—')}</span>
+        </span>
+        <span class="run-mode__npc-stance" style="--_stance:${stance}"></span>
+      </button>`;
+    }).join('');
+  },
+  // Stance color from the linked character's faction position (reuses the world's own
+  // status palette). No faction → neutral. Pure read; never throws.
+  _stanceColor(ch,n){
+    try{
+      if(!ch||!n)return 'var(--color-text-faint)';
+      const f=(n.factions||[]).find(x=>x&&x.id===ch.factionId);
+      const pos=(f&&f.position)||'';
+      const map={thriving:'var(--color-thriving)',ascendant:'var(--color-thriving)',rising:'var(--color-thriving)',
+        holding:'var(--color-text-faint)',stable:'var(--color-stable)',
+        strained:'var(--color-tense)',declining:'var(--color-tense)',waning:'var(--color-tense)',
+        crisis:'var(--color-crisis)',collapsing:'var(--color-crisis)',hostile:'var(--color-crisis)'};
+      return map[pos]||'var(--color-text-faint)';
+    }catch(e){return 'var(--color-text-faint)';}
+  },
+
+  // CENTER — the doom clock stage. Renders into #run-clocks (kept id). One focused
+  // clock at a time (the anchor); a switcher row lets the GM pick which threat is on
+  // stage. The ring is the reused Campaign._clockSVG; heat re-skins it to danger.
   _renderClocks(){
     const host=document.getElementById('run-clocks');if(!host)return;
     const cp=State.cp();const E=Utils.escHtml;
     const clocks=cp.clocks||[];
+    const chip=document.getElementById('run-clock-chip');
     if(!clocks.length){
-      host.innerHTML=`<div class="run-mode__empty">No clocks yet. Build them in Campaign prep, then tick them here as the night moves.</div>`;
+      if(chip)chip.textContent='no clocks';
+      host.innerHTML=`<div class="run-mode__doom-empty">
+        <div class="run-mode__stage-eyebrow">The stage is clear</div>
+        <div>No threats are ticking. Build a clock in Campaign prep — a flood, a hunt, a deadline — and it takes the stage here, the through-line for the whole night.</div>
+      </div>`;
       return;
     }
-    // Reuse Campaign._clockSVG verbatim - same geometry, same data-seg semantics.
+    const c=this._focusClock();
+    const heat=this._heat(c.filled,c.size);
+    if(chip)chip.textContent=`${c.filled} / ${c.size} filled`;
     const svg=(typeof Campaign!=='undefined'&&Campaign._clockSVG)?Campaign._clockSVG.bind(Campaign):null;
-    host.innerHTML=clocks.map(c=>{
-      const ring=svg?svg(c.size,c.filled):`${c.filled}/${c.size}`;
-      return `<div class="run-mode__clock" data-clock="${E(c.id)}">
-        <div class="cmp-clock__svg-wrap" data-clock-svg="${E(c.id)}" title="Click a segment to advance this threat">${ring}</div>
-        <div>
-          <div class="run-mode__clock-name">${E(c.name||'Threat')}</div>
-          <div class="run-mode__clock-count">${c.filled}/${c.size} filled</div>
+    const ring=svg?svg(c.size,c.filled):`${c.filled}/${c.size}`;
+    const stateWord=heat==='max'?'Broken':heat==='high'?'Breaking':heat==='mid'?'Rising':'Building';
+    const remaining=c.size-c.filled;
+    let caption;
+    if(c.filled>=c.size){caption='The clock is full. <b>It happens now.</b> Make the table feel the turn.';}
+    else if(heat==='high'){caption=`<b>${remaining} segment left.</b> Every choice costs something now.`;}
+    else{caption=`${remaining} segment${remaining>1?'s':''} remain. Advance it when the table burns time or pushes their luck.`;}
+    const switcher=clocks.length>1?`<div class="run-mode__stage-switch" id="run-clock-switch">`+
+      clocks.map(k=>`<button type="button" data-focus="${E(k.id)}" class="${k.id===c.id?'is-active':''}" title="${E(k.name||'Threat')}">${E(k.name||'Threat')}</button>`).join('')+
+      `</div>`:'';
+    host.innerHTML=`
+      <div class="run-mode__stage-eyebrow">The Doom Clock</div>
+      <div class="run-mode__stage-title">${E(c.name||'Threat')}</div>
+      <div class="run-mode__doom" data-heat="${heat}">
+        <div class="cmp-clock__svg-wrap" data-clock-svg="${E(c.id)}" title="Click a segment to set the clock">${ring}</div>
+        <div class="run-mode__doom-center">
+          <div class="run-mode__doom-count">${c.filled}<em>/${c.size}</em></div>
+          <div class="run-mode__doom-state">${stateWord}</div>
         </div>
-      </div>`;
-    }).join('');
+      </div>
+      <p class="run-mode__stage-caption">${caption}</p>
+      <div class="run-mode__stage-controls">
+        <button class="run-mode__btn run-mode__btn--primary" id="run-doom-advance" type="button"><span>Advance</span><span class="run-mode__btn-key">A</span></button>
+        <button class="run-mode__btn" id="run-doom-ease" type="button">Ease back</button>
+        <button class="run-mode__btn" id="run-doom-reveal" type="button"><span>Reveal a secret</span><span class="run-mode__btn-key">R</span></button>
+      </div>
+      ${switcher}`;
+  },
+
+  // Advance / ease the FOCUSED clock by one segment (routes through the shipped
+  // State.cpSetClockSeg so undo + persistence + cp:changed all fire as normal).
+  advanceFocus(){
+    const c=this._focusClock();if(!c)return;
+    if(c.filled>=c.size){showToast('That clock is already full.',[],2000);return;}
+    State.cpSetClockSeg(c.id,c.filled+1);   // fires cp:changed → render()
+    if(c.filled+1>=c.size)showToast('The clock is full — it happens now.',[],2500);
+  },
+  easeFocus(){
+    const c=this._focusClock();if(!c)return;
+    if(c.filled<=0)return;
+    // cpSetClockSeg toggles down when seg===filled; setting to filled-1 eases by one.
+    State.cpSetClockSeg(c.id,c.filled-1);
+  },
+
+  // Deliver the next undelivered secret to the table — flips it in the bank (the real
+  // toggle) and surfaces it as a toast so the GM has the line in front of them.
+  revealNextSecret(){
+    const cp=State.cp();
+    const secrets=cp.secrets||[];
+    const next=secrets.find(s=>s&&!s.delivered);
+    if(!next){showToast('Every staged secret is already out.',[],2500);return;}
+    State.cpToggleSecret(next.id);   // fires cp:changed → re-render
+    const txt=(next.text||'').trim()||'(untitled secret)';
+    showToast('Revealed: '+(txt.length>90?txt.slice(0,88)+'…':txt),[],5000);
+  },
+
+  // Open the full audience for the focused NPC — the deep surface (grant secrets, full
+  // transcript, make-canon). Reuses the shipped Audience.open(realCharacterId).
+  openFullAudience(){
+    const cp=State.cp();
+    const npc=(cp.npcs||[]).find(x=>x&&x.id===this._askNpcId);
+    if(!npc||!npc.linkedCharacterId){showToast('Link this person to a world character to open their audience.',[],3500);return;}
+    if(typeof Audience==='undefined'||!Audience.open){showToast('Audience unavailable.',[],3000);return;}
+    Audience.open(npc.linkedCharacterId);
   },
 
   _renderSecrets(){
     const host=document.getElementById('run-secrets');if(!host)return;
     const cp=State.cp();const E=Utils.escHtml;
     const secrets=cp.secrets||[];
+    const countEl=document.getElementById('run-secret-count');
+    const delivered=secrets.filter(s=>s&&s.delivered).length;
+    if(countEl)countEl.textContent=secrets.length?`${delivered}/${secrets.length}`:'none';
     if(!secrets.length){
       host.innerHTML=`<div class="run-mode__empty">No secrets staged. Stock the bank in Campaign prep, then check them off here when the table earns them.</div>`;
       return;
@@ -17556,9 +18024,160 @@ const RunMode={
     const host=document.getElementById('run-roll-log');if(!host)return;
     const cp=State.cp();const E=Utils.escHtml;
     const log=cp.runRollLog||[];
-    if(!log.length){host.innerHTML='';return;}
+    if(!log.length){host.innerHTML=`<li style="justify-content:center;color:var(--color-text-faint)">No rolls yet tonight.</li>`;return;}
     host.innerHTML=log.map(r=>`<li><span class="rl-die">${E(r.die||'')}</span><span class="rl-result">${E(String(r.value))}</span></li>`).join('');
   },
+
+  // ── RIGHT — ASK THE NPC (the moat). Selecting a cast member targets this panel;
+  //    a question streams a grounded, fail-closed reply into the scrollable answer box. ──
+  _ASK_SUGGEST:['What do you want from us?','Who profits if this goes wrong?','What are you not telling me?'],
+  selectNpc(npcId){
+    const cp=State.cp();
+    const npc=(cp.npcs||[]).find(x=>x&&x.id===npcId);
+    if(!npc)return;
+    this._askNpcId=npcId;
+    // repaint cast active state without a full rebuild flicker
+    document.querySelectorAll('#run-cast .run-mode__npc').forEach(b=>b.classList.toggle('is-active',b.dataset.npc===npcId));
+    this._renderAsk(true);
+    const input=document.getElementById('run-ask-input');
+    if(input&&!input.disabled){try{input.focus();}catch(e){}}
+  },
+  _renderAsk(resetOut){
+    const E=Utils.escHtml;
+    const cp=State.cp();
+    const n=(typeof State!=='undefined'&&State.get)?State.get():null;
+    const npc=(cp.npcs||[]).find(x=>x&&x.id===this._askNpcId)||null;
+    const ch=(npc&&npc.linkedCharacterId&&n)?(n.characters||[]).find(c=>c&&c.id===npc.linkedCharacterId):null;
+    const faceEl=document.getElementById('run-ask-face');
+    const nameEl=document.getElementById('run-ask-name');
+    const roleEl=document.getElementById('run-ask-role');
+    const input=document.getElementById('run-ask-input');
+    const send=document.getElementById('run-ask-send');
+    const sugg=document.getElementById('run-ask-suggest');
+    const full=document.getElementById('run-ask-full');
+    const tag=document.getElementById('run-ask-tag');
+    if(!npc){
+      if(faceEl)faceEl.textContent='·';
+      if(nameEl)nameEl.textContent='Tap someone on the left';
+      if(roleEl)roleEl.textContent='to speak with them';
+      if(input){input.disabled=true;input.value='';input.placeholder='Select a character first…';}
+      if(send)send.disabled=true;
+      if(sugg)sugg.innerHTML='';
+      if(full)full.hidden=true;
+      if(tag)tag.textContent='in character';
+      return;
+    }
+    const nm=(npc.name||(ch&&ch.name)||'Unnamed').trim();
+    const role=(npc.role||(ch&&ch.role)||'').trim();
+    const initial=(nm.replace(/[^\p{L}\p{N}]/u,'').charAt(0)||'·').toUpperCase();
+    if(faceEl)faceEl.textContent=initial;
+    if(nameEl)nameEl.textContent=nm;
+    if(roleEl)roleEl.textContent=role||'—';
+    const linked=!!ch;
+    if(input){input.disabled=!linked;input.placeholder=linked?`Ask ${nm.split(' ')[0]} anything…`:'Link this person to a world character to ask them';}
+    if(send)send.disabled=!linked;
+    if(full){full.hidden=!linked;}
+    if(tag)tag.textContent=linked?'grounded · public-only':'not linked';
+    if(sugg){sugg.style.display='';sugg.innerHTML=linked?this._ASK_SUGGEST.map(q=>`<button type="button" data-ask-q="${E(q)}">${E(q)}</button>`).join(''):'';}
+    if(resetOut){const out=document.getElementById('run-ask-out');if(out)out.hidden=true;}
+  },
+  sendAsk(qText){
+    const E=Utils.escHtml;
+    if(this._asking){showToast('A reply is already coming in.',[],2000);return;}
+    const cp=State.cp();
+    const npc=(cp.npcs||[]).find(x=>x&&x.id===this._askNpcId);
+    if(!npc){showToast('Select a character on the left first.',[],2500);return;}
+    if(!npc.linkedCharacterId){showToast('Link this person to a world character (in prep) to ask them live.',[],3500);return;}
+    const input=document.getElementById('run-ask-input');
+    const q=String(qText||(input&&input.value)||'').trim();
+    if(!q){if(input)input.focus();return;}
+    const out=document.getElementById('run-ask-out');
+    const qEl=document.getElementById('run-ask-q');
+    const voiceEl=document.getElementById('run-ask-voice');
+    const statusEl=document.getElementById('run-ask-status');
+    const metaEl=document.getElementById('run-ask-meta');
+    const send=document.getElementById('run-ask-send');
+    const sugg=document.getElementById('run-ask-suggest');
+    if(sugg)sugg.style.display='none';   // collapse prompts once an answer is in flight
+    if(out)out.hidden=false;
+    if(metaEl)metaEl.hidden=true;
+    if(qEl)qEl.innerHTML=`“${E(q)}”`;
+    if(voiceEl){voiceEl.classList.remove('is-in');voiceEl.innerHTML=`<em>thinking…</em>`;}
+    if(statusEl)statusEl.textContent='…';
+    if(input)input.value='';
+    this._asking=true;
+    if(send)send.disabled=true;
+    const stop=()=>{this._asking=false;if(send)send.disabled=false;};
+    const started=Audience.askInline(npc.linkedCharacterId,q,{
+      onToken:acc=>{if(voiceEl)voiceEl.textContent=acc;const ans=document.getElementById('run-ask-answer');if(ans)ans.scrollTop=ans.scrollHeight;},
+      onDone:text=>{
+        if(voiceEl){voiceEl.textContent=text;voiceEl.classList.add('is-in');}
+        if(statusEl)statusEl.textContent='';
+        if(metaEl)metaEl.hidden=false;
+        this._lastAsk={npc:(npc.name||'').trim(),q,text};
+        stop();
+      },
+      onError:msg=>{
+        if(voiceEl){voiceEl.innerHTML=`<em>${E(msg)}</em>`;}
+        if(statusEl)statusEl.textContent='';
+        if(metaEl)metaEl.hidden=true;
+        stop();
+      },
+    });
+    if(started===false){stop();}
+  },
+  // Push the last answer to canon: seed the inscribe form (review-before-commit), same
+  // path the canon chips use. Nothing auto-commits.
+  _askToCanon(){
+    const a=this._lastAsk;if(!a||!a.text){showToast('No answer to save yet.',[],2000);return;}
+    if(typeof Modals==='undefined'||!Modals.open){showToast('Inscribe form unavailable.',[],3000);return;}
+    if(!State.get()){showToast('No active realm.',[],3000);return;}
+    Modals.open('manual-event');
+    const line=`${a.npc?a.npc+': ':''}“${a.text}”`;
+    const nameEl=document.getElementById('ev-name');if(nameEl)nameEl.value=(a.npc?a.npc+' speaks':'NPC speaks');
+    const descEl=document.getElementById('ev-desc');if(descEl)descEl.value=line;
+    const typeEl=document.getElementById('ev-type');if(typeEl)typeEl.value='Political';
+    const visEl=document.getElementById('ev-vis');if(visEl)visEl.value='public';
+    const errEl=document.getElementById('ev-name-err');if(errEl)errEl.textContent='';
+  },
+
+  // ── RIGHT — ORACLE. A held question + the persistent world chaos factor, resolved
+  //    through the shipped Solo._rollFateChart (Mythic-style). Each consult is its own
+  //    roll; the question + carried chaos are what make consecutive consults feel like
+  //    one evolving session. Higher chaos widens "Yes" and fires more twists. ──
+  _renderOracle(){
+    const chaos=this._chaos();
+    const valEl=document.getElementById('run-chaos-val');
+    if(valEl)valEl.textContent=`${this._CHAOS_WORD[chaos]} · ${chaos}`;
+    const fill=document.getElementById('run-chaos-fill');
+    if(fill)fill.style.setProperty('--_chaos',((chaos-1)/8*100)+'%');
+    const wrap=document.querySelector('.run-mode__chaos');
+    if(wrap)wrap.setAttribute('data-hot',chaos>=7?'true':'false');
+    document.querySelectorAll('#run-oracle-odds button').forEach(b=>b.classList.toggle('is-active',parseInt(b.dataset.odds,10)===this._odds));
+  },
+  consultOracle(){
+    const E=Utils.escHtml;
+    if(typeof Solo==='undefined'||!Solo._rollFateChart){showToast('Oracle engine unavailable.',[],3000);return;}
+    const chaos=this._chaos();
+    const res=Solo._rollFateChart(this._odds,chaos);   // {result, roll, ceiling, randomEvent}
+    const vEl=document.getElementById('run-oracle-verdict');
+    const subEl=document.getElementById('run-oracle-sub');
+    const twEl=document.getElementById('run-oracle-twist');
+    const qInput=document.getElementById('run-oracle-q');
+    const q=(qInput&&qInput.value||'').trim();
+    let label,cls;
+    if(res.result==='ExceptionalYes'){label='Yes, and…';cls='v-yes';}
+    else if(res.result==='Yes'){label='Yes';cls='v-yes';}
+    else if(res.result==='ExceptionalNo'){label='No, and…';cls='v-no';}
+    else{label='No';cls='v-no';}
+    if(vEl){vEl.className='run-mode__oracle-verdict '+cls;vEl.textContent=label;
+      vEl.classList.remove('is-in');void vEl.offsetWidth;vEl.classList.add('is-in');}
+    if(subEl)subEl.textContent=q?`“${q}”`:`odds ${this._oddsWord()} · chaos ${chaos}`;
+    if(twEl)twEl.textContent=res.randomEvent?'A twist breaks in — something unasked-for happens.':'';
+  },
+  _oddsWord(){return this._odds===2?'unlikely':this._odds===5?'likely':'even';},
+
+  _renderClocksLegacyNoop(){/* placeholder kept intentionally empty */},
 
   // BIND - all Run Mode wiring lives here (called from bootstrap, NOT the monolith).
   bind(){
@@ -17576,32 +18195,76 @@ const RunMode={
     document.getElementById('run-dice-toggle')?.addEventListener('click',()=>this.toggleDiceOnly());
     document.getElementById('run-end-session')?.addEventListener('click',()=>this.endSession());
 
-    // Delegated clicks inside the cockpit: clock segments, secret toggles, dice.
+    // Delegated clicks across the whole cockpit. One handler; first match wins.
     const root=document.getElementById('run-mode');
     if(root){
       root.addEventListener('click',e=>{
+        // dice
         const die=e.target.closest('[data-die]');
         if(die){this.roll(die.dataset.die);return;}
+        // clock segment (works on the doom stage's reused ring)
         const seg=e.target.closest('.cmp-clock__seg');
         if(seg){
           const wrap=seg.closest('[data-clock-svg]');
-          if(wrap){State.cpSetClockSeg(wrap.dataset.clockSvg,parseInt(seg.dataset.seg,10));this._renderClocks();}
+          if(wrap){State.cpSetClockSeg(wrap.dataset.clockSvg,parseInt(seg.dataset.seg,10));}
           return;
         }
+        // secret toggle
         const sec=e.target.closest('.run-mode__secret');
-        if(sec&&sec.dataset.secret){State.cpToggleSecret(sec.dataset.secret);this._renderSecrets();return;}
+        if(sec&&sec.dataset.secret){State.cpToggleSecret(sec.dataset.secret);return;}
+        // cast → target the Ask panel
+        const npcBtn=e.target.closest('.run-mode__npc');
+        if(npcBtn&&npcBtn.dataset.npc){this.selectNpc(npcBtn.dataset.npc);return;}
+        // doom stage controls
+        if(e.target.closest('#run-doom-advance')){this.advanceFocus();return;}
+        if(e.target.closest('#run-doom-ease')){this.easeFocus();return;}
+        if(e.target.closest('#run-doom-reveal')){this.revealNextSecret();return;}
+        // clock switcher (which threat is on stage)
+        const focusBtn=e.target.closest('[data-focus]');
+        if(focusBtn){this._focusClockId=focusBtn.dataset.focus;this._renderClocks();return;}
+        // ask panel
+        if(e.target.closest('#run-ask-send')){this.sendAsk();return;}
+        const askQ=e.target.closest('[data-ask-q]');
+        if(askQ){this.sendAsk(askQ.dataset.askQ);return;}
+        if(e.target.closest('#run-ask-full')){this.openFullAudience();return;}
+        if(e.target.closest('#run-ask-capture')){this._askToCanon();return;}
+        if(e.target.closest('#run-ask-toclock')){this.advanceFocus();return;}
+        // oracle
+        const odds=e.target.closest('#run-oracle-odds [data-odds]');
+        if(odds){this._odds=parseInt(odds.dataset.odds,10);this._renderOracle();return;}
+        if(e.target.closest('#run-chaos-down')){this._setChaos(this._chaos()-1);return;}
+        if(e.target.closest('#run-chaos-up')){this._setChaos(this._chaos()+1);return;}
+        if(e.target.closest('#run-oracle-ask')){this.consultOracle();return;}
       });
-      // Keyboard: space/enter toggles a focused secret; Escape leaves the cockpit.
+      // Enter sends a question from either text field; space/enter toggles a focused secret.
       root.addEventListener('keydown',e=>{
+        const t=e.target;
+        if(t&&t.id==='run-ask-input'&&e.key==='Enter'){e.preventDefault();this.sendAsk();return;}
+        if(t&&t.id==='run-oracle-q'&&e.key==='Enter'){e.preventDefault();this.consultOracle();return;}
+        if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA')){if(e.key==='Escape')t.blur();return;}
         if(e.key==='Escape'){this.close();return;}
         if((e.key===' '||e.key==='Enter')){
-          const sec=e.target.closest&&e.target.closest('.run-mode__secret');
-          if(sec&&sec.dataset.secret){e.preventDefault();State.cpToggleSecret(sec.dataset.secret);this._renderSecrets();}
+          const sec=t.closest&&t.closest('.run-mode__secret');
+          if(sec&&sec.dataset.secret){e.preventDefault();State.cpToggleSecret(sec.dataset.secret);}
         }
+      });
+      // Cockpit-scoped hotkeys (only while open, never inside a field). Single letters are
+      // free globally (verified); we still guard against the app's Ctrl/Cmd shortcuts.
+      document.addEventListener('keydown',e=>{
+        if(!this.isOpen())return;
+        if(e.ctrlKey||e.metaKey||e.altKey)return;
+        const t=document.activeElement;
+        if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.isContentEditable))return;
+        const k=e.key.toLowerCase();
+        if(k==='a'){e.preventDefault();this.advanceFocus();}
+        else if(k==='e'){e.preventDefault();this.easeFocus();}
+        else if(k==='r'){e.preventDefault();this.revealNextSecret();}
+        else if(k==='d'){e.preventDefault();this.roll(20);}
+        else if(k==='o'){e.preventDefault();this.consultOracle();}
       });
     }
 
-    // Live re-render: if a clock/secret changes from any path while open, reflect it.
+    // Live re-render: if a clock/secret/cast changes from any path while open, reflect it.
     document.addEventListener('cp:changed',()=>{if(this.isOpen())this.render();});
 
     // ── Canon quick-chips panel (P4.2) — delegated, lives in RunMode's own bind. ──
@@ -24957,31 +25620,141 @@ window.__rwClearDevTheme=function(){localStorage.removeItem('rw_dev_theme');loca
   <aside class="cmp-rail" id="cmp-rail" role="complementary" aria-label="Live commentary — heads-up, questions, watch-outs" hidden></aside>
 </div>
 
-<!-- ─── RUN MODE — at-the-table cockpit (P4.1): clocks / secret bank / dice ─── -->
+<!-- ─── RUN MODE — at-the-table cockpit (P4.x redesign): cast · doom stage · GM desk ─── -->
+<!-- One connected surface. The doom clock on center stage is the through-line; the cast
+     (left) targets the Ask panel (right), answers/rolls can push the clock, and outcomes
+     flow to canon on End Session. Inherits body.theme-*; no own theme switcher. -->
 <div class="run-mode" id="run-mode" role="main" aria-label="Run Mode — live session cockpit">
   <header class="run-mode__header">
-    <h1 class="run-mode__title">🎲 Run the Table<small>Live session cockpit — tick clocks, deliver secrets, roll the dice.</small></h1>
+    <div class="run-mode__brand">
+      <h1 class="run-mode__title">Realm<b>Wright</b></h1>
+      <span class="run-mode__badge">Run</span>
+    </div>
+    <div class="run-mode__session">
+      <span class="run-mode__pip"><span class="run-mode__pip-dot"></span>Live</span>
+      <span class="run-mode__ses-name" id="run-ses-name"></span>
+    </div>
+    <div class="run-mode__head-spacer"></div>
     <div class="run-mode__head-actions">
       <button class="run-mode__dice-toggle" id="run-dice-toggle" type="button" aria-pressed="false" title="Collapse to a big dice pad for fast rolling">Dice only</button>
       <button class="run-mode__exit" id="run-exit" type="button" aria-label="Return to dashboard">← Dashboard</button>
     </div>
   </header>
   <div class="run-mode__grid">
-    <section class="run-mode__col run-mode__col--clocks" aria-label="Campaign clocks">
-      <h2 class="run-mode__col-title">Clocks</h2>
-      <div id="run-clocks"></div>
+
+    <!-- LEFT — the cast present tonight (the moat: grounded NPCs) + the secret bank -->
+    <section class="run-mode__region run-mode__region--cast" aria-label="The cast and secret bank">
+      <div class="run-mode__region-head">
+        <h2>The Cast</h2>
+        <span class="run-mode__chip" id="run-cast-count">—</span>
+      </div>
+      <div class="run-mode__region-body">
+        <div class="run-mode__cast" id="run-cast"></div>
+        <div class="run-mode__cast-foot">
+          <div class="run-mode__legend" aria-hidden="true">
+            <span><i style="background:var(--color-thriving)"></i>Ally</span>
+            <span><i style="background:var(--color-text-faint)"></i>Neutral</span>
+            <span><i style="background:var(--color-tense)"></i>Wary</span>
+            <span><i style="background:var(--color-crisis)"></i>Hostile</span>
+          </div>
+        </div>
+        <div class="run-mode__region-head" style="margin:var(--space-5) calc(-1 * var(--space-4)) 0;border-top:1px solid var(--color-border-hairline)">
+          <h2>Secret Bank</h2>
+          <span class="run-mode__chip" id="run-secret-count">—</span>
+        </div>
+        <div id="run-secrets" style="margin-top:var(--space-4)"></div>
+      </div>
     </section>
-    <section class="run-mode__col run-mode__col--secrets" aria-label="Secret bank">
-      <h2 class="run-mode__col-title">Secret Bank</h2>
-      <div id="run-secrets"></div>
+
+    <!-- CENTER — the doom clock, the signature anchor (renders into #run-clocks) -->
+    <section class="run-mode__region run-mode__region--stage" aria-label="The turning point">
+      <div class="run-mode__region-head">
+        <h2>Turning Point</h2>
+        <span class="run-mode__chip" id="run-clock-chip">—</span>
+      </div>
+      <div class="run-mode__stage" id="run-clocks" aria-live="polite"></div>
     </section>
-    <section class="run-mode__col run-mode__col--dice" aria-label="Dice and roll log">
-      <h2 class="run-mode__col-title">Dice</h2>
-      <div class="run-mode__roll-now" id="run-roll-now" aria-live="polite"></div>
-      <div class="run-mode__dice-pad" id="run-dice-pad"></div>
-      <h2 class="run-mode__col-title" style="margin-top:var(--space-4)">Roll Log</h2>
-      <ul class="run-mode__roll-log" id="run-roll-log" aria-label="Recent rolls"></ul>
-    </section>
+
+    <!-- RIGHT — the GM desk: Ask the NPC · Dice · Oracle -->
+    <aside class="run-mode__region run-mode__region--desk" aria-label="GM desk">
+      <div class="run-mode__region-head">
+        <h2>GM Desk</h2>
+        <span class="run-mode__panel-tag">world-aware</span>
+      </div>
+      <div class="run-mode__region-body run-mode__desk">
+
+        <!-- Ask the NPC — grounded, fail-closed, scrolls in its own box -->
+        <div class="run-mode__panel run-mode__panel--ask">
+          <div class="run-mode__panel-head"><h3>Ask the NPC</h3><span class="run-mode__panel-tag" id="run-ask-tag">in character</span></div>
+          <div class="run-mode__panel-body">
+            <div class="run-mode__ask-who">
+              <span class="run-mode__ask-face" id="run-ask-face">·</span>
+              <div class="run-mode__ask-who-main">
+                <div class="run-mode__ask-name" id="run-ask-name">Tap someone on the left</div>
+                <div class="run-mode__ask-role" id="run-ask-role">to speak with them</div>
+              </div>
+              <button class="run-mode__ask-full" id="run-ask-full" type="button" title="Open the full audience — grant secrets, see the transcript" hidden>Full audience →</button>
+            </div>
+            <div class="run-mode__ask-field">
+              <input class="run-mode__ask-input" id="run-ask-input" type="text" placeholder="Select a character first…" aria-label="Ask the selected character a question" disabled>
+              <button class="run-mode__ask-send" id="run-ask-send" type="button" disabled>Ask</button>
+            </div>
+            <div class="run-mode__ask-suggest" id="run-ask-suggest"></div>
+            <div class="run-mode__ask-out" id="run-ask-out" hidden>
+              <div class="run-mode__ask-out-label"><span>Their answer</span><span id="run-ask-status"></span></div>
+              <div class="run-mode__ask-answer" id="run-ask-answer">
+                <div class="run-mode__ask-q" id="run-ask-q"></div>
+                <div class="run-mode__ask-voice" id="run-ask-voice"></div>
+              </div>
+              <div class="run-mode__ask-meta" id="run-ask-meta" hidden>
+                <button class="run-mode__ask-capture" id="run-ask-capture" type="button">Save to canon</button>
+                <button class="run-mode__ask-toclock" id="run-ask-toclock" type="button" title="This revelation raises the stakes — advance the focused clock">Advance clock</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dice — full set incl. d20 + d100; readout slams -->
+        <div class="run-mode__panel run-mode__panel--dice">
+          <div class="run-mode__panel-head"><h3>Dice</h3><span class="run-mode__panel-tag" id="run-dice-last">—</span></div>
+          <div class="run-mode__panel-body">
+            <div class="run-mode__dice">
+              <div class="run-mode__roll-now" id="run-roll-now" aria-live="polite"><small>tap a die</small></div>
+              <div class="run-mode__dice-pad" id="run-dice-pad"></div>
+            </div>
+            <div class="run-mode__roll-log-title">Roll Log</div>
+            <ul class="run-mode__roll-log" id="run-roll-log" aria-label="Recent rolls"></ul>
+          </div>
+        </div>
+
+        <!-- Oracle — held question + persistent chaos, resolved through the fate engine -->
+        <div class="run-mode__panel run-mode__panel--oracle">
+          <div class="run-mode__panel-head"><h3>Oracle</h3><span class="run-mode__panel-tag">yes / no + twist</span></div>
+          <div class="run-mode__panel-body">
+            <div class="run-mode__oracle-verdict" id="run-oracle-verdict">Hold a question</div>
+            <div class="run-mode__oracle-sub" id="run-oracle-sub">set the odds, then consult</div>
+            <div class="run-mode__oracle-twist" id="run-oracle-twist"></div>
+            <input class="run-mode__oracle-q" id="run-oracle-q" type="text" placeholder="The question you're asking the table…" aria-label="The yes/no question">
+            <div class="run-mode__oracle-odds" id="run-oracle-odds" role="group" aria-label="Odds">
+              <button type="button" data-odds="2">Unlikely</button>
+              <button type="button" data-odds="3" class="is-active">50 / 50</button>
+              <button type="button" data-odds="5">Likely</button>
+            </div>
+            <div class="run-mode__chaos">
+              <div class="run-mode__chaos-label"><span>Chaos</span><span class="v" id="run-chaos-val">—</span></div>
+              <div class="run-mode__chaos-track">
+                <button class="run-mode__chaos-step" id="run-chaos-down" type="button" aria-label="Lower chaos">−</button>
+                <div class="run-mode__chaos-bar"><div class="run-mode__chaos-fill" id="run-chaos-fill"></div></div>
+                <button class="run-mode__chaos-step" id="run-chaos-up" type="button" aria-label="Raise chaos">+</button>
+              </div>
+            </div>
+            <button class="run-mode__oracle-ask" id="run-oracle-ask" type="button">Consult the oracle</button>
+          </div>
+        </div>
+
+      </div>
+    </aside>
+
   </div>
   <div class="run-mode__end">
     <button class="run-mode__end-btn" id="run-end-session" type="button">End Session</button>
