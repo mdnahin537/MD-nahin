@@ -1569,6 +1569,12 @@ body.theme-ember .modal.modal--lg{width:800px}
 .fd-divider__label{font-size:var(--text-label-sm);color:var(--color-text-faint);white-space:nowrap}
 .fd-secondary-actions{display:flex;gap:var(--space-3);justify-content:center}
 .fd-secondary-actions .btn{flex:1;justify-content:center}
+/* Bug 1 fix — front-door close button + worldbuilding doors. */
+.fd-close{position:absolute;top:14px;right:16px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid var(--color-border-hairline);border-radius:8px;color:var(--color-text-muted);font-size:22px;line-height:1;cursor:pointer;transition:border-color .15s,color .15s,background .15s;z-index:2}
+.fd-close:hover{border-color:var(--ember-color,var(--color-gold));color:var(--ember-color,var(--color-gold));background:rgba(127,127,127,.06)}
+.fd-build-actions{display:flex;gap:var(--space-3);justify-content:center}
+.fd-build-actions .fd-build-btn{flex:1;justify-content:center}
+@media (max-width:560px){.fd-build-actions{flex-direction:column}}
 .fd-recent{border-top:0.5px solid var(--color-border-hairline);padding-top:var(--space-4)}
 .fd-recent__heading{font-size:var(--text-label);color:var(--color-text-faint);margin:0 0 var(--space-3);text-transform:uppercase;letter-spacing:0.12em}
 .fd-recent__list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--space-1)}
@@ -3292,7 +3298,14 @@ SECTION 7: MOTION & STATE STYLES
    entirely via existing tokens so it skins for ember/modern/manuscript. ─── */
 .campaign-mode{position:fixed;inset:0;background:var(--color-bg);z-index:8000;overflow-y:auto;display:none}
 .campaign-mode.is-open{display:block}
-.cmp-header{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px 32px;border-bottom:1px solid var(--color-border-hairline);position:sticky;top:0;background:var(--color-bg);z-index:10}
+.cmp-header{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px 32px;border-bottom:1px solid var(--color-border-hairline);position:sticky;top:0;background:var(--color-bg);z-index:8060}
+/* Bug 2 fix: the commentary rail (.cmp-rail, position:fixed right:0 z-index:8050) used to
+   cover the "← World" exit button at the header's right edge, so clicking it did nothing and
+   the user was trapped in Campaign mode. Reserve the rail's width on the header (so the exit
+   button sits left of the rail) AND keep the header above the rail (z-index 8060 > 8050) so
+   the button is always both visible and clickable. Mirrors .cmp-grid's margin-right:336px. */
+.campaign-mode.has-rail .cmp-header{margin-right:320px}
+@media (max-width:980px){.campaign-mode.has-rail .cmp-header{margin-right:0}}
 .cmp-title{font-family:'Cinzel',serif;font-size:var(--text-display-lg);margin:0;color:var(--color-ink)}
 .cmp-title small{font-family:var(--font-body);font-size:var(--text-label-sm);color:var(--color-text-faint);display:block;letter-spacing:.04em;margin-top:2px}
 .cmp-exit{background:transparent;border:1px solid var(--color-border-hairline);border-radius:6px;padding:8px 16px;color:var(--color-text-muted);cursor:pointer;font-size:var(--text-label-sm);transition:border-color .15s,color .15s}
@@ -4321,6 +4334,11 @@ SECTION 8: DOM STRUCTURE
     <div id="nn-mode-seed">
       <p style="font-size:var(--text-label-sm);color:var(--color-text-muted);margin:0 0 12px">Pick a starting realm. Rename and edit everything after creation.</p>
       <div class="seed-grid" id="seed-grid"></div>
+      <!-- One-click fully-populated world (NPCs, clocks, secrets, chronicle) — no API key needed. -->
+      <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--color-border-hairline);display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span style="font-size:var(--text-label-sm);color:var(--color-text-muted)">New here? See a complete, playable world first:</span>
+        <button type="button" class="btn btn--secondary" id="nn-load-example">🌍 Load an example world</button>
+      </div>
     </div>
 
     <!-- Tab: Describe with preview-before-commit -->
@@ -9566,12 +9584,15 @@ const Render={
       // P1.6/P1.7: empty-state CTA so first-run users have an obvious entry point.
       // Without this guard, every downstream Compute.* call crashes on a missing nation.
       const anEl=document.getElementById('active-nation-name');
-      if(anEl)anEl.innerHTML='<button type="button" id="empty-state-create-realm" class="btn btn--primary" style="font-family:inherit">+ Create your first realm</button>';
+      // Empty-state CTAs: build from scratch OR load a fully-populated example world (no API key).
+      if(anEl)anEl.innerHTML='<span style="display:inline-flex;gap:8px;flex-wrap:wrap;align-items:center"><button type="button" id="empty-state-create-realm" class="btn btn--primary" style="font-family:inherit">+ Create your first realm</button><button type="button" id="empty-state-load-example" class="btn btn--secondary" style="font-family:inherit">🌍 Load an example world</button></span>';
       const sl=document.getElementById('status-label');if(sl)sl.textContent='';
       const numEl=document.getElementById('stability-number');if(numEl)numEl.textContent='—';
-      const bsEl=document.getElementById('breakdown-sentence');if(bsEl)bsEl.textContent='No realm yet. Create one to begin worldbuilding.';
+      const bsEl=document.getElementById('breakdown-sentence');if(bsEl)bsEl.textContent='No realm yet. Build one from scratch, or load an example world to explore everything right away.';
       const btn=document.getElementById('empty-state-create-realm');
       if(btn)btn.addEventListener('click',()=>{if(typeof Modals!=='undefined')Modals.open('new-nation');});
+      const exBtn=document.getElementById('empty-state-load-example');
+      if(exBtn)exBtn.addEventListener('click',()=>{if(typeof SampleMode!=='undefined'&&SampleMode.loadSample)SampleMode.loadSample('heist');});
       return;
     }
     const stab=Compute.stability(n);
@@ -15372,6 +15393,11 @@ const SampleMode={
     freshState.meta.activeNationId=sampleNation.id;
     freshState.meta._sampleMode=true;
     freshState.meta._sampleId=sampleId;
+    // Populate the Campaign-prep board (the data Run Mode reads): cast NPCs linked to the live
+    // world characters (so Ask-the-NPC is grounded), progress clocks, and a staged secret bank.
+    // Built AFTER buildNationFromSeed so linkedCharacterId points at the freshly-minted character
+    // ids. Without this a loaded sample showed empty cast/clocks/secrets in Run Mode.
+    freshState.meta.campaignPrep=SampleMode._buildCampaignPrep(sampleNation,sampleId);
     State.data=freshState;
     SampleMode._active=true;
     SampleMode._activeSampleId=sampleId;
@@ -15379,7 +15405,52 @@ const SampleMode={
     Render.all();
     SampleMode._showBanner(seed.name,sampleId);
     const label={heist:'The Heist',solo:'The Wandering Investigator',political:'The Saltmoot Council'}[sampleId]||sampleId;
-    showToast(`Sample loaded: ${label}. Explore the chronicle, factions, and Copilot — no API key needed.`,[],7000);
+    showToast(`Sample loaded: ${label}. Explore the chronicle, factions, Run the Table, and the Copilot — no API key needed.`,[],7000);
+  },
+
+  // Build the Campaign-prep board that Run Mode (the at-the-table cockpit) reads. Cast NPCs are
+  // mapped 1:1 to the live world characters and linked by id (grounds Ask-the-NPC); clocks are
+  // authored per sample (real, in-fiction deadlines) and secrets are lifted from nation.secrets.
+  // Pure builder — returns the campaignPrep object; the caller assigns it onto fresh state.
+  _buildCampaignPrep(nation,sampleId){
+    const cp=(typeof emptyCampaignPrep==='function')?emptyCampaignPrep():{stakes:'',notes:'',clocks:[],beats:[],npcs:[],secrets:[]};
+    const uid=()=>(typeof Utils!=='undefined'&&Utils.uuid)?Utils.uuid():('id-'+Math.random().toString(36).slice(2,10));
+    const chars=Array.isArray(nation.characters)?nation.characters:[];
+    // Cast — everyone in the realm, present tonight, linked to their world character.
+    cp.npcs=chars.filter(c=>c&&c.name&&c.status!=='deceased').map(c=>({
+      id:uid(),name:c.name,role:c.role||'',
+      motivation:(c.drive||'').trim(),
+      here:true,linkedCharacterId:c.id,
+    }));
+    // Secrets — stage the realm's secret bank so the GM can reveal them at the table.
+    cp.secrets=(Array.isArray(nation.secrets)?nation.secrets:[]).map(s=>({
+      id:uid(),text:(s.content||s.title||'').trim(),delivered:false,
+    })).filter(s=>s.text);
+    // Clocks — authored per sample (real in-fiction deadlines). Falls back to the realm's open
+    // hooks so any sample (or a future one) still seeds at least one meaningful clock.
+    const AUTHORED={
+      heist:[
+        {name:'Sealed warrants execute',size:8,filled:5},
+        {name:'Plant the listening device',size:6,filled:1},
+        {name:'Land-title buyer closes in',size:4,filled:2},
+      ],
+      solo:[
+        {name:"Veiled Court closes on Marik",size:6,filled:3},
+        {name:'Read Elena’s ledger entry',size:4,filled:1},
+      ],
+      political:[
+        {name:'Twentieth signature secured',size:8,filled:6},
+        {name:'Orryn publishes the correspondence',size:6,filled:2},
+        {name:'Bread Coalition forces a vote',size:6,filled:3},
+      ],
+    };
+    let clocks=AUTHORED[sampleId];
+    if(!clocks||!clocks.length){
+      const hooks=(Array.isArray(nation.hooks)?nation.hooks:[]).filter(h=>h&&!h.resolved).slice(0,3);
+      clocks=hooks.map(h=>({name:(h.title||'Front').slice(0,40),size:6,filled:2}));
+    }
+    cp.clocks=(clocks||[]).map(c=>({id:uid(),name:c.name,size:c.size,filled:c.filled,lastChangedAt:Date.now()}));
+    return cp;
   },
 
   closeSample(){
@@ -15517,6 +15588,14 @@ const FrontDoor={
     document.getElementById('fd-generate-btn')?.addEventListener('click',()=>this._handleGenerate());
     document.getElementById('fd-sample')?.addEventListener('click',()=>this._handleSample());
     document.getElementById('fd-activate')?.addEventListener('click',()=>this._handleActivate());
+    // Bug 1 fix: close + the two worldbuilding doors.
+    document.getElementById('fd-close')?.addEventListener('click',()=>this.close());
+    document.getElementById('fd-build-scratch')?.addEventListener('click',()=>{this.close();if(typeof Modals!=='undefined')Modals.open('new-nation');});
+    document.getElementById('fd-load-example')?.addEventListener('click',()=>{
+      // One click to a fully-populated world (NPCs, clocks, secrets, chronicle, hooks) — no API key.
+      if(typeof SampleMode!=='undefined'&&typeof SampleMode.loadSample==='function'){this.close();setTimeout(()=>SampleMode.loadSample('heist'),60);}
+      else this._handleSample();
+    });
     document.getElementById('fd-style-group')?.addEventListener('click',e=>{
       const pill=e.target.closest('.char-status-pill');if(!pill)return;
       document.querySelectorAll('#fd-style-group .char-status-pill').forEach(p=>{p.classList.remove('is-selected');p.setAttribute('aria-pressed','false');});
@@ -23692,7 +23771,12 @@ function bindEventListeners(){
           if(typeof Campaign!=='undefined')Campaign.open();
         }else{
           // World — quiet worldbuilding on the dashboard. GM state untouched.
+          // Bug 2: close every full-screen overlay (Campaign + Run) and force a fresh
+          // dashboard paint so returning to World never lands the user on a stale/blank
+          // screen — the shell renders in all three themes (applyTheme Architecture A).
           if(typeof Campaign!=='undefined')Campaign.close();
+          if(typeof RunMode!=='undefined'&&RunMode.close)RunMode.close();
+          if(typeof applyTheme==='function')applyTheme();
           showToast('World mode — quiet worldbuilding.',[],2200);
         }
       });
@@ -23967,6 +24051,12 @@ function bindEventListeners(){
     Render.all();
     _nnResetDescribePane();
     showToast(`"${Utils.escHtml(nation.name)}" created.`);
+  });
+
+  // ── New Nation: load a fully-populated example world (one click, no API key) ─
+  document.getElementById('nn-load-example')?.addEventListener('click',()=>{
+    Modals.close('new-nation');
+    if(typeof SampleMode!=='undefined'&&SampleMode.loadSample)setTimeout(()=>SampleMode.loadSample('heist'),60);
   });
 
   // ── New Nation: describe → generate preview ────────────────────────────────
@@ -25652,6 +25742,11 @@ window.__rwClearDevTheme=function(){localStorage.removeItem('rw_dev_theme');loca
 <!-- ── FRONT DOOR MODAL ──────────────────────────────────────────────────── -->
 <div class="modal modal--front-door" id="modal-front-door" role="dialog" aria-modal="true" aria-labelledby="fd-title" aria-describedby="fd-subtitle">
   <div class="modal__header fd-header">
+    <!-- Bug 1 fix: a real close affordance. Without it the front door had no exit but the
+         (undiscoverable) Escape key, so first-run owners were trapped behind its full-screen
+         backdrop — every click on the dashboard/nation-switcher was swallowed, which read as
+         "create new nation does nothing". Closing drops straight to the dashboard. -->
+    <button class="fd-close" id="fd-close" type="button" aria-label="Close and go to the dashboard">×</button>
     <div class="fd-wordmark">
       <span class="fd-wordmark__diamond" aria-hidden="true">◆</span>
       <h1 class="fd-wordmark__name" id="fd-title">RealmWright</h1>
@@ -25682,6 +25777,14 @@ window.__rwClearDevTheme=function(){localStorage.removeItem('rw_dev_theme');loca
       <hr class="fd-divider__rule">
       <span class="fd-divider__label">or</span>
       <hr class="fd-divider__rule">
+    </div>
+    <!-- Bug 1 fix: explicit, labelled worldbuilding doors. "Prep this session" needs an AI key,
+         so an owner without one (and who wants to BUILD a world, not prep a session) previously
+         had no obvious path — world-creation was "not clear". These two go straight to the work:
+         a fully-populated example world (no key needed) and the from-scratch realm builder. -->
+    <div class="fd-build-actions">
+      <button type="button" class="btn btn--secondary fd-build-btn" id="fd-load-example" aria-label="Load a fully-built example world you can explore right away">🌍 Load an example world</button>
+      <button type="button" class="btn btn--secondary fd-build-btn" id="fd-build-scratch" aria-label="Build a brand-new world from scratch">✦ Build a world from scratch</button>
     </div>
     <div class="fd-secondary-actions">
       <button type="button" class="btn btn--secondary" id="fd-sample" aria-label="Try a pre-built sample session">See a sample session</button>
