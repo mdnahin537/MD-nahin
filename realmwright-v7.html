@@ -190,8 +190,14 @@ body.theme-ember {
   /* Ambient Living Layer — warm drifting embers/motes over a faint amber glow. */
   --amb-particle:255,185,100;          /* rgb triplet for canvas motes */
   --amb-particle-alpha:0.5;
-  --amb-glow:radial-gradient(ellipse 70% 50% at 50% 30%,rgba(255,185,100,0.05),transparent 70%);
-  --amb-vignette:radial-gradient(ellipse 120% 120% at 50% 50%,transparent 60%,rgba(20,8,0,0.18));
+  --amb-glow:radial-gradient(ellipse 66% 48% at 50% 26%,rgba(255,176,92,0.075),transparent 72%);
+  /* Second aurora wash — a deeper amber pool, low + offset, drifts counter to layer 1. */
+  --amb-glow2:radial-gradient(ellipse 52% 40% at 64% 70%,rgba(212,137,30,0.055),transparent 70%);
+  --amb-vignette:radial-gradient(ellipse 120% 120% at 50% 50%,transparent 60%,rgba(20,8,0,0.20));
+  /* Heartbeat severity ramp — warm vermilion crisis harmonized with gold; the
+     gold itself is the caution step; a calm bronze is the lowest pressure. */
+  --hb-front:#ff7d5a;--hb-threshold:#ffbe6e;--hb-pressure:#c99a5c;
+  --hb-rail-track:rgba(255,222,185,.09);
   /* Semantic aliases — dark values for Ember's inverted lightness model */
   --color-bg:#120c07;
   --color-surface:rgba(255,185,100,0.04);
@@ -257,13 +263,20 @@ body.theme-manuscript {
   --color-border-default:#B7C3CC;
   /* Coordinate-grid rule line — very faint cool grey graph paper. */
   --ms-grid:#D7DEE3;
-  /* Ambient Living Layer — "dust in daylight": faint cool motes + a soft paper
-     haze. Particles are a dark cool tone (light motes vanish on light paper),
-     kept whisper-low so body ink always wins. */
-  --amb-particle:31,81,112;
-  --amb-particle-alpha:0.16;
-  --amb-glow:radial-gradient(ellipse 90% 70% at 50% 18%,rgba(31,81,112,0.025),transparent 74%);
-  --amb-vignette:radial-gradient(ellipse 130% 130% at 50% 50%,transparent 66%,rgba(70,86,106,0.07));
+  /* Ambient Living Layer — "dust in a sunbeam": warm sepia motes (cool/dark dots
+     read as grime on light paper; warm ones read as floating dust lit by the
+     window) over a soft paper haze. Whisper-low so body ink always wins. */
+  --amb-particle:124,98,58;
+  --amb-particle-alpha:0.15;
+  --amb-glow:radial-gradient(ellipse 88% 66% at 50% 16%,rgba(31,81,112,0.030),transparent 74%);
+  /* Second wash — a faint warm daylight pool low-right, so the room reads as lit
+     by a window, not tinted blue. Whisper-low: body ink must always win. */
+  --amb-glow2:radial-gradient(ellipse 60% 46% at 70% 78%,rgba(154,106,18,0.022),transparent 72%);
+  --amb-vignette:radial-gradient(ellipse 130% 130% at 50% 50%,transparent 66%,rgba(70,86,106,0.075));
+  /* Heartbeat severity ramp — survey conventions on light paper: survey-red
+     crisis, ochre caution, drafting-blue (calm/structural) for active pressure. */
+  --hb-front:#B23A22;--hb-threshold:#9A6A12;--hb-pressure:#1F5170;
+  --hb-rail-track:rgba(24,34,48,.10);
   /* Era band tints — pale cool washes over chart paper. */
   --era-tint-1:rgba(31,81,112,0.06);
   --era-tint-2:rgba(178,58,34,0.07);
@@ -336,8 +349,14 @@ body.theme-modern {
   /* Ambient Living Layer — cool slow drift + faint teal grid haze (cold). */
   --amb-particle:94,200,216;
   --amb-particle-alpha:0.32;
-  --amb-glow:radial-gradient(ellipse 80% 60% at 50% 20%,rgba(94,200,216,0.04),transparent 72%);
-  --amb-vignette:radial-gradient(ellipse 120% 120% at 50% 50%,transparent 58%,rgba(6,10,16,0.20));
+  --amb-glow:radial-gradient(ellipse 76% 56% at 50% 18%,rgba(94,200,216,0.058),transparent 73%);
+  /* Second aurora — a cooler teal-indigo pool low-right, drifts counter to layer 1. */
+  --amb-glow2:radial-gradient(ellipse 54% 42% at 66% 72%,rgba(63,166,182,0.045),transparent 70%);
+  --amb-vignette:radial-gradient(ellipse 120% 120% at 50% 50%,transparent 58%,rgba(6,10,16,0.22));
+  /* Heartbeat severity ramp — coral crisis, gold caution, cold-teal accent
+     (calm) for active pressure: cohesive with the Command Console palette. */
+  --hb-front:#ff8a8a;--hb-threshold:#f0c674;--hb-pressure:#5ec8d8;
+  --hb-rail-track:rgba(232,237,242,.08);
   /* Display Fraunces (sharp cut); body Source Serif 4. */
   --font-display:'Fraunces',Georgia,serif;
   --font-body:'Source Serif 4','Newsreader',Georgia,serif;
@@ -641,30 +660,109 @@ body.theme-ember .gm-badge{
 /* When pressures stack on a narrower viewport */
 @media (max-width:1100px){.wms-pressures{grid-template-columns:1fr 1fr}}
 @media (max-width:780px){.wms-pressures{grid-template-columns:1fr}}
-/* P2.6 — World Heartbeat panel */
-.wms-heartbeat{display:flex;flex-direction:column;gap:10px}
-.wms-hb-item{display:flex;flex-direction:column;gap:6px;padding:14px 16px;
-  background:rgba(255,185,100,.025);border:1px solid var(--color-border-hairline);
-  border-left:3px solid transparent;position:relative;
-  transition:border-color .2s,background .2s}
-.wms-hb-item:hover{background:rgba(255,185,100,.05);border-color:rgba(255,185,100,.28)}
-.wms-hb-item--threshold{border-left-color:var(--color-tense)}
-.wms-hb-item--front{border-left-color:var(--color-crisis)}
-.wms-hb-item--pressure{border-left-color:rgba(255,185,100,.55)}
-.wms-hb-kind{font-family:var(--font-mono);font-size:9px;letter-spacing:.22em;
-  text-transform:uppercase;color:var(--color-text-muted);font-weight:500}
+/* P2.6 — World Heartbeat — "The Pressure Gauge"
+   A read-only forecast instrument. The list is pre-sorted most-imminent-first;
+   the design MAKES that ordering felt: rank-1 dominates (size + brightness + a
+   calm live pulse), ranks 2-3 recede. Each row carries a vertical pressure rail
+   whose FILL HEIGHT (--hb-fill, 0..1, set per-item by _renderHeartbeat) encodes
+   imminence — echoing the world's own filling clocks. Severity color comes from
+   per-theme --hb-* tokens (front=crisis, threshold=caution, pressure=accent),
+   refined to read "instrument", not "alarm". Motion: ONE element animates (the
+   rank-1 rail), fully gated by reduced-motion. */
+.wms-heartbeat{display:flex;flex-direction:column;gap:8px;
+  /* Per-theme severity ramp; overridden in each body.theme-* block below. */
+  --hb-front:#ff7a5c;--hb-threshold:var(--color-tense);--hb-pressure:#c89a5e;
+  --hb-rail-track:rgba(255,255,255,.07)}
+.wms-hb-item{position:relative;display:grid;
+  grid-template-columns:3px 1fr;gap:0 15px;align-items:stretch;
+  padding:13px 16px 13px 0;
+  background:linear-gradient(90deg,
+    color-mix(in srgb,var(--hb-accent) 7%,transparent) 0%,
+    color-mix(in srgb,var(--hb-accent) 2.5%,transparent) 26%,transparent 60%);
+  border:1px solid var(--color-border-hairline);
+  border-radius:var(--radius-sm);overflow:hidden;
+  transition:background .28s var(--ease-out),border-color .2s var(--ease-out),
+    transform .28s var(--ease-out)}
+/* Severity accent per kind — one variable feeds rail, wash, eyebrow, glow. */
+.wms-hb-item--front{--hb-accent:var(--hb-front)}
+.wms-hb-item--threshold{--hb-accent:var(--hb-threshold)}
+.wms-hb-item--pressure{--hb-accent:var(--hb-pressure)}
+/* The pressure rail (left column). Track is faint; fill rises to --hb-fill. */
+.wms-hb-rail{grid-row:1;grid-column:1;align-self:stretch;position:relative;
+  background:var(--hb-rail-track);border-radius:2px;overflow:hidden}
+.wms-hb-rail::after{content:'';position:absolute;left:0;right:0;bottom:0;
+  height:calc(var(--hb-fill,.5)*100%);
+  background:linear-gradient(to top,var(--hb-accent),
+    color-mix(in srgb,var(--hb-accent) 45%,transparent));
+  box-shadow:0 0 7px -1px color-mix(in srgb,var(--hb-accent) 60%,transparent);
+  transition:height .5s var(--ease-instrument)}
+.wms-hb-body{grid-row:1;grid-column:2;display:flex;flex-direction:column;
+  gap:5px;min-width:0;padding:1px 0}
+.wms-hb-eyebrow{display:flex;align-items:baseline;gap:8px}
+.wms-hb-rank{font-family:var(--font-mono);font-size:10px;font-weight:500;
+  letter-spacing:.04em;color:var(--hb-accent);opacity:.85;
+  font-variant-numeric:tabular-nums;flex:none}
+.wms-hb-kind{font-family:var(--font-mono);font-size:9px;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--color-text-muted);font-weight:500;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .wms-hb-text{font-family:'Cinzel',serif;font-size:13px;color:var(--color-ink);
-  line-height:1.4;font-weight:400}
+  line-height:1.42;font-weight:400;letter-spacing:.005em}
 .wms-hb-rule{font-size:11px;color:var(--color-text-muted);line-height:1.5;
-  font-style:italic;display:none}
-.wms-hb-item:hover .wms-hb-rule{display:block}
-.wms-hb-ask{margin-top:6px;padding:4px 10px;font-size:10px;letter-spacing:.14em;
+  font-style:italic;
+  display:grid;grid-template-rows:0fr;opacity:0;
+  transition:grid-template-rows .3s var(--ease-out),opacity .22s var(--ease-out)}
+.wms-hb-rule>span{overflow:hidden;min-height:0}
+.wms-hb-item:hover .wms-hb-rule,.wms-hb-item:focus-within .wms-hb-rule{
+  grid-template-rows:1fr;opacity:1;margin-top:1px}
+.wms-hb-ask{margin-top:3px;padding:5px 11px;font-size:10px;letter-spacing:.12em;
   text-transform:uppercase;font-family:var(--font-mono);
-  background:transparent;border:1px solid rgba(255,185,100,.30);
-  color:var(--ember-color,#FFB964);cursor:pointer;
-  transition:background .15s,border-color .15s;align-self:flex-start}
-.wms-hb-ask:hover{background:rgba(255,185,100,.10);border-color:rgba(255,185,100,.55)}
-.wms-hb-stable{font-size:12px;color:var(--color-text-faint);font-style:italic;padding:6px 0}
+  background:transparent;border:1px solid color-mix(in srgb,var(--hb-accent) 38%,transparent);
+  color:var(--hb-accent);cursor:pointer;border-radius:var(--radius-sm);
+  align-self:flex-start;
+  max-height:0;padding-top:0;padding-bottom:0;margin-top:0;
+  border-color:transparent;opacity:0;overflow:hidden;
+  transition:max-height .28s var(--ease-out),opacity .22s var(--ease-out),
+    background .15s var(--ease-out),border-color .2s var(--ease-out),
+    color .15s var(--ease-out),padding .28s var(--ease-out)}
+.wms-hb-item:hover .wms-hb-ask,.wms-hb-item:focus-within .wms-hb-ask{
+  max-height:32px;padding-top:5px;padding-bottom:5px;margin-top:4px;opacity:1;
+  border-color:color-mix(in srgb,var(--hb-accent) 38%,transparent)}
+.wms-hb-ask:hover{background:color-mix(in srgb,var(--hb-accent) 12%,transparent);
+  border-color:color-mix(in srgb,var(--hb-accent) 62%,transparent)}
+.wms-hb-ask:focus-visible{outline:2px solid var(--hb-accent);outline-offset:1px}
+.wms-hb-item:hover{transform:translateX(2px);
+  border-color:color-mix(in srgb,var(--hb-accent) 30%,transparent);
+  background:linear-gradient(90deg,
+    color-mix(in srgb,var(--hb-accent) 11%,transparent) 0%,
+    color-mix(in srgb,var(--hb-accent) 4%,transparent) 30%,transparent 64%)}
+/* RANK-1 — the most imminent. Dominates: bigger headline, brighter wash, and a
+   single calm "pressure pulse" on its rail. This is the one moving element. */
+.wms-hb-item[data-hb-rank="1"]{padding-top:15px;padding-bottom:15px;
+  background:linear-gradient(90deg,
+    color-mix(in srgb,var(--hb-accent) 12%,transparent) 0%,
+    color-mix(in srgb,var(--hb-accent) 4.5%,transparent) 30%,transparent 62%);
+  border-color:color-mix(in srgb,var(--hb-accent) 26%,transparent)}
+.wms-hb-item[data-hb-rank="1"] .wms-hb-text{font-size:15px;line-height:1.38;
+  color:var(--color-ink)}
+.wms-hb-item[data-hb-rank="1"] .wms-hb-kind{color:var(--hb-accent);opacity:.92}
+.wms-hb-item[data-hb-rank="1"] .wms-hb-rail::after{
+  animation:hb-pulse 3.4s var(--ease-in-out) infinite}
+.wms-hb-item[data-hb-rank="1"]:hover{
+  border-color:color-mix(in srgb,var(--hb-accent) 40%,transparent)}
+/* Ranks 2-3 quietly recede so rank-1 wins the eye. */
+.wms-hb-item[data-hb-rank="3"]{opacity:.9}
+@keyframes hb-pulse{
+  0%,100%{box-shadow:0 0 7px -1px color-mix(in srgb,var(--hb-accent) 55%,transparent);
+    filter:brightness(1)}
+  50%{box-shadow:0 0 13px 0 color-mix(in srgb,var(--hb-accent) 80%,transparent);
+    filter:brightness(1.12)}}
+@media (prefers-reduced-motion:reduce){
+  .wms-hb-item[data-hb-rank="1"] .wms-hb-rail::after{animation:none}
+  .wms-hb-rail::after,.wms-hb-item,.wms-hb-rule,.wms-hb-ask{transition:none}}
+.force-reduced-motion .wms-hb-item[data-hb-rank="1"] .wms-hb-rail::after{animation:none}
+.wms-hb-stable{font-size:12px;color:var(--color-text-faint);font-style:italic;
+  padding:8px 0 8px 15px;border-left:2px solid color-mix(in srgb,var(--color-thriving) 45%,transparent);
+  line-height:1.5}
 /* Tablet reflow — left/right rails shrink, center keeps breathing room. */
 @media (max-width:1100px){.wms-panels{grid-template-columns:248px 1fr 256px}}
 /* Below 900px: collapse the right rail under the center column. */
@@ -1289,18 +1387,31 @@ only; will-change is applied to the overlay/canvas, never children.
 #ambient-layer{position:fixed;inset:0;pointer-events:none;z-index:400;
   opacity:0;transition:opacity 600ms ease;will-change:opacity}
 #ambient-layer.is-on{opacity:1}
-/* Base glow + vignette wash — themed; the glow breathes very slowly. */
-#ambient-layer .amb-glow{position:absolute;inset:0;background:var(--amb-glow,none);
-  animation:amb-breathe 22s ease-in-out infinite;will-change:transform,opacity}
+/* Living atmosphere: TWO slow gradient layers give depth. Layer 1 (.amb-glow)
+   is the themed core glow, breathing slowly (scale + tiny drift). Layer 2
+   (::before, --amb-glow2) is a second, slower, counter-drifting wash — the
+   light feels like it moves, not just pulses. Both whisper-low. Transform/opacity
+   only; will-change on the layer, never abused. */
+#ambient-layer .amb-glow{position:absolute;inset:-8%;background:var(--amb-glow,none);
+  animation:amb-breathe 26s var(--ease-in-out) infinite;will-change:transform,opacity}
+#ambient-layer .amb-glow::before{content:'';position:absolute;inset:0;
+  background:var(--amb-glow2,none);
+  animation:amb-drift 40s var(--ease-in-out) infinite;will-change:transform,opacity}
 #ambient-layer .amb-vignette{position:absolute;inset:0;background:var(--amb-vignette,none)}
 #ambient-layer canvas{position:absolute;inset:0;width:100%;height:100%;will-change:transform}
-@keyframes amb-breathe{0%,100%{opacity:0.85;transform:scale(1)}50%{opacity:1;transform:scale(1.03)}}
-/* Reduced-motion: no drift, no breathing — static faint vignette only. JS also
+@keyframes amb-breathe{
+  0%,100%{opacity:.82;transform:scale(1) translate3d(0,0,0)}
+  50%{opacity:1;transform:scale(1.045) translate3d(0,-1.2%,0)}}
+@keyframes amb-drift{
+  0%,100%{opacity:.5;transform:translate3d(-1.5%,1%,0) scale(1.05)}
+  50%{opacity:.85;transform:translate3d(2%,-1.5%,0) scale(1.12)}}
+/* Reduced-motion: no drift, no breathing — static faint wash only. JS also
    skips the canvas loop, so this is belt-and-suspenders for the CSS glow. */
 @media (prefers-reduced-motion:reduce){
-  #ambient-layer .amb-glow{animation:none}
+  #ambient-layer .amb-glow,#ambient-layer .amb-glow::before{animation:none}
 }
-.force-reduced-motion #ambient-layer .amb-glow{animation:none}
+.force-reduced-motion #ambient-layer .amb-glow,
+.force-reduced-motion #ambient-layer .amb-glow::before{animation:none}
 
 /*
 ==============================================================================
@@ -21602,14 +21713,30 @@ const WorldShell={
       ctr.innerHTML=`<div class="wms-hb-stable">World stable — ${dormant - activePressureCount} pressure${dormant - activePressureCount===1?'':'s'} dormant, no thresholds approaching.</div>`;
       return;
     }
+    // Presentational only: map each item's imminence to a 0..1 pressure-rail fill.
+    // Reads the deterministic `distance` Compute.heartbeat already returns (no logic
+    // change to the selector). Fuller rail = more imminent. front>threshold>pressure
+    // by construction, so rail height reinforces the existing severity sort visually.
+    const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+    const railFill=(it)=>{
+      const d=Number(it.distance)||0;
+      if(it.kind==='front')return d<=1?0.97:0.80;            // 1 tick = nearly full
+      if(it.kind==='threshold')return clamp(1-d/18,0.32,0.9); // closer point = fuller
+      return clamp(0.30+d*0.07,0.30,0.72);                    // pressure: by drift magnitude
+    };
     let html='';
-    items.forEach(item=>{
+    items.forEach((item,i)=>{
       const kindLabel=E(KIND_LABEL[item.kind]||item.kind);
-      html+=`<div class="wms-hb-item wms-hb-item--${E(item.kind)}" data-hb-text="${E(item.text)}" data-hb-rule="${E(item.ruleText)}">
-        <div class="wms-hb-kind">${kindLabel}</div>
-        <div class="wms-hb-text">${E(item.text)}</div>
-        <div class="wms-hb-rule">${E(item.ruleText)}</div>
-        <button class="wms-hb-ask" type="button" title="Open Copilot with this item as context">What should I do about this?</button>
+      const rank=i+1;
+      const fill=railFill(item).toFixed(3);
+      html+=`<div class="wms-hb-item wms-hb-item--${E(item.kind)}" data-hb-rank="${rank}" style="--hb-fill:${fill}" data-hb-text="${E(item.text)}" data-hb-rule="${E(item.ruleText)}">
+        <div class="wms-hb-rail" aria-hidden="true"></div>
+        <div class="wms-hb-body">
+          <div class="wms-hb-eyebrow"><span class="wms-hb-rank">${rank}</span><span class="wms-hb-kind">${kindLabel}</span></div>
+          <div class="wms-hb-text">${E(item.text)}</div>
+          <div class="wms-hb-rule"><span>${E(item.ruleText)}</span></div>
+          <button class="wms-hb-ask" type="button" title="Open Copilot with this item as context">What should I do about this?</button>
+        </div>
       </div>`;
     });
     ctr.innerHTML=html;
@@ -24428,28 +24555,58 @@ const Ambient={
     this._seed(w,h);
   },
   _seed(w,h){
-    const n=Math.min(50,Math.round((w*h)/30000)); // cap 50; scale to viewport
-    this.parts=Array.from({length:n},()=>({
-      x:Math.random()*w,y:Math.random()*h,r:0.6+Math.random()*1.8,
-      vx:(Math.random()-0.5)*0.10,vy:-(0.05+Math.random()*0.18),
-      a:0.3+Math.random()*0.7}));
+    // Depth-layered field: each mote has depth 0..1 (far→near). Near motes are
+    // larger, brighter, drift a touch faster and twinkle more — that parallax is
+    // what reads as "atmosphere" instead of flat dots. Plus a slow horizontal
+    // sway (sin) per mote so they float on air currents, not a conveyor belt.
+    const n=Math.min(64,Math.round((w*h)/26000)); // cap 64; scales to viewport
+    this.t=0;
+    this.parts=Array.from({length:n},()=>{
+      const depth=Math.random();                 // 0 far … 1 near
+      return {
+        x:Math.random()*w,y:Math.random()*h,
+        r:0.5+depth*1.9,                          // near = bigger
+        vy:-(0.035+depth*0.16+Math.random()*0.05),// near rises slightly faster
+        drift:Math.random()*6.283,                // sway phase
+        sway:(0.10+depth*0.30),                   // near sways wider
+        swSpd:0.5+Math.random()*0.7,              // own sway frequency
+        baseA:(0.28+depth*0.62),                  // near = brighter
+        tw:Math.random()*6.283,                   // twinkle phase
+        twSpd:0.6+Math.random()*1.1,              // own twinkle frequency
+        twAmt:0.18+depth*0.30                     // near twinkles more
+      };
+    });
   },
-  _start(){if(this.raf||this._reduced())return;this.last=0;this.raf=requestAnimationFrame(this._tick.bind(this));},
+  _readColors(){
+    const cs=getComputedStyle(this.el);
+    this._rgb=cs.getPropertyValue('--amb-particle').trim()||'255,185,100';
+    this._baseAlpha=parseFloat(cs.getPropertyValue('--amb-particle-alpha'))||0.4;
+    this._colorFrame=0;
+  },
+  _start(){if(this.raf||this._reduced())return;this.last=0;this._readColors();this.raf=requestAnimationFrame(this._tick.bind(this));},
   _stop(){if(this.raf){cancelAnimationFrame(this.raf);this.raf=0;}},
   _tick(ts){
     this.raf=requestAnimationFrame(this._tick.bind(this));
     if(ts-this.last<55)return; // ~18fps gate — cheap, no flicker
     this.last=ts;
-    const w=window.innerWidth,h=window.innerHeight,ctx=this.ctx;
+    this.t+=0.055; // time accumulator (~per visible frame); drives sway + twinkle
+    // Refresh themed color/alpha every ~20 frames so live theme switches apply
+    // without paying getComputedStyle on every frame.
+    if((this._colorFrame=(this._colorFrame||0)+1)>=20||this._rgb===undefined)this._readColors();
+    const w=window.innerWidth,h=window.innerHeight,ctx=this.ctx,t=this.t;
+    const rgb=this._rgb,base=this._baseAlpha;
     ctx.clearRect(0,0,w,h);
-    const rgb=getComputedStyle(this.el).getPropertyValue('--amb-particle').trim()||'255,185,100';
-    const base=parseFloat(getComputedStyle(this.el).getPropertyValue('--amb-particle-alpha'))||0.4;
     for(const p of this.parts){
-      p.x+=p.vx;p.y+=p.vy;
-      if(p.y<-4){p.y=h+4;p.x=Math.random()*w;}
-      if(p.x<-4)p.x=w+4;else if(p.x>w+4)p.x=-4;
-      ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,6.283);
-      ctx.fillStyle=`rgba(${rgb},${(base*p.a).toFixed(3)})`;ctx.fill();
+      p.y+=p.vy;
+      const dx=Math.sin(t*p.swSpd+p.drift)*p.sway; // organic horizontal float
+      let px=p.x+dx;
+      if(p.y<-4){p.y=h+4;p.x=Math.random()*w;}     // recycle off the top
+      if(px<-4)px=w+4;else if(px>w+4)px=-4;
+      // Gentle twinkle: alpha breathes around the mote's base brightness.
+      const tw=1+Math.sin(t*p.twSpd+p.tw)*p.twAmt;
+      const a=base*p.baseA*tw;
+      ctx.beginPath();ctx.arc(px,p.y,p.r,0,6.283);
+      ctx.fillStyle=`rgba(${rgb},${(a>0?a:0).toFixed(3)})`;ctx.fill();
     }
   },
   set(on){
