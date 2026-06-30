@@ -3630,6 +3630,10 @@ body.theme-manuscript .run-mode{--run-doom-low:var(--color-amber);--run-doom-mid
 .run-mode__ask-capture:hover{background:var(--ember-color);color:var(--color-ink-elevated)}
 .run-mode__ask-toclock{font-family:var(--font-mono);font-size:var(--text-label-sm);letter-spacing:.04em;text-transform:uppercase;color:var(--color-text-muted);padding:5px 10px;border:1px solid var(--color-border-hairline);border-radius:var(--radius-none);background:transparent;cursor:pointer}
 .run-mode__ask-toclock:hover{border-color:var(--color-crisis);color:var(--color-crisis)}
+@media (prefers-reduced-motion:no-preference){
+  .run-mode__ask-toclock.is-committed{animation:run-committed .5s ease}
+  @keyframes run-committed{0%{background:var(--color-crisis);color:var(--color-ink-elevated);border-color:var(--color-crisis)}100%{background:transparent}}
+}
 
 /* Dice — the readout slams, the set is always fully visible (incl. d20 + d100) */
 .run-mode__dice{display:flex;flex-direction:column;align-items:center;gap:var(--space-3)}
@@ -18229,11 +18233,16 @@ const RunMode={
 
   // Advance / ease the FOCUSED clock by one segment (routes through the shipped
   // State.cpSetClockSeg so undo + persistence + cp:changed all fire as normal).
+  // A named toast so the GM always sees WHICH threat moved and to what — the ripple
+  // is never silent, whether it came from the stage button, the 'A' hotkey, or an answer.
   advanceFocus(){
     const c=this._focusClock();if(!c)return;
-    if(c.filled>=c.size){showToast('That clock is already full.',[],2000);return;}
-    State.cpSetClockSeg(c.id,c.filled+1);   // fires cp:changed → render()
-    if(c.filled+1>=c.size)showToast('The clock is full — it happens now.',[],2500);
+    const nm=(c.name||'The threat').trim();
+    if(c.filled>=c.size){showToast(`${nm} is already full.`,[],2000);return;}
+    const next=c.filled+1;
+    State.cpSetClockSeg(c.id,next);   // fires cp:changed → render()
+    if(next>=c.size)showToast(`${nm} is full — it happens now.`,[],2600);
+    else showToast(`${nm} advances → ${next}/${c.size}.`,[],2200);
   },
   easeFocus(){
     const c=this._focusClock();if(!c)return;
@@ -18405,6 +18414,16 @@ const RunMode={
     });
     if(started===false){stop();}
   },
+  // Answer-card "Advance clock": the GM is ruling that THIS revelation raised the stakes.
+  // Advance the focused clock (named toast via advanceFocus) and flash the button so the
+  // ripple from answer → world is felt, not just done.
+  _advanceFromAnswer(){
+    if(!this._lastAsk||!this._lastAsk.text){showToast('Ask something first — then its weight can move a clock.',[],2500);return;}
+    if(!(State.cp().clocks||[]).length){showToast('No clocks on the stage to advance. Build one in prep.',[],2800);return;}
+    this.advanceFocus();
+    const btn=document.getElementById('run-ask-toclock');
+    if(btn){btn.classList.remove('is-committed');void btn.offsetWidth;btn.classList.add('is-committed');}
+  },
   // Push the last answer to canon: seed the inscribe form (review-before-commit), same
   // path the canon chips use. Nothing auto-commits.
   _askToCanon(){
@@ -18517,7 +18536,7 @@ const RunMode={
         if(askQ){this.sendAsk(askQ.dataset.askQ);return;}
         if(e.target.closest('#run-ask-full')){this.openFullAudience();return;}
         if(e.target.closest('#run-ask-capture')){this._askToCanon();return;}
-        if(e.target.closest('#run-ask-toclock')){this.advanceFocus();return;}
+        if(e.target.closest('#run-ask-toclock')){this._advanceFromAnswer();return;}
         // oracle
         const odds=e.target.closest('#run-oracle-odds [data-odds]');
         if(odds){this._odds=parseInt(odds.dataset.odds,10);this._renderOracle();return;}
