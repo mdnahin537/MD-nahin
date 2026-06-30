@@ -3570,6 +3570,10 @@ SECTION 7: MOTION & STATE STYLES
 .run-mode__doom[data-heat="high"] .run-mode__doom-count,.run-mode__doom[data-heat="max"] .run-mode__doom-count{color:var(--run-doom-high)}
 body.theme-modern .run-mode{--run-doom-mid:#ffa53d;--run-doom-high:#ff6a3d;--run-doom-max:#f5341a}
 body.theme-manuscript .run-mode{--run-doom-low:var(--color-amber);--run-doom-mid:#d2691e;--run-doom-high:#c0341c;--run-doom-max:#8f1f10;--run-doom-empty:#e3e8ec}
+/* Exceptional oracle hues are tuned for dark surfaces; on the light Manuscript theme
+   they wash out (bright mint at ~1.4:1 on parchment is unreadable). Deepen them and
+   drop the halo so 'Yes, and…'/'No, and…' stay legible AND still read as exceptional. */
+body.theme-manuscript .run-mode{--run-exc-yes:#1f9d57;--run-exc-yes-glow:transparent;--run-exc-no:#c92a18;--run-exc-no-glow:transparent}
 .run-mode__doom-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
 .run-mode__doom-count{font-family:var(--font-display),'Cinzel',serif;font-size:var(--text-display-lg);line-height:1;color:var(--color-ink);font-variant-numeric:tabular-nums}
 .run-mode__doom-count em{font-style:normal;color:var(--color-text-faint);font-size:.5em}
