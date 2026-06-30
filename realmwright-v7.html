@@ -3546,6 +3546,19 @@ SECTION 7: MOTION & STATE STYLES
 .run-mode__legend span{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:var(--text-label-sm);letter-spacing:.04em;color:var(--color-text-faint)}
 .run-mode__legend i{width:8px;height:8px;border-radius:50%}
 
+/* ═══ SECRET BANK — a live checklist. Delivered secrets must look UNMISTAKABLY spent
+   so the GM never re-reveals one or loses track of what's still in their pocket. ═══ */
+#run-secrets{display:flex;flex-direction:column;gap:var(--space-2)}
+.run-mode__secret{display:grid;grid-template-columns:22px 1fr;align-items:start;gap:var(--space-3);padding:10px 12px;border:1px solid var(--color-border-hairline);border-radius:var(--radius-none);background:var(--color-surface);cursor:pointer;transition:border-color var(--duration-instant),background var(--duration-instant),opacity var(--duration-instant)}
+.run-mode__secret:hover{background:var(--color-parchment-warm);border-color:var(--color-border-default)}
+.run-mode__secret:focus-visible{outline:2px solid var(--ember-color-pale);outline-offset:1px}
+.run-mode__secret-check{width:22px;height:22px;margin-top:1px;display:grid;place-items:center;border:1px solid var(--color-border-default);border-radius:var(--radius-none);background:var(--color-parchment-pale);color:transparent;font-size:13px;line-height:1;padding:0;cursor:pointer;flex-shrink:0;transition:background var(--duration-instant),color var(--duration-instant),border-color var(--duration-instant)}
+.run-mode__secret-text{font-size:var(--text-body-sm);color:var(--color-ink);line-height:1.5;overflow-wrap:anywhere}
+/* delivered — checkbox fills ember, ✓ shows, text reads as spent (dimmed + struck) */
+.run-mode__secret[aria-checked="true"]{background:var(--color-bg);border-color:var(--color-border-hairline)}
+.run-mode__secret[aria-checked="true"] .run-mode__secret-check{background:var(--ember-color);border-color:var(--ember-color);color:var(--color-ink-elevated)}
+.run-mode__secret[aria-checked="true"] .run-mode__secret-text{color:var(--color-text-faint);text-decoration:line-through;text-decoration-color:var(--color-text-faint)}
+
 /* ═══ CENTER — THE STAGE (the Doom Clock, the signature anchor) ═══ */
 .run-mode__region--stage{background:var(--color-parchment);align-items:stretch}
 .run-mode__stage{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--space-5);padding:var(--space-6) var(--space-5);text-align:center}
