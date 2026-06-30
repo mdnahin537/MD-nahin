@@ -3517,15 +3517,15 @@ SECTION 7: MOTION & STATE STYLES
 
 /* ═══ LEFT — THE CAST (the moat: who's at the table, grounded NPCs) ═══ */
 .run-mode__cast{display:flex;flex-direction:column;gap:var(--space-2)}
-.run-mode__npc{display:grid;grid-template-columns:42px 1fr auto;align-items:center;gap:var(--space-3);width:100%;text-align:left;padding:11px 12px;border:1px solid var(--color-border-hairline);border-radius:var(--radius-none);background:var(--color-surface);cursor:pointer;position:relative;transition:border-color var(--duration-instant),background var(--duration-instant)}
+.run-mode__npc{display:grid;grid-template-columns:42px minmax(0,1fr) auto;align-items:center;gap:var(--space-3);width:100%;text-align:left;padding:11px 12px;border:1px solid var(--color-border-hairline);border-radius:var(--radius-none);background:var(--color-surface);cursor:pointer;position:relative;transition:border-color var(--duration-instant),background var(--duration-instant)}
 .run-mode__npc:hover{background:var(--color-parchment-warm);border-color:var(--color-border-default)}
 .run-mode__npc.is-active{border-color:var(--ember-color-pale);background:var(--color-parchment-warm)}
 .run-mode__npc.is-active::before{content:'';position:absolute;left:-1px;top:9px;bottom:9px;width:3px;background:var(--ember-color)}
 .run-mode__npc-face{width:42px;height:42px;border-radius:var(--radius-none);background:var(--color-parchment-pale);display:grid;place-items:center;font-family:var(--font-display),'Cinzel',serif;font-size:var(--text-h3);color:var(--ember-color);border:1px solid var(--color-border-hairline)}
 .run-mode__npc.is-active .run-mode__npc-face{border-color:var(--ember-color-pale)}
 .run-mode__npc-main{min-width:0}
-.run-mode__npc-name{font-family:var(--font-display),'Cinzel',serif;font-size:var(--text-body);color:var(--color-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.25}
-.run-mode__npc-role{font-size:var(--text-body-sm);color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;margin-top:1px}
+.run-mode__npc-name{font-family:var(--font-display),'Cinzel',serif;font-size:var(--text-body);color:var(--color-ink);line-height:1.25;overflow-wrap:anywhere;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.run-mode__npc-role{font-size:var(--text-body-sm);color:var(--color-text-muted);line-height:1.3;margin-top:1px;overflow-wrap:anywhere;overflow:hidden;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical}
 .run-mode__npc-stance{width:10px;height:10px;border-radius:50%;flex-shrink:0;background:var(--_stance,var(--color-text-faint))}
 .run-mode__cast-foot{margin-top:var(--space-4);padding-top:var(--space-4);border-top:1px solid var(--color-border-hairline)}
 .run-mode__legend{display:flex;flex-wrap:wrap;gap:var(--space-2) var(--space-4)}
@@ -3579,7 +3579,7 @@ body.theme-manuscript .run-mode{--run-doom-low:var(--color-amber);--run-doom-mid
 
 /* ═══ RIGHT — THE GM DESK (Ask the NPC · Dice · Oracle) ═══ */
 .run-mode__desk{display:flex;flex-direction:column;gap:var(--space-4)}
-.run-mode__panel{border:1px solid var(--color-border-hairline);border-radius:var(--radius-none);background:var(--color-surface);display:flex;flex-direction:column;overflow:hidden}
+.run-mode__panel{border:1px solid var(--color-border-hairline);border-radius:var(--radius-none);background:var(--color-surface);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
 .run-mode__panel-head{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);padding:10px var(--space-4);border-bottom:1px solid var(--color-border-hairline)}
 .run-mode__panel-head h3{font-family:var(--font-mono);font-size:var(--text-label-sm);letter-spacing:.16em;text-transform:uppercase;color:var(--color-text-muted);font-weight:500;margin:0}
 .run-mode__panel-tag{font-family:var(--font-mono);font-size:var(--text-label-sm);letter-spacing:.08em;color:var(--color-text-faint);white-space:nowrap}
@@ -3644,10 +3644,21 @@ body.theme-manuscript .run-mode{--run-doom-low:var(--color-amber);--run-doom-mid
 .run-mode.is-dice-only .run-mode__roll-now{font-size:calc(var(--text-display-lg) * 1.6)}
 
 /* Oracle — a held question + persistent chaos, resolved through Solo._rollFateChart */
-.run-mode__oracle-verdict{font-family:var(--font-display),'Cinzel',serif;font-size:var(--text-h1);color:var(--color-ink);text-align:center;min-height:1.2em;line-height:1.15}
+/* Exceptional tokens — vivid, glowing, cockpit-scoped so an "and…" reads with weight
+   in EVERY theme (the theme pastels are too soft to carry the extra meaning). */
+.run-mode{--run-exc-yes:#3ddc84;--run-exc-yes-glow:rgba(61,220,132,.55);--run-exc-no:#ff4d3d;--run-exc-no-glow:rgba(255,77,61,.5)}
+.run-mode__oracle-verdict{font-family:var(--font-display),'Cinzel',serif;font-size:var(--text-h1);color:var(--color-ink);text-align:center;min-height:1.2em;line-height:1.15;transition:text-shadow var(--duration-default) ease}
 .run-mode__oracle-verdict.v-yes{color:var(--color-thriving)}
 .run-mode__oracle-verdict.v-no{color:var(--color-crisis)}
 .run-mode__oracle-verdict.v-strong{color:var(--ember-color)}
+/* "Yes, and…" / "No, and…" — the heaviest outcomes in solo play. Brighter hue + a halo
+   so the GM FEELS the swing the instant it lands. */
+.run-mode__oracle-verdict.v-yes-exc{color:var(--run-exc-yes);text-shadow:0 0 22px var(--run-exc-yes-glow)}
+.run-mode__oracle-verdict.v-no-exc{color:var(--run-exc-no);text-shadow:0 0 22px var(--run-exc-no-glow)}
+/* a small "exceptional" flag rendered next to the sub-line */
+.run-mode__oracle-flag{display:inline-block;font-family:var(--font-mono);font-size:var(--text-label-sm);letter-spacing:.14em;text-transform:uppercase;padding:1px 7px;margin-bottom:6px;border-radius:var(--radius-none);border:1px solid currentColor}
+.run-mode__oracle-flag--yes{color:var(--run-exc-yes)}
+.run-mode__oracle-flag--no{color:var(--run-exc-no)}
 .run-mode__oracle-sub{font-family:var(--font-body);font-size:var(--text-body-sm);color:var(--color-text-muted);text-align:center;min-height:1.3em;font-style:italic;margin-top:4px}
 .run-mode__oracle-twist{font-family:var(--font-body);font-size:var(--text-body-sm);color:var(--ember-color);text-align:center;margin-top:6px;line-height:1.45}
 .run-mode__oracle-q{margin-top:var(--space-3);width:100%;min-height:42px;padding:0 12px;background:var(--color-parchment-pale);border:1px solid var(--color-border-hairline);border-radius:var(--radius-none);color:var(--color-ink);font-family:var(--font-body);font-size:var(--text-body-sm)}
@@ -3687,6 +3698,9 @@ body.theme-manuscript .run-mode{--run-doom-low:var(--color-amber);--run-doom-mid
   @keyframes run-slam{0%{transform:scale(1.16);opacity:.5}60%{transform:scale(.97)}100%{transform:scale(1)}}
   .run-mode__oracle-verdict.is-in{animation:run-fade-up var(--duration-default) cubic-bezier(0.16,1,0.3,1)}
   @keyframes run-fade-up{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  /* exceptional verdicts hit harder: a quick swell + a glow pulse so "and…" lands with weight */
+  .run-mode__oracle-verdict.is-in.v-yes-exc,.run-mode__oracle-verdict.is-in.v-no-exc{animation:run-exc-slam .42s cubic-bezier(0.16,1,0.3,1)}
+  @keyframes run-exc-slam{0%{opacity:0;transform:scale(1.22)}55%{opacity:1;transform:scale(.98)}100%{transform:scale(1)}}
   .run-mode__ask-voice.is-in{animation:run-fade-up var(--duration-default) cubic-bezier(0.16,1,0.3,1)}
 }
 
@@ -18367,14 +18381,19 @@ const RunMode={
     const twEl=document.getElementById('run-oracle-twist');
     const qInput=document.getElementById('run-oracle-q');
     const q=(qInput&&qInput.value||'').trim();
-    let label,cls;
-    if(res.result==='ExceptionalYes'){label='Yes, and…';cls='v-yes';}
-    else if(res.result==='Yes'){label='Yes';cls='v-yes';}
-    else if(res.result==='ExceptionalNo'){label='No, and…';cls='v-no';}
-    else{label='No';cls='v-no';}
+    let label,cls,exc;
+    if(res.result==='ExceptionalYes'){label='Yes, and…';cls='v-yes-exc';exc='yes';}
+    else if(res.result==='Yes'){label='Yes';cls='v-yes';exc=null;}
+    else if(res.result==='ExceptionalNo'){label='No, and…';cls='v-no-exc';exc='no';}
+    else{label='No';cls='v-no';exc=null;}
     if(vEl){vEl.className='run-mode__oracle-verdict '+cls;vEl.textContent=label;
       vEl.classList.remove('is-in');void vEl.offsetWidth;vEl.classList.add('is-in');}
-    if(subEl)subEl.textContent=q?`“${q}”`:`odds ${this._oddsWord()} · chaos ${chaos}`;
+    if(subEl){
+      // Exceptional results carry a flagged eyebrow so the extra weight is unmistakable.
+      const flag=exc?`<span class="run-mode__oracle-flag run-mode__oracle-flag--${exc}">Exceptional</span> `:'';
+      const tail=q?`“${E(q)}”`:`odds ${this._oddsWord()} · chaos ${chaos}`;
+      subEl.innerHTML=flag+tail;
+    }
     if(twEl)twEl.textContent=res.randomEvent?'A twist breaks in — something unasked-for happens.':'';
   },
   _oddsWord(){return this._odds===2?'unlikely':this._odds===5?'likely':'even';},
