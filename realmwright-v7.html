@@ -3527,6 +3527,20 @@ SECTION 7: MOTION & STATE STYLES
 .run-mode__npc-name{font-family:var(--font-display),'Cinzel',serif;font-size:var(--text-body);color:var(--color-ink);line-height:1.25;overflow-wrap:anywhere;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .run-mode__npc-role{font-size:var(--text-body-sm);color:var(--color-text-muted);line-height:1.3;margin-top:1px;overflow-wrap:anywhere;overflow:hidden;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical}
 .run-mode__npc-stance{width:10px;height:10px;border-radius:50%;flex-shrink:0;background:var(--_stance,var(--color-text-faint))}
+/* a card + its "set aside" affordance. The button hides until the row is hovered or
+   the button itself is focused, so the rail stays calm but the control is always reachable. */
+.run-mode__npc-row{position:relative}
+.run-mode__npc-row .run-mode__npc{width:100%}
+.run-mode__npc-bench{position:absolute;top:6px;right:8px;font-family:var(--font-mono);font-size:var(--text-label-sm);letter-spacing:.04em;color:var(--color-text-faint);background:var(--color-surface);border:1px solid var(--color-border-hairline);border-radius:var(--radius-none);padding:2px 7px;cursor:pointer;opacity:0;transition:opacity var(--duration-instant),color var(--duration-instant),border-color var(--duration-instant)}
+.run-mode__npc-row:hover .run-mode__npc-bench,.run-mode__npc-bench:focus{opacity:1}
+.run-mode__npc-bench:hover{color:var(--color-text-muted);border-color:var(--color-border-default)}
+/* THE BENCH — the rest of tonight's cast, one tap from the scene */
+.run-mode__bench{margin-top:var(--space-4);padding-top:var(--space-3);border-top:1px dashed var(--color-border-hairline)}
+.run-mode__bench-head{display:flex;align-items:center;gap:var(--space-2);font-family:var(--font-mono);font-size:var(--text-label-sm);letter-spacing:.14em;text-transform:uppercase;color:var(--color-text-faint);margin-bottom:var(--space-3)}
+.run-mode__bench-head span{font-variant-numeric:tabular-nums;color:var(--color-text-muted);border:1px solid var(--color-border-hairline);border-radius:var(--radius-none);padding:0 6px}
+.run-mode__bench-list{display:flex;flex-wrap:wrap;gap:6px}
+.run-mode__bench-chip{font-family:var(--font-body);font-size:var(--text-body-sm);color:var(--color-text-muted);background:var(--color-parchment-pale);border:1px solid var(--color-border-hairline);border-radius:var(--radius-none);padding:5px 11px;cursor:pointer;transition:border-color var(--duration-instant),color var(--duration-instant),background var(--duration-instant);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.run-mode__bench-chip:hover{border-color:var(--ember-color-pale);color:var(--color-ink);background:var(--color-parchment-warm)}
 .run-mode__cast-foot{margin-top:var(--space-4);padding-top:var(--space-4);border-top:1px solid var(--color-border-hairline)}
 .run-mode__legend{display:flex;flex-wrap:wrap;gap:var(--space-2) var(--space-4)}
 .run-mode__legend span{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:var(--text-label-sm);letter-spacing:.04em;color:var(--color-text-faint)}
@@ -17886,15 +17900,30 @@ const RunMode={
   open(){
     const el=document.getElementById('run-mode');
     if(!el)return;
+    // Remember who launched us so focus returns there on close (a11y).
+    this._returnFocusTo=(document.activeElement&&document.activeElement!==document.body)?document.activeElement:null;
     el.classList.add('is-open');
     // Idle-clock heuristic baseline (same call Campaign.open makes). Keyless.
     if(typeof LiveMode!=='undefined'){
       try{LiveMode.markSessionStart&&LiveMode.markSessionStart();}catch(e){}
     }
     this.render();
+    // Move focus INTO the cockpit so keyboard/AT users land in the live region
+    // (announces "Run Mode — live session cockpit") instead of the hidden dashboard.
+    el.setAttribute('tabindex','-1');
+    try{el.focus({preventScroll:true});}catch(e){try{el.focus();}catch(_){}}
   },
 
-  close(){document.getElementById('run-mode')?.classList.remove('is-open');},
+  close(){
+    const el=document.getElementById('run-mode');
+    if(el)el.classList.remove('is-open');
+    // Return focus to whatever opened the cockpit. The opener is often the (now-hidden)
+    // mode-dropdown item, which can't take focus — so if the focus doesn't land, fall
+    // back to the always-visible mode button.
+    const tryFocus=node=>{if(!node||typeof node.focus!=='function')return false;try{node.focus({preventScroll:true});}catch(e){try{node.focus();}catch(_){}}return document.activeElement===node;};
+    const opener=this._returnFocusTo;this._returnFocusTo=null;
+    if(!tryFocus(opener))tryFocus(document.getElementById('switch-mode-btn'));
+  },
 
   toggleDiceOnly(){
     const el=document.getElementById('run-mode');if(!el)return;
@@ -18073,26 +18102,33 @@ const RunMode={
     el.textContent=(n&&n.name)?n.name:'Session in progress';
   },
 
-  // LEFT — the cast present tonight. Sourced from cp().npcs (the GM's prepped roster);
-  // each maps to a real world character via linkedCharacterId for the grounded Ask.
+  // LEFT — the cast. A real GM keeps a full roster but only some people are IN THE
+  // SCENE right now, and pulls others in/out fluidly. So the rail is two tiers:
+  //   · IN THE SCENE — the present (here) NPCs: full askable cards.
+  //   · ON THE BENCH — the rest of tonight's cast: one-tap chips to pull into the scene.
+  // Toggling present/bench is live here (State.cpToggleNpc) — no trip back to prep.
+  // Default with nothing curated (no one flagged present): treat everyone as in-scene,
+  // so a GM who never touches "present" still gets the whole table to question.
   _renderCast(){
     const host=document.getElementById('run-cast');if(!host)return;
     const cp=State.cp();const E=Utils.escHtml;
     const n=(typeof State!=='undefined'&&State.get)?State.get():null;
     const chars=(n&&Array.isArray(n.characters))?n.characters:[];
-    // Present tonight first; within that, keep prep order. If none flagged present, show all.
-    let cast=(cp.npcs||[]).filter(x=>x&&(x.name||x.role));
-    const present=cast.filter(x=>x.here);
-    if(present.length)cast=present;
+    const roster=(cp.npcs||[]).filter(x=>x&&(x.name||x.role));
+    const flagged=roster.filter(x=>x.here);
+    // If someone is flagged present, that IS the scene and the rest go to the bench.
+    // If nobody is flagged, the whole roster is the scene (graceful default) and no bench.
+    const inScene=flagged.length?flagged:roster;
+    const bench=flagged.length?roster.filter(x=>!x.here):[];
     const countEl=document.getElementById('run-cast-count');
-    if(countEl)countEl.textContent=cast.length?`${cast.length} present`:'none';
-    if(!cast.length){
+    if(countEl)countEl.textContent=inScene.length?`${inScene.length} in scene`:'none';
+    if(!roster.length){
       host.innerHTML=`<div class="run-mode__empty">No cast yet. Add the people at tonight's table in Campaign prep — mark who's present — and they appear here to question live.</div>`;
       this._askNpcId=null;
       return;
     }
-    if(!cast.find(x=>x.id===this._askNpcId))this._askNpcId=null;
-    host.innerHTML=cast.map(npc=>{
+    if(!inScene.find(x=>x.id===this._askNpcId))this._askNpcId=null;
+    const card=npc=>{
       const ch=npc.linkedCharacterId?chars.find(c=>c&&c.id===npc.linkedCharacterId):null;
       const nm=(npc.name||(ch&&ch.name)||'Unnamed').trim();
       const role=(npc.role||(ch&&ch.role)||'').trim();
@@ -18100,15 +18136,32 @@ const RunMode={
       const stance=this._stanceColor(ch,n);
       const active=npc.id===this._askNpcId?' is-active':'';
       const grounded=ch?'':' title="Not linked to a world character — link them in prep to ask them live"';
-      return `<button class="run-mode__npc${active}" type="button" data-npc="${E(npc.id)}"${grounded}>
-        <span class="run-mode__npc-face">${E(initial)}</span>
-        <span class="run-mode__npc-main">
-          <span class="run-mode__npc-name">${E(nm)}</span>
-          <span class="run-mode__npc-role">${E(role||'—')}</span>
-        </span>
-        <span class="run-mode__npc-stance" style="--_stance:${stance}"></span>
-      </button>`;
-    }).join('');
+      // The card body selects for Ask; the aside button benches without selecting.
+      return `<div class="run-mode__npc-row">
+        <button class="run-mode__npc${active}" type="button" data-npc="${E(npc.id)}"${grounded}>
+          <span class="run-mode__npc-face">${E(initial)}</span>
+          <span class="run-mode__npc-main">
+            <span class="run-mode__npc-name">${E(nm)}</span>
+            <span class="run-mode__npc-role">${E(role||'—')}</span>
+          </span>
+          <span class="run-mode__npc-stance" style="--_stance:${stance}"></span>
+        </button>
+        <button class="run-mode__npc-bench" type="button" data-bench-out="${E(npc.id)}" title="Set ${E(nm)} aside — out of the scene" aria-label="Set ${E(nm)} aside">Set aside</button>
+      </div>`;
+    };
+    let html=inScene.map(card).join('');
+    if(bench.length){
+      const chips=bench.map(npc=>{
+        const ch=npc.linkedCharacterId?chars.find(c=>c&&c.id===npc.linkedCharacterId):null;
+        const nm=(npc.name||(ch&&ch.name)||'Unnamed').trim();
+        return `<button class="run-mode__bench-chip" type="button" data-bench-in="${E(npc.id)}" title="Bring ${E(nm)} into the scene">+ ${E(nm)}</button>`;
+      }).join('');
+      html+=`<div class="run-mode__bench">
+        <div class="run-mode__bench-head">On the bench<span>${bench.length}</span></div>
+        <div class="run-mode__bench-list">${chips}</div>
+      </div>`;
+    }
+    host.innerHTML=html;
   },
   // Stance color from the linked character's faction position (reuses the world's own
   // status palette). No faction → neutral. Pure read; never throws.
@@ -18257,6 +18310,16 @@ const RunMode={
     this._renderAsk(true);
     const input=document.getElementById('run-ask-input');
     if(input&&!input.disabled){try{input.focus();}catch(e){}}
+  },
+  // Bring a benched NPC into the scene AND target them for Ask — the GM almost always
+  // pulls someone in because they want to speak with them next. cpToggleNpc fires
+  // cp:changed → render(), so we set the Ask target first, then flip present.
+  _pullIntoScene(npcId){
+    const cp=State.cp();
+    const npc=(cp.npcs||[]).find(x=>x&&x.id===npcId);
+    if(!npc)return;
+    this._askNpcId=npcId;
+    State.cpToggleNpc(npcId);   // here:false → true; re-renders the rail with them in-scene + active
   },
   _renderAsk(resetOut){
     const E=Utils.escHtml;
@@ -18433,6 +18496,11 @@ const RunMode={
         // secret toggle
         const sec=e.target.closest('.run-mode__secret');
         if(sec&&sec.dataset.secret){State.cpToggleSecret(sec.dataset.secret);return;}
+        // cast bench: pull into / set aside from the scene (live, no trip to prep)
+        const benchIn=e.target.closest('[data-bench-in]');
+        if(benchIn){this._pullIntoScene(benchIn.dataset.benchIn);return;}
+        const benchOut=e.target.closest('[data-bench-out]');
+        if(benchOut){State.cpToggleNpc(benchOut.dataset.benchOut);return;}
         // cast → target the Ask panel
         const npcBtn=e.target.closest('.run-mode__npc');
         if(npcBtn&&npcBtn.dataset.npc){this.selectNpc(npcBtn.dataset.npc);return;}
@@ -18482,6 +18550,16 @@ const RunMode={
         else if(k==='r'){e.preventDefault();this.revealNextSecret();}
         else if(k==='d'){e.preventDefault();this.roll(20);}
         else if(k==='o'){e.preventDefault();this.consultOracle();}
+      });
+      // Focus guard: while the full-screen cockpit is open, keep Tab focus inside it
+      // (otherwise Tab walks into the hidden dashboard underneath). Pull a stray focus
+      // back to the cockpit root. Re-entrancy-guarded so our own .focus() doesn't loop.
+      document.addEventListener('focusin',e=>{
+        if(this._guardingFocus||!this.isOpen())return;
+        if(root.contains(e.target))return;
+        this._guardingFocus=true;
+        try{root.focus({preventScroll:true});}catch(_){try{root.focus();}catch(__){}}
+        this._guardingFocus=false;
       });
     }
 
