@@ -3480,6 +3480,12 @@ SECTION 7: MOTION & STATE STYLES
    honors reduced-motion. Target ≥768px (tablet-landscape, laptop, desktop). */
 .run-mode{position:fixed;inset:0;background:var(--color-bg);z-index:8000;display:none;flex-direction:column;overflow:hidden}
 .run-mode.is-open{display:flex}
+/* The cockpit sits at z-8000, far above the app's modals (z-~1010). When the GM opens
+   a modal FROM the cockpit (Save to canon's inscribe form, manual-event), it must rise
+   ABOVE the cockpit or it opens hidden behind it. Toasts go higher still. */
+body:has(.run-mode.is-open) .modal-backdrop{z-index:8500}
+body:has(.run-mode.is-open) .modal{z-index:8510}
+body:has(.run-mode.is-open) .toast-host,body:has(.run-mode.is-open) #toast-host,body:has(.run-mode.is-open) [class*="toast"]{z-index:8600}
 /* whisper-faint atmosphere from the theme's ambient glow; static, reduced-motion-safe */
 .run-mode::before{content:'';position:absolute;inset:0;pointer-events:none;z-index:0;background:var(--amb-glow,transparent);opacity:.7}
 
@@ -18629,9 +18635,14 @@ const RunMode={
       // Focus guard: while the full-screen cockpit is open, keep Tab focus inside it
       // (otherwise Tab walks into the hidden dashboard underneath). Pull a stray focus
       // back to the cockpit root. Re-entrancy-guarded so our own .focus() doesn't loop.
+      // EXEMPTION: a modal opened FROM the cockpit (e.g. Save to canon's inscribe form)
+      // is raised above the cockpit and owns focus — never yank it back, or the GM
+      // can't type in the modal.
       document.addEventListener('focusin',e=>{
         if(this._guardingFocus||!this.isOpen())return;
         if(root.contains(e.target))return;
+        if(e.target.closest&&e.target.closest('.modal,.modal-backdrop'))return;
+        if(document.querySelector('.modal-backdrop.is-open'))return;  // a modal layer is up
         this._guardingFocus=true;
         try{root.focus({preventScroll:true});}catch(_){try{root.focus();}catch(__){}}
         this._guardingFocus=false;
