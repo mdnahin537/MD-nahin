@@ -3629,7 +3629,7 @@ body.theme-manuscript .run-mode{--run-exc-yes:#1f9d57;--run-exc-yes-glow:transpa
 .run-mode__ask-who{display:flex;align-items:center;gap:10px;margin-bottom:var(--space-3)}
 .run-mode__ask-face{width:34px;height:34px;border-radius:var(--radius-none);background:var(--color-parchment-pale);display:grid;place-items:center;font-family:var(--font-display),'Cinzel',serif;font-size:var(--text-body);color:var(--ember-color);border:1px solid var(--color-border-hairline);flex-shrink:0}
 .run-mode__ask-who-main{min-width:0}
-.run-mode__ask-name{font-family:var(--font-display),'Cinzel',serif;font-size:var(--text-body-sm);color:var(--color-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.run-mode__ask-name{font-family:var(--font-display),'Cinzel',serif;font-size:var(--text-body-sm);color:var(--color-ink);line-height:1.25;overflow-wrap:anywhere;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .run-mode__ask-role{font-family:var(--font-mono);font-size:var(--text-label-sm);letter-spacing:.04em;color:var(--color-text-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .run-mode__ask-full{margin-left:auto;font-family:var(--font-mono);font-size:var(--text-label-sm);letter-spacing:.04em;color:var(--color-text-muted);background:transparent;border:none;cursor:pointer;white-space:nowrap;padding:4px 2px}
 .run-mode__ask-full:hover{color:var(--ember-color)}
@@ -3782,6 +3782,23 @@ body.theme-manuscript .run-mode{--run-exc-yes:#1f9d57;--run-exc-yes-glow:transpa
 @media (max-height:680px){
   .run-mode__doom{width:min(30vh,200px)}
   .run-mode__stage{gap:var(--space-3)}
+}
+/* NARROW WIDTHS (the 2-col reflow) — the full-width desk below claims up to 46vh, so the
+   top cast+stage row is vertically squeezed at ANY height. The 300px ring then overflows
+   the overflow:hidden stage region and gets CLIPPED — hiding the centre count/state — at
+   narrow-but-tall windows (e.g. 900x900) that the max-HEIGHT rules above never catch.
+   Same mechanism as those rules, keyed to the 1024px WIDTH and placed AFTER them so it
+   controls the cascade at every narrow case (the vh ceiling keeps it correct at short
+   heights too): shrink the ring (width drives height via aspect-ratio), top-anchor the
+   stage so the ring + its absolutely-centred count start visible and scroll from the top
+   instead of being centre-clipped, and free a little desk height. Theme-independent —
+   themes override only the clock's colours, not its size — so this covers ember,
+   manuscript AND modern. */
+@media (max-width:1024px){
+  .run-mode__doom{width:min(28vh,230px)}
+  .run-mode__stage{gap:var(--space-4);padding:var(--space-4) var(--space-5);justify-content:flex-start}
+  .run-mode__stage-title{font-size:var(--text-h3)}
+  .run-mode__region--desk{max-height:42vh}
 }
 /* ── CANON QUICK-CHIPS (P4.2) — post-save summary -> tappable chips ───────── */
 .canon-chips{display:none;margin:0 var(--space-5) var(--space-4);padding:var(--space-4);background:var(--color-parchment-pale);border:1px solid var(--ember-color);border-radius:var(--radius-none)}
@@ -15493,7 +15510,7 @@ const SampleMode={
     Render.all();
     SampleMode._showBanner(seed.name,sampleId);
     const label={heist:'The Heist',solo:'The Wandering Investigator',political:'The Saltmoot Council'}[sampleId]||sampleId;
-    showToast(`Sample loaded: ${label}. Explore the chronicle, factions, Run the Table, and the Copilot — no API key needed.`,[],7000);
+    showToast(`Sample loaded: ${label}. Explore the chronicle, factions, Run the Table, and the Copilot — no API key needed.`,[],4500);
   },
 
   // Build the Campaign-prep board that Run Mode (the at-the-table cockpit) reads. Cast NPCs are
