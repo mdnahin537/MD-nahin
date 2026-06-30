@@ -18128,6 +18128,11 @@ const RunMode={
   // ── RENDER ──
   render(){
     if(!this.isOpen())return;
+    // A re-render (e.g. after benching an NPC) can destroy the focused button and drop
+    // focus to <body> — outside the cockpit, where Escape/Tab no longer reach it. Note
+    // whether focus was ours before, so we can recover it after.
+    const root=document.getElementById('run-mode');
+    const hadFocus=!!(root&&document.activeElement&&root.contains(document.activeElement));
     this._renderSessionName();
     this._renderCast();
     this._renderClocks();      // the doom stage (kept name: bind/cp:changed call this)
@@ -18136,6 +18141,12 @@ const RunMode={
     this._renderRollLog();
     this._renderAsk();
     this._renderOracle();
+    // If our focused element was replaced (focus fell to body), pull it back to the cockpit.
+    if(hadFocus&&root&&document.activeElement===document.body){
+      this._guardingFocus=true;
+      try{root.focus({preventScroll:true});}catch(_){try{root.focus();}catch(__){}}
+      this._guardingFocus=false;
+    }
   },
 
   _renderSessionName(){
@@ -18600,6 +18611,13 @@ const RunMode={
         if(!this.isOpen())return;
         if(e.ctrlKey||e.metaKey||e.altKey)return;
         const t=document.activeElement;
+        // Escape always closes — even when a re-render has dropped focus to <body>
+        // (where the root-scoped Escape handler above would never fire). If a field
+        // holds focus, the root handler blurs it first; here we close.
+        if(e.key==='Escape'){
+          if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.isContentEditable))return;
+          e.preventDefault();this.close();return;
+        }
         if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.isContentEditable))return;
         const k=e.key.toLowerCase();
         if(k==='a'){e.preventDefault();this.advanceFocus();}
