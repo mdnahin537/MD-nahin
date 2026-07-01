@@ -20343,6 +20343,45 @@ const Tonight={
   // Bug 5: tracks which nation was generated for this Tonight session so
   // saveSecretsToRealm writes to the right nation even after a nation switch.
   _generatedNationId:null,
+  // True only while a pack was produced against the GM's REAL, permanent world
+  // ("Run tonight in my current world"). It gates OUT every delete/cleanup path and
+  // suppresses "Keep this realm" — the real world is already kept and must never be
+  // tagged _tonightGenerated nor auto-deleted on failure/re-run.
+  _currentWorldMode:false,
+
+  // Wire the "Run tonight in my current world" toggle to the live active world.
+  // Shows it only when a real world exists; labels it with that world's name.
+  _syncCurrentWorldToggle(){
+    const opt=document.getElementById('tonight-world-opt');
+    const cb=document.getElementById('tonight-current-world');
+    const label=document.getElementById('tonight-current-world-label');
+    const nation=(typeof State!=='undefined')?State.get():null;
+    if(!opt||!cb)return;
+    if(nation&&nation.name){
+      opt.style.display='';
+      if(label)label.textContent=`Run tonight in ${nation.name}`;
+    }else{
+      // No world to run in — hide the toggle and force the invent-from-text path.
+      opt.style.display='none';
+      cb.checked=false;
+    }
+    this._refreshComposerCopy();
+  },
+
+  // Reflect the toggle state in the placeholder + cost note so the GM knows the world
+  // (not the one line) is the input when running in their current world.
+  _refreshComposerCopy(){
+    const cb=document.getElementById('tonight-current-world');
+    const inp=document.getElementById('tonight-input');
+    const note=document.getElementById('tonight-note');
+    const on=!!cb?.checked&&document.getElementById('tonight-world-opt')?.style.display!=='none';
+    if(inp)inp.placeholder=on
+      ?'Optional: a focusing sentence for tonight (leave blank to just run your world).'
+      :'The party arrives at the harbor city. Trade has collapsed and the merchant council is fractured.';
+    if(note)note.textContent=on
+      ?'Prepares tonight’s session from your current world. Uses ~$0.03–0.08 of API credits.'
+      :'Generates a world on the fly and prepares tonight’s session. Uses ~$0.03–0.08 of API credits.';
+  },
   _taglines:[
     'Consulting your chronicle…',
     'Cross-referencing factions…',
@@ -20361,6 +20400,9 @@ const Tonight={
     if(el)el.classList.add('is-open');
     const inp=document.getElementById('tonight-input');
     if(inp)setTimeout(()=>inp.focus(),100);
+    // "Run in my current world" toggle — only offered when a real active world exists.
+    // Off by default so the historic invent-from-text path stays the untouched default.
+    this._syncCurrentWorldToggle();
     // Reset results view
     this._resetResults();
     // F8: mount accuracy chip in the Tonight composer row.
@@ -20400,6 +20442,7 @@ const Tonight={
     if(spinner)spinner.classList.remove('is-visible');
     this._lastSecrets=[];
     this._generatedNationId=null;
+    this._currentWorldMode=false;
   },
 
   _setSpinner(msg){
@@ -20430,15 +20473,70 @@ const Tonight={
 
   async generate(){
     const situation=(document.getElementById('tonight-input')?.value||'').trim();
-    if(!situation){showToast('Type a situation first — one line describing tonight\'s scenario.');return;}
+    // "Run tonight in my current world": ON only if the toggle is checked AND a real
+    // active world actually exists. Anything else → the historic invent-from-text path.
+    const wantCurrentWorld=!!document.getElementById('tonight-current-world')?.checked;
+    const activeWorld=(typeof State!=='undefined')?State.get():null;
+    const useCurrentWorld=wantCurrentWorld&&!!activeWorld&&!!activeWorld.name;
+    // In the invent path the one line IS the input, so it's still required. In the
+    // current-world path the WORLD is the input, so the line is optional focusing context.
+    if(!useCurrentWorld&&!situation){showToast('Type a situation first — one line describing tonight\'s scenario.');return;}
     if(typeof Copilot==='undefined'||!Copilot.isConfigured()){
       showToast('Configure your OpenRouter API key in Settings first.');return;
     }
     const length=document.querySelector('#tonight-length .is-selected')?.dataset?.len||'short';
     const btn=document.getElementById('tonight-generate');
     if(btn){btn.disabled=true;btn.textContent='⚡ Working…';}
-    this._setSpinner('Step 1/3 — Building the world…');
+    // generatedNationId stays null in the current-world path so the catch-block orphan
+    // cleanup (which is guarded by `if(generatedNationId)`) can NEVER delete the real world.
     let generatedNationId=null;
+
+    if(useCurrentWorld){
+      // ── RUN IN THE GM'S REAL, PERMANENT WORLD ────────────────────────────────
+      // No importFromText, no addNation, no _tonightGenerated tag, no cleanup of any
+      // kind. State.get() is already this world, which is exactly what generateStrongStart
+      // (nation arg) and generateSessionPrep (reads State.get()) consume. A failed or
+      // re-run generate here leaves the world 100% untouched.
+      this._currentWorldMode=true;
+      const nation=activeWorld;
+      // _generatedNationId points at the REAL world purely so "Save secrets to realm"
+      // appends to the right nation. It is NEVER used to delete — only saveSecretsToRealm
+      // reads it, and _cleanupPreviousTonightNation keys off the tag, not this id.
+      Tonight._generatedNationId=nation.id;
+      this._setSpinner('Steps 1 & 2 — Reading your world + crafting the session pack…');
+      try{
+        const [strongStartRes,prepRes]=await Promise.all([
+          Copilot.generateStrongStart({nation,situation}).catch(e=>({_error:e?.message||'Strong Start failed.'})),
+          Copilot.generateSessionPrep({focus:'mystery',length,twist:situation,proposeSecrets:10}).catch(e=>({_error:e?.message||'Session Prep failed.'})),
+        ]);
+        const ssFailed=strongStartRes&&typeof strongStartRes==='object'&&strongStartRes._error;
+        const prepFailed=prepRes&&typeof prepRes==='object'&&prepRes._error;
+        if(ssFailed&&prepFailed){
+          throw new Error(strongStartRes._error+' / '+prepRes._error);
+        }
+        this._setSpinner('');
+        this._renderResults({
+          strongStart:ssFailed?null:strongStartRes,
+          strongStartError:ssFailed?strongStartRes._error:null,
+          prep:prepFailed?null:prepRes,
+          prepError:prepFailed?prepRes._error:null,
+          nation,
+          retryInputs:{nation,situation,length},
+        });
+      }catch(err){
+        // CRITICAL: real-world path performs NO cleanup/delete. Just surface the error;
+        // the world is exactly as it was before this run.
+        this._setSpinner('');
+        showToast('Generation failed: '+(err.message||'unknown error'));
+      }finally{
+        if(btn){btn.disabled=false;btn.textContent='⚡ Generate Session Pack';}
+      }
+      return;
+    }
+
+    // ── INVENT A NEW NATION FROM THE ONE LINE (historic default path) ──────────
+    this._currentWorldMode=false;
+    this._setSpinner('Step 1/3 — Building the world…');
     try{
       // Step 1: Generate nation from situation description
       // Clean up any previous tonight-generated nation first (avoids accumulation on re-runs)
@@ -20573,7 +20671,9 @@ const Tonight={
     // BUG 12 fix: include "Keep this realm" button so user can promote a tonight nation to
     // permanent. Without it, _tonightGenerated stays set and _cleanupPreviousTonightNation
     // silently deletes any edited/exported tonight nation on next generation.
-    const tonightNationId=this._generatedNationId;
+    // Current-world path: the realm is ALREADY the kept, permanent world, so "Keep this
+    // realm" is meaningless/harmful (it would try to un-tag an untagged nation) — suppress it.
+    const tonightNationId=this._currentWorldMode?null:this._generatedNationId;
     html+=`<div class="tonight-actions">
       <button class="btn btn--primary" id="tonight-print-btn" type="button">Print / Save PDF</button>
       <button class="btn btn--secondary" id="tonight-new-btn" type="button">Generate another</button>
@@ -20664,6 +20764,7 @@ const Tonight={
   bind(){
     document.getElementById('tonight-generate')?.addEventListener('click',()=>this.generate());
     document.getElementById('tonight-exit')?.addEventListener('click',()=>this.close());
+    document.getElementById('tonight-current-world')?.addEventListener('change',()=>this._refreshComposerCopy());
     document.querySelectorAll('#tonight-length .char-status-pill').forEach(b=>{
       b.addEventListener('click',()=>{
         document.querySelectorAll('#tonight-length .char-status-pill').forEach(x=>x.classList.remove('is-selected'));
@@ -26124,6 +26225,12 @@ window.__rwClearDevTheme=function(){localStorage.removeItem('rw_dev_theme');loca
       <textarea class="form-textarea" id="tonight-input" rows="3"
         placeholder="The party arrives at the harbor city. Trade has collapsed and the merchant council is fractured."
         aria-label="Situation description"></textarea>
+      <div class="tonight-mode__opts" id="tonight-world-opt" style="display:none">
+        <label style="display:flex;align-items:center;gap:8px;font-size:var(--text-body-sm);cursor:pointer;margin:0">
+          <input type="checkbox" id="tonight-current-world">
+          <span id="tonight-current-world-label">Run tonight in my current world</span>
+        </label>
+      </div>
       <div class="tonight-mode__opts">
         <label>Length:</label>
         <div class="char-status-group" id="tonight-length" role="group" aria-label="Session length">
@@ -26134,7 +26241,7 @@ window.__rwClearDevTheme=function(){localStorage.removeItem('rw_dev_theme');loca
         <span id="tonight-accuracy-chip" style="margin-left:auto"></span>
       </div>
       <button class="btn btn--primary" id="tonight-generate" type="button" style="margin-top:8px">⚡ Generate Session Pack</button>
-      <p class="tonight-mode__note">Generates a world on the fly and prepares tonight's session. Uses ~$0.03–0.08 of API credits.</p>
+      <p class="tonight-mode__note" id="tonight-note">Generates a world on the fly and prepares tonight's session. Uses ~$0.03–0.08 of API credits.</p>
       <div class="tonight-mode__spinner" id="tonight-spinner"></div>
     </div>
     <div class="tonight-results" id="tonight-results"></div>
