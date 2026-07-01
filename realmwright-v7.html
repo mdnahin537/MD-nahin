@@ -24061,9 +24061,18 @@ function bindEventListeners(){
     if(status){status.textContent='Asking the Copilot... this takes 5–15 seconds.';status.style.color='var(--color-text-muted)';}
     try{
       // C.8: pass open hooks and undeployed secrets so the AI can incorporate them.
+      // Tolerate BOTH data shapes: the runtime shape ({status:'open'|'undeployed'}, e.g. hooks
+      // created in Campaign) AND the authored/fixture shape ({resolved:false} for hooks,
+      // {visibility,content} with no status for secrets, e.g. the example world). A strict
+      // status==='open'/'undeployed' filter silently dropped every hook/secret authored in the
+      // fixture shape — so the AI never saw the world's real hooks/secrets. This is the fix.
       const spNation=State.get();
-      const activeHooks=(spNation.hooks||[]).filter(h=>h.status==='open').map(h=>h.title);
-      const availableSecrets=(spNation.secrets||[]).filter(s=>s.status==='undeployed').slice(0,10).map(s=>s.content);
+      const activeHooks=(spNation.hooks||[])
+        .filter(h=>h&&(h.status?h.status==='open':!h.resolved))
+        .map(h=>h.title||h.name).filter(Boolean);
+      const availableSecrets=(spNation.secrets||[])
+        .filter(s=>s&&(s.status?s.status!=='deployed':!s.deployed))
+        .slice(0,10).map(s=>s.content||s.description||s.title).filter(Boolean);
       const prep=await Copilot.generateSessionPrep({focus,length,twist,activeHooks,availableSecrets});
       const n=State.get();
       if(status){status.textContent='✓ Generated. Opening print preview...';status.style.color='var(--color-thriving)';}
