@@ -12706,23 +12706,47 @@ const FoundryExport={
     const pages=n.secrets.map((s,i)=>this._page(this._h(s.title||'Unnamed secret'),`<p><strong>Visibility:</strong> ${this._h(s.visibility||'private')}</p><p>${this._h(s.content||s.description||'')}</p>`,i));
     return this._entry(`${n.name} — Secrets`,pages);
   },
+  // Returns ONE JournalEntry object (NOT an array). Foundry's "right-click → Import Data" ingests
+  // a single document, so every category's pages are flattened into one entry with the category
+  // prefixed onto each page name. This imports in a single click; multi-entry arrays cannot.
   build(scope,opts){
     scope=scope||'active';opts=opts||{};
     const data=State.data;
     if(!data||!Array.isArray(data.nations)||!data.nations.length)throw new Error('No realms to export.');
     const nations=scope==='all'?data.nations:[data.nations.find(n=>n.id===(data.meta&&data.meta.activeNationId))].filter(Boolean);
     if(!nations.length)throw new Error('No active realm.');
-    const entries=[];
+    const CATS=[
+      ['Overview',n=>this._buildRealmOverview(n)],
+      ['Chronicle',n=>this._buildChronicle(n,opts)],
+      ['Faction',n=>this._buildFactions(n)],
+      ['Character',n=>this._buildCharacters(n)],
+      ['Location',n=>this._buildLocations(n)],
+      ['Hook',n=>this._buildHooks(n)],
+      ['Secret',n=>this._buildSecrets(n,opts)],
+    ];
+    const multi=nations.length>1;
+    const pages=[];let sort=0;
     nations.forEach(n=>{
-      [this._buildRealmOverview(n),this._buildChronicle(n,opts),this._buildFactions(n),this._buildCharacters(n),this._buildLocations(n),this._buildHooks(n),this._buildSecrets(n,opts)].forEach(e=>{if(e)entries.push(e);});
+      CATS.forEach(([label,fn])=>{
+        const entry=fn(n);
+        if(!entry||!Array.isArray(entry.pages))return;
+        entry.pages.forEach(pg=>{
+          const realmTag=multi?`${n.name} · `:'';
+          pg.name=`${realmTag}${label} — ${pg.name}`;
+          pg.sort=sort++;
+          pages.push(pg);
+        });
+      });
     });
-    return entries;
+    if(!pages.length)throw new Error('Nothing to export for the active realm.');
+    const title=scope==='all'?'All Realms — Story Bible':`${nations[0].name} — Story Bible`;
+    return this._entry(title,pages);
   },
   download(scope,opts){
     scope=scope||'active';
     try{
-      const entries=this.build(scope,opts);
-      const blob=new Blob([JSON.stringify(entries,null,2)],{type:'application/json'});
+      const entry=this.build(scope,opts);
+      const blob=new Blob([JSON.stringify(entry,null,2)],{type:'application/json'});
       const url=URL.createObjectURL(blob);
       const a=document.createElement('a');a.href=url;
       const baseName=scope==='all'?'all-realms':((State.data.nations.find(n=>n.id===(State.data.meta&&State.data.meta.activeNationId))||{}).name||'realm');
@@ -12730,7 +12754,7 @@ const FoundryExport={
       a.download=`realmwright-foundry-${slug}-${new Date().toISOString().slice(0,10)}.json`;
       document.body.appendChild(a);a.click();document.body.removeChild(a);
       setTimeout(()=>URL.revokeObjectURL(url),1000);
-      if(typeof showToast==='function')showToast(`Exported ${entries.length} Foundry journal entries (public chronicle only — GM secrets & hidden events excluded; safe to share). Import in Foundry V12 → Journals sidebar → right-click → Import Data.`,[],8000);
+      if(typeof showToast==='function')showToast(`Exported a Foundry journal (${entry.pages.length} pages, public chronicle only — GM secrets & hidden events excluded; safe to share). In Foundry V12: Journals sidebar → create a Journal Entry → right-click it → Import Data → choose this file.`,[],9000);
     }catch(e){
       if(typeof showToast==='function')showToast('Foundry export failed: '+(e.message||e));
     }
