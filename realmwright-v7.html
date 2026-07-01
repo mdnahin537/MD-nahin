@@ -12752,8 +12752,6 @@ function generatePDF(){
   const eras=Compute.eras(events,n);
   pc.innerHTML=`<style>
     @media print{
-      body>*:not(#print-container){display:none!important}
-      #print-container{display:block!important}
       @page{margin:0.75in;size:letter}
     }
     #print-container{font-family:'Fraunces',Georgia,'Times New Roman',serif;color:#1a1a1a;max-width:7in;margin:0 auto;padding:0.4in;line-height:1.5}
@@ -12984,8 +12982,6 @@ function renderSessionPrepPDF(prep,nation){
   const status=Compute.status(stab);
   pc.innerHTML=`<style>
     @media print{
-      body>*:not(#print-container){display:none!important}
-      #print-container{display:block!important}
       @page{margin:0.6in;size:letter}
     }
     #print-container{font-family:'Inter',-apple-system,Helvetica,sans-serif;color:#1a1a1a;max-width:7in;margin:0 auto;padding:0.4in;line-height:1.5}
@@ -18885,8 +18881,6 @@ const Press={
   // The scoped print stylesheet — editorial-dark authoring, parchment-clean on the page.
   _STYLE:`
     @media print{
-      body>*:not(#print-container){display:none!important}
-      #print-container{display:block!important}
       @page{margin:0.75in;size:letter}
     }
     #print-container{font-family:'Fraunces',Georgia,'Times New Roman',serif;color:#1a1a1a;max-width:7in;margin:0 auto;padding:0.4in;line-height:1.5}
