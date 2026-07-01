@@ -7619,7 +7619,11 @@ function buildNationFromSeed(seed){
     copilotQueue:Array.isArray(seed.copilotQueue)?seed.copilotQueue:[],
     copilotContextDepth:seed.copilotContextDepth||'medium',
     sessions:seed.sessions||[],
-    hooks:seed.hooks||[],
+    // Give every hook a stable id like chronicle/characters/secrets do. Without
+    // this, seeded/imported hooks had no id, so buildContext rendered each one as
+    // "[undefined] Title" into the AI context (a junk token that also reads as a
+    // bug) and mark_hook_resolved had nothing to match on.
+    hooks:(seed.hooks||[]).map(h=>({...h,id:h.id||Utils.uuid()})),
     // P5.3: secrets carry a stable unique id like every other entity array (chronicle/characters/
     // artifacts) — the Hold Audience grant gate keys on it, so an id-less secret could otherwise be
     // unmatchable (or, with the old fail-open gate, ride another's grant). Mirrors the artifacts line.
@@ -11484,7 +11488,8 @@ const Audience={
     (async () => {
       let acc = '';
       try{
-        const body = { model, messages, stream: true, max_tokens: 600,
+        const body = { model, messages, stream: true,
+          max_tokens: (Copilot && Copilot._budgetMaxTokens) ? Copilot._budgetMaxTokens(model, 600) : 600,
           ...((Copilot && Copilot._reasoningParamFor) ? Copilot._reasoningParamFor(model) : {}) };
         const resp = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
         if(!resp.ok){
@@ -11753,7 +11758,7 @@ const Audience={
     const sendBtn = document.getElementById('aud-send'); if(sendBtn){ sendBtn.disabled = true; sendBtn.textContent = '…'; }
     let acc = '', usage = null, errMsg = null;
     try{
-      const body = { model, messages, stream: true, max_tokens: 600, ...Copilot._reasoningParamFor(model) };
+      const body = { model, messages, stream: true, max_tokens: Copilot._budgetMaxTokens(model, 600), ...Copilot._reasoningParamFor(model) };
       const resp = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body), signal: this._abort.signal });
       if(!resp.ok){
         let t = `HTTP ${resp.status}`;
@@ -13163,8 +13168,31 @@ const Copilot={
   NEMOTRON_FREE:'nvidia/nemotron-3-ultra-550b-a55b:free',
   // Only the Nemotron-free model takes OpenRouter's reasoning control. Paid
   // Claude/GPT/Gemini ids return {} so no `reasoning` key ever attaches to them.
+  //
+  // WHY medium, not high: Nemotron is a REASONING model — it spends completion
+  // tokens *thinking* (streamed as delta.reasoning) BEFORE it writes a single
+  // token of the answer, and OpenRouter's max_tokens caps reasoning+answer
+  // COMBINED. Measured on the bundled Solis Prime world, effort:'high' burned
+  // 430–1050 reasoning tokens on simple generation tasks, so a 400-token Stakes
+  // call finished on reasoning alone (finish_reason:'length', zero answer) and
+  // an 1800-token Session Prep truncated its JSON mid-field. These are bounded
+  // authoring tasks, not math proofs; 'medium' still reasons but leaves the
+  // answer room to actually land. Paired with _budgetMaxTokens (reasoning
+  // headroom on top of the caller's answer budget) this is what makes the free
+  // model usable instead of returning empty/truncated output.
   _reasoningParamFor(model){
-    return model===Copilot.NEMOTRON_FREE?{reasoning:{effort:'high'}}:{};
+    return model===Copilot.NEMOTRON_FREE?{reasoning:{effort:'medium'}}:{};
+  },
+  // Reasoning models consume max_tokens on their private thinking before the
+  // answer. Callers set max_tokens for the ANSWER they want; for Nemotron we add
+  // a fixed reasoning headroom on top so the thinking doesn't eat the answer.
+  // No-op for paid non-reasoning models (their max_tokens means answer-only).
+  // 2000 covers the measured worst case (~1050 high-effort reasoning tokens on
+  // Solis Prime) with margin even though we've dropped to medium effort.
+  _NEMOTRON_REASONING_HEADROOM:2000,
+  _budgetMaxTokens(model,requestedMaxTokens){
+    if(model!==Copilot.NEMOTRON_FREE||typeof requestedMaxTokens!=='number')return requestedMaxTokens;
+    return requestedMaxTokens+Copilot._NEMOTRON_REASONING_HEADROOM;
   },
   // ─── OPENROUTER ONE-CLICK OAUTH (PKCE) ───────────────────────────────────────
   // Authorize once in the browser; OpenRouter sends back a free key via PKCE. The
@@ -14021,7 +14049,24 @@ const Copilot={
       chars.forEach(c=>{
         const role=c.role?`, ${c.role}`:'';
         const charStatus=c.status&&c.status!=='active'?` [${c.status}]`:'';
-        lines.push(`- ${c.name}${role}${charStatus}: ${c.description||''}`);
+        // A character's dramatic weight lives in description OR in the
+        // drive/fear/plotSeeds fields. Sample worlds and quick-add NPCs often
+        // have the latter and an empty description — without this fallback the
+        // AI saw only "Name, role:" with a blank body, so the most useful facts
+        // about every NPC (what they want, what they fear, the hooks they carry)
+        // were invisible to it. Compose whatever is present.
+        let body=(c.description||'').trim();
+        if(!body){
+          const parts=[];
+          if(c.drive&&String(c.drive).trim()&&!/^n\/a$/i.test(String(c.drive).trim()))parts.push(`Wants: ${String(c.drive).trim()}`);
+          if(c.fear&&String(c.fear).trim()&&!/^n\/a$/i.test(String(c.fear).trim()))parts.push(`Fears: ${String(c.fear).trim()}`);
+          if(Array.isArray(c.plotSeeds)&&c.plotSeeds.length){
+            const seeds=c.plotSeeds.map(s=>String(s||'').trim()).filter(Boolean);
+            if(seeds.length)parts.push(`Hooks: ${seeds.join(' | ')}`);
+          }
+          body=parts.join('. ');
+        }
+        lines.push(`- ${c.name}${role}${charStatus}: ${body}`);
       });
     }
     // Chronicle — smart selection (full window) + ledger compression (everything else).
@@ -14058,7 +14103,10 @@ const Copilot={
         lines.push('\n## Plot Hooks');
         hooks.forEach(h=>{
           const st=h.resolved||h.status==='resolved'?' [resolved]':'';
-          lines.push(`- [${h.id}] ${h.title||'Untitled hook'}${st}: ${h.description||''}`);
+          // Only print an id bracket when there is one — legacy saves may lack it,
+          // and "[undefined]" is both a wasted token and a bug the model can see.
+          const idPart=h.id?`[${h.id}] `:'';
+          lines.push(`- ${idPart}${h.title||'Untitled hook'}${st}: ${h.description||''}`);
         });
       }
     }
@@ -14299,7 +14347,7 @@ Without a CANON block, your response is conversational only — no simulation ef
     // Inner helper: stream one round-trip. Accumulates content into `accumulated`
     // (visible to the UI) and returns {toolCalls, usage, finishReason}.
     const streamOnce=async (msgs)=>{
-      const body={model,messages:msgs,stream:true,max_tokens:1500,...Copilot._reasoningParamFor(model)};
+      const body={model,messages:msgs,stream:true,max_tokens:Copilot._budgetMaxTokens(model,1500),...Copilot._reasoningParamFor(model)};
       if(toolsEnabled){body.tools=COPILOT_TOOLS;body.tool_choice='auto';}
       const resp=await fetch(streamUrl,{
         method:'POST',
@@ -14621,6 +14669,11 @@ Without a CANON block, your response is conversational only — no simulation ef
       model=settings.copilotModel||'anthropic/claude-sonnet-latest';
     }
     let finalExtras={...bodyExtras,...Copilot._reasoningParamFor(model)};
+    // Reasoning models: grow the cap so private thinking doesn't eat the answer
+    // the caller asked for. No-op for non-reasoning models. See _budgetMaxTokens.
+    if(typeof finalExtras.max_tokens==='number'){
+      finalExtras.max_tokens=Copilot._budgetMaxTokens(model,finalExtras.max_tokens);
+    }
     if(provider==='ollama'&&finalExtras.response_format?.type==='json_object'){
       delete finalExtras.response_format;
       finalExtras.format='json';
