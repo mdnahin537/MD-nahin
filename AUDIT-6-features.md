@@ -322,6 +322,26 @@ the only reason it wasn't exercised live is that it requires a user API key for 
    verified lossless round-trip (36/37 keys; only intentional de-dup rename + internal-flag
    strip). Works. Optional polish only (a labelled whole-app backup export).
 
+## RELATED FINDING (adjacent to the 6, NOT yet fixed — documented for a follow-up)
+
+**Same field-shape bug class in the "New Session" logging modal** (`openNewSession`, ~L20692):
+its "hooks closed" and "secrets deployed" multi-selects filter `h.status==='open'` (L20704) and
+`s.status==='undeployed'` (L20712). On a fixture/authored world (the example world included),
+hooks have `{resolved:false}` (no `status`) and secrets have no `status` → both lists render
+EMPTY ("No open hooks" / "No undeployed secrets") though the world has 3 hooks and 2 secrets.
+So a GM logging a session cannot check off the hooks/secrets they used.
+- **Deeper issue:** fixture hooks also lack an `id` (keys: title,description,resolved,
+  relatedFactions), but the checkbox uses `data-hid="${h.id}"` — so simply loosening the filter is
+  NOT enough; a fixture hook would post `undefined` as its id. Needs hook-`id` backfill (assign
+  ids to hooks lacking them, e.g. in `buildNationFromSeed` or a one-time migration) BEFORE the
+  filter fix, or the modal will look fixed while still not working. This is why I did NOT patch it
+  here — a half-fix would violate the "what it says is what it does" bar.
+- **Recommended fix (follow-up):** (1) backfill `id` on any hook missing one at load/migration
+  time; (2) then normalize the two filters to the tolerant form used in the Session Prep fix.
+  Also audit the Campaign secret-deploy path (L20936) and NPC-status path for the same shape drift.
+- Severity: **MAJOR** for the Sessions feature's usefulness on authored worlds; out of the 6-feature
+  mandate, so logged rather than fixed in this pass.
+
 ## VERIFICATION LEDGER (what is / isn't browser-verified)
 - ✅ Code trace + compile check: DONE for all 6 + the print fix (main app block compiles clean;
   offending selector count 0; global `.print-preview` rule intact).
