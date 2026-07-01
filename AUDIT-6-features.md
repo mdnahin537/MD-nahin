@@ -79,6 +79,33 @@ the only reason it wasn't exercised live is that it requires a user API key for 
 
 ---
 
+## 0b. HIGHER-IMPACT PRINT BUG — PDF silently TRUNCATES to one page (found on re-verification)
+
+**Severity: BLOCKER (worse than §0 — it is INVISIBLE: you get *a* page, just missing everything
+after the first ~720px).**
+
+### Root cause (code-traced + browser-proven)
+After §0 unblocked the content, Story Bible (and ANY document longer than one page — the common
+case) still came out as a **single page**, dropping Chronicle onward with no visual sign anything
+was missing. Cause: the base styles
+`html{font-size:16px;height:100%;overflow:hidden}` (L2154) and
+`body{…height:100vh;overflow:hidden…}` (L2157) are **never reset under `@media print`**, so
+Chromium's paged output captured only the first viewport-height slice and clipped the rest.
+
+### Fix — LANDED + BROWSER-VERIFIED (committed)
+Added `html,body{overflow:visible!important;height:auto!important}` INSIDE the `@media print`
+block at L3850. Re-verified: the same "Solis Prime" content with all sections enabled now
+produces a **6-page, 779 KB PDF** whose text includes the previously-missing sections —
+`CHRONICLE`, the faction "Shadowclaw", chronicle content ("Conduit", "Warrants", "Marr"), and a
+stability-math appendix whose tail reads "Final: 54 (TENSE) § § § -- 6 of 6 --". On-screen page
+`scrollHeight` = 3228px (well past one printed page) now flows across all 6 pages. Compiles clean.
+
+### Affects
+Feature 2 (Story Bible) and Feature 4 (Session Prep) and the Press recap — every multi-page PDF.
+This is the exact "looks fine but silently broken" class the owner flagged.
+
+---
+
 ## FEATURE-BY-FEATURE (filled in as traced)
 
 ### 1. "Export as JSON" — handler L24005 → `exportJSON('single')` (def L12617)
@@ -168,7 +195,19 @@ the only reason it wasn't exercised live is that it requires a user API key for 
   Verified: output `isArray:false`, 18 pages, all pass Foundry page-shape (`type:text`,
   `text.format:1`), unique `_id`s, strictly increasing `sort`, secrets still excluded. Imports in
   one click. (NPCs remain journal pages, not Actors — intentional/system-agnostic; see plan C below
-  for a future Actors option.) Original fix-plan options retained for reference:
+  for a future Actors option.)
+- ✅ SAFETY + COMPLETENESS RE-VERIFIED on the rich "Solis Prime" world (4 characters, 3 locations,
+  2 private secrets, 2 private + 5 public chronicle events):
+    - INCLUDES all 4 Character pages (Cedric Vell, Magistrate Sera Vell, Dust, Iolanthe Marr) and
+      both Location pages. ✓
+    - Exports ONLY the 5 PUBLIC chronicle events; both `private` events excluded. ✓
+    - **No GM secret leaks into the player-importable file:** none of the secret CONTENT sentences,
+      no "Secret —" page, no `[secret]`/`forecast` markers, and no private-chronicle descriptions
+      appear anywhere in the serialized export (checked full text, case-insensitive). The only
+      incidental hits were benign: a PUBLIC hook titled "The Sealed Warrants" (hooks are player-
+      facing) and the adjective "private" inside a location description ("Marr's private office") —
+      NOT secret data. → **safe to hand to players.**
+  Original fix-plan options retained for reference:
     A. **Emit one combined JournalEntry** whose `pages[]` are ALL the item pages across all
        categories (prefix page names with the category, e.g. "Faction · The Algorithm Council"),
        and keep the single-object top-level shape `{_id,name:"<Realm> — Story Bible",pages,...}`.
@@ -302,13 +341,19 @@ the only reason it wasn't exercised live is that it requires a user API key for 
 
 ## RANKED FINDINGS (by GM impact)
 
+0. **[BLOCKER · FIXED] PDF silently TRUNCATES to one page (§0b)** — the WORST of the print bugs
+   because it is invisible: after the blank bug was fixed, every multi-page PDF (the common case)
+   still dropped Chronicle onward, showing only page 1 with no sign anything was missing. Root:
+   `html/body` `overflow:hidden;height:100vh` never reset under print. FIXED + verified (6-page,
+   779 KB PDF now contains the previously-missing sections). Affects Features 2 & 4 + Press recap.
 1. **[BLOCKER · FIXED] Blank print/PDF (§0)** — killed BOTH paid PDF deliverables (Story Bible +
-   Session Prep) and the Press recap. Feature output was an empty file. Highest impact; fixed in
-   commit ec42cb0; needs a browser render-verify to fully close.
+   Session Prep) and the Press recap. Feature output was an empty file. Fixed (commit ec42cb0) and
+   browser-verified (176 KB PDF with real content).
 2. **[BLOCKER · FIXED] Foundry export was a non-importable ARRAY (Feature 3)** — the app
    instructs "right-click → Import Data", which cannot ingest an array; the feature's core promise
    failed when followed. FIXED (commit ffb9daf): now one importable JournalEntry (18 valid pages),
-   browser-verified. Fully closed.
+   browser-verified. **Safety re-verified on rich data:** includes characters+locations, and NO GM
+   secret / private chronicle leaks into the player-importable file. Fully closed.
 3. **[MAJOR · CORE FIX LANDED] Session Prep was dropping the world's hooks & secrets (Feature 4)**
    — hook/secret field-model drift silently sent the AI EMPTY hooks/secrets (0 of 3 hooks, 0 of 2
    secrets on the example world). FIXED + data-verified (0→3 hooks, 0→2 secrets now reach the AI).
@@ -345,15 +390,17 @@ So a GM logging a session cannot check off the hooks/secrets they used.
 ## VERIFICATION LEDGER (what is / isn't browser-verified)
 - ✅ Code trace + compile check: DONE for all 6 + the print fix (main app block compiles clean;
   offending selector count 0; global `.print-preview` rule intact).
-- ✅ Print/PDF fix: BROWSER-VERIFIED via headless Chromium. Story Bible PDF renders real content
-  (display:block under print media, 1280×2865 rect, 176 KB PDF, extracted text = the realm's
-  actual data). See §0.
+- ✅ Print/PDF BLANK fix (§0): BROWSER-VERIFIED. Story Bible PDF renders real content
+  (display:block under print media, 176 KB PDF, extracted text = the realm's actual data).
+- ✅ Print/PDF TRUNCATION fix (§0b): BROWSER-VERIFIED. Same content (all sections on) now = a
+  6-page, 779 KB PDF containing the previously-clipped Chronicle/factions/appendix ("6 of 6").
 - ✅ JSON export bytes: captured (27 KB, valid, all 34 nation keys incl. every entity array).
 - ✅ JSON round-trip: VERIFIED lossless (36/37 keys; only intentional de-dup rename + `_preBaked`).
-- ✅ Foundry export bytes: captured — top-level ARRAY of 6 entries with correct per-doc shapes.
-  Confirms the container bug. (NOT tested inside a live Foundry instance — none available here;
-  conclusion rests on Foundry's documented single-document "Import Data" contract + the confirmed
-  array-vs-single mismatch. The FIX below makes it a single importable JournalEntry.)
+- ✅ Foundry export (POST-FIX): BROWSER-VERIFIED on the rich "Solis Prime" world — single
+  importable JournalEntry (18 valid pages); INCLUDES characters + locations; and leaks NO GM
+  secret / private-chronicle content into the player file (full-text case-insensitive check).
+  (Still NOT tested inside a live Foundry app — none available; the import contract rests on
+  Foundry's documented single-document "Import Data" behavior, which the single-object output meets.)
 - ⏳ Session Prep / Tonight AI OUTPUT quality: NOT run live — requires the user's OpenRouter API
   key (Copilot). Prompts were evaluated by reading the code (buildContext + all system prompts).
   The Session Prep PRINT path is unblocked by the §0 fix (shares the same render tail).
