@@ -108,12 +108,14 @@ the only reason it wasn't exercised live is that it requires a user API key for 
       MUST be verified by an actual export→import→diff (see verification section).
 - ROOT CAUSE (of any fidelity gap): asymmetry between "dump everything" on export and
   "reconstruct known fields only" on import.
-- SEVERITY: **minor-to-major**, pending round-trip diff. If round-trip is lossless → minor
-  (just the "whole-app backup" expectation gap). If fields drop → major (silent data loss).
-- FIX PLAN: (1) Run export→import→deep-diff on Solis Prime (+ a nation with hooks/secrets/
-  characters/locations/campaign data) and list any dropped keys. (2) For each dropped key, add
-  it to `buildNationFromSeed`'s reconstruction. (3) Optionally add a true "Full backup (all data
-  incl. settings)" export that includes `meta` minus secrets, clearly labelled.
+- SEVERITY: **MINOR** — ✅ round-trip VERIFIED essentially lossless. Export→re-import→re-export
+  of "Solis Prime": the re-imported nation kept **36 of 37 keys**; the ONLY changes were
+  `name` "Solis Prime"→"Solis Prime 2" (intentional de-dup on import) and `_preBaked` dropped
+  (internal example flag, correctly stripped). ALL entity arrays (stats, chronicle, factions,
+  characters, locations, hooks, secrets, …) round-tripped byte-identical. No user data lost.
+- FIX PLAN: No correctness fix needed. Only OPTIONAL polish: add a clearly-labelled "Full backup
+  (all realms + settings, no API key)" export for GMs who expect a whole-app backup, since the
+  current export is per-world by design. Low priority.
 
 ### 2. "Export as Story Bible (PDF)" — handler L24006 → `export-opts` modal → `generatePDF` (L12739)
 - CLAIMS: a formatted GM PDF of the world.
@@ -159,7 +161,14 @@ the only reason it wasn't exercised live is that it requires a user API key for 
   expecting clickable actors/tokens won't get them).
 - ROOT CAUSE: wrong top-level container (array) vs Foundry's single-document import contract.
 - SEVERITY: **BLOCKER for the advertised use** (cannot be imported via the documented path).
-- FIX PLAN (concrete, pick one — A is smallest, correct, ship-now):
+- ✅ FIX LANDED + BROWSER-VERIFIED (commit ffb9daf): `build()` now flattens every category's
+  pages into ONE `JournalEntry` ("<Realm> — Story Bible"), prefixing each page name with its
+  category and re-sequencing `sort`; `download()` serializes that single object and the toast now
+  gives the correct steps (create a Journal Entry → right-click → Import Data → choose file).
+  Verified: output `isArray:false`, 18 pages, all pass Foundry page-shape (`type:text`,
+  `text.format:1`), unique `_id`s, strictly increasing `sort`, secrets still excluded. Imports in
+  one click. (NPCs remain journal pages, not Actors — intentional/system-agnostic; see plan C below
+  for a future Actors option.) Original fix-plan options retained for reference:
     A. **Emit one combined JournalEntry** whose `pages[]` are ALL the item pages across all
        categories (prefix page names with the category, e.g. "Faction · The Algorithm Council"),
        and keep the single-object top-level shape `{_id,name:"<Realm> — Story Bible",pages,...}`.
@@ -288,9 +297,10 @@ the only reason it wasn't exercised live is that it requires a user API key for 
 1. **[BLOCKER · FIXED] Blank print/PDF (§0)** — killed BOTH paid PDF deliverables (Story Bible +
    Session Prep) and the Press recap. Feature output was an empty file. Highest impact; fixed in
    commit ec42cb0; needs a browser render-verify to fully close.
-2. **[BLOCKER] Foundry export is a non-importable ARRAY (Feature 3)** — the app instructs
-   "right-click → Import Data", which cannot ingest an array; the feature's core promise fails
-   when followed. Document shapes are correct, so the fix is small (emit one combined entry).
+2. **[BLOCKER · FIXED] Foundry export was a non-importable ARRAY (Feature 3)** — the app
+   instructs "right-click → Import Data", which cannot ingest an array; the feature's core promise
+   failed when followed. FIXED (commit ffb9daf): now one importable JournalEntry (18 valid pages),
+   browser-verified. Fully closed.
 3. **[MAJOR] Session Prep context/connection gaps (Feature 4)** — default depth hides
    secrets/oracle; hook/secret field-model drift can silently drop authored content; no PC/party
    continuity. The prompt CRAFT is fine; the WIRING under-delivers "grounded in your world".
@@ -298,16 +308,24 @@ the only reason it wasn't exercised live is that it requires a user API key for 
    a worldbuilding tool should let "Tonight" run inside the world the GM already built.
 5. **[MAJOR] Campaign starts empty every time (Feature 6)** — works and is connected to
    characters, but nothing seeds the board from the world or from AI prep; high manual friction.
-6. **[MINOR→MAJOR, pending diff] JSON export round-trip fidelity (Feature 1)** — complete dump,
-   but re-import reconstructs only known fields; verify no silent field loss for worlds with
-   hooks/secrets/locations/campaign data.
+6. **[MINOR · VERIFIED OK] JSON export round-trip fidelity (Feature 1)** — complete dump AND
+   verified lossless round-trip (36/37 keys; only intentional de-dup rename + internal-flag
+   strip). Works. Optional polish only (a labelled whole-app backup export).
 
 ## VERIFICATION LEDGER (what is / isn't browser-verified)
-- Code trace + compile check: DONE for all 6 + the print fix (main app block compiles; offending
-  selector removed; global rule intact).
-- Foundry import contract: researched against Foundry KB (single-document Import Data). NOT tested
-  in a live Foundry instance (out of scope/no Foundry here) — conclusion rests on the documented
-  import behavior + confirmed array vs single-object mismatch.
-- Browser render of the PDFs (does content now appear), actual export BYTES (JSON + Foundry),
-  and JSON round-trip diff: PENDING. Playwright + Chromium are now installed in the scratchpad;
-  next step is a headless run that loads Solis Prime, triggers each export, and captures reality.
+- ✅ Code trace + compile check: DONE for all 6 + the print fix (main app block compiles clean;
+  offending selector count 0; global `.print-preview` rule intact).
+- ✅ Print/PDF fix: BROWSER-VERIFIED via headless Chromium. Story Bible PDF renders real content
+  (display:block under print media, 1280×2865 rect, 176 KB PDF, extracted text = the realm's
+  actual data). See §0.
+- ✅ JSON export bytes: captured (27 KB, valid, all 34 nation keys incl. every entity array).
+- ✅ JSON round-trip: VERIFIED lossless (36/37 keys; only intentional de-dup rename + `_preBaked`).
+- ✅ Foundry export bytes: captured — top-level ARRAY of 6 entries with correct per-doc shapes.
+  Confirms the container bug. (NOT tested inside a live Foundry instance — none available here;
+  conclusion rests on Foundry's documented single-document "Import Data" contract + the confirmed
+  array-vs-single mismatch. The FIX below makes it a single importable JournalEntry.)
+- ⏳ Session Prep / Tonight AI OUTPUT quality: NOT run live — requires the user's OpenRouter API
+  key (Copilot). Prompts were evaluated by reading the code (buildContext + all system prompts).
+  The Session Prep PRINT path is unblocked by the §0 fix (shares the same render tail).
+- ⏳ Campaign persistence + "deliver secret → chronicle" + dead-control sweep: NOT browser-run yet
+  (code-traced only).
