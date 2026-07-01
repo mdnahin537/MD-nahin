@@ -225,15 +225,23 @@ the only reason it wasn't exercised live is that it requires a user API key for 
 - SEVERITY: **BLOCKER** for the PDF being empty (fixed via §0). **Major** for the prompt-context
   gaps (they degrade real usefulness but the feature still produces usable hooks).
 - FIX PLAN:
-    1. (Done) §0 print fix → PDF renders.
-    2. For Session Prep specifically, force a higher context floor: pass `tier:'high'` (or
-       `requires_full`) into `buildContext` for this call so Secrets + Oracle + full hooks are in
-       context. One-line change at the `buildContext(n)` call (L14962) → `buildContext(n,{tier:'high',message:promoMsg})`.
-    3. Normalize hook/secret filters to the tolerant form used elsewhere: treat a hook as open if
-       `h.status? h.status==='open' : !h.resolved`; a secret as available if
-       `s.status? s.status!=='deployed' : !s.deployed`. Reuse the helper already implied at L18749.
-    4. Add an optional "Party / where we left off" textarea to the session-prep modal and thread
-       it into `userPrompt` so ongoing tables get real continuity. (Bigger; schedule after 2-3.)
+    1. ✅ (Done, §0) print fix → PDF renders.
+    2. ✅ (Done, commit after ffb9daf) **Normalized the hook/secret filters** — this was the big
+       one. BROWSER-DATA-VERIFIED impact on the example world: `activeHooks` 0 → **3**
+       ("The Sealed Warrants", "The Land Titles' Buyer", "Dust's Spire Source"),
+       `availableSecrets` 0 → **2** (Magistrate Vell's sealed warrants; the 2181 Conduit Raids).
+       The AI now actually receives the world's authored hooks/secrets instead of empty arrays.
+       (This is the concrete "not connected" defect, root-caused and closed.)
+    3. OPTIONAL (deferred — has a per-call TOKEN COST tradeoff, so it's Hunter's call, not
+       unilateral): raise the context floor for this call to `tier:'high'` so `buildContext`
+       also includes Oracle log + all hooks. Lower priority now that hooks/secrets reach the
+       model via the user prompt (fix 2) even at the default `mid` tier. One-line change at the
+       `buildContext(n,{...})` call (~L14962).
+    4. OPTIONAL enhancement: add a "Party / where we left off" textarea to the session-prep modal
+       and thread it into `userPrompt` so ongoing tables get real PC continuity. (Bigger; a
+       genuine usefulness upgrade, but a new UI surface — schedule deliberately.)
+    NOTE: AI OUTPUT quality itself was NOT run live (needs the user's OpenRouter key). The prompt
+    CRAFT is good (see evaluation); fix 2 repairs the WIRING that was starving it.
 
 ### 5. Mode "Tonight" — "One line. One world. One session, ready to run." (L26043; `Tonight` L20269)
 - CLAIMS: type one line → a session you can run tonight, connected to the tool.
@@ -301,9 +309,11 @@ the only reason it wasn't exercised live is that it requires a user API key for 
    instructs "right-click → Import Data", which cannot ingest an array; the feature's core promise
    failed when followed. FIXED (commit ffb9daf): now one importable JournalEntry (18 valid pages),
    browser-verified. Fully closed.
-3. **[MAJOR] Session Prep context/connection gaps (Feature 4)** — default depth hides
-   secrets/oracle; hook/secret field-model drift can silently drop authored content; no PC/party
-   continuity. The prompt CRAFT is fine; the WIRING under-delivers "grounded in your world".
+3. **[MAJOR · CORE FIX LANDED] Session Prep was dropping the world's hooks & secrets (Feature 4)**
+   — hook/secret field-model drift silently sent the AI EMPTY hooks/secrets (0 of 3 hooks, 0 of 2
+   secrets on the example world). FIXED + data-verified (0→3 hooks, 0→2 secrets now reach the AI).
+   The prompt CRAFT was already fine; this repaired the WIRING that starved it. Remaining items
+   (context-depth floor, party-continuity input) are optional and noted in Feature 4.
 4. **[MAJOR ENHANCEMENT] Tonight ignores the active world (Feature 5)** — brilliant one-shot, but
    a worldbuilding tool should let "Tonight" run inside the world the GM already built.
 5. **[MAJOR] Campaign starts empty every time (Feature 6)** — works and is connected to
