@@ -4,6 +4,14 @@ Branch: `claude/magical-mayer-YwP53` (PR #9) · File: `realmwright-v7.html` (~26
 Example world for exercising: **Solis Prime** (front door → "🌍 Load an example world").
 Status legend: ✅ verified in browser · 🔬 code-traced (not yet browser-verified) · ⏳ pending
 
+> CORRECTION (browser-verified): the front-door "🌍 Load an example world" (`#fd-load-example`)
+> loads a fully-built world whose active nation is named **"Solis Prime"** (Near-Future /
+> Corporate Sovereignty, ruler Director-Emerita Iolanthe Marr) — NOT the bare "Meridian" entry
+> in the `EXAMPLES` array (L5807). This front-door world is RICH: 10 stats, 7 chronicle events,
+> 2 factions, **4 characters, 2 locations, 3 hooks, 2 secrets**. So it DOES exercise hooks/
+> secrets/characters/locations. (Wherever notes below said "the example has no hooks/secrets",
+> that referred to the Meridian seed row, not the front-door world. The rich world is `_preBaked`.)
+
 Last updated: (in progress)
 
 ---
@@ -54,9 +62,20 @@ Stripped the `body>*:not(#print-container){display:none!important}` and
 global `.print-preview` rule now governs print visibility; the cloned content (inside
 `.print-preview__page`) survives to the printed page.
 
-**Status: root cause confirmed by code trace; fix LANDED + compile-verified (main app block
-compiles clean; offending selector count 0; global `.print-preview` rule intact).
-Browser render verification: PENDING (Playwright now installed; see verification section).**
+**Status: FIXED and BROWSER-VERIFIED (commit ec42cb0).**
+Empirical proof (headless Chromium, loaded the front-door example world "Solis Prime",
+clicked Export ▾ → Export as Story Bible (PDF) → Generate PDF, then measured under `print` media):
+- `.print-preview__page` computes `display:block`, bounding rect **1280×2865px** (real content).
+- `.print-preview` wrapper computes `display:block` — this is the element the OLD `#print-container`
+  rule was hiding; it is now visible. No ancestor computes `display:none`.
+- The non-preview sibling `#app` computes `display:none` under print — the global rule works.
+- `page.pdf()` produced a **176 KB** PDF (a blank PDF is ~5–10 KB). Extracted PDF text begins:
+  "§ Solis Prime · Near-Future · Corporate Sovereignty · Year 2188 · Ruler: Director-Emerita
+  Iolanthe Marr … Stability: 54 — TENSE … STATS … Legitimacy 44 … FACTIONS … The Shadowclaw Clan …"
+  → the realm's real content is in the PDF. Before the fix this was blank.
+Compile check: main app block compiles clean; offending selector count 0; global rule intact.
+(Session Prep PDF shares the same render tail and the same fix; its render path is now unblocked —
+the only reason it wasn't exercised live is that it requires a user API key for the AI step.)
 
 ---
 
@@ -64,6 +83,14 @@ Browser render verification: PENDING (Playwright now installed; see verification
 
 ### 1. "Export as JSON" — handler L24005 → `exportJSON('single')` (def L12617)
 - CLAIMS: dump the world as JSON.
+- ✅ BROWSER-VERIFIED (bytes captured): exporting the front-door "Solis Prime" produced 27,179
+  bytes of **valid JSON**. Top keys: `format,version,schemaVersion,exportedAt,nation`. The
+  `nation` object carried ALL 34 of its keys, including every entity array:
+  stats(10), factions(2), chronicle(7), characters(4), locations(2), hooks(3), secrets(2),
+  plus laws, artifacts, relations, sessions, fronts, bestiary, glossary, notes, oracleLog,
+  turnLog, pressArchive, tables, housePressures, metadata, etc. → **the export is COMPLETE for
+  a single world** (nothing silently dropped on the way OUT). `meta` (incl. API key) correctly
+  excluded. Round-trip fidelity (the way BACK, via buildNationFromSeed) = see verification ledger.
 - ACTUAL (code-traced): Serializes the active nation (`scope='single'`) or all nations
   (`scope='all'`) via `JSON.stringify(nation, null, 2)` after a deep clone. Deliberately
   EXCLUDES `State.data.meta` — so `copilotKey` never leaks (good, security-correct). Because it
@@ -106,6 +133,13 @@ Browser render verification: PENDING (Playwright now installed; see verification
 
 ### 3. "Export to Foundry VTT" — handler L24007 → `FoundryExport.download('active')` (L12653)
 - CLAIMS: "output a format Foundry Virtual Tabletop can import."
+- ✅ BROWSER-VERIFIED (bytes captured): export produced 15,260 bytes whose **top level is a JSON
+  ARRAY of 6 entries** (`topLevelIsArray: true`). entry[0] = "Solis Prime — Realm Overview",
+  keys `_id,name,pages,folder,sort,ownership,flags,_stats`, `_stats.coreVersion:"12"`, 2 pages;
+  page[0] keys `_id,type,name,title,text,sort,flags`, `type:"text"`, `text.format:1`. No secret/
+  private markers present (public-only default holds). → **CONFIRMS the diagnosis exactly: the
+  per-document shapes are correct, but the ARRAY container cannot be imported via the instructed
+  single-document "Import Data" flow.**
 - ACTUAL (code-traced + format-researched): Builds one `JournalEntry` per category (Realm
   Overview, Chronicle, Factions, Characters, Locations, Hooks, Secrets), one page per item.
   The per-document SHAPES ARE CORRECT for Foundry v12:
