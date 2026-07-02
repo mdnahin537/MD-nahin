@@ -14072,6 +14072,35 @@ const Copilot={
         lines.push(`- ${c.name}${role}${charStatus}: ${body}`);
       });
     }
+    // F-1: the copilot could not see where the party was or what was ticking toward
+    // catastrophe — it had factions and people but no map and no danger clocks. Both
+    // are core world state (like Factions/Characters above), so both are unconditional:
+    // no tier gate, just an emptiness check. Mirrors the Factions block's plain style.
+    if(nation.locations&&nation.locations.length){
+      lines.push('\n## Locations');
+      nation.locations.forEach(l=>{
+        const typeTag=l.type&&String(l.type).trim().toLowerCase()!=='other'?` (${l.type})`:'';
+        const parent=l.parentId?nation.locations.find(p=>p.id===l.parentId):null;
+        const parentTag=parent&&parent.name?`, part of ${parent.name}`:'';
+        const control=l.controllingFactionName?`, controlled by ${l.controllingFactionName}`:'';
+        const body=(l.description&&String(l.description).trim())||(l.notes&&String(l.notes).trim())||'';
+        lines.push(`- ${l.name}${typeTag}${parentTag}${control}${body?`: ${body}`:''}`);
+      });
+    }
+    if(nation.fronts&&nation.fronts.length){
+      lines.push('\n## Fronts');
+      nation.fronts.forEach(f=>{
+        const statusTag=f.status&&f.status!=='active'?` [${f.status}]`:'';
+        const clock=`${f.clockFilled||0}/${f.clockSize||0} segments`;
+        // Strip a trailing period before joining so two sentence-cased fields don't
+        // collide into "...days.. If it fills:" — one clean period goes back on at the end.
+        const parts=[];
+        if(f.description&&String(f.description).trim())parts.push(String(f.description).trim().replace(/\.+$/,''));
+        if(f.catastropheEvent&&String(f.catastropheEvent).trim())parts.push(`If it fills: ${String(f.catastropheEvent).trim().replace(/\.+$/,'')}`);
+        const body=parts.length?`: ${parts.join('. ')}.`:'';
+        lines.push(`- ${f.name} (${f.catastropheType||'Military'}, ${clock})${statusTag}${body}`);
+      });
+    }
     // Chronicle — smart selection (full window) + ledger compression (everything else).
     const sortedChron=this._sortedChronicle(nation.chronicle);
     const sel=this._smartSelectChronicle(nation,cfg,message);
