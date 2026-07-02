@@ -6106,7 +6106,7 @@ const Solo={
       this.renderPanel();
       try{
         const built=PromptFill.build('so1',{
-          '[QUESTION]':Utils.escHtml(entry.question),
+          '[QUESTION]':entry.question,
           '[ODDS]':oddsLabel,
           '[CHAOS_FACTOR]':String(chaos),
           '[ROLL_RESULT]':fateRoll.result,
@@ -6156,7 +6156,7 @@ const Solo={
       const chronicle=(n.chronicle||[]).slice(-5).map(e=>`[Year ${e.year}] ${e.name}: ${e.description||''}`).join('\n');
       const built=PromptFill.build('so2',{
         '[CHRONICLE_LAST_5]':chronicle,
-        '[CURRENT_SCENE]':Utils.escHtml(entry.scene),
+        '[CURRENT_SCENE]':entry.scene,
         '[CHAOS_FACTOR]':String(chaos),
       },n,{message:entry.scene||'',surface:'solo'});
       TransparencyLog._pendingLabel='Scene Pivot';
@@ -6202,8 +6202,8 @@ const Solo={
     try{
       const sceneInput=document.getElementById('solo-scene-input')?.value?.trim()||'Current scene';
       const built=PromptFill.build('so3',{
-        '[CURRENT_SCENE]':Utils.escHtml(sceneInput),
-        '[CURRENT_MOOD]':Utils.escHtml(entry.currentMood),
+        '[CURRENT_SCENE]':sceneInput,
+        '[CURRENT_MOOD]':entry.currentMood,
       },n,{message:sceneInput||'',surface:'solo'});
       TransparencyLog._pendingLabel='Mood Shift';
       const json=await Copilot._apiFetchJson(
@@ -6713,10 +6713,11 @@ const AccuracyChip={
   _tierFor(surface){
     const k=this._settingKeyFor(surface);
     if(!k)return'mid';
+    // Copilot uses the legacy depth label set, stored on the nation record itself
+    // (not in settings). Map to the new tier name space so the chip can colour-code
+    // consistently across all surfaces.
+    if(k==='copilotContextDepth')return EffortPicker.fromDepth(State.get()?.copilotContextDepth);
     const v=State.data?.meta?.settings?.[k];
-    // Copilot uses the legacy depth label set. Map to the new tier name space so
-    // the chip can colour-code consistently across all surfaces.
-    if(k==='copilotContextDepth')return EffortPicker.fromDepth(v);
     return v||'mid';
   },
   // Synthesize meta when sub#1's buildAIContext isn't wired yet. Faithful enough
@@ -6724,7 +6725,7 @@ const AccuracyChip={
   _synthesizeMeta(surface,tier){
     const n=State.get();if(!n)return{eventsFull:0,eventsLedger:0,eventsTotal:0,approxTokens:0,tier,surface,autoPromoted:false,cacheable:false};
     const eventsTotal=(n.chronicle||[]).length;
-    const tierCaps={low:10,mid:30,high:50,max:Infinity};
+    const tierCaps={low:5,mid:20,high:50,xhigh:70,max:Infinity};
     const cap=tierCaps[tier]??30;
     const eventsFull=Math.min(eventsTotal,cap===Infinity?eventsTotal:cap);
     const eventsLedger=Math.max(0,eventsTotal-eventsFull);
@@ -6814,6 +6815,8 @@ const AccuracyChip={
       // Copilot stores the legacy depth label on the nation, not in settings — keep that.
       if(key==='copilotContextDepth'){
         const n=State.get();if(n){n.copilotContextDepth=EffortPicker.toDepth(t);State._touch(n.id);}
+        const depthSel=document.getElementById('copilot-depth-select');
+        if(depthSel)depthSel.value=EffortPicker.toDepth(t);
       }else{
         State.setSetting(key,t);
       }
@@ -13578,7 +13581,7 @@ const Copilot={
   // Read tools pull directly from State.data. Write tools either apply (autoApply:true)
   // or queue onto n.copilotQueue for human review (autoApply:false, default).
   _isWriteTool(name){
-    return ['add_chronicle_entry','add_npc','add_plot_seed','mark_hook_resolved','update_faction_stance','update_nation_stat'].indexOf(name)>=0;
+    return ['add_chronicle_entry','add_npc','add_plot_seed','mark_hook_resolved','update_faction_stance','update_nation_stat','add_front_tick'].indexOf(name)>=0;
   },
   _executeTool(name,args,nationId){
     // P1.8: tool calls must always resolve against the nation that the stream
@@ -14312,6 +14315,8 @@ Without a CANON block, your response is conversational only — no simulation ef
     const history=n.copilotConversation
       .slice(0,-1)
       .filter(m=>(m.role==='user'||m.role==='assistant'||(m.role==='system'&&m._summarized)))
+      // Don't replay error/stopped/empty placeholders back into the model as if they were real turns.
+      .filter(m=>!(m.role==='assistant'&&typeof m.content==='string'&&(m.content.startsWith('_[Error:')||m.content.startsWith('_[Stopped')||m.content.startsWith('_[No response'))))
       .map(m=>({role:m.role,content:m.content}));
     // Prompt caching: on OpenRouter Anthropic models, split the system message so the
     // frozen instruction + tool-protocol prefix becomes a cacheable block and only the
@@ -14362,6 +14367,7 @@ Without a CANON block, your response is conversational only — no simulation ef
         if(resp.status===401)errorMessage='Invalid API key. Check Settings → Copilot.';
         else if(resp.status===402)errorMessage='Out of credits. Top up at openrouter.ai/credits.';
         else if(resp.status===429)errorMessage='Rate limited — wait a moment and retry. Free models cap at ~50 requests/day (1000/day after $10 of credits); a persistent 429 means the daily limit, not a hiccup.';
+        else if(resp.status===500||resp.status===502||resp.status===503)errorMessage='The model\'s server is overloaded right now — this is common on the free shared model at busy times. Wait a minute and try again, or choose a paid model in Settings.';
         else errorMessage=`Request failed: ${errText}`;
         throw new Error(errorMessage);
       }
@@ -14702,6 +14708,7 @@ Without a CANON block, your response is conversational only — no simulation ef
       if(resp.status===401)throw new Error('Invalid API key. Check Settings → Copilot.');
       if(resp.status===402)throw new Error('Out of credits. Top up at openrouter.ai/credits.');
       if(resp.status===429)throw new Error('Rate limited — wait a moment and retry. Free models cap at ~50 requests/day (1000/day after $10 of credits); a persistent 429 means the daily limit, not a hiccup.');
+      if(resp.status===500||resp.status===502||resp.status===503)throw new Error('The model\'s server is overloaded right now — this is common on the free shared model at busy times. Wait a minute and try again, or choose a paid model in Settings.');
       throw new Error(errText);
     }
     const data=await resp.json();
@@ -21706,10 +21713,11 @@ const GMMode={
   _renderNPCVariants(variants){
     const body=document.getElementById('quick-npc-body');
     if(!body)return;
-    const E=Utils.escHtml;
     body.innerHTML=`<div class="quick-npc-card__field-label" style="margin-bottom:8px">Pick one — 3 candidates</div><div id="qnpc-variants"></div><div class="quick-npc-card__actions"><button class="btn btn--secondary" id="qnpc-variants-reroll">🎲 Re-roll all 3</button><button class="btn btn--secondary" id="qnpc-variants-cancel">Discard</button></div>`;
     // Render each variant as a markdown-formatted summary, picker drops user into _renderNPC.
-    const formatted=variants.map(v=>`**${E(v.name||'Unnamed')}** — *${E(v.role||'')}*\n\n${v.hook?'_Why tonight:_ '+E(v.hook)+'\n\n':''}${v.drive?'Drive: '+E(v.drive)+'  \n':''}${v.fear?'Fear: '+E(v.fear)+'  \n':''}${v.trait?'Trait: '+E(v.trait):''}`);
+    // Raw values only — Variants.render -> Markdown.render HTML-escapes on the way in;
+    // pre-escaping here caused a double-escape (e.g. "Marik&#39;s" shown literally).
+    const formatted=variants.map(v=>`**${v.name||'Unnamed'}** — *${v.role||''}*\n\n${v.hook?'_Why tonight:_ '+v.hook+'\n\n':''}${v.drive?'Drive: '+v.drive+'  \n':''}${v.fear?'Fear: '+v.fear+'  \n':''}${v.trait?'Trait: '+v.trait:''}`);
     Variants.render({
       variants:formatted,
       container:document.getElementById('qnpc-variants'),
@@ -24774,6 +24782,7 @@ function bindEventListeners(){
       n.copilotContextDepth=e.target.value||'medium';
       State._touch(n.id);
       State.persistNow();
+      try{document.dispatchEvent(new CustomEvent('rw:effort-changed',{detail:{key:'copilotContextDepth',value:n.copilotContextDepth}}));}catch(_){}
     });
   }
   // Send button — now wired (delivery 2)
