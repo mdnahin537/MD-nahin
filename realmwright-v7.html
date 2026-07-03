@@ -13425,7 +13425,10 @@ const Copilot={
     const n=State.get();
     if(!n){ctr.innerHTML='<div class="copilot-panel__empty">No active nation.</div>';return;}
     const conv=n.copilotConversation||[];
-    if(!this.isConfigured()){
+    // P6.12 — Sample Mode preview: once a saved-answer conversation exists (see send()),
+    // show it instead of the "no key" onboarding card, so the demo answer is reachable.
+    const sampleHasConversation=conv.length&&typeof SampleMode!=='undefined'&&SampleMode.isActive();
+    if(!this.isConfigured()&&!sampleHasConversation){
       // No API key — show onboarding empty state
       ctr.innerHTML=`<div class="copilot-panel__empty">
         <div class="copilot-panel__empty-mark">⌘</div>
@@ -13564,12 +13567,15 @@ const Copilot={
       if(chipEl&&typeof AccuracyChip!=='undefined'&&!chipEl._refreshAccChip)AccuracyChip.mount(chipEl,'copilot',{getMessage:()=>document.getElementById('copilot-input')?.value||''});
       else if(chipEl&&chipEl._refreshAccChip)chipEl._refreshAccChip();
     }else{
+      // P6.12 — Sample Mode preview: keep the input/send usable so a saved answer is
+      // reachable (see send()); a real key is still required for anything else.
+      const sampleActive=typeof SampleMode!=='undefined'&&SampleMode.isActive();
       dot?.classList.remove('is-active');
-      if(txt)txt.textContent='Not configured — add API key in Settings';
+      if(txt)txt.textContent=sampleActive?'Sample Mode — showing a saved answer':'Not configured — add API key in Settings';
       if(modelDisp)modelDisp.style.display='none';
-      if(input)input.disabled=true;
-      if(input)input.placeholder='Configure your API key to begin.';
-      if(sendBtn)sendBtn.disabled=true;
+      if(input)input.disabled=!sampleActive;
+      if(input)input.placeholder=sampleActive?'Ask anything — a saved sample answer will be shown':'Configure your API key to begin.';
+      if(sendBtn)sendBtn.disabled=!sampleActive;
       if(cost)cost.textContent='— ¢ per message';
     }
   },
@@ -14310,6 +14316,22 @@ Without a CANON block, your response is conversational only — no simulation ef
   // Send a message via OpenRouter (streaming, with tool-calling loop — Phase 5C).
   async send(){
     if(this._sending){showToast('A response is already streaming.');return;}
+    // P6.12 — Sample Mode preview: no key configured, but this sample has a saved answer.
+    // Show it instead of refusing outright, so a prospective buyer can see the Copilot work.
+    if(typeof SampleMode!=='undefined'&&SampleMode.isActive()&&!this.isConfigured()){
+      const sInput=document.getElementById('copilot-input');
+      const sUserText=(sInput?.value||'').trim();
+      if(!sUserText)return;
+      const sampleId=SampleMode._activeSampleId;
+      const pre=SampleMode.getPreBakedOutput(sampleId,'copilotAnswer')||SampleMode.getPreBakedOutput(sampleId,'strongStart');
+      if(pre){
+        this.appendMessage('user',sUserText);
+        if(sInput){sInput.value='';sInput.style.height='auto';}
+        this.appendMessage('assistant','_Saved sample answer — add your API key in Settings to ask your own questions._\n\n'+pre);
+        return;
+      }
+      // No saved answer for this sample — fall through to the normal refusal below.
+    }
     if(!this.isConfigured()){showToast('Configure your API key first.');return;}
     const input=document.getElementById('copilot-input');
     const userText=(input?.value||'').trim();
