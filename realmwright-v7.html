@@ -6150,7 +6150,8 @@ const Solo={
           '[ODDS]':oddsLabel,
           '[CHAOS_FACTOR]':String(chaos),
           '[ROLL_RESULT]':fateRoll.result,
-        },n,{message:entry.question||'',surface:'solo'});
+        // X-1: thread the real 'solo' tier knob — was silently following chat-copilot depth.
+        },n,{message:entry.question||'',surface:'solo',tier:(typeof AccuracyChip!=='undefined')?AccuracyChip._tierFor('solo'):'mid'});
         TransparencyLog._pendingLabel='Solo Oracle';
         const json=await Copilot._apiFetchJson(
           [{role:'system',content:built.system},{role:'user',content:built.user}]
@@ -6198,7 +6199,8 @@ const Solo={
         '[CHRONICLE_LAST_5]':chronicle,
         '[CURRENT_SCENE]':entry.scene,
         '[CHAOS_FACTOR]':String(chaos),
-      },n,{message:entry.scene||'',surface:'solo'});
+      // X-1: thread the real 'solo' tier knob — was silently following chat-copilot depth.
+      },n,{message:entry.scene||'',surface:'solo',tier:(typeof AccuracyChip!=='undefined')?AccuracyChip._tierFor('solo'):'mid'});
       TransparencyLog._pendingLabel='Scene Pivot';
       const json=await Copilot._apiFetchJson(
         [{role:'system',content:built.system},{role:'user',content:built.user}]
@@ -6244,7 +6246,8 @@ const Solo={
       const built=PromptFill.build('so3',{
         '[CURRENT_SCENE]':sceneInput,
         '[CURRENT_MOOD]':entry.currentMood,
-      },n,{message:sceneInput||'',surface:'solo'});
+      // X-1: thread the real 'solo' tier knob — was silently following chat-copilot depth.
+      },n,{message:sceneInput||'',surface:'solo',tier:(typeof AccuracyChip!=='undefined')?AccuracyChip._tierFor('solo'):'mid'});
       TransparencyLog._pendingLabel='Mood Shift';
       const json=await Copilot._apiFetchJson(
         [{role:'system',content:built.system},{role:'user',content:built.user}]
@@ -15012,11 +15015,13 @@ Include 0-3 founding chronicle events that match the description. Include 1-3 fa
   },
   // ─── STRONG START GENERATOR (r72) ───
   // One evocative paragraph opening the session. max_tokens: 400.
-  async generateStrongStart({nation, situation}){
+  async generateStrongStart({nation, situation, surface='strongstart'}){
     if(!this.isConfigured())throw new Error('Copilot not configured. Add an API key in Settings.');
     // F1 surface: 'strongstart' — situation text may name an event/character to promote.
     // F6: thread the surface's own tier knob (strongstartTier) instead of always using the global depth.
-    const strongstartTier=(typeof AccuracyChip!=='undefined')?AccuracyChip._tierFor('strongstart'):'mid';
+    // X-1: `surface` defaults to the Tonight/GM-toolbar knob; the Campaign board passes
+    // 'campaign-strongstart' so its OWN chip (campaignStrongStartTier) is the one actually read.
+    const strongstartTier=(typeof AccuracyChip!=='undefined')?AccuracyChip._tierFor(surface):'mid';
     const ctx=this.buildContext(nation||State.get(),{message:situation||'',tier:strongstartTier});
     // Phase 5D: request 3 variants so the GM can pick the one that fits the table.
     const sys=`You are a TTRPG game master assistant. Generate three distinct evocative paragraphs (each 60–100 words) that each could open tonight's session with immediate action, tension, or revelation. Each paragraph is read aloud to players. Pull them out of the real world and into the scene. Use sensory detail, present tense, second-person plural ("you"). Do not introduce all NPCs at once. Do not reveal the central mystery. Each variant should establish the scene with a single immediate hook.\n\nReturn exactly 3 distinct variants. Format: JSON {"variants":["<variant 1>","<variant 2>","<variant 3>"]}. Each variant must be meaningfully different — not three rewordings of the same idea. At least one variant should be uncomfortable or unexpected, pushing the GM out of obvious choices.`;
@@ -15039,10 +15044,12 @@ Include 0-3 founding chronicle events that match the description. Include 1-3 fa
   },
   // ─── GENERATE SECRETS (r73) ───
   // Returns array of single-sentence fact strings.
-  async generateSecrets(nation,count=10){
+  async generateSecrets(nation,count=10,surface='secrets'){
     if(!this.isConfigured())throw new Error('Copilot not configured. Add an API key in Settings.');
     // F6: thread the surface's own tier knob (secretsTier) instead of always using the global depth.
-    const secretsTier=(typeof AccuracyChip!=='undefined')?AccuracyChip._tierFor('secrets'):'mid';
+    // X-1: `surface` defaults to the Tonight/GM-toolbar knob; the Campaign board passes
+    // 'campaign-secrets' so its OWN chip (campaignSecretsTier) is the one actually read.
+    const secretsTier=(typeof AccuracyChip!=='undefined')?AccuracyChip._tierFor(surface):'mid';
     const ctx=this.buildContext(nation||State.get(),{tier:secretsTier});
     const sys=`You are a TTRPG game master assistant. Generate ${count} short single-sentence facts ("secrets and clues") about the given world. Each is a true fact the players might discover. Each is abstracted from the method of discovery — do not specify how the players learn it. Each should cover a different aspect of the world (politics, history, NPCs, hidden danger, etc.). Format: JSON {"secrets":["...","..."]}. No preamble, no markdown fences, only the JSON.`;
     const user=`# World\n${ctx}\n\nGenerate ${count} secrets now.`;
@@ -15202,7 +15209,11 @@ Event: The Harbor Fire | Military | +3 | public | A fire destroyed three warehou
     // F1 surface: 'tonight-sessionprep' — twist + open-hook titles can name canon to promote.
     const activeHooksForCtx=opts?.activeHooks||[];
     const promoMsg=[(opts?.twist||'').trim(),...activeHooksForCtx].filter(Boolean).join('\n');
-    const context=this.buildContext(n,{message:promoMsg});
+    // X-1: no settings key exists for 'tonight-sessionprep' — read the real, user-visible
+    // 'tonight' knob (tonightTier) instead of silently falling back to chat-copilot depth.
+    // Not board-invoked, so no opts.surface is needed (AD-6).
+    const sessionPrepTier=(typeof AccuracyChip!=='undefined')?AccuracyChip._tierFor('tonight'):'mid';
+    const context=this.buildContext(n,{message:promoMsg,tier:sessionPrepTier});
     // proposeSecrets declared here (before systemPrompt) to avoid TDZ — it is referenced in the template literal below
     const proposeSecrets=opts?.proposeSecrets||0;
     const systemPrompt=`You are generating GM session-prep notes for a tabletop RPG. The setting is the nation described below — its current state, factions, characters, and recent history. Your job: produce ${hookCount} concrete plot hooks the GM can drop into tonight's game. Then ${includeNpcRoster?'a brief NPC roster of key figures (4-6 NPCs), and ':''}a one-paragraph "current tensions" summary the GM can read aloud or paraphrase.
@@ -15265,11 +15276,16 @@ No preamble, no markdown fences, only the JSON.`;
   },
   // ─── GM MODE: Quick NPC ───
   // Returns a single NPC ready to drop in. Non-streaming, structured JSON.
-  async generateQuickNPC(){
+  async generateQuickNPC(opts={}){
     if(!this.isConfigured())throw new Error('Copilot not configured. Add an API key in Settings.');
     const n=State.get();
     if(!n)throw new Error('No active realm.');
-    const context=this.buildContext(n);
+    // X-1: `surface` defaults to the Tonight/GM-toolbar knob ('tonight' — no dedicated
+    // 'tonight-quicknpc' settings key exists, AD-6); the Campaign board passes
+    // 'campaign-quicknpc' so its OWN chip (campaignNpcTier) is the one actually read.
+    const surface=opts.surface||'tonight';
+    const quicknpcTier=(typeof AccuracyChip!=='undefined')?AccuracyChip._tierFor(surface):'mid';
+    const context=this.buildContext(n,{tier:quicknpcTier});
     // Phase 5D: request 3 NPC variants so the GM can pick the one that fits.
     const systemPrompt=`You are generating NPCs for a tabletop RPG GM who needs someone to introduce immediately. Read the realm state below and produce three distinct NPC candidates — each someone the players might encounter at the start of tonight's session.
 
@@ -15316,11 +15332,16 @@ No preamble, no markdown, only the JSON.`;
   },
   // ─── GM MODE: What's at Stake? ───
   // Returns a single read-aloud paragraph summarizing the dramatic situation.
-  async generateStakes(){
+  async generateStakes(opts={}){
     if(!this.isConfigured())throw new Error('Copilot not configured. Add an API key in Settings.');
     const n=State.get();
     if(!n)throw new Error('No active realm.');
-    const context=this.buildContext(n);
+    // X-1: `surface` defaults to the Tonight/GM-toolbar knob ('tonight' — no dedicated
+    // 'tonight-stakes' settings key exists, AD-6); the Campaign board passes
+    // 'campaign-stakes' so its OWN chip (campaignStakesTier) is the one actually read.
+    const surface=opts.surface||'tonight';
+    const stakesTier=(typeof AccuracyChip!=='undefined')?AccuracyChip._tierFor(surface):'mid';
+    const context=this.buildContext(n,{tier:stakesTier});
     const systemPrompt=`You are summarizing the dramatic situation of a fictional realm for a tabletop GM. Read the realm state below and produce a single read-aloud paragraph (~3-5 sentences) that captures what is at stake right now.
 
 This is meant to be read aloud at the start of a session, so it should:
@@ -15343,21 +15364,29 @@ Return ONLY the paragraph as plain text. No preamble, no formatting.`;
   // run through the canonical JSON-parse-retry path (_apiFetchJson) with a tiny
   // {"text":...} envelope — same retry/fence-strip behaviour every other generator
   // gets, no fork. Prose lands in the GM's Notes via cpSetText (insert-or-copy, UX-7).
-  async generateNotesSummary(nation){
+  async generateNotesSummary(nation,opts={}){
     if(!this.isConfigured())throw new Error('Copilot not configured. Add an API key in Settings.');
     const n=nation||State.get();
     if(!n)throw new Error('No active realm.');
-    const context=this.buildContext(n);
+    // X-1: Campaign Notes is board-only (AD-6) — surface defaults straight to its own
+    // knob so the mounted 'campaign-notes' chip (campaignNotesTier) is truthful.
+    const surface=opts.surface||'campaign-notes';
+    const notesTier=(typeof AccuracyChip!=='undefined')?AccuracyChip._tierFor(surface):'mid';
+    const context=this.buildContext(n,{tier:notesTier});
     const sys=`You are summarizing a fictional tabletop realm for its game master, for their private session notes. Read the realm state and write a tight summary of NO MORE THAN 4 lines (4 short sentences, each on its own line). Capture the realm by name, its current dramatic situation, and the one or two tensions that matter most right now. Plain prose, no headers, no bullet markers, no preamble. Return JSON only: {"text":"<line 1>\\n<line 2>\\n<line 3>\\n<line 4>"}.`;
     const user=`# Realm State\n${context}\n\nWrite the 4-line summary now.`;
     const parsed=await this._apiFetchJson([{role:'system',content:sys},{role:'user',content:user}],{stream:false,max_tokens:300});
     return String(parsed&&parsed.text||'').trim();
   },
-  async generateNotesGaps(nation){
+  async generateNotesGaps(nation,opts={}){
     if(!this.isConfigured())throw new Error('Copilot not configured. Add an API key in Settings.');
     const n=nation||State.get();
     if(!n)throw new Error('No active realm.');
-    const context=this.buildContext(n);
+    // X-1: Campaign Notes is board-only (AD-6) — surface defaults straight to its own
+    // knob so the mounted 'campaign-notes' chip (campaignNotesTier) is truthful.
+    const surface=opts.surface||'campaign-notes';
+    const notesTier=(typeof AccuracyChip!=='undefined')?AccuracyChip._tierFor(surface):'mid';
+    const context=this.buildContext(n,{tier:notesTier});
     const sys=`You are a tabletop game master's prep assistant. Read the realm state and surface what the GM may have FORGOTTEN to think about: loose threads, unresolved hooks, factions or characters introduced but never developed, dangling tensions, and questions the world raises but does not answer. Be concrete — name the specific entities and threads. Write 3-6 short bullet lines, each starting with "- ", each a single actionable observation. No preamble, no closing summary. Return JSON only: {"text":"- <observation>\\n- <observation>\\n..."}.`;
     const user=`# Realm State\n${context}\n\nList the loose threads and unaddressed elements now.`;
     const parsed=await this._apiFetchJson([{role:'system',content:sys},{role:'user',content:user}],{stream:false,max_tokens:600});
@@ -17515,23 +17544,23 @@ const Campaign={
   _aiActionsFor(section){
     const A=[];
     if(section==='stakes'){
-      A.push({label:'Read the realm → write Stakes',kind:'single',run:()=>Copilot.generateStakes(),apply:txt=>{State.cpSet('stakes',String(txt||'').trim());}});
+      A.push({label:'Read the realm → write Stakes',kind:'single',run:()=>Copilot.generateStakes({surface:'campaign-stakes'}),apply:txt=>{State.cpSet('stakes',String(txt||'').trim());}});
     }else if(section==='beats'){
-      A.push({label:'Strong Start from world',kind:'variants',run:()=>Copilot.generateStrongStart({nation:State.get()}),apply:v=>{State.cpInsertBeat({text:typeof v==='string'?v:String(v||'')},0);}});
+      A.push({label:'Strong Start from world',kind:'variants',run:()=>Copilot.generateStrongStart({nation:State.get(),surface:'campaign-strongstart'}),apply:v=>{State.cpInsertBeat({text:typeof v==='string'?v:String(v||'')},0);}});
       A.push({label:'Suggest next beat',kind:'variants',run:()=>Copilot.generateBeatSuggestions(State.get(),{existingBeats:State.cp().beats,position:State.cp().beats.length}),apply:v=>{State.cpInsertBeat({text:typeof v==='string'?v:String(v||'')});}});
     }else if(section==='npcs'){
       A.push({label:'Pull NPCs for tonight (local)',kind:'local',run:()=>this._pullNpcsLocal()});
-      A.push({label:'Cast a fresh NPC',kind:'variants',run:()=>Copilot.generateQuickNPC(),render:v=>{const o=(v&&typeof v==='object')?v:{};return [o.name,o.role,o.drive||o.hook].filter(Boolean).join(' — ');},apply:v=>{const o=(v&&typeof v==='object')?v:{};State.cpInsertNpc({name:o.name||'',role:o.role||'',motivation:o.drive||o.hook||'',here:true});}});
+      A.push({label:'Cast a fresh NPC',kind:'variants',run:()=>Copilot.generateQuickNPC({surface:'campaign-quicknpc'}),render:v=>{const o=(v&&typeof v==='object')?v:{};return [o.name,o.role,o.drive||o.hook].filter(Boolean).join(' — ');},apply:v=>{const o=(v&&typeof v==='object')?v:{};State.cpInsertNpc({name:o.name||'',role:o.role||'',motivation:o.drive||o.hook||'',here:true});}});
     }else if(section==='clocks'){
       A.push({label:'Suggest clocks from world',kind:'variants',run:()=>Copilot.generateClockSuggestions(State.get()),render:v=>{const o=(v&&typeof v==='object')?v:{};return `${o.name||'Clock'} (${o.size||6}-tick) — ${o.justification||''}`;},apply:v=>{const o=(v&&typeof v==='object')?v:{};State.cpInsertClock({name:o.name||'New Threat',size:[4,6,8].includes(o.size)?o.size:6});}});
     }else if(section==='secrets'){
-      A.push({label:'Generate 5 secrets',kind:'variants',run:async()=>{const arr=await Copilot.generateSecrets(State.get(),5);return {variants:Array.isArray(arr)?arr:[]};},apply:v=>{State.cpInsertSecret({text:typeof v==='string'?v:String(v||'')});},multi:true});
+      A.push({label:'Generate 5 secrets',kind:'variants',run:async()=>{const arr=await Copilot.generateSecrets(State.get(),5,'campaign-secrets');return {variants:Array.isArray(arr)?arr:[]};},apply:v=>{State.cpInsertSecret({text:typeof v==='string'?v:String(v||'')});},multi:true});
     }else if(section==='notes'){
       // Real generators (P6.2): each reads the realm via buildContext, runs through the
       // shared JSON-parse-retry path, and APPENDS into Notes via cpSetText — never clobbers
       // existing notes. copyable:true gives the GM the insert-or-copy choice (UX-7).
-      A.push({label:'Summarize the realm in 4 lines',kind:'single',copyable:true,run:()=>Copilot.generateNotesSummary(State.get()),apply:txt=>{State.cpSetText('notes',this._appendNotes(State.cp().notes,String(txt||'')));}});
-      A.push({label:'What did I forget to think about?',kind:'single',copyable:true,run:()=>Copilot.generateNotesGaps(State.get()),apply:txt=>{State.cpSetText('notes',this._appendNotes(State.cp().notes,String(txt||'')));}});
+      A.push({label:'Summarize the realm in 4 lines',kind:'single',copyable:true,run:()=>Copilot.generateNotesSummary(State.get(),{surface:'campaign-notes'}),apply:txt=>{State.cpSetText('notes',this._appendNotes(State.cp().notes,String(txt||'')));}});
+      A.push({label:'What did I forget to think about?',kind:'single',copyable:true,run:()=>Copilot.generateNotesGaps(State.get(),{surface:'campaign-notes'}),apply:txt=>{State.cpSetText('notes',this._appendNotes(State.cp().notes,String(txt||'')));}});
     }
     return A;
   },
@@ -25728,7 +25757,8 @@ const EncounterBuilder={
     };
     TransparencyLog._pendingLabel='Encounter Builder';
     // F1 surface: 'encounter' — situation text may name a faction/event the GM expects to feature.
-    const filled=PromptFill.build('eb1',extraVars,n,{message:inputs.situation||'',surface:'encounter'});
+    // X-1: thread the real 'encounter' tier knob — was silently following chat-copilot depth.
+    const filled=PromptFill.build('eb1',extraVars,n,{message:inputs.situation||'',surface:'encounter',tier:(typeof AccuracyChip!=='undefined')?AccuracyChip._tierFor('encounter'):'mid'});
     const messages=[
       {role:'system',content:filled.system},
       {role:'user',content:filled.user},
