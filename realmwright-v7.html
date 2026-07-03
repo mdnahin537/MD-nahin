@@ -15134,9 +15134,19 @@ Include 0-3 founding chronicle events that match the description. Include 1-3 fa
     const strongstartTier=(typeof AccuracyChip!=='undefined')?AccuracyChip._tierFor(surface):'mid';
     const ctx=this.buildContext(nation||State.get(),{message:situation||'',tier:strongstartTier});
     // Phase 5D: request 3 variants so the GM can pick the one that fits the table.
-    const sys=`You are a TTRPG game master assistant. Generate three distinct evocative paragraphs (each 60–100 words) that each could open tonight's session with immediate action, tension, or revelation. Each paragraph is read aloud to players. Pull them out of the real world and into the scene. Use sensory detail, present tense, second-person plural ("you"). Do not introduce all NPCs at once. Do not reveal the central mystery. Each variant should establish the scene with a single immediate hook.\n\nReturn exactly 3 distinct variants. Format: JSON {"variants":["<variant 1>","<variant 2>","<variant 3>"]}. Each variant must be meaningfully different — not three rewordings of the same idea. At least one variant should be uncomfortable or unexpected, pushing the GM out of obvious choices.`;
+    // A2: anchor each variant to a DIFFERENT named world-state pressure, force something to
+    // already be happening (not mood/weather scene-setting), forbid fog-machine prose, and
+    // continue last session when a "Recent Sessions" block is present (buildContext, X-2).
+    const sys=`You are opening tonight's tabletop session. Write three distinct read-aloud strong starts (60-100 words each, present tense, second-person plural "you"). A strong start drops the players INTO an event already moving — not a description of weather, streets, or mood. Requirements for EACH variant:
+- Anchor it to a DIFFERENT named pressure from the world-state (a faction move, a front ticking, a character acting, an unresolved hook). Three variants = three different anchors.
+- Something happens in the first sentence. A named person wants something from the players by the last sentence.
+- End on the exact moment that demands the players act or speak.
+- Concrete nouns and working verbs. No mists, whispers, tapestries, or "little do they know."
+- Do not reveal any fact listed under a "## Secrets" section in the world-state; play its consequences instead.
+If a "Recent Sessions" section exists, at least one variant must pick up precisely where the last session ended.
+Return JSON only: {"variants":["<60-100 words>","<60-100 words>","<60-100 words>"]}. Variants must differ in anchor, location, and emotional register — at least one uncomfortable, pushing the GM off the obvious choice.`;
     const user=`# World context\n${ctx}\n\n# Situation\n${situation||'Begin the session.'}\n\nReturn the JSON now.`;
-    const data=await this._apiFetch([{role:'system',content:sys},{role:'user',content:user}],{stream:false,max_tokens:1200,response_format:{type:'json_object'}});
+    const data=await this._apiFetch([{role:'system',content:sys},{role:'user',content:user}],{stream:false,max_tokens:1200,response_format:{type:'json_object'},temperature:0.9});
     const raw=(data?.choices?.[0]?.message?.content||'').trim();
     let parsed=null;
     try{parsed=JSON.parse(raw);}
