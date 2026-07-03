@@ -15490,17 +15490,12 @@ No preamble, no markdown fences, only the JSON.`;
       {role:'system',content:systemPrompt},
       {role:'user',content:userPrompt},
     ];
-    const data=await this._apiFetch(messages,{stream:false,max_tokens:length==='long'?3000:1800,response_format:{type:'json_object'},temperature:0.7});
-    const raw=data?.choices?.[0]?.message?.content||'';
-    let parsed;
-    try{parsed=JSON.parse(raw);}
-    catch(e){
-      let cleaned=raw.replace(/^```(?:json)?\s*/i,'').replace(/\s*```\s*$/,'').trim();
-      const fb=cleaned.indexOf('{'),lb=cleaned.lastIndexOf('}');
-      if(fb>=0&&lb>fb){cleaned=cleaned.slice(fb,lb+1);}
-      try{parsed=JSON.parse(cleaned);}
-      catch(e2){throw new Error('The model returned malformed JSON. Try again.');}
-    }
+    // BB-4: routed through the shared retry-once JSON helper (was a weaker hand-rolled
+    // single-shot parse with no retry). Same hard-fail contract on a terminal parse failure
+    // (throws) — just retried once first instead of giving up immediately. Shape validation
+    // below (hooks must be a non-empty array) is unchanged and still runs on whatever
+    // _apiFetchJson successfully parses.
+    const parsed=await this._apiFetchJson(messages,{stream:false,max_tokens:length==='long'?3000:1800,temperature:0.7});
     if(!parsed||typeof parsed!=='object')throw new Error('Empty response.');
     if(!Array.isArray(parsed.hooks)||!parsed.hooks.length)throw new Error('No plot hooks were generated. Try again.');
     return parsed;
