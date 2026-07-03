@@ -15631,6 +15631,11 @@ Return ONLY the paragraph as plain text. No preamble, no formatting.`;
   },
 
   // Delivery H: Naming Generator
+  // D1 (probe-proven, P-3): the old one-liner said "extract patterns" but the live model just
+  // handed back 4 of the GM's EXISTING characters as "new" names. Replaced with an ordered
+  // onomastics method that makes the anti-parrot rule explicit and load-bearing, and returns
+  // the extracted sound-pattern alongside the names (additive field — the JSON parse below is
+  // unchanged and callers still read only .names, so nothing downstream breaks).
   async generateNames(nation,opts={}){
     if(!this.isConfigured())throw new Error('No API key configured');
     const type=opts.type||'people';
@@ -15641,12 +15646,18 @@ Return ONLY the paragraph as plain text. No preamble, no formatting.`;
     const ctx=this.buildContext(nation,{tier:namingTier});
     const typeNote={people:'people (mix of masculine, feminine, and gender-neutral names)',places:'place names (cities, regions, landmarks)',titles:'titles and honorifics (ranks, forms of address)',orders:'faction names (orders, guilds, houses, movements)'}[type]||type;
     const themeNote=theme?` Additional theme guidance: ${theme}.`:'';
-    const systemPrompt=`You are a TTRPG worldbuilding assistant. Generate ${qty} names for ${typeNote} that fit the given realm's linguistic patterns, era, and culture.${themeNote} Extract patterns from existing names in the world state before generating. Names must sound internally consistent with the realm. Return as JSON: {"names":["...","...",...]}`;
+    const systemPrompt=`You are the onomastics engine for one specific fictional realm. Generate ${qty} NEW names for ${typeNote}.
+Method, in order:
+1. Collect every proper name visible in the world-state (people, places, factions).
+2. Identify the sound-pattern: syllable counts, favoured consonant clusters, endings by gender/register, and how ${typeNote} names differ from other names in this culture.${themeNote}
+3. Generate ${qty} names that a native of this realm in this era would recognise as ordinary — matching the pattern WITHOUT copying: never return a name (or obvious variant of a name) that already appears in the world-state.
+4. Names must be culturally coherent with the era and government register (an industrial republic names differently from a tribal confederation).
+Return JSON only: {"names":["..."], "pattern":"<one sentence: the naming rule you extracted and followed>"}`;
     const messages=[
       {role:'system',content:systemPrompt},
       {role:'user',content:`# Realm State\n${ctx}\n\nGenerate ${qty} ${typeNote} names now.`},
     ];
-    const raw=await this._apiFetch(messages,{stream:false,max_tokens:800,response_format:{type:'json_object'}});
+    const raw=await this._apiFetch(messages,{stream:false,max_tokens:800,response_format:{type:'json_object'},temperature:0.9});
     const text=(raw?.choices?.[0]?.message?.content||'').trim();
     try{
       const clean=text.replace(/```json|```/g,'').trim();
@@ -25842,19 +25853,26 @@ const NamingUI={
     try{
       const result=await Copilot.generateNames(n,{type,qty,theme});
       this._lastNames=(result&&result.names)||[];
-      this.renderList(this._lastNames);
+      // D1: the model now also returns the sound-pattern it extracted — additive, rendered only
+      // when present so an older/degraded response still falls back to the plain list view.
+      this.renderList(this._lastNames,result&&result.pattern);
     }catch(e){
       showToast('Name generation failed: '+e.message);
     }finally{
       if(btn){btn.disabled=false;btn.textContent='⌘ Generate Names';}
     }
   },
-  renderList(names){
+  renderList(names,pattern){
     const listEl=document.getElementById('name-list');
     const outEl=document.getElementById('name-output');
+    const patternEl=document.getElementById('name-pattern');
     if(!listEl||!outEl)return;
     if(!names.length){showToast('No names returned. Try again.');return;}
     const E=Utils.escHtml;
+    if(patternEl){
+      if(pattern){patternEl.textContent='Pattern: '+String(pattern);patternEl.style.display='block';}
+      else{patternEl.textContent='';patternEl.style.display='none';}
+    }
     listEl.innerHTML=names.map(nm=>`<div style="padding:1px 0">${E(String(nm))}</div>`).join('');
     outEl.style.display='block';
   },
@@ -26617,6 +26635,7 @@ window.__rwClearDevTheme=function(){localStorage.removeItem('rw_dev_theme');loca
     </div>
     <button class="btn btn--primary" id="name-generate-btn" style="margin-bottom:16px">⌘ Generate Names</button>
     <div id="name-output" style="display:none">
+      <div id="name-pattern" style="display:none;font-size:var(--text-body-sm);color:var(--color-text-muted);font-style:italic;margin-bottom:10px"></div>
       <div id="name-list" style="max-height:280px;overflow-y:auto;border:1px solid var(--color-border-hairline);border-radius:4px;padding:12px;font-size:var(--text-body-sm);columns:2;column-gap:1rem;line-height:1.8"></div>
       <div style="display:flex;gap:8px;margin-top:12px">
         <button class="btn btn--secondary" id="name-copy-btn">Copy All</button>
