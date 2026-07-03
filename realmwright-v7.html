@@ -15148,21 +15148,23 @@ Include 0-3 founding chronicle events that match the description. Include 1-3 fa
 If a "Recent Sessions" section exists, at least one variant must pick up precisely where the last session ended.
 Return JSON only: {"variants":["<60-100 words>","<60-100 words>","<60-100 words>"]}. Variants must differ in anchor, location, and emotional register — at least one uncomfortable, pushing the GM off the obvious choice.`;
     const user=`# World context\n${ctx}\n\n# Situation\n${situation||'Begin the session.'}\n\nReturn the JSON now.`;
-    const data=await this._apiFetch([{role:'system',content:sys},{role:'user',content:user}],{stream:false,max_tokens:1200,response_format:{type:'json_object'},temperature:0.9});
-    const raw=(data?.choices?.[0]?.message?.content||'').trim();
-    let parsed=null;
-    try{parsed=JSON.parse(raw);}
-    catch(e){
-      let cleaned=raw.replace(/^```(?:json)?\s*/i,'').replace(/\s*```\s*$/,'').trim();
-      const fb=cleaned.indexOf('{'),lb=cleaned.lastIndexOf('}');
-      if(fb>=0&&lb>fb)cleaned=cleaned.slice(fb,lb+1);
-      try{parsed=JSON.parse(cleaned);}catch(e2){parsed=null;}
+    // BB-4: routed through the shared retry-once JSON helper (was a weaker hand-rolled
+    // single-shot parse with no retry). _apiFetchJson throws its own error only after a strict
+    // retry ALSO fails to parse; on that double failure, fall back to the last attempt's raw
+    // text — same backward-compat plain-string contract the hand-rolled version returned on a
+    // single failure, just now given a second chance first.
+    let parsed;
+    try{
+      parsed=await this._apiFetchJson([{role:'system',content:sys},{role:'user',content:user}],{stream:false,max_tokens:1200,temperature:0.9});
+    }catch(e){
+      if(e&&typeof e.raw==='string')return e.raw.trim();
+      throw e;
     }
     if(parsed&&Array.isArray(parsed.variants)&&parsed.variants.length){
       return {variants:parsed.variants.map(v=>typeof v==='string'?v.trim():String(v||'').trim()).filter(Boolean)};
     }
-    // Backward-compat fallback: model returned a plain string. Wrap as single-variant.
-    return raw;
+    // Backward-compat fallback: model returned valid JSON but the wrong shape. Wrap as a string.
+    return JSON.stringify(parsed);
   },
   // ─── GENERATE SECRETS (r73) ───
   // Returns array of single-sentence fact strings.
