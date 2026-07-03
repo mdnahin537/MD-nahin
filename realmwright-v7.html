@@ -15405,11 +15405,14 @@ Hook: Who pays the shrine-keeper? | The party found the shrine tended but no one
 
 The hooks should focus on: ${focusDescription}
 
-Each hook should be:
-- Concrete and immediately runnable (not abstract or about distant events)
-- Grounded in the nation's actual current state — reference specific stats, factions, or characters by name
-- Open-ended enough that the players' choices matter
-- 2-4 sentences each
+Each hook must be:
+- A situation ABOUT TO TIP, not a summary: name the person standing in front of the players, what they want, and the deadline.
+- Grounded in the world-state by name (faction, character, location, or a chronicle event).
+- Decision-shaped: end with the concrete choice it forces on the players tonight.
+- 2-4 sentences. No hook may restate another hook with different nouns.
+If a "Recent Sessions" section is present in the world-state, at least one hook must directly continue its most recent unresolved thread, and say so ("continues Session N").
+
+The tensions paragraph opens on whatever the last session left burning, if sessions are present.
 
 Return ONLY a JSON object with this shape:
 {
@@ -15444,7 +15447,7 @@ No preamble, no markdown fences, only the JSON.`;
       {role:'system',content:systemPrompt},
       {role:'user',content:userPrompt},
     ];
-    const data=await this._apiFetch(messages,{stream:false,max_tokens:length==='long'?3000:1800,response_format:{type:'json_object'}});
+    const data=await this._apiFetch(messages,{stream:false,max_tokens:length==='long'?3000:1800,response_format:{type:'json_object'},temperature:0.7});
     const raw=data?.choices?.[0]?.message?.content||'';
     let parsed;
     try{parsed=JSON.parse(raw);}
@@ -20905,7 +20908,7 @@ const Tonight={
       try{
         const [strongStartRes,prepRes]=await Promise.all([
           Copilot.generateStrongStart({nation,situation}).catch(e=>({_error:e?.message||'Strong Start failed.'})),
-          Copilot.generateSessionPrep({focus:'mystery',length,twist:situation,proposeSecrets:10}).catch(e=>({_error:e?.message||'Session Prep failed.'})),
+          Copilot.generateSessionPrep({focus:'balanced',length,twist:situation,proposeSecrets:10}).catch(e=>({_error:e?.message||'Session Prep failed.'})),
         ]);
         const ssFailed=strongStartRes&&typeof strongStartRes==='object'&&strongStartRes._error;
         const prepFailed=prepRes&&typeof prepRes==='object'&&prepRes._error;
@@ -20958,7 +20961,7 @@ const Tonight={
       this._setSpinner('Steps 2 & 3 — Crafting opening + session pack in parallel…');
       const [strongStartRes,prepRes]=await Promise.all([
         Copilot.generateStrongStart({nation,situation}).catch(e=>({_error:e?.message||'Strong Start failed.'})),
-        Copilot.generateSessionPrep({focus:'mystery',length,twist:situation,proposeSecrets:10}).catch(e=>({_error:e?.message||'Session Prep failed.'})),
+        Copilot.generateSessionPrep({focus:'balanced',length,twist:situation,proposeSecrets:10}).catch(e=>({_error:e?.message||'Session Prep failed.'})),
       ]);
       // If both failed, throw to enter the catch block + clean up the orphan nation.
       const ssFailed=strongStartRes&&typeof strongStartRes==='object'&&strongStartRes._error;
@@ -21150,7 +21153,7 @@ const Tonight={
       const btn=document.getElementById('tonight-retry-prep');
       if(btn){btn.disabled=true;btn.textContent='Retrying\u2026';}
       try{
-        const p=await Copilot.generateSessionPrep({focus:'mystery',length:inputs.length,twist:inputs.situation,proposeSecrets:10});
+        const p=await Copilot.generateSessionPrep({focus:'balanced',length:inputs.length,twist:inputs.situation,proposeSecrets:10});
         this._renderResults({strongStart,prep:p,nation,retryInputs:inputs});
       }catch(e){
         if(btn){btn.disabled=false;btn.textContent='Retry Session Prep';}
