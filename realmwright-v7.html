@@ -14922,7 +14922,13 @@ Without a CANON block, your response is conversational only — no simulation ef
     const raw2=data2?.choices?.[0]?.message?.content||'';
     parsed=tryParse(raw2);
     if(parsed&&typeof parsed==='object')return parsed;
-    throw new Error('The model returned malformed JSON twice. Try rephrasing your request or switching models in Settings.');
+    // AD-5: attach the model's actual last-attempt text to the thrown error so a caller that
+    // needs graceful degradation (player handouts — a hard failure here would regress UX on a
+    // flaky free-model day) can recover it instead of losing the response entirely. Purely
+    // additive: no existing caller reads .raw, so this changes nothing for them.
+    const err=new Error('The model returned malformed JSON twice. Try rephrasing your request or switching models in Settings.');
+    err.raw=raw2;
+    throw err;
   },
   // ─── CONTINUITY CHECK (non-streaming, structured verdict) ───
   // Returns {text, costNote} where text is the model's verdict and costNote is a brief usage line.
@@ -15094,10 +15100,18 @@ Include 0-3 founding chronicle events that match the description. Include 1-3 fa
   },
   // ─── PLAYER HANDOUTS ───
   async _handoutFetch(sys,userMsg){
-    const data=await this._apiFetch([{role:'system',content:sys},{role:'user',content:userMsg}],{stream:false,max_tokens:600,response_format:{type:'json_object'}});
-    const raw=(data?.choices?.[0]?.message?.content||'').trim();
-    const clean=raw.replace(/^```(?:json)?\n?/,'').replace(/\n?```$/,'').trim();
-    try{return JSON.parse(clean);}catch(x){return {title:'Handout',body:raw};}
+    // BB-4/BB-3: routed through the shared retry-once JSON helper (was a weaker hand-rolled
+    // single-shot parse) at temperature 0.9 — handouts are a creative surface, not a judgment
+    // one (probe P-2's dull recap-paragraph output wants more spread, not less).
+    try{
+      return await this._apiFetchJson([{role:'system',content:sys},{role:'user',content:userMsg}],{stream:false,max_tokens:600,temperature:0.9});
+    }catch(e){
+      // AD-5: never hard-fail a player handout. _apiFetchJson throws only after a strict
+      // retry; on that double failure (or the 200-with-empty-content flake probe P-2 hit on
+      // the free model) fall back to whatever text the model actually produced so the modal
+      // still renders something the GM can read, copy, or retry from.
+      return {title:'Handout',body:(e&&e.raw)||(e&&e.message)||''};
+    }
   },
   async generateProclamation(nation,opts={}){
     if(!this.isConfigured())throw new Error('Copilot not configured. Add an API key in Settings.');
@@ -15106,8 +15120,16 @@ Include 0-3 founding chronicle events that match the description. Include 1-3 fa
     // F1 surface: 'handout-proclamation' — topic can name a decree/faction/year to promote.
     // F6: thread the shared handout tier knob (handoutTier covers all three handout generators).
     const handoutTierProc=(typeof AccuracyChip!=='undefined')?AccuracyChip._tierFor('handout'):'mid';
-    const ctx=this.buildContext(nation||State.get(),{message:topic,tier:handoutTierProc});
-    const sys='You are a TTRPG GM assistant. Write an in-character proclamation from the ruler of the given realm. 150-200 words. Use period-appropriate formal language. Open with the ruler\'s title and a brief seal description. Include the date. Sign off with the ruler\'s name and titles. Tone: '+tone+'. Return JSON only: {"title":"<short title>","body":"<full text>"}.';
+    // BB-5/B1: this is read BY PLAYERS — build on the public-information wall (see generateNewsBulletin
+    // just below for the probe that proved the leak class this structurally closes).
+    const ctx=this.buildContext(nation||State.get(),{message:topic,tier:handoutTierProc,publicOnly:true});
+    const sys=`You are producing a player handout: an official proclamation from the current government of the realm. Write it as the physical document players hold. Rules:
+- Match the era and government style: a medieval crown proclaims; an industrial republic issues a Chancellery notice; a corporate state posts a directive. Use the ruler's/office's actual name and title from the world-state.
+- Structure: formal opening with title and seal line — the decree itself (ONE concrete measure reacting to the current public situation) — the stated official justification (which may be spin) — what changes for ordinary subjects, concretely (a tax, a curfew, a bounty, a ration) — penalty or enforcement clause — date in the realm's calendar year — signature and titles.
+- 150-220 words. Period diction, but every sentence must carry information a player can act on.
+- Use ONLY publicly known facts; the document may spin them, but may not reveal anything non-public.
+- Tone: ${tone}.
+Return JSON only: {"title":"<short document title>","body":"<full text>"}`;
     const user='# World context\n'+ctx+'\n\n# Topic\n'+topic+'\n\nWrite the proclamation now.';
     return await this._handoutFetch(sys,user);
   },
@@ -15118,9 +15140,21 @@ Include 0-3 founding chronicle events that match the description. Include 1-3 fa
     // F1 surface: 'handout-news' — topic seeds entity-relevance.
     // F6: thread the shared handout tier knob (handoutTier covers all three handout generators).
     const handoutTierNews=(typeof AccuracyChip!=='undefined')?AccuracyChip._tierFor('handout'):'mid';
-    const ctx=this.buildContext(nation||State.get(),{message:topic,tier:handoutTierNews});
+    // BB-5/B2: news is read BY PLAYERS — build on the public-information wall so a private
+    // chronicle entry or a character's undisclosed knowledge can never reach this prompt at
+    // all. PROBE-PROVEN: the prior one-liner prompt, run against the live model on the real
+    // Surassi Compact sample, produced "Word is the Founding Bargain promised provincial seats
+    // that never got filled. Talith knows." — Talith's undisclosed charter knowledge is a plot
+    // hook explicitly marked GM-only. This closes that leak structurally, not by prompt ask.
+    const ctx=this.buildContext(nation||State.get(),{message:topic,tier:handoutTierNews,publicOnly:true});
     const scopeMap={court:'formal court chronicle language',provincial:'provincial gazette style',common:'common rumor and tavern-talk diction'};
-    const sys='You are a TTRPG GM assistant. Write an in-fiction news bulletin. Use '+(scopeMap[scope]||scopeMap.common)+'. 100-150 words. Return JSON only: {"title":"<bulletin title>","body":"<full text>"}.';
+    const scopeDiction=scopeMap[scope]||scopeMap.common;
+    const sys=`You are producing a player handout: an in-fiction news sheet from inside the realm. Scope: ${scope} — ${scopeDiction}. Rules:
+- Give it a masthead name that fits the era and scope, and the in-world date.
+- 2-4 short items, each with its own small headline. Items react to CURRENT public events from the world-state — pick the ones a ${scope} audience would actually talk about.
+- Write from inside the fiction: the sheet does not know it is in a game, and it does NOT know anything non-public. It may repeat, distort, or get things wrong the way rumor does — at least one item should carry a plausible distortion or partisan spin a sharp player could catch, but NEVER reveal a non-public fact by "guessing" it correctly.
+- Period texture: a price, a wanted notice, a shipping line, a sermon time — one small mundane item makes the sheet real.
+- 120-180 words total. Return JSON only: {"title":"<masthead + edition>","body":"<the items, each as 'HEADLINE — text' on its own lines>"}`;
     const user='# World context\n'+ctx+'\n\n# Topic\n'+topic+'\n\nWrite the bulletin now.';
     return await this._handoutFetch(sys,user);
   },
