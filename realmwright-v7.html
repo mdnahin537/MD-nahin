@@ -5437,6 +5437,8 @@ Description: A tunnel gave way, halting the eastern works.</pre>
         <button type="button" class="char-status-pill" data-btype="other">Other</button>
       </div>
     </div>
+    <div class="form-field"><label class="form-label" for="be-gen-env">Generation hint — environment <span style="color:var(--color-text-faint);font-weight:400">(optional)</span></label><input class="form-input" id="be-gen-env" placeholder="Flooded quarter, grain silos, mountain pass..."></div>
+    <div class="form-field"><label class="form-label" for="be-gen-theme">Generation hint — theme <span style="color:var(--color-text-faint);font-weight:400">(optional)</span></label><input class="form-input" id="be-gen-theme" placeholder="Bred for war, escaped livestock, cursed relic..."></div>
     <div class="form-field"><label class="form-label" for="be-env">Environment</label><input class="form-input" id="be-env" placeholder="Mountain highlands, ancient ruins..."></div>
     <div class="form-field"><label class="form-label" for="be-desc">Description</label><textarea class="form-textarea" id="be-desc" rows="3" placeholder="Appearance and behavior..."></textarea></div>
     <div class="form-field"><label class="form-label" for="be-statblock">Stat Block</label><textarea class="form-textarea" id="be-statblock" rows="4" placeholder="HP: 45  AC: 14  Speed: 40ft&#10;Attacks: Bite +6 (2d8+4), Claw +6 (1d8+4)&#10;Abilities: Fire Breath (DC 14, 3d6 fire)"></textarea></div>
@@ -15332,6 +15334,13 @@ Return JSON only: {"title":"Letter from <writer> to <recipient>","body":"<the le
     try{return JSON.parse(_raw3a);}catch(e){const _c=_raw3a.replace(/```json|```/g,'').trim();try{return JSON.parse(_c);}catch(e2){return {};}}
   },
   // ─── GENERATE CREATURE (r78) ───
+  // B4 (probe-proven, P-1): the old one-liner produced a genuinely inventive creature, but with
+  // a FULL D&D 5e stat block (AC/HP/CR/dice saves) despite the Bestiary feature describing
+  // itself as system-agnostic everywhere else — the API prompt never said so. It also
+  // CONTRADICTED canon (invented "House Orryn" — Orryn is a defected guildsman, not a house —
+  // and misdated the lean harvests) and had no idea what creatures already existed. Rewritten to
+  // be explicitly system-agnostic, canon-respecting, ecologically grounded, and self-aware of
+  // the existing bestiary so successive creatures stop colliding.
   async generateCreature(nation,opts={}){
     if(!this.isConfigured())throw new Error('Copilot not configured. Add an API key in Settings.');
     const n=nation||State.get();
@@ -15342,9 +15351,22 @@ Return JSON only: {"title":"Letter from <writer> to <recipient>","body":"<the le
     // F6: thread the surface's own tier knob (bestiaryTier) instead of always using the global depth.
     const bestiaryTier=(typeof AccuracyChip!=='undefined')?AccuracyChip._tierFor('bestiary'):'mid';
     const ctx=this.buildContext(n,{message:[opts.type,opts.environment,opts.theme].filter(Boolean).join(' '),tier:bestiaryTier});
-    const sys='You are a TTRPG GM assistant. Generate a creature for the given world. '+typeHint+envHint+themeHint+'Return JSON only: {"name":"","type":"","description":"","statBlock":"","environment":"","lore":""}.';
-    const user='# World context\n'+ctx+'\n\nGenerate the creature now.';
-    const _data3b=await this._apiFetch([{role:'system',content:sys},{role:'user',content:user}],{stream:false,max_tokens:800,response_format:{type:'json_object'}});
+    const sys=`You are adding a creature to a tabletop GM's bestiary for this specific world. ${typeHint}${envHint}${themeHint}Rules:
+- Root it in THIS world: its habitat, diet, and behaviour must follow from named geography, economy, or history in the world-state (grain routes, a war's battlefields, a flooded quarter). Its existence should explain or be explained by something already true.
+- The realm's people must have a RELATIONSHIP with it: what they call it, how they use, fear, hunt, or profit from it. Lore is 2-4 sentences of what people believe — mark the belief that is wrong or incomplete.
+- description: 2-3 sensory sentences a GM can read aloud on first sighting.
+- statBlock: SYSTEM-AGNOSTIC ONLY — threat level (harmless/dangerous/lethal/catastrophic), 2-3 capabilities as behaviour, one weakness, one sign of its presence players notice first. NO game statistics, armor classes, hit points, or dice notation of any system.
+- Never contradict established canon; never invent new named factions, houses, or historical events — reference only what exists in the world-state.
+- Do not duplicate any creature under "Existing bestiary" if provided.
+Return JSON only: {"name":"","type":"","description":"","statBlock":"","environment":"","lore":""}`;
+    let user='# World context\n'+ctx+'\n\nGenerate the creature now.';
+    // B4 anti-dupe: list the GM's saved bestiary so successive creatures stop colliding with
+    // ones already on the page (mirrors the A5 secrets anti-dupe convention).
+    const existingBestiary=(n?.bestiary||[]).map(e=>'- '+e.name+' ('+e.type+')');
+    if(existingBestiary.length){
+      user+='\n\n# Existing bestiary (do not duplicate)\n'+existingBestiary.join('\n');
+    }
+    const _data3b=await this._apiFetch([{role:'system',content:sys},{role:'user',content:user}],{stream:false,max_tokens:1000,response_format:{type:'json_object'},temperature:0.9});
     const _raw3b=_data3b?.choices?.[0]?.message?.content||'{}';
     try{return JSON.parse(_raw3b);}catch(e){const _c=_raw3b.replace(/```json|```/g,'').trim();try{return JSON.parse(_c);}catch(e2){return {};}}
   },
@@ -23611,10 +23633,14 @@ const Bestiary={
   async generate(){
     const n=State.get();if(!n)return;
     const type=document.querySelector('#be-type-group .is-selected')?.dataset?.btype||'beast';
+    // B4: two hint inputs next to the type pills finally let the GM steer environment/theme —
+    // generateCreature already accepted these params, the UI just never sent them.
+    const environment=(document.getElementById('be-gen-env')?.value||'').trim();
+    const theme=(document.getElementById('be-gen-theme')?.value||'').trim();
     const btn=document.getElementById('bestiary-generate-btn');
     if(btn){btn.disabled=true;btn.textContent='Generating...';}
     try{
-      const result=await Copilot.generateCreature(n,{type});
+      const result=await Copilot.generateCreature(n,{type,environment,theme});
       if(result){
         this.openModal();
         ['name','env','desc','statblock','lore'].forEach(k=>{
