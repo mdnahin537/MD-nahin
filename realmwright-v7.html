@@ -14846,7 +14846,9 @@ Without a CANON block, your response is conversational only — no simulation ef
     const w=ev.weight>0?`+${ev.weight}`:String(ev.weight||0);
     const eventDesc=`[Year ${ev.year}] ${ev.name||'Untitled'} (${ev.type||'Political'}, weight ${w}): ${ev.description||'(no description)'}`;
     // F1 surface: 'continuity' — feed the event text to entity-relevance so it pulls related canon.
-    const context=this.buildContext(n,{message:eventDesc});
+    // F6: thread the surface's own tier knob (continuityTier) instead of always using the global depth.
+    const continuityTier=(typeof AccuracyChip!=='undefined')?AccuracyChip._tierFor('continuity'):'mid';
+    const context=this.buildContext(n,{message:eventDesc,tier:continuityTier});
     const systemPrompt=`You are a worldbuilding continuity checker. The user has marked one chronicle event for review against the rest of the nation's history. Your job: identify any contradictions, anachronisms, or implausibilities between this event and what's already established.
 
 Be concrete. Quote specific other events, stats, or facts you're comparing against. If the event is consistent, say so plainly. If it's mostly fine but raises a minor question, flag the question. If it directly contradicts something, name what.
@@ -14940,7 +14942,9 @@ Include 0-3 founding chronicle events that match the description. Include 1-3 fa
   async generateStrongStart({nation, situation}){
     if(!this.isConfigured())throw new Error('Copilot not configured. Add an API key in Settings.');
     // F1 surface: 'strongstart' — situation text may name an event/character to promote.
-    const ctx=this.buildContext(nation||State.get(),{message:situation||''});
+    // F6: thread the surface's own tier knob (strongstartTier) instead of always using the global depth.
+    const strongstartTier=(typeof AccuracyChip!=='undefined')?AccuracyChip._tierFor('strongstart'):'mid';
+    const ctx=this.buildContext(nation||State.get(),{message:situation||'',tier:strongstartTier});
     // Phase 5D: request 3 variants so the GM can pick the one that fits the table.
     const sys=`You are a TTRPG game master assistant. Generate three distinct evocative paragraphs (each 60–100 words) that each could open tonight's session with immediate action, tension, or revelation. Each paragraph is read aloud to players. Pull them out of the real world and into the scene. Use sensory detail, present tense, second-person plural ("you"). Do not introduce all NPCs at once. Do not reveal the central mystery. Each variant should establish the scene with a single immediate hook.\n\nReturn exactly 3 distinct variants. Format: JSON {"variants":["<variant 1>","<variant 2>","<variant 3>"]}. Each variant must be meaningfully different — not three rewordings of the same idea. At least one variant should be uncomfortable or unexpected, pushing the GM out of obvious choices.`;
     const user=`# World context\n${ctx}\n\n# Situation\n${situation||'Begin the session.'}\n\nReturn the JSON now.`;
@@ -14964,7 +14968,9 @@ Include 0-3 founding chronicle events that match the description. Include 1-3 fa
   // Returns array of single-sentence fact strings.
   async generateSecrets(nation,count=10){
     if(!this.isConfigured())throw new Error('Copilot not configured. Add an API key in Settings.');
-    const ctx=this.buildContext(nation||State.get());
+    // F6: thread the surface's own tier knob (secretsTier) instead of always using the global depth.
+    const secretsTier=(typeof AccuracyChip!=='undefined')?AccuracyChip._tierFor('secrets'):'mid';
+    const ctx=this.buildContext(nation||State.get(),{tier:secretsTier});
     const sys=`You are a TTRPG game master assistant. Generate ${count} short single-sentence facts ("secrets and clues") about the given world. Each is a true fact the players might discover. Each is abstracted from the method of discovery — do not specify how the players learn it. Each should cover a different aspect of the world (politics, history, NPCs, hidden danger, etc.). Format: JSON {"secrets":["...","..."]}. No preamble, no markdown fences, only the JSON.`;
     const user=`# World\n${ctx}\n\nGenerate ${count} secrets now.`;
     const data=await this._apiFetch([{role:'system',content:sys},{role:'user',content:user}],{stream:false,max_tokens:1200,response_format:{type:'json_object'}});
@@ -14991,7 +14997,9 @@ Include 0-3 founding chronicle events that match the description. Include 1-3 fa
     const tone=opts.tone||'grand';
     const topic=opts.topic||'a recent decree'; // B10: raw string — AI doesn't render HTML
     // F1 surface: 'handout-proclamation' — topic can name a decree/faction/year to promote.
-    const ctx=this.buildContext(nation||State.get(),{message:topic});
+    // F6: thread the shared handout tier knob (handoutTier covers all three handout generators).
+    const handoutTierProc=(typeof AccuracyChip!=='undefined')?AccuracyChip._tierFor('handout'):'mid';
+    const ctx=this.buildContext(nation||State.get(),{message:topic,tier:handoutTierProc});
     const sys='You are a TTRPG GM assistant. Write an in-character proclamation from the ruler of the given realm. 150-200 words. Use period-appropriate formal language. Open with the ruler\'s title and a brief seal description. Include the date. Sign off with the ruler\'s name and titles. Tone: '+tone+'. Return JSON only: {"title":"<short title>","body":"<full text>"}.';
     const user='# World context\n'+ctx+'\n\n# Topic\n'+topic+'\n\nWrite the proclamation now.';
     return await this._handoutFetch(sys,user);
@@ -15001,7 +15009,9 @@ Include 0-3 founding chronicle events that match the description. Include 1-3 fa
     const scope=opts.scope||'common';
     const topic=opts.topic||'recent events'; // B10: raw string
     // F1 surface: 'handout-news' — topic seeds entity-relevance.
-    const ctx=this.buildContext(nation||State.get(),{message:topic});
+    // F6: thread the shared handout tier knob (handoutTier covers all three handout generators).
+    const handoutTierNews=(typeof AccuracyChip!=='undefined')?AccuracyChip._tierFor('handout'):'mid';
+    const ctx=this.buildContext(nation||State.get(),{message:topic,tier:handoutTierNews});
     const scopeMap={court:'formal court chronicle language',provincial:'provincial gazette style',common:'common rumor and tavern-talk diction'};
     const sys='You are a TTRPG GM assistant. Write an in-fiction news bulletin. Use '+(scopeMap[scope]||scopeMap.common)+'. 100-150 words. Return JSON only: {"title":"<bulletin title>","body":"<full text>"}.';
     const user='# World context\n'+ctx+'\n\n# Topic\n'+topic+'\n\nWrite the bulletin now.';
@@ -15015,7 +15025,9 @@ Include 0-3 founding chronicle events that match the description. Include 1-3 fa
     let fromDesc=opts.fromName||'a character'; // B10: raw string
     let toDesc=opts.toName||'another character'; // B10: raw string
     // F1 surface: 'handout-letter' — writer/recipient/topic all seed entity-relevance.
-    const ctx=this.buildContext(n,{message:[topic,fromDesc,toDesc].join(' ')});
+    // F6: thread the shared handout tier knob (handoutTier covers all three handout generators).
+    const handoutTierLetter=(typeof AccuracyChip!=='undefined')?AccuracyChip._tierFor('handout'):'mid';
+    const ctx=this.buildContext(n,{message:[topic,fromDesc,toDesc].join(' '),tier:handoutTierLetter});
     if(opts.fromCharId){const c=n.characters?.find(x=>x.id===opts.fromCharId);if(c)fromDesc=c.name+' ('+(c.role||'')+', drives: '+(c.drive||'')+', fears: '+(c.fear||'')+')';}
     if(opts.toCharId){const c=n.characters?.find(x=>x.id===opts.toCharId);if(c)toDesc=c.name+' ('+(c.role||'')+')';}
     // A1 fix: sys MUST be declared outside the if(opts.toCharId) block. Prior code had the const
@@ -15028,8 +15040,10 @@ Include 0-3 founding chronicle events that match the description. Include 1-3 fa
   // ─── SUGGEST RELATIONS (r77) ───
   async suggestRelations(fromNation,toNation){
     if(!this.isConfigured())throw new Error('Copilot not configured. Add an API key in Settings.');
-    const ctxA=this.buildContext(fromNation);
-    const ctxB=this.buildContext(toNation);
+    // F6: thread the surface's own tier knob (relationsTier) instead of always using the global depth.
+    const relationsTier=(typeof AccuracyChip!=='undefined')?AccuracyChip._tierFor('relations'):'mid';
+    const ctxA=this.buildContext(fromNation,{tier:relationsTier});
+    const ctxB=this.buildContext(toNation,{tier:relationsTier});
     const sys='You are a TTRPG GM assistant. Based on two realm profiles, propose a diplomatic posture (one of: allied, friendly, neutral, hostile, at-war) and a 1-2 sentence rationale. Return JSON only: {"posture":"<value>","rationale":"<text>"}.';
     const user='# Realm A (the one asking)\n'+ctxA+'\n\n# Realm B (the other)\n'+ctxB+'\n\nPropose Realm A\'s posture toward Realm B.';
     const _data3a=await this._apiFetch([{role:'system',content:sys},{role:'user',content:user}],{stream:false,max_tokens:300,response_format:{type:'json_object'}});
@@ -15044,7 +15058,9 @@ Include 0-3 founding chronicle events that match the description. Include 1-3 fa
     const envHint=opts.environment?'Environment: '+opts.environment+'. ':'';
     const themeHint=opts.theme?'Theme: '+opts.theme+'. ':'';
     // F1 surface: 'bestiary' — type/env/theme can name a region/faction tied to a location.
-    const ctx=this.buildContext(n,{message:[opts.type,opts.environment,opts.theme].filter(Boolean).join(' ')});
+    // F6: thread the surface's own tier knob (bestiaryTier) instead of always using the global depth.
+    const bestiaryTier=(typeof AccuracyChip!=='undefined')?AccuracyChip._tierFor('bestiary'):'mid';
+    const ctx=this.buildContext(n,{message:[opts.type,opts.environment,opts.theme].filter(Boolean).join(' '),tier:bestiaryTier});
     const sys='You are a TTRPG GM assistant. Generate a creature for the given world. '+typeHint+envHint+themeHint+'Return JSON only: {"name":"","type":"","description":"","statBlock":"","environment":"","lore":""}.';
     const user='# World context\n'+ctx+'\n\nGenerate the creature now.';
     const _data3b=await this._apiFetch([{role:'system',content:sys},{role:'user',content:user}],{stream:false,max_tokens:800,response_format:{type:'json_object'}});
@@ -15058,7 +15074,9 @@ Include 0-3 founding chronicle events that match the description. Include 1-3 fa
     const n=nation||State.get();
     if(!n)throw new Error('No active nation.');
     // F1 surface: 'decipher' — feed the raw notes to entity-relevance.
-    const ctx=this.buildContext(n,{message:text||''});
+    // F6: thread the surface's own tier knob (decipherTier) instead of always using the global depth.
+    const decipherTier=(typeof AccuracyChip!=='undefined')?AccuracyChip._tierFor('decipher'):'mid';
+    const ctx=this.buildContext(n,{message:text||'',tier:decipherTier});
     const scopeNote=target==='all'?'Extract all types of changes: new or updated NPCs/characters, factions, locations, chronicle events, secrets and clues, and open hooks.':
       target==='characters'?'Focus ONLY on new or updated characters and NPCs.':
       target==='events'?'Focus ONLY on chronicle events and things that happened.':
@@ -15278,7 +15296,9 @@ Return ONLY the paragraph as plain text. No preamble, no formatting.`;
     if(!this.isConfigured())throw new Error('No API key configured');
     const scope=opts.scope||'all';
     const count=parseInt(opts.count,10)||20;
-    const ctx=this.buildContext(nation);
+    // F6: thread the surface's own tier knob (glossaryTier) instead of always using the global depth.
+    const glossaryTier=(typeof AccuracyChip!=='undefined')?AccuracyChip._tierFor('glossary'):'mid';
+    const ctx=this.buildContext(nation,{tier:glossaryTier});
     const scopeNote=scope==='all'?'all domains (political, cultural, religious, geographic)':`${scope} terms only`;
     const systemPrompt=`You are a TTRPG worldbuilding assistant. Generate an alphabetized glossary of world-specific terms for the given realm. Scope: ${scopeNote}. Target ~${count} entries. Each entry: TERM: one-to-two sentence definition in the realm's voice. Include proper nouns (people, factions, institutions, places), world-specific concepts, and realm-specific jargon. Do NOT include generic fantasy terms. Format as JSON: {"glossary":[{"term":"...","definition":"..."},...]}. Sort entries alphabetically by term.`;
     const messages=[
@@ -15299,7 +15319,9 @@ Return ONLY the paragraph as plain text. No preamble, no formatting.`;
     const type=opts.type||'people';
     const qty=parseInt(opts.qty,10)||20;
     const theme=opts.theme||'';
-    const ctx=this.buildContext(nation);
+    // F6: thread the surface's own tier knob (namingTier) instead of always using the global depth.
+    const namingTier=(typeof AccuracyChip!=='undefined')?AccuracyChip._tierFor('naming'):'mid';
+    const ctx=this.buildContext(nation,{tier:namingTier});
     const typeNote={people:'people (mix of masculine, feminine, and gender-neutral names)',places:'place names (cities, regions, landmarks)',titles:'titles and honorifics (ranks, forms of address)',orders:'faction names (orders, guilds, houses, movements)'}[type]||type;
     const themeNote=theme?` Additional theme guidance: ${theme}.`:'';
     const systemPrompt=`You are a TTRPG worldbuilding assistant. Generate ${qty} names for ${typeNote} that fit the given realm's linguistic patterns, era, and culture.${themeNote} Extract patterns from existing names in the world state before generating. Names must sound internally consistent with the realm. Return as JSON: {"names":["...","...",...]}`;
