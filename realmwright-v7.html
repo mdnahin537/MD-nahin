@@ -15362,9 +15362,18 @@ Return JSON only: {"name":"","type":"","description":"","statBlock":"","environm
     if(existingBestiary.length){
       user+='\n\n# Existing bestiary (do not duplicate)\n'+existingBestiary.join('\n');
     }
-    const _data3b=await this._apiFetch([{role:'system',content:sys},{role:'user',content:user}],{stream:false,max_tokens:1000,response_format:{type:'json_object'},temperature:0.9});
-    const _raw3b=_data3b?.choices?.[0]?.message?.content||'{}';
-    try{return JSON.parse(_raw3b);}catch(e){const _c=_raw3b.replace(/```json|```/g,'').trim();try{return JSON.parse(_c);}catch(e2){return {};}}
+    // BB-4: routed through the shared retry-once JSON helper (was a weaker hand-rolled
+    // single-shot parse with no retry and no {...}-extraction). _apiFetchJson throws its own
+    // error only after a strict retry ALSO fails to parse; on that double failure, fall back to
+    // {} exactly like the hand-rolled version did on a single failure, so the bestiary form
+    // still opens empty instead of surfacing a new error path. A real fetch/API error (no .raw
+    // on the thrown error) still propagates unchanged to the caller.
+    try{
+      return await this._apiFetchJson([{role:'system',content:sys},{role:'user',content:user}],{stream:false,max_tokens:1000,temperature:0.9});
+    }catch(e){
+      if(e&&typeof e.raw==='string')return {};
+      throw e;
+    }
   },
   // ─── NOTES DECIPHER (r79) ───
   // Accepts raw notes/transcript and returns a CANON block for the standard review pipeline.
