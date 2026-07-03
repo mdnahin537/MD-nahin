@@ -14071,6 +14071,12 @@ const Copilot={
     const tier=this._normalizeTier(opts&&opts.tier!=null?opts.tier:nation.copilotContextDepth);
     const cfg=this._DEPTH_CFG[tier]||this._DEPTH_CFG.mid;
     const message=opts&&opts.message?String(opts.message):'';
+    // BB-5: player-facing handouts must never see GM-only knowledge — a private/forecast
+    // chronicle entry, a plot hook, the Secrets bank, or a character's private drive/fear/
+    // plotSeeds. `publicOnly` walls those off STRUCTURALLY (the text is simply never handed
+    // to the model) rather than by asking it nicely in the prompt. Default false: every
+    // existing caller's output is byte-for-byte unchanged.
+    const publicOnly=!!(opts&&opts.publicOnly);
     const lines=[];
     lines.push(`# Nation: ${nation.name}`);
     lines.push(`Era: ${nation.era}, Year: ${nation.currentYear}`);
@@ -14104,6 +14110,14 @@ const Copilot={
       const chars=cfg.npcsActiveOnly?nation.characters.filter(c=>c.status==='active'||!c.status):nation.characters;
       chars.forEach(c=>{
         const role=c.role?`, ${c.role}`:'';
+        // BB-5(d): a public-facing handout may only know a character's name and role —
+        // drive/fear/plotSeeds are GM knowledge, and description often carries the same
+        // private framing (that's exactly how probe P-2 leaked "Talith knows..." — a fact
+        // marked undisclosed). Nothing beyond name/role survives the wall.
+        if(publicOnly){
+          lines.push(`- ${c.name}${role}`);
+          return;
+        }
         const charStatus=c.status&&c.status!=='active'?` [${c.status}]`:'';
         // A character's dramatic weight lives in description OR in the
         // drive/fear/plotSeeds fields. Sample worlds and quick-add NPCs often
@@ -14164,8 +14178,12 @@ const Copilot={
       });
     }
     // Chronicle — smart selection (full window) + ledger compression (everything else).
-    const sortedChron=this._sortedChronicle(nation.chronicle);
-    const sel=this._smartSelectChronicle(nation,cfg,message);
+    // BB-5(a): for publicOnly, restrict to visibility==='public' entries BEFORE smart-select
+    // runs, so a private/forecast event can never be scored into the window OR the ledger —
+    // the wall is structural (the model never receives the text), not a prompt suggestion.
+    const chronSource=publicOnly?{...nation,chronicle:(nation.chronicle||[]).filter(e=>e&&e.visibility==='public')}:nation;
+    const sortedChron=this._sortedChronicle(chronSource.chronicle);
+    const sel=this._smartSelectChronicle(chronSource,cfg,message);
     const fullSet=sortedChron.filter(e=>sel.fullIds.has(e.id));
     const ledgerSet=sortedChron.filter(e=>!sel.fullIds.has(e.id));
     if(fullSet.length){
@@ -14191,7 +14209,9 @@ const Copilot={
       ledgerBlock='\n## Chronicle Ledger\n_Events outside the current window. Ask if you need any expanded._\n'+rows.join('\n');
       lines.push(ledgerBlock);
     }
-    if(cfg.includeHooks&&nation.hooks&&nation.hooks.length){
+    // BB-5(c): hooks are GM-only planning material (probe P-2's exact leak vector — a hook
+    // marked "she has not said so publicly" is precisely what must never reach a handout).
+    if(cfg.includeHooks&&!publicOnly&&nation.hooks&&nation.hooks.length){
       const hooks=cfg.unresolvedOnly?nation.hooks.filter(h=>!h.resolved&&h.status!=='resolved'):nation.hooks;
       if(hooks.length){
         lines.push('\n## Plot Hooks');
@@ -14204,7 +14224,8 @@ const Copilot={
         });
       }
     }
-    if(cfg.includeSecrets&&nation.secrets&&nation.secrets.length){
+    // BB-5(b): includeSecrets is forced off for a public-facing context regardless of tier.
+    if(cfg.includeSecrets&&!publicOnly&&nation.secrets&&nation.secrets.length){
       lines.push('\n## Secrets');
       nation.secrets.forEach(s=>lines.push(`- ${s.title||'(untitled)'}: ${s.content||''}`));
     }
@@ -14221,6 +14242,12 @@ const Copilot={
     if(pressures.length){
       lines.push('\n## Active Pressures');
       pressures.forEach(p=>lines.push(`- ${p.text}`));
+    }
+    // BB-5(f): the explicit closing rule handed to the model — belt-and-braces alongside the
+    // structural omissions above (there is nothing secret left in this string to leak, and
+    // the model is told plainly that everything it did receive is public).
+    if(publicOnly){
+      lines.push('\nNOTE: everything above is public knowledge inside the world.');
     }
     const text=lines.join('\n');
     if(opts&&opts.returnMeta){
