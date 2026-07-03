@@ -10323,7 +10323,7 @@ const Parse={
       // Strip leading bullet markers ("- ", "* ", "• ") that AIs sometimes prefix lines with
       line=line.replace(/^[-*•]\s+/,'');
       // Match prefix case-insensitively
-      const head=line.match(/^(stat|event|faction|character|artifact)\s*:\s*(.*)$/i);
+      const head=line.match(/^(stat|event|faction|character|artifact|location|hook|secret)\s*:\s*(.*)$/i);
       if(!head){failures.push({line,reason:'unrecognized line'});return;}
       const kind=head[1].toLowerCase();
       const rest=head[2].trim();
@@ -10345,7 +10345,17 @@ const Parse={
         if(p.length>=4){
           // Decimal-aware weight; CLAMP.eventWeight rounds + clamps to [-30,30] (e.g. -7.8 → -8).
           const w=normNum(p[2]).match(/[+-]?\d+(?:\.\d+)?/);
-          candidates.push({type:'event',name:p[0],evType:p[1]||'Political',weight:CLAMP.eventWeight(w?w[0]:0),visibility:CLAMP.visibility(p[3]||'public'),description:p.slice(4).join(' | ')});
+          // Optional 6th field "| year N" (additive, C1): lets a note about a PAST event land at
+          // that year instead of always today's currentYear. When absent, or when a 6th field
+          // exists but isn't a recognized year marker, `description` falls through to the exact
+          // old expression (p.slice(4).join(' | ')) — every pre-existing block still parses
+          // byte-identically; only this brand-new 6th-field shape (never emitted before C2 lands
+          // the prompt change) takes the new path.
+          const yearMatch=p.length>=6?normNum(p[5]).match(/year\s*(-?\d+)/i):null;
+          const description=yearMatch?[p[4]].concat(p.slice(6)).join(' | '):p.slice(4).join(' | ');
+          const cand={type:'event',name:p[0],evType:p[1]||'Political',weight:CLAMP.eventWeight(w?w[0]:0),visibility:CLAMP.visibility(p[3]||'public'),description};
+          if(yearMatch)cand.year=Number(yearMatch[1]);
+          candidates.push(cand);
         }else failures.push({line,reason:'event needs 4+ pipe-separated parts'});
       }else if(kind==='faction'){
         const p=rest.split('|').map(s=>s.trim());
@@ -10366,6 +10376,23 @@ const Parse={
         const p=rest.split('|').map(s=>s.trim());
         if(p.length>=2)candidates.push({type:'artifact',artType:p[0],content:p.slice(1).join(' | ')});
         else failures.push({line,reason:'artifact needs type | content'});
+      }else if(kind==='location'){
+        // C1: closes the parser's biggest silent-data-loss gap — session notes about a new place
+        // used to produce nothing. Name-only is enough (mirrors character/faction); type/description
+        // are free text, same as importFromText's location schema (no enum — "fortress" is valid).
+        const p=rest.split('|').map(s=>s.trim());
+        if(p.length>=1&&p[0])candidates.push({type:'location',name:p[0],locType:p[1]||'',description:p.slice(2).join(' | ')||''});
+        else failures.push({line,reason:'location needs name'});
+      }else if(kind==='hook'){
+        const p=rest.split('|').map(s=>s.trim());
+        if(p.length>=1&&p[0])candidates.push({type:'hook',title:p[0],description:p.slice(1).join(' | ')||''});
+        else failures.push({line,reason:'hook needs title'});
+      }else if(kind==='secret'){
+        // Content is mandatory (mirrors artifact's "type | content" — a title-only secret reveals
+        // nothing worth inscribing).
+        const p=rest.split('|').map(s=>s.trim());
+        if(p.length>=2)candidates.push({type:'secret',title:p[0],content:p.slice(1).join(' | ')});
+        else failures.push({line,reason:'secret needs title | content'});
       }
     });
     return detail?{candidates,failures}:candidates;
@@ -10403,7 +10430,8 @@ const Parse={
     const unmatched=[];
     const touched=new Set(); // tracks which kinds were touched, for accurate dispatch fields
     const errors=[]; // per-candidate failures — a single bad candidate must not abort the batch
-    const skipped={event:0,faction:0,character:0,artifact:0}; // dedupe skip counts, surfaced below
+    const skipped={event:0,faction:0,character:0,artifact:0,location:0}; // dedupe skip counts, surfaced below
+    const updated={character:0}; // C1: character-update merges (not a dupe-skip, not a create)
     try{
     candidates.forEach(c=>{
       try{
@@ -10420,7 +10448,10 @@ const Parse={
       }
       else if(c.type==='event'){
         // Deduplicate: skip if an event with the same name (case-insensitive) AND same year exists.
-        const evYear=CLAMP.year(n.currentYear,n.currentYear);
+        // C1: honor an explicit c.year (new optional "| year N" field) when present — CLAMP.year's
+        // own null-check falls through to the fallback (currentYear) when c.year is undefined, so
+        // this is byte-identical to the old expression for every pre-existing (yearless) candidate.
+        const evYear=CLAMP.year(c.year,n.currentYear);
         const dupe=n.chronicle.find(e=>(e.name||'').toLowerCase()===(c.name||'').toLowerCase()&&e.year===evYear);
         if(!dupe){const ev={id:Utils.uuid(),name:c.name,type:CLAMP.eventType(c.evType),weight:CLAMP.eventWeight(c.weight),description:c.description||'',year:evYear,visibility:CLAMP.visibility(c.visibility),relatedStats:[],source:'ai-canon',createdAt:Utils.now()};n.chronicle.push(ev);touched.add('chronicle');}
         else skipped.event++;
@@ -10441,6 +10472,14 @@ const Parse={
         // Deduplicate: skip if a character with the same name (case-insensitive) already exists.
         const dupe=n.characters.find(ch=>(ch.name||'').toLowerCase()===(c.name||'').toLowerCase());
         if(!dupe){n.characters.push({id:Utils.uuid(),name:c.name,role:c.role||'',description:c.desc||'',status:'active',drive:'',fear:'',factionId:null,chronicleLinks:[],createdAt:Utils.now()});touched.add('character');}
+        else if(c.desc){
+          // C1 fix: a Character line about someone who already exists used to be silently DROPPED
+          // as a "duplicate" — the GM's session-note update (what changed about them) vanished.
+          // Append it to the existing description with a dated separator instead, and count it as
+          // an update, not a dupe. A line with no new description text still has nothing to merge.
+          dupe.description=(dupe.description||'')+` — [Session note ${Utils.now().slice(0,10)}] ${c.desc}`;
+          touched.add('character');updated.character++;
+        }
         else skipped.character++;
       }
       else if(c.type==='artifact'){
@@ -10449,7 +10488,27 @@ const Parse={
         if(!dupe){n.artifacts.push({id:Utils.uuid(),type:c.artType,content:c.content||''});touched.add('artifact');}
         else skipped.artifact++;
       }
-      }catch(e){errors.push({line:c.name||c.statName||'(unknown)',reason:e.message});}
+      else if(c.type==='location'){
+        // C1: deduplicate by name like faction/character/artifact above. Routed through the real
+        // State.addLocation (not a hand-built push) so it gets the exact production shape
+        // ({id,name,type,parentId,description,controllingFactionName,notes,createdAt}) and the
+        // cycle-safe id — the plan's own {...,status:'active'} sketch is NOT the real shape.
+        const dupe=n.locations.find(l=>(l.name||'').toLowerCase()===(c.name||'').toLowerCase());
+        if(!dupe){State.addLocation(nid,{name:c.name,type:c.locType||'',description:c.description||''});touched.add('location');}
+        else skipped.location++;
+      }
+      else if(c.type==='hook'){
+        // C1: no dedupe (a session can raise several similarly-worded leads) — routed through the
+        // real State.addHook so it lands with the production shape/defaults (status:'open', etc.).
+        State.addHook(nid,{title:c.title,description:c.description||''});
+        touched.add('hook');
+      }
+      else if(c.type==='secret'){
+        // C1: no dedupe, same reasoning as hooks. Routed through the real State.addSecret.
+        State.addSecret(nid,{title:c.title,content:c.content||''});
+        touched.add('secret');
+      }
+      }catch(e){errors.push({line:c.name||c.statName||c.title||'(unknown)',reason:e.message});}
     });
     }finally{State._suppressUndo=false;}
     State._touch(nid);State.persist();
@@ -10460,9 +10519,12 @@ const Parse={
     if(unmatched.length){
       setTimeout(()=>showToast(`Couldn't match stat${unmatched.length>1?'s':''}: ${unmatched.join(', ')}`,[],5000),600);
     }
-    const skipTotal=skipped.event+skipped.faction+skipped.character+skipped.artifact;
+    const skipTotal=skipped.event+skipped.faction+skipped.character+skipped.artifact+skipped.location;
     if(skipTotal){
       setTimeout(()=>showToast(`Skipped ${skipTotal} duplicate${skipTotal>1?'s':''}.`,[],5000),600);
+    }
+    if(updated.character){
+      setTimeout(()=>showToast(`Updated ${updated.character} existing character${updated.character>1?'s':''}.`,[],5000),600);
     }
     if(errors.length){
       setTimeout(()=>showToast(`Skipped ${errors.length} malformed item${errors.length>1?'s':''}: ${errors.map(e=>e.line).join(', ')}`,[],6000),600);
@@ -12100,13 +12162,21 @@ const Modals={
         const header=document.createElement('div');header.className='canon-candidate__header';
         const cb=document.createElement('input');cb.type='checkbox';cb.id=`cc-${i}`;cb.checked=true;
         const lbl=document.createElement('label');lbl.className='canon-candidate__name';lbl.htmlFor=cb.id;
-        lbl.textContent=`${(c.type||'').toUpperCase()}: ${c.name||c.statName||c.artType||''}`;
+        // C1: a Character candidate whose name already exists in this nation will MERGE on accept
+        // (applyCandidates), not create — a mechanical lookup here so the GM sees that up front.
+        let updateTag='';
+        if(c.type==='character'){
+          const nn=State.data.nations.find(x=>x.id===nid);
+          const exists=nn&&(nn.characters||[]).some(ch=>(ch.name||'').toLowerCase()===(c.name||'').toLowerCase());
+          if(exists)updateTag=' (update existing)';
+        }
+        lbl.textContent=`${(c.type||'').toUpperCase()}: ${c.name||c.statName||c.artType||c.title||''}${updateTag}`;
         header.append(cb,lbl);
         const meta=document.createElement('div');meta.className='canon-candidate__meta';
         if(c.type==='stat'){
           meta.textContent=`${c.statName}: ${c.delta>0?'+':''}${c.delta}`;
         }else if(c.type==='event'){
-          meta.innerHTML=`${E(c.evType||'')} · wt${(c.weight||0)>0?'+':''}${E(String(c.weight||0))} · ${E(c.visibility||'public')}<br><small>${E(c.description||'')}</small>`;
+          meta.innerHTML=`${E(c.evType||'')} · wt${(c.weight||0)>0?'+':''}${E(String(c.weight||0))} · ${E(c.visibility||'public')}${c.year?` · year ${E(String(c.year))}`:''}<br><small>${E(c.description||'')}</small>`;
         }else if(c.type==='faction'){
           meta.textContent=c.desc||c.description||'';
         }else if(c.type==='character'){
@@ -12114,6 +12184,12 @@ const Modals={
           meta.textContent=role?`${role} — ${d}`:d;
         }else if(c.type==='artifact'){
           meta.textContent=`[${c.artType||''}] ${c.content||''}`;
+        }else if(c.type==='location'){
+          meta.textContent=`${c.locType||'location'} — ${c.description||''}`;
+        }else if(c.type==='hook'){
+          meta.textContent=c.description||'';
+        }else if(c.type==='secret'){
+          meta.textContent=c.content||'';
         }
         wrap.append(header,meta);
         ctr.appendChild(wrap);
