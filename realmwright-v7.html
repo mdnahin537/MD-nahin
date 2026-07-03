@@ -4866,6 +4866,25 @@ Description: A tunnel gave way, halting the eastern works.</pre>
           </div>
         </div>
       </div>
+      <!-- P6.11 — write scope + auto-apply. Applies to both providers (not gated behind
+           the OpenRouter-only fields above), since tool-calling is provider-agnostic. -->
+      <div class="settings-row">
+        <div style="flex:1">
+          <div class="settings-label">Copilot write scope</div>
+          <div class="settings-desc">Standard allows chronicle entries, NPCs, plot seeds, and resolving hooks. Full also allows the Copilot to propose faction stance changes, nation stat deltas, and front clock ticks.</div>
+          <select class="form-select" id="copilot-scope-select" style="width:100%;margin-top:var(--space-2)">
+            <option value="standard">Standard — chronicle, NPCs, hooks</option>
+            <option value="full">Full — also stats, factions, fronts</option>
+          </select>
+        </div>
+      </div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-label">Auto-apply Copilot changes</div>
+          <div class="settings-desc">Off by default: proposals wait in a review queue for you to accept or reject. Auto-apply lets the Copilot change your world without review — turn it on only if you trust it to act unsupervised.</div>
+        </div>
+        <button class="toggle" id="toggle-copilot-autoapply" aria-label="Toggle Copilot auto-apply"></button>
+      </div>
       <!-- Ollama fields (shown when provider = ollama) -->
       <div id="copilot-ollama-fields" style="display:none">
         <!-- P6.9 — probe failures explain themselves here instead of failing silently. -->
@@ -24917,6 +24936,19 @@ function bindEventListeners(){
     Copilot.updateStatus();
   });
 
+  // P6.11 — Copilot write scope: gates which write tools the model may call
+  // (see COPILOT_TOOLS_STANDARD_ALLOWED / _executeTool's scope check).
+  document.getElementById('copilot-scope-select')?.addEventListener('change',(e)=>{
+    State.setSetting('copilotScope',e.target.value);
+  });
+  // P6.11 — Copilot auto-apply toggle. OFF by default; ON lets queued tool
+  // proposals apply immediately instead of waiting for GM review.
+  document.getElementById('toggle-copilot-autoapply')?.addEventListener('click',()=>{
+    const v=!State.data.meta.settings.copilotAutoApply;
+    State.setSetting('copilotAutoApply',v);
+    document.getElementById('toggle-copilot-autoapply')?.classList.toggle('is-on',v);
+  });
+
   // B39: Provider radio buttons — show/hide OpenRouter vs Ollama fields
   function _applyProviderUI(provider){
     const orFields=document.getElementById('copilot-openrouter-fields');
@@ -25023,6 +25055,10 @@ function bindEventListeners(){
     const olMod=document.getElementById('ollama-model-input');
     if(olUrl)olUrl.value=State.data?.meta?.settings?.ollamaUrl||'http://localhost:11434';
     if(olMod)olMod.value=State.data?.meta?.settings?.ollamaModel||'llama3.1';
+    // P6.11 — Sync scope select + auto-apply toggle to current settings
+    const scopeSel=document.getElementById('copilot-scope-select');
+    if(scopeSel)scopeSel.value=State.data?.meta?.settings?.copilotScope||'standard';
+    document.getElementById('toggle-copilot-autoapply')?.classList.toggle('is-on',!!State.data?.meta?.settings?.copilotAutoApply);
   };
 
   // Global import file
