@@ -5535,6 +5535,7 @@ Description: A tunnel gave way, halting the eastern works.</pre>
       <div class="handout-actions">
         <button class="btn" id="handout-print-btn" aria-label="Print handout">Print</button>
         <button class="btn" id="handout-copy-btn" aria-label="Copy handout to clipboard">Copy</button>
+        <button class="btn" id="handout-save-artifact-btn" aria-label="Save handout as an artifact">Save as artifact</button>
       </div>
     </div>
   </div>
@@ -23356,10 +23357,29 @@ const Handouts={
     }
   },
 
+  // (B1/B2/B3 optional feature) Persist the generated handout into the world's own artifact
+  // bank — artifacts already exist, export already prints them, and global search already
+  // indexes them (:_buildGroups reads nation.artifacts live), so this is a one-button wire-up
+  // rather than new storage. Undo-able like any other content-adding action.
+  saveArtifact(){
+    const n=State.get();
+    if(!n)return;
+    const title=document.getElementById('handout-output-title')?.textContent||'';
+    const body=document.getElementById('handout-body')?.textContent||'';
+    if(!body){showToast('Generate a handout first.');return;}
+    State.pushUndo();
+    n.artifacts=n.artifacts||[];
+    n.artifacts.push({id:Utils.uuid(),type:this._type||'handout',content:(title?title+'\n\n':'')+body});
+    State._touch(n.id);
+    State.persist();
+    showToast('Saved as an artifact.');
+  },
+
   bind(){
     document.getElementById('handout-generate-btn')?.addEventListener('click',()=>this.generate());
     document.getElementById('handout-print-btn')?.addEventListener('click',()=>this.print());
     document.getElementById('handout-copy-btn')?.addEventListener('click',()=>this.copy());
+    document.getElementById('handout-save-artifact-btn')?.addEventListener('click',()=>this.saveArtifact());
     document.getElementById('gm-proclamation-btn')?.addEventListener('click',()=>this.open('proclamation'));
     document.getElementById('gm-news-btn')?.addEventListener('click',()=>this.open('news'));
     document.getElementById('gm-letter-btn')?.addEventListener('click',()=>this.open('letter'));
