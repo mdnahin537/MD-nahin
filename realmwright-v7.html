@@ -14151,6 +14151,15 @@ const Copilot={
         lines.push(`- ${f.name} (${f.catastropheType||'Military'}, ${clock})${statusTag}${body}`);
       });
     }
+    // X-2: session memory (what actually happened at the table) was invisible to every
+    // generator — Session Prep, Strong Start, Stakes, Beats, the Oracle all planned
+    // "tonight" blind to last session. Last 3, gated above 'low' (cheap but real signal).
+    if(Array.isArray(nation.sessions)&&nation.sessions.length&&tier!=='low'){
+      lines.push('\n## Recent Sessions (what happened at the table)');
+      nation.sessions.slice(-3).forEach(s=>{
+        lines.push(`- Session ${s.number??'?'}${s.title?` — ${s.title}`:''}: ${(s.summary||'').trim()||'(no summary)'}`);
+      });
+    }
     // Chronicle — smart selection (full window) + ledger compression (everything else).
     const sortedChron=this._sortedChronicle(nation.chronicle);
     const sel=this._smartSelectChronicle(nation,cfg,message);
