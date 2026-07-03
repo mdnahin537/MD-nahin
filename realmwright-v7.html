@@ -17791,6 +17791,43 @@ const Campaign={
       this._renderRailFromHeuristics();
     });
   },
+  // BB-2 (X-3, "the board can't see itself"): pure markdown serializer for the
+  // prep board. Board generators are invoked FROM this board (stakes text, clocks,
+  // beats, cast, staged secrets) but previously couldn't see any of it — Clocks
+  // proposed duplicates, Quick NPC re-cast people already staged, Secrets/Stakes
+  // ignored what the GM had already written. Every board-invoking generator can
+  // now append this as its own user-prompt section.
+  // Accepts an optional `cp` (defaults to the live State.cp()) purely so it can be
+  // unit-tested with synthetic data without touching global state — real callers
+  // always invoke it with no argument. Returns '' when the whole board is empty so
+  // callers can do `user+=Campaign.boardBlock()` unconditionally, no `if` needed.
+  boardBlock(cp=State.cp()){
+    const lines=[];
+    const stakes=(cp.stakes||'').trim();
+    if(stakes)lines.push(`Stakes: ${stakes.slice(0,300)}`);
+    if(Array.isArray(cp.clocks)&&cp.clocks.length){
+      lines.push('Clocks:');
+      cp.clocks.forEach(c=>{if(c)lines.push(`- ${c.name||'Untitled'} ${c.filled||0}/${c.size||6}`);});
+    }
+    if(Array.isArray(cp.beats)&&cp.beats.length){
+      lines.push('Beats:');
+      cp.beats.forEach((b,i)=>{if(b)lines.push(`${i+1}. ${(b.text||'').trim().slice(0,120)}`);});
+    }
+    if(Array.isArray(cp.npcs)&&cp.npcs.length){
+      lines.push('Cast:');
+      cp.npcs.forEach(npc=>{if(npc)lines.push(`- ${npc.name||'Unnamed'} — ${npc.role||'no role'}, ${npc.here?'here':'absent'}`);});
+    }
+    if(Array.isArray(cp.secrets)&&cp.secrets.length){
+      const undelivered=cp.secrets.filter(s=>s&&!s.delivered);
+      lines.push(`Staged secrets: ${cp.secrets.length} (${undelivered.length} undelivered)`);
+      undelivered.forEach(s=>{
+        const first=(s.text||'').trim().split('\n')[0];
+        if(first)lines.push(`- ${first}`);
+      });
+    }
+    if(!lines.length)return'';
+    return `# Tonight's prep board\n${lines.join('\n')}`;
+  },
   // ── C3: per-section AI pill popovers ──────────────────────────────────────
   // Action registry per spec §5. `kind:'variants'` runs a 3-variant flow through
   // Variants.render; `kind:'single'` inserts the single output and closes; the
