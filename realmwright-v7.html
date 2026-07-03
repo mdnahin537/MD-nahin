@@ -15156,14 +15156,29 @@ Include 0-3 founding chronicle events that match the description. Include 1-3 fa
   // Returns array of single-sentence fact strings.
   async generateSecrets(nation,count=10,surface='secrets'){
     if(!this.isConfigured())throw new Error('Copilot not configured. Add an API key in Settings.');
+    const n=nation||State.get();
     // F6: thread the surface's own tier knob (secretsTier) instead of always using the global depth.
     // X-1: `surface` defaults to the Tonight/GM-toolbar knob; the Campaign board passes
     // 'campaign-secrets' so its OWN chip (campaignSecretsTier) is the one actually read.
     const secretsTier=(typeof AccuracyChip!=='undefined')?AccuracyChip._tierFor(surface):'mid';
-    const ctx=this.buildContext(nation||State.get(),{tier:secretsTier});
-    const sys=`You are a TTRPG game master assistant. Generate ${count} short single-sentence facts ("secrets and clues") about the given world. Each is a true fact the players might discover. Each is abstracted from the method of discovery — do not specify how the players learn it. Each should cover a different aspect of the world (politics, history, NPCs, hidden danger, etc.). Format: JSON {"secrets":["...","..."]}. No preamble, no markdown fences, only the JSON.`;
-    const user=`# World\n${ctx}\n\nGenerate ${count} secrets now.`;
-    const data=await this._apiFetch([{role:'system',content:sys},{role:'user',content:user}],{stream:false,max_tokens:1200,response_format:{type:'json_object'}});
+    const ctx=this.buildContext(n,{tier:secretsTier});
+    const sys=`You are writing secrets & clues for a tabletop GM: ${count} short, single-sentence TRUE facts about this world that players might discover in play. Rules:
+- Each is abstracted from HOW it is discovered — never "if the players search X".
+- Each must do table-work when discovered: it either recontextualizes something already established (name it), arms the players with leverage over a named person or faction, or warns of a named danger in motion. No trivia.
+- Spread across different entities and domains (politics, money, family, geography, the past). No two secrets about the same person.
+- Never restate a fact already visible in the world-state, and never contradict one.
+- Do NOT duplicate or trivially reword anything under "Existing secrets" if provided.
+Return JSON only: {"secrets":["...", ...]} — exactly ${count} entries, each a single sentence.`;
+    let user=`# World\n${ctx}\n\nGenerate ${count} secrets now.`;
+    // A5 anti-dupe: the generator previously ran blind to the GM's saved secret bank (only
+    // visible in-context at secretsTier>=high via includeSecrets), so re-rolls routinely
+    // collided with facts already banked in n.secrets. Always list the saved bank here —
+    // independent of tier — so duplication is closed deterministically, not by luck of depth.
+    const existingSecrets=(n?.secrets||[]).map(s=>(s.title||s.content||'').trim()).filter(Boolean).slice(0,30);
+    if(existingSecrets.length){
+      user+=`\n\n# Existing secrets (do not duplicate)\n${existingSecrets.map(t=>'- '+t).join('\n')}`;
+    }
+    const data=await this._apiFetch([{role:'system',content:sys},{role:'user',content:user}],{stream:false,max_tokens:1200,response_format:{type:'json_object'},temperature:0.9});
     const raw=data?.choices?.[0]?.message?.content||'';
     let parsed;
     try{parsed=JSON.parse(raw);}
