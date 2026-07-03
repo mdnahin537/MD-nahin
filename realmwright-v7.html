@@ -3878,8 +3878,15 @@ body.theme-manuscript .run-mode{--run-exc-yes:#1f9d57;--run-exc-yes-glow:transpa
 /* ── DELIVERY G CSS (Decipher FAB, Relationship Web, Global Search) ─── */
 
 /* Notes Decipher FAB */
+/* Bonus-bug fix: was bottom:32px, which put this FAB's 44px-tall box (32-76px up from
+   the viewport bottom) squarely on top of #copilot-send (a constant 35-67px up from the
+   bottom whenever the Copilot panel is open, at every viewport width — measured, not
+   guessed). z-index 600 also clears the panel (11), so the overlap was fully visible,
+   not just hit-tested. Raised to clear the send button's band with margin; this is a
+   pure vertical relationship so it holds at any width, unlike an offset tied to the
+   panel's own responsive breakpoint. */
 .decipher-fab{
-  position:fixed;bottom:32px;right:32px;z-index:600;
+  position:fixed;bottom:80px;right:32px;z-index:600;
   display:flex;align-items:center;gap:8px;
   padding:12px 20px;
   background:linear-gradient(135deg,#1a1208,#2a1c10);
@@ -4192,7 +4199,13 @@ SECTION 8: DOM STRUCTURE
       <div class="nation-card" id="nation-card"></div>
       <div class="pressure-points" id="pressure-points"></div>
       <div class="recent-pulse" id="recent-pulse"></div>
-      <button class="copilot-launch" id="copilot-launch" aria-label="Open the Copilot — ask anything or tell it to change your world" title="Ask anything, or tell the Copilot to change your world (every change is yours to approve)"><span class="copilot-launch__mark">⌘</span> Ask &amp; Command</button>
+      <!-- #copilot-launch used to live here. Relocated to a direct child of #app (see
+           below, after .world-mode-shell) because this <main> sits inside .main-row,
+           which applyTheme() sets to display:none whenever WorldShell is active — i.e.
+           always in production. That silently killed the only general-purpose Copilot
+           entry point (the panel itself opens fine via Copilot.open(); only this FAB
+           was trapped). Bonus-bug fix, not a redesign: same element, same id, same
+           fixed-position CSS — just no longer nested inside a layout that hides it. -->
     </main>
     <aside class="arsenal" aria-label="Arsenal"><div class="arsenal__inner" id="arsenal-inner"></div></aside>
   </div>
@@ -4357,6 +4370,14 @@ SECTION 8: DOM STRUCTURE
       </div>
     </footer>
   </div>
+  <!-- Bonus-bug fix: relocated from inside .main-row > .living-nation, which is
+       display:none whenever WorldShell is active (always in production) — that made
+       this the only Copilot entry point that was silently unreachable. It is already
+       position:fixed with its own z-index (120, floats over both layouts by design;
+       see .copilot-launch CSS), so a direct child of #app renders it correctly and
+       identically regardless of which layout (legacy main-row or WorldShell) is
+       currently shown. Same id, same markup, same click handler — nothing else changed. -->
+  <button class="copilot-launch" id="copilot-launch" aria-label="Open the Copilot — ask anything or tell it to change your world" title="Ask anything, or tell the Copilot to change your world (every change is yours to approve)"><span class="copilot-launch__mark">⌘</span> Ask &amp; Command</button>
 </div>
 <!-- Onboarding overlay -->
 <div class="onboarding-overlay is-hidden" id="onboarding-overlay">
