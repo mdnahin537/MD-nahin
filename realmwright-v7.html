@@ -15670,12 +15670,18 @@ Return JSON only: {"names":["..."], "pattern":"<one sentence: the naming rule yo
       {role:'system',content:systemPrompt},
       {role:'user',content:`# Realm State\n${ctx}\n\nGenerate ${qty} ${typeNote} names now.`},
     ];
-    const raw=await this._apiFetch(messages,{stream:false,max_tokens:800,response_format:{type:'json_object'},temperature:0.9});
-    const text=(raw?.choices?.[0]?.message?.content||'').trim();
+    // BB-4: routed through the shared retry-once JSON helper (was a weaker hand-rolled
+    // single-shot parse with no retry and no {...}-extraction). _apiFetchJson throws its own
+    // error only after a strict retry ALSO fails to parse; on that double failure, fall back to
+    // {names:[]} exactly like the hand-rolled version did on a single failure, so the modal
+    // still renders an empty list instead of surfacing a new error path. A real fetch/API error
+    // (no .raw on the thrown error) still propagates unchanged to the caller's own try/catch.
     try{
-      const clean=text.replace(/```json|```/g,'').trim();
-      return JSON.parse(clean);
-    }catch(e){return{names:[]};}
+      return await this._apiFetchJson(messages,{stream:false,max_tokens:800,temperature:0.9});
+    }catch(e){
+      if(e&&typeof e.raw==='string')return {names:[]};
+      throw e;
+    }
   },
   // ─── CAMPAIGN v2 C3 — Clock suggestions (3 variants) ───
   // Proposes 3 progress clocks seeded from highest-pressure factions / unresolved
