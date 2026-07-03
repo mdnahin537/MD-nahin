@@ -15192,16 +15192,10 @@ Return JSON only: {"secrets":["...", ...]} — exactly ${count} entries, each a 
     if(existingSecrets.length){
       user+=`\n\n# Existing secrets (do not duplicate)\n${existingSecrets.map(t=>'- '+t).join('\n')}`;
     }
-    const data=await this._apiFetch([{role:'system',content:sys},{role:'user',content:user}],{stream:false,max_tokens:1200,response_format:{type:'json_object'},temperature:0.9});
-    const raw=data?.choices?.[0]?.message?.content||'';
-    let parsed;
-    try{parsed=JSON.parse(raw);}
-    catch(e){
-      let cleaned=raw.replace(/^```(?:json)?\s*/i,'').replace(/\s*```\s*$/,'').trim();
-      const fb=cleaned.indexOf('{'),lb=cleaned.lastIndexOf('}');
-      if(fb>=0&&lb>fb)cleaned=cleaned.slice(fb,lb+1);
-      try{parsed=JSON.parse(cleaned);}catch(e2){throw new Error('The model returned malformed JSON. Try again.');}
-    }
+    // BB-4: routed through the shared retry-once JSON helper (was a weaker hand-rolled
+    // single-shot parse with no retry). Same hard-fail contract on a terminal parse failure
+    // (throws) — just retried once first instead of giving up immediately.
+    const parsed=await this._apiFetchJson([{role:'system',content:sys},{role:'user',content:user}],{stream:false,max_tokens:1200,temperature:0.9});
     return Array.isArray(parsed?.secrets)?parsed.secrets:[];
   },
   // ─── PLAYER HANDOUTS ───
