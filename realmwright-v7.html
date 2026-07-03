@@ -14261,9 +14261,11 @@ const Copilot={
       // tool fires). Mutate the simulation ONLY via the provided function tools.
       return `${intro}
 
-To change the simulation, call the provided function tools (update_nation_stat, add_chronicle_entry, add_npc, add_plot_seed, mark_hook_resolved, update_faction_stance). These are the ONLY way to apply changes — they go through a review queue or auto-apply per the user's settings.
+To change the simulation, call the provided function tools (update_nation_stat, add_chronicle_entry, add_npc, add_plot_seed, mark_hook_resolved, update_faction_stance, add_front_tick). These are the ONLY way to apply changes — they go through a review queue or auto-apply per the user's settings.
 
-Do NOT emit a [CANON] block. The CANON text format is legacy and is ignored in this mode; emitting one wastes tokens and applies nothing. Use the tools instead. If you have no change to make, just answer conversationally.${groundingRule}${tail}`;
+Do NOT emit a [CANON] block. The CANON text format is legacy and is ignored in this mode; emitting one wastes tokens and applies nothing. Use the tools instead. If you have no change to make, just answer conversationally.
+
+Whenever you call a tool, also tell the GM in one plain sentence what you are changing and why, so they can decide whether to accept it.${groundingRule}${tail}`;
     }
     // No tools available (e.g. local Ollama): fall back to the legacy [CANON] text channel.
     return `${intro}
