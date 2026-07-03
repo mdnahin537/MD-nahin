@@ -570,3 +570,27 @@ claude update        # update to latest version
 /config               # open settings menu
 /help                 # all slash commands
 ```
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+## REALMWRIGHT AUTOPILOT — DURABLE DOCTRINE (2026-07-02)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Standing operating doctrine for the RealmWright quality push. Permanent memory — survives restart.
+
+MODEL STRENGTH RANKING (Hunter's ruling — for this work, overrides older opusplan lines):
+  Fable 5  (model:"fable")  = STRONGEST. Finding, verifying, "what to do next / how best", when lost or need advice, exhaustive investigation.
+  Opus 4.8 (model:"opus")   = planning / hard thinking.
+  Sonnet 5 (model:"sonnet") = doing / fixing / legwork / browser. (Sonnet 5, NOT Sonnet 4.6.)
+
+OPERATING METHOD (every task):
+  - Main agent orchestrates ONLY: plan → delegate → verify. Stays lean (protects its context). Does NOT do the heavy reading/finding/fixing itself.
+  - FIND/verify → Fable 5 (set it up right: quote the CURRENT code per claim, prove it real, give it live verification). DO/fix → Sonnet 5. PLAN → Opus 4.8. Lost / "what next" → Fable 5.
+  - ONE agent at a time (Hunter on a tight Pro/weekly limit; agents die at ~119 bytes when a 5h window is spent). Agents use 4–12 skills (named + actually used); subagents 1–5.
+  - Verify EVERY claim against live code before editing; verify EVERY fix (compile "3/4 compiled" + live browser) before trusting; commit + push each verified fix.
+  - Continuity across the tight limit: timers re-enter the working session every ~5h5m and continue from the scratchpad state file.
+
+ROADMAP: (1) Copilot fixes → (2) Campaign mode fixes → (3) SEND HUNTER THE PRODUCT FILE (realmwright-v7.html) as his backup before going further → (4) continuously find NEW broken / disconnected / useless things and make them genuinely useful (Fable picks what's next). Bar: a GM must be SATISFIED and AMAZED; what a feature SAYS it does must be what it ACTUALLY does; everything connects to everything.
+
+LIVE WORKING STATE (ephemeral, session-only): scratchpad/AUTOPILOT-STATE.md holds current findings, verification status, and the progress log. If it and the timers are lost to a container reclaim, rebuild from git history + this doctrine + a fresh Fable finding pass, then re-arm the timers.
+
+MECHANICS: single-file app realmwright-v7.html (~1.23MB inline script → use `grep -a`). Compile: `node /tmp/synA.mjs realmwright-v7.html` → "3/4 compiled" = HEALTHY (block#1 DOMPurify false error expected). Never commit/echo the OpenRouter test key (scratchpad only; Hunter rotates it when done). Halal only; market-default vocabulary on new player copy; no audit .md in the repo; never touch the money-path / worker.
