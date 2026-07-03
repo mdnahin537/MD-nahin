@@ -15158,6 +15158,15 @@ Return JSON only: {"title":"<short document title>","body":"<full text>"}`;
     const user='# World context\n'+ctx+'\n\n# Topic\n'+topic+'\n\nWrite the bulletin now.';
     return await this._handoutFetch(sys,user);
   },
+  // B3: the 2 most recent chronicle mentions of a named character — the same substring trick
+  // _smartSelectChronicle's entity-relevance matching uses (lowercase name inside a lowercase
+  // description), scoped to one name instead of scoring the whole cast. Most-recent-first.
+  _recentMentions(nation,name){
+    const needle=String(name||'').trim().toLowerCase();
+    if(needle.length<3)return [];
+    const mentioned=(nation.chronicle||[]).filter(e=>e&&(e.description||'').toLowerCase().includes(needle));
+    return this._sortedChronicle(mentioned).slice(-2).reverse();
+  },
   async generateInCharacterLetter(nation,opts={}){
     if(!this.isConfigured())throw new Error('Copilot not configured. Add an API key in Settings.');
     const n=nation||State.get();
@@ -15165,16 +15174,45 @@ Return JSON only: {"title":"<short document title>","body":"<full text>"}`;
     const tone=opts.tone||'neutral';
     let fromDesc=opts.fromName||'a character'; // B10: raw string
     let toDesc=opts.toName||'another character'; // B10: raw string
+    // B3 ordering fix: resolve fromDesc/toDesc BEFORE buildContext, not after. Previously the
+    // resolution ran too late to affect anything — buildContext's entity-relevance message had
+    // already been built from the raw placeholder text — AND no caller ever passed
+    // fromCharId/toCharId anyway (the UI only offered free-text name inputs), so this whole path
+    // was dead code. The UI now offers a cast <select>, so this fires for real.
+    // The WRITER gets full enrichment (their voice is what the whole letter hinges on): role,
+    // status, drive, fear, and their 2 most recent chronicle mentions. The recipient only needs
+    // enough to address correctly — name and role, same depth as before.
+    if(opts.fromCharId){
+      const c=n.characters?.find(x=>x.id===opts.fromCharId);
+      if(c){
+        const bits=[];
+        if(c.role)bits.push(c.role);
+        if(c.status&&c.status!=='active')bits.push(c.status);
+        let desc=`${c.name}${bits.length?' ('+bits.join(', ')+')':''}`;
+        const traits=[];
+        if(c.drive)traits.push(`Wants: ${c.drive}`);
+        if(c.fear)traits.push(`Fears: ${c.fear}`);
+        if(traits.length)desc+=' — '+traits.join('. ');
+        const mentions=this._recentMentions(n,c.name);
+        if(mentions.length)desc+=' Recent history: '+mentions.map(e=>`[Year ${e.year}] ${e.name}`).join('; ')+'.';
+        fromDesc=desc;
+      }
+    }
+    if(opts.toCharId){const c=n.characters?.find(x=>x.id===opts.toCharId);if(c)toDesc=c.name+' ('+(c.role||'')+')';}
     // F1 surface: 'handout-letter' — writer/recipient/topic all seed entity-relevance.
     // F6: thread the shared handout tier knob (handoutTier covers all three handout generators).
     const handoutTierLetter=(typeof AccuracyChip!=='undefined')?AccuracyChip._tierFor('handout'):'mid';
+    // B3: unlike the news/proclamation wall (BB-5), the letter's AUTHOR may legitimately know
+    // private things — full context, not publicOnly. The audience rule in the prompt below is
+    // the actual guard: the writer may reference private matters they're part of, nothing more.
     const ctx=this.buildContext(n,{message:[topic,fromDesc,toDesc].join(' '),tier:handoutTierLetter});
-    if(opts.fromCharId){const c=n.characters?.find(x=>x.id===opts.fromCharId);if(c)fromDesc=c.name+' ('+(c.role||'')+', drives: '+(c.drive||'')+', fears: '+(c.fear||'')+')';}
-    if(opts.toCharId){const c=n.characters?.find(x=>x.id===opts.toCharId);if(c)toDesc=c.name+' ('+(c.role||'')+')';}
-    // A1 fix: sys MUST be declared outside the if(opts.toCharId) block. Prior code had the const
-    // fused onto the same line as the closing brace of the if block, making it unreachable when
-    // opts.toCharId is falsy and causing a syntax-level undefined reference crash.
-    const sys='You are a TTRPG GM assistant. Write a letter in-character from the writer to the recipient. Use the writer\'s voice (drives, fears, status). 100-200 words. Use period-appropriate epistolary conventions. Tone: '+tone+'. Return JSON only: {"title":"Letter from [writer] to [recipient]","body":"<full text>"}.';
+    const sys=`You are writing a letter that exists inside the fictional world, from the writer to the recipient, as a player handout. Rules:
+- The WRITER's voice rules everything: what they want (drive), what they fear, their station, and their relationship to the recipient decide what is said plainly, what is hinted, and what is left out. A fearful person hedges; a proud one commands.
+- The letter pursues the writer's drive in some concrete way: it asks, warns, offers, threatens, or confesses SOMETHING SPECIFIC tied to the topic and the current situation.
+- The writer knows only what their position would let them know. They may reference private matters THEY are part of, but nothing they could not know.
+- Period-appropriate epistolary convention (salutation, closing) for the era. 120-220 words. Tone: ${tone}.
+- Somewhere, one detail only the writer would notice — a smell, a debt, a shared memory — that makes the voice theirs.
+Return JSON only: {"title":"Letter from <writer> to <recipient>","body":"<the letter>"}`;
     const user='# World context\n'+ctx+'\n\n# Writer\n'+fromDesc+'\n\n# Recipient\n'+toDesc+'\n\n# Topic\n'+topic+'\n\nWrite the letter now.';
     return await this._handoutFetch(sys,user);
   },
@@ -23199,10 +23237,12 @@ const Handouts={
           <button type="button" class="char-status-pill" data-val="common">Common / Tavern</button>
         </div></div>`,
     letter:`
-      <div class="form-field"><label class="form-label" for="hd-from">From (character name)</label>
-        <input class="form-input" id="hd-from" placeholder="Seraphina Vane" autocomplete="off"></div>
-      <div class="form-field"><label class="form-label" for="hd-to">To (character name)</label>
-        <input class="form-input" id="hd-to" placeholder="Lord Aldric" autocomplete="off"></div>
+      <div class="form-field"><label class="form-label" for="hd-from-select">From (character)</label>
+        <select class="form-select" id="hd-from-select"></select>
+        <input class="form-input" id="hd-from" placeholder="Or type a name not in your cast" autocomplete="off" style="margin-top:6px"></div>
+      <div class="form-field"><label class="form-label" for="hd-to-select">To (character)</label>
+        <select class="form-select" id="hd-to-select"></select>
+        <input class="form-input" id="hd-to" placeholder="Or type a name not in your cast" autocomplete="off" style="margin-top:6px"></div>
       <div class="form-field"><label class="form-label" for="hd-topic">Subject</label>
         <input class="form-input" id="hd-topic" placeholder="A warning about the coming audit" autocomplete="off"></div>
       <div class="form-field"><label class="form-label">Tone</label>
@@ -23230,6 +23270,18 @@ const Handouts={
         });
       });
     });
+    // B3: populate the writer/recipient selects from the GM's own cast so the letter can be
+    // enriched with real drive/fear/history instead of a free-text guess the generator can
+    // never resolve. "Someone else…" keeps the free-text path for anyone not yet in the roster.
+    if(type==='letter'){
+      const n=State.get();
+      const E=Utils.escHtml;
+      const options='<option value="">— Someone else… —</option>'+((n&&n.characters)||[]).map(c=>`<option value="${E(c.id)}">${E(c.name)}</option>`).join('');
+      const fromSelect=document.getElementById('hd-from-select');
+      const toSelect=document.getElementById('hd-to-select');
+      if(fromSelect)fromSelect.innerHTML=options;
+      if(toSelect)toSelect.innerHTML=options;
+    }
     if(typeof Modals!=='undefined')Modals.open('handout');
   },
 
@@ -23255,9 +23307,13 @@ const Handouts={
       }else if(type==='letter'){
         const tone=document.querySelector('#hd-tone-grp .is-selected')?.dataset.val||'neutral';
         const topic=document.getElementById('hd-topic')?.value.trim()||'';
+        // B3: a picked cast member wins (real drive/fear/history); the free-text field is only
+        // the "someone else" fallback (select value is '' when that option is chosen).
+        const fromCharId=document.getElementById('hd-from-select')?.value||'';
+        const toCharId=document.getElementById('hd-to-select')?.value||'';
         const fromName=document.getElementById('hd-from')?.value.trim()||'';
         const toName=document.getElementById('hd-to')?.value.trim()||'';
-        result=await Copilot.generateInCharacterLetter(nation,{tone,topic,fromName,toName});
+        result=await Copilot.generateInCharacterLetter(nation,{tone,topic,fromName,toName,fromCharId,toCharId});
       }
       if(!result)throw new Error('Empty response');
       document.getElementById('handout-output-title').textContent=result.title||'Handout';
