@@ -15563,12 +15563,14 @@ This is meant to be read aloud at the start of a session, so it should:
 - End on a question or implied dilemma that hooks the players in
 - Be evocative without being purple — Rumi's clarity, not Tolkien's grandeur
 
+Pick the SINGLE hottest pressure in the world-state right now — the one closest to tipping — and build the paragraph around it; mention at most one secondary tension in passing. Name the specific people and places carrying it. If a "Tonight's prep board" section is present, sharpen what the GM already wrote there rather than replacing its subject.
+
 Return ONLY the paragraph as plain text. No preamble, no formatting.`;
     const messages=[
       {role:'system',content:systemPrompt},
       {role:'user',content:`# Realm State\n${context}\n\nWrite the read-aloud paragraph.`},
     ];
-    const data=await this._apiFetch(messages,{stream:false,max_tokens:400});
+    const data=await this._apiFetch(messages,{stream:false,max_tokens:400,temperature:0.8});
     return (data?.choices?.[0]?.message?.content||'').trim();
   },
 
