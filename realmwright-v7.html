@@ -15333,7 +15333,10 @@ Return JSON only: {"title":"Letter from <writer> to <recipient>","body":"<the le
     // F6: thread the surface's own tier knob (decipherTier) instead of always using the global depth.
     const decipherTier=(typeof AccuracyChip!=='undefined')?AccuracyChip._tierFor('decipher'):'mid';
     const ctx=this.buildContext(n,{message:text||'',tier:decipherTier});
-    const scopeNote=target==='all'?'Extract all types of changes: new or updated NPCs/characters, factions, stat adjustments, chronicle events, and artifacts.':
+    // C2: 'all' now names every kind the parser actually accepts (C1 added Location/Hook/Secret
+    // to Parse.canonBlock) — the 'secrets' target's promise below finally has a real Secret: line
+    // to back it (5ec2b29 had narrowed just this 'all' string because the kinds were missing).
+    const scopeNote=target==='all'?'Extract all types of changes: new or updated NPCs/characters, factions, stat adjustments, chronicle events, artifacts, locations, secrets and clues, and open hooks.':
       target==='characters'?'Focus ONLY on new or updated characters and NPCs.':
       target==='events'?'Focus ONLY on chronicle events and things that happened.':
       target==='secrets'?'Focus ONLY on secrets, clues, and hidden facts.':
@@ -15346,21 +15349,27 @@ Rules:
 - ONLY structure what is clearly present in the notes. Do not invent details.
 - If something is ambiguous, mark that field with [Q: your question here] so the GM can clarify.
 - Keep each proposed item minimal and accurate to the source material.
+- For a Character line about someone who ALREADY exists in the world context above, use their EXACT existing name and put ONLY the new or changed information in the description — the review step merges it into their existing record instead of creating a duplicate.
 - Output a single CANON block in standard RealmWright format. This block begins with [CANON] and ends with [/CANON]. Each line uses pipe-delimited format:
 - Characters:  Character: Name | Role | Description or notes
-- Events:      Event: Title | Type | Weight | visibility | Description
+- Events:      Event: Title | Type | Weight | visibility | Description | year N (optional — omit to use the current year)
 - Factions:    Faction: Name | Description
 - Stats:       Stat: StatName +N  (or -N)
 - Artifacts:   Artifact: type | content
+- Locations:   Location: Name | type | Description
+- Hooks:       Hook: Title | Description
+- Secrets:     Secret: Title | Content
 Use [Q: question here] inline when something is ambiguous.
 
 CANON block format example:
 [CANON]
 Character: Lyra Veyne | Spy | Works for the merchant council. [Q: Which house specifically?]
 Event: The Harbor Fire | Military | +3 | public | A fire destroyed three warehouses on the south dock.
+Location: Wolf Pass | landmark | A narrow mountain pass where a hidden shrine was discovered this session.
+Hook: Who pays the shrine-keeper? | The party found the shrine tended but no one admits paying for its upkeep.
 [/CANON]`;
     const user=`# World context\n${ctx}\n\n# Raw notes to decipher\n${text}\n\nProduce the CANON block now.`;
-    const data=await this._apiFetch([{role:'system',content:sys},{role:'user',content:user}],{stream:false,max_tokens:2000});
+    const data=await this._apiFetch([{role:'system',content:sys},{role:'user',content:user}],{stream:false,max_tokens:2000,temperature:0.3});
     return (data?.choices?.[0]?.message?.content||'').trim();
   },
   // ─── GM SESSION PREP ───
@@ -20301,6 +20310,10 @@ const Interview={
   // ── THE SAME INVENT-GUARD decipherNotes uses (CC-GROUND). The blueprint requires it VERBATIM; we
   // build the addition prompt from the same rule so the model structures ONLY what the GM said. ──
   _additionSystemPrompt(){
+    // C2: grammar list realigned to match Parse.canonBlock post-C1 — this prompt already
+    // PROMISED locations/secrets/hooks above (that was the bug); it just had no line format to
+    // back the promise. Kept textually mirrored to decipherNotes's sys prompt (same invent-guard,
+    // same rules, same example shape) per the "SAME... VERBATIM" contract noted at bind time.
     return `You are a TTRPG world-organizing assistant. The GM is describing their world one answer at a time. Turn this answer into structured changes and output them as a CANON block in RealmWright format so the GM can review and accept each proposed change individually.
 
 Extract all relevant types from the answer: new or updated factions, characters/NPCs, locations, chronicle events (things that happened), secrets and clues, and open hooks.
@@ -20309,18 +20322,24 @@ Rules:
 - ONLY structure what is clearly present in the notes. Do not invent details.
 - If something is ambiguous, mark that field with [Q: your question here] so the GM can clarify.
 - Keep each proposed item minimal and accurate to the source material.
+- For a Character line about someone who ALREADY exists in the world context above, use their EXACT existing name and put ONLY the new or changed information in the description — the review step merges it into their existing record instead of creating a duplicate.
 - Output a single CANON block in standard RealmWright format. This block begins with [CANON] and ends with [/CANON]. Each line uses pipe-delimited format:
 - Characters:  Character: Name | Role | Description or notes
-- Events:      Event: Title | Type | Weight | visibility | Description
+- Events:      Event: Title | Type | Weight | visibility | Description | year N (optional — omit to use the current year)
 - Factions:    Faction: Name | Description
 - Stats:       Stat: StatName +N  (or -N)
 - Artifacts:   Artifact: type | content
+- Locations:   Location: Name | type | Description
+- Hooks:       Hook: Title | Description
+- Secrets:     Secret: Title | Content
 Use [Q: question here] inline when something is ambiguous.
 
 CANON block format example:
 [CANON]
 Character: Lyra Veyne | Spy | Works for the merchant council. [Q: Which house specifically?]
 Event: The Harbor Fire | Military | +3 | public | A fire destroyed three warehouses on the south dock.
+Location: Wolf Pass | landmark | A narrow mountain pass where a hidden shrine was discovered this session.
+Hook: Who pays the shrine-keeper? | The party found the shrine tended but no one admits paying for its upkeep.
 [/CANON]`;
   },
 
@@ -20479,7 +20498,7 @@ Event: The Harbor Fire | Military | +3 | public | A fire destroyed three warehou
       const ctx=Copilot.buildContext(n,{message:text});
       const sys=this._additionSystemPrompt();
       const user=`# World context\n${ctx}\n\n# The GM just said\n${text}\n\nProduce the CANON block now.`;
-      const data=await Copilot._apiFetch([{role:'system',content:sys},{role:'user',content:user}],{stream:false,max_tokens:1500});
+      const data=await Copilot._apiFetch([{role:'system',content:sys},{role:'user',content:user}],{stream:false,max_tokens:1500,temperature:0.3});
       const raw=(data&&data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content||'').trim();
       const parsed=Parse.canonBlock(raw,{detail:true});
       if((parsed.candidates&&parsed.candidates.length)||(parsed.failures&&parsed.failures.length)){
