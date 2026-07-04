@@ -8696,6 +8696,11 @@ const State={
       npcsAppeared:cfg.npcsAppeared||[],
       eventsLogged:cfg.eventsLogged||[],
       advanceDays:cfg.advanceDays||0,
+      // F2: a durable snapshot of the campaign-prep board at save time (beats played,
+      // secrets delivered + to whom, clock states, cast present). Session sub-field —
+      // rides the existing `sessions:seed.sessions||[]` export path verbatim, no
+      // whitelist change needed (unlike a new meta/nation-level field).
+      boardSnapshot:cfg.boardSnapshot||null,
       createdAt:Utils.now(),
     };
     n.sessions.push(s);
@@ -14271,7 +14276,17 @@ const Copilot={
     if(Array.isArray(nation.sessions)&&nation.sessions.length&&tier!=='low'){
       lines.push('\n## Recent Sessions (what happened at the table)');
       nation.sessions.slice(-3).forEach(s=>{
-        lines.push(`- Session ${s.number??'?'}${s.title?` — ${s.title}`:''}: ${(s.summary||'').trim()||'(no summary)'}`);
+        let line=`- Session ${s.number??'?'}${s.title?` — ${s.title}`:''}: ${(s.summary||'').trim()||'(no summary)'}`;
+        // F2: surface the board snapshot when present — the actual secrets revealed and
+        // clocks that struck, so next prep plans knowing what players already learned.
+        const bs=s.boardSnapshot;
+        if(bs){
+          if(bs.secretsDelivered&&bs.secretsDelivered.length)
+            line+=`\n    · Revealed: ${bs.secretsDelivered.map(x=>x.text).filter(Boolean).slice(0,4).join('; ')}`;
+          if(bs.clocks&&bs.clocks.some(c=>c.filled>=c.size))
+            line+=`\n    · Clocks that struck: ${bs.clocks.filter(c=>c.filled>=c.size).map(c=>c.name).join(', ')}`;
+        }
+        lines.push(line);
       });
     }
     // Chronicle — smart selection (full window) + ledger compression (everything else).
@@ -18630,20 +18645,31 @@ const RunMode={
     const clocks=Array.isArray(c.clocks)?c.clocks:[];
     const secrets=Array.isArray(c.secrets)?c.secrets:[];
     const rolls=Array.isArray(c.runRollLog)?c.runRollLog:[];
+    const beats=Array.isArray(c.beats)?c.beats:[];
     return {
       clockCount:clocks.length,
       clocksFilled:clocks.filter(k=>k&&k.size>0&&k.filled>=k.size).length,
       secretCount:secrets.length,
       secretsDelivered:secrets.filter(s=>s&&s.delivered).length,
+      // F2: the actual delivered-secret texts + played-beat count, so a blank-summary
+      // session still reads richly rather than as a count-only line.
+      secretsDeliveredTexts:secrets.filter(s=>s&&s.delivered).map(s=>(s.text||'').trim()).filter(Boolean),
+      beatsPlayedCount:beats.filter(b=>b&&b.done).length,
       rollCount:rolls.length,
     };
   },
 
   // PURE: a short human line from the snapshot (no DOM). Plain, market-default copy.
+  // F2: appends delivered-secret texts + played-beat count when present, so the GM who
+  // leaves the summary blank still gets a real record of what happened, not just tallies.
   _sessionSummaryLine(rec){
     const r=rec||{};
-    return `Tonight: ${r.secretsDelivered||0}/${r.secretCount||0} secrets delivered - `
+    let line=`Tonight: ${r.secretsDelivered||0}/${r.secretCount||0} secrets delivered - `
       +`${r.clocksFilled||0}/${r.clockCount||0} clocks filled - ${r.rollCount||0} rolls.`;
+    if(r.beatsPlayedCount)line+=` ${r.beatsPlayedCount} beat${r.beatsPlayedCount===1?'':'s'} played.`;
+    if(Array.isArray(r.secretsDeliveredTexts)&&r.secretsDeliveredTexts.length)
+      line+=` Revealed: ${r.secretsDeliveredTexts.slice(0,4).join('; ')}.`;
+    return line;
   },
 
   // ── CANON QUICK-CHIPS (P4.2) ──────────────────────────────────────────────
@@ -21593,8 +21619,18 @@ const SHSPanels={
     State._suppressUndo=true;
     let sid, added;
     try{
-      // 1. Save session
-      sid=State.addSession(n.id,{title:title||null,summary,hooksClosed,advanceDays,npcsAppeared});
+      // 1. Save session — F2: attach a durable board snapshot so tonight's actual play
+      // (which beats ran, which secrets landed and to whom, which clocks moved, who was
+      // at the table) survives past the live board, which never persists on its own.
+      // Computed here so BOTH the Run-Mode-end path and manual New-Session path capture it.
+      const _cp=State.cp();
+      const boardSnapshot={
+        beatsPlayed:_cp.beats.filter(b=>b&&b.done).map(b=>(b.text||'').trim()).filter(Boolean),
+        secretsDelivered:_cp.secrets.filter(s=>s&&s.delivered).map(s=>({text:(s.text||'').trim(),to:(s.deliveredTo||'').trim()})),
+        clocks:_cp.clocks.map(c=>({name:c.name,filled:c.filled,size:c.size})),
+        castPresent:_cp.npcs.filter(x=>x&&x.here).map(x=>(x.name||'').trim()).filter(Boolean),
+      };
+      sid=State.addSession(n.id,{title:title||null,summary,hooksClosed,advanceDays,npcsAppeared,boardSnapshot});
       added=(n.sessions||[]).find(s=>s.id===sid);
       // 2. Close selected hooks
       hooksClosed.forEach(hid=>State.updateHook(n.id,hid,{status:'closed',closedInSession:sid}));
