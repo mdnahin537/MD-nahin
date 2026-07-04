@@ -8921,6 +8921,24 @@ const State={
   cpRemoveSecret(id){this.pushUndo();const cp=this.cp();cp.secrets=cp.secrets.filter(x=>x.id!==id);this._touchMeta();this.persist();this._cpEmit(['secrets']);},
   cpInsertSecret(secret){const cp=this.cp();const s={id:Utils.uuid(),text:'',delivered:false,deliveredTo:'',deliveredAt:null,...(secret||{})};this.pushUndo();cp.secrets.push(s);this._touchMeta();this.persist();this._cpEmit(['secrets']);return s.id;},
   cpInsertClock(clock){const cp=this.cp();const c={id:Utils.uuid(),name:'New Threat',size:6,filled:0,lastChangedAt:Date.now(),...(clock||{})};this.pushUndo();cp.clocks.push(c);this._touchMeta();this.persist();this._cpEmit(['clocks']);return c.id;},
+  // F3: the missing session boundary. Retires what was SPENT tonight (played beats,
+  // delivered secrets) while keeping what's ONGOING (clocks — a 4/6 riot clock is still
+  // 4/6 next week; stakes/notes — the GM's standing prep). Clears "present" so the table
+  // is re-cast next time, and resets the session-scoped counters (idle-clock baseline,
+  // AI live-mode call budget) so both finally mean "since you sat down to play," not "since
+  // this save was created." Opt-in only (never auto-called) — offered as a toast action.
+  cpRollForward(){
+    this.pushUndo();
+    const cp=this.cp();
+    cp.beats  =cp.beats.filter(b=>b&&!b.done);        // played beats retire; unplayed carry forward
+    cp.secrets=cp.secrets.filter(s=>s&&!s.delivered); // landed secrets retire; unrevealed carry forward
+    cp.npcs.forEach(x=>{if(x)x.here=false;});          // clear "present" — re-cast the table next time
+    cp.clocks.forEach(c=>{if(c)c.lastChangedAt=null;});// clocks persist (ongoing threats) but baseline clears
+    cp.sessionStartedAt=Date.now();
+    cp.sessionCallCount=0;
+    cp.runRollLog=[];
+    this._touchMeta();this.persist();this._cpEmit(['beats','secrets','npcs','clocks']);
+  },
   // ─── CAMPAIGN EVENT EMITTER ───
   // Single dispatch point so LiveMode + AccuracyChip can react. Marks `trivial`
   // for keystroke-debounced text autosave so triggers can ignore those.
@@ -18710,10 +18728,12 @@ const RunMode={
     // Remember who launched us so focus returns there on close (a11y).
     this._returnFocusTo=(document.activeElement&&document.activeElement!==document.body)?document.activeElement:null;
     el.classList.add('is-open');
-    // Idle-clock heuristic baseline (same call Campaign.open makes). Keyless.
-    if(typeof LiveMode!=='undefined'){
-      try{LiveMode.markSessionStart&&LiveMode.markSessionStart();}catch(e){}
-    }
+    // F3: entering the cockpit IS the session start — reset the baseline unconditionally
+    // (unlike Campaign.open's guarded LiveMode.markSessionStart, which must NOT reset on a
+    // mid-week re-open of prep — that call is left alone on purpose). This is what makes
+    // "idle since session start" finally mean "since you sat down to play," and it resets
+    // the AI live-mode call budget per real session instead of only on a page reload.
+    try{const cp=State.cp();cp.sessionStartedAt=Date.now();cp.sessionCallCount=0;State.persist();}catch(e){}
     this.render();
     // Move focus INTO the cockpit so keyboard/AT users land in the live region
     // (announces "Run Mode — live session cockpit") instead of the hidden dashboard.
@@ -21674,6 +21694,15 @@ const SHSPanels={
     if(advanceDays>0&&typeof WorldTurnReport!=='undefined'&&!_turnAlreadyApplied){
       _turnActions.push({label:'Take the World Turn →',handler:()=>WorldTurnReport.open(advanceDays)});
     }
+    // F3: offer the session boundary — never force it. The boardSnapshot above already
+    // captured tonight's play into the session record, so rolling forward now only clears
+    // the LIVE board (played beats, delivered secrets, "present" cast, clock baselines) —
+    // nothing is lost, it's just retired from the working prep surface.
+    _turnActions.push({label:'Clear played beats & delivered secrets for next session →',handler:()=>{
+      State.cpRollForward();
+      if(typeof Campaign!=='undefined'&&Campaign.isOpen&&Campaign.isOpen())Campaign.render();
+      showToast('Board rolled forward. Unplayed beats and unrevealed secrets kept.',[],3500);
+    }});
     showToast(`Session ${added?.number||'?'} saved. World now Year ${n.currentYear}.`,_turnActions,_turnActions.length?8000:4000);
     // ── end P2.4a ─────────────────────────────────────────────────────────────
     // ── P4.2 — Canon quick-chips: the no-AI ingestion path ─────────────────────
