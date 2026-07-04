@@ -7710,6 +7710,15 @@ function buildNationFromSeed(seed){
       if(fac)c.factionId=fac.id;
       delete c.faction; // remove stale field
     }
+    // C3: resolve an AI-imported factionName (case-insensitive) to the canonical factionId —
+    // mirrors the c.faction migration above. drive/fear already ride the {...c} spread higher
+    // up untouched; factionName is optional so a minimal old-shape import (no factionName at
+    // all) is completely unaffected.
+    if(c.factionName&&typeof c.factionName==='string'&&!c.factionId){
+      const fac=n.factions.find(f=>f.name&&f.name.toLowerCase()===c.factionName.toLowerCase());
+      if(fac)c.factionId=fac.id;
+      delete c.factionName;
+    }
   });
   // Build core stats fresh so changed CORE_STATS values flow into existing nations on import —
   // BUT honour House-Rules edits. CC-LM1 (P5.1, the import-overwrite landmine): rebuilding the
@@ -15076,10 +15085,10 @@ Return this exact shape:
     {"name": "string", "type": "Government|Opposition|Religious|Economic|Military", "position": "holding|gaining|losing|fragmenting", "description": "string", "leaderName": "string"}
   ],
   "chronicle": [
-    {"name": "string", "type": "Political|Military|Economic|Cultural|Social|Diplomatic|Natural", "weight": -30 to 30, "year": number, "visibility": "public", "description": "string"}
+    {"name": "string", "type": "Political|Military|Economic|Cultural|Social|Diplomatic|Natural", "weight": -30 to 30, "year": number, "visibility": "public", "description": "string", "relatedStats": ["statKey", ...] (optional)}
   ],
   "characters": [
-    {"name": "string", "role": "string", "description": "string", "status": "active|deceased|missing|retired"}
+    {"name": "string", "role": "string", "description": "string", "status": "active|deceased|missing|retired", "drive": "string (what they want)" (optional), "fear": "string" (optional), "factionName": "string (must match a faction in this JSON, or omit)" (optional)}
   ],
   "locations": [
     {"name": "string", "type": "string (e.g. city, region, fortress, landmark)", "description": "string"}
@@ -15098,6 +15107,8 @@ Infer reasonable values from the description. If a field isn't mentioned, use a 
 - A merchant power: trade 80+, knowledge 60+, urbanization 70+
 - A military power: manpower 75+, raw_materials 60+
 
+Give every character a drive and a fear that connect to at least one faction or event in this JSON. Hooks must name entities defined in this JSON.
+
 Include 0-3 founding chronicle events that match the description. Include 1-3 factions. Include 0-4 characters, 0-4 locations, 0-3 hooks, and 0-3 secrets — omit an array (or leave it empty) if the description doesn't support it; never invent unrelated content just to fill a count. Return ONLY the JSON.`;
     const messages=[
       {role:'system',content:systemPrompt},
@@ -15107,7 +15118,7 @@ Include 0-3 founding chronicle events that match the description. Include 1-3 fa
     // the original name/stats/factions/chronicle-only shape. 3000 gives headroom so a fuller
     // world doesn't get cut off mid-JSON (_budgetMaxTokens still adds the Nemotron reasoning
     // headroom on top of whichever number is passed here).
-    const data=await this._apiFetch(messages,{stream:false,max_tokens:3000,response_format:{type:'json_object'}});
+    const data=await this._apiFetch(messages,{stream:false,max_tokens:3000,response_format:{type:'json_object'},temperature:0.3});
     const raw=data?.choices?.[0]?.message?.content||'';
     // Try to parse — handle cases where model wrapped in markdown fences despite instructions
     let parsed;
