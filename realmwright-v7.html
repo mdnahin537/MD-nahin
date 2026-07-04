@@ -16082,7 +16082,22 @@ Return JSON only: {"names":["..."], "pattern":"<one sentence: the naming rule yo
     if(!this.isConfigured())throw new Error('Copilot not configured. Add an API key in Settings.');
     const f=facts||{lines:[],eventIds:[],npcNames:[]};
     const where=mode==='sandtable'?'a forecast of how a hypothetical choice diverges from the baseline':'the turn the world just took on its own';
-    const tone=(nation&&typeof this.buildContext==='function')?this.buildContext(nation):'';
+    // E8: the old "tone" block was a FULL buildContext dump — stats, chronicle, everything —
+    // included "just for voice" at the largest token cost in the app, and it handed the model
+    // citable-looking content it must NOT cite. Swap it for a compact voice card: identity
+    // line + the NAMES ONLY (no ids, no descriptions — nothing here is a citation target) of
+    // the 3 loudest chronicle events. The FACTS block below remains the sole citable path.
+    const voiceCard=nation?[
+      `${nation.name||'the realm'} | ${nation.era||'—'} era | ${nation.government||'—'} | led by ${nation.leader||'—'}`,
+      (()=>{
+        const loudest=[...(nation.chronicle||[])]
+          .sort((a,b)=>Math.abs(b&&b.weight||0)-Math.abs(a&&a.weight||0))
+          .slice(0,3)
+          .map(e=>e&&e.name)
+          .filter(Boolean);
+        return loudest.length?`Defined by: ${loudest.join(', ')}`:'';
+      })(),
+    ].filter(Boolean).join('\n'):'';
     const sys=`You are the chronicler of a fictional tabletop realm, writing the era-voice telling of ${where}. You are given the deterministic facts the game already computed — that math is the TRUTH and is shown to the GM above your prose. Your job is to render those facts as 2-4 short paragraphs of grounded, evocative narration (the realm's voice — Rumi's clarity, not Tolkien's grandeur), then offer at most two concrete follow-up hooks for the GM.
 
 Hard rules:
@@ -16093,9 +16108,9 @@ Hard rules:
 
 Return JSON only: {"prose":"<2-4 short paragraphs>","hooks":["<hook>","<hook>"]}. At most 2 hooks.`;
     const factBlock=(f.lines||[]).map(l=>'- '+l).join('\n')||'- (no changes)';
-    const ctxBlock=tone?`\n\n# Realm tone (for voice only — do not cite from here)\n${tone}`:'';
+    const ctxBlock=voiceCard?`\n\n# Realm voice (style only — never cite from here)\n${voiceCard}`:'';
     const user=`# FACTS (the computed truth — narrate and cite ONLY these)\n${factBlock}${ctxBlock}\n\nWrite the telling now.`;
-    const parsed=await this._apiFetchJson([{role:'system',content:sys},{role:'user',content:user}],{stream:false,max_tokens:600});
+    const parsed=await this._apiFetchJson([{role:'system',content:sys},{role:'user',content:user}],{stream:false,max_tokens:600,temperature:0.8});
     const prose=String(parsed&&parsed.prose||'').trim();
     let hooks=Array.isArray(parsed&&parsed.hooks)?parsed.hooks:[];
     hooks=hooks.map(h=>String(h||'').trim()).filter(Boolean).slice(0,2);
