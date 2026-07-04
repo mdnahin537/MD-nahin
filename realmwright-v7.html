@@ -15332,17 +15332,36 @@ Return JSON only: {"title":"Letter from <writer> to <recipient>","body":"<the le
     return await this._handoutFetch(sys,user);
   },
   // ─── SUGGEST RELATIONS (r77) ───
-  async suggestRelations(fromNation,toNation){
+  // D3: reviews an EXISTING diplomatic stance rather than guessing blind — sees the current
+  // posture and the GM's own notes, and only proposes a change when the world-state actually
+  // justifies one. Realm B is compacted to tier 'low' (context economy: suggestAll calls this
+  // once per other realm, so realm B's full context would otherwise be paid for N times).
+  async suggestRelations(fromNation,toNation,existing={}){
     if(!this.isConfigured())throw new Error('Copilot not configured. Add an API key in Settings.');
     // F6: thread the surface's own tier knob (relationsTier) instead of always using the global depth.
     const relationsTier=(typeof AccuracyChip!=='undefined')?AccuracyChip._tierFor('relations'):'mid';
     const ctxA=this.buildContext(fromNation,{tier:relationsTier});
-    const ctxB=this.buildContext(toNation,{tier:relationsTier});
-    const sys='You are a TTRPG GM assistant. Based on two realm profiles, propose a diplomatic posture (one of: allied, friendly, neutral, hostile, at-war) and a 1-2 sentence rationale. Return JSON only: {"posture":"<value>","rationale":"<text>"}.';
+    const ctxB=this.buildContext(toNation,{tier:'low'});
+    const currentPosture=existing.posture||'neutral';
+    const currentNotes=(existing.notes||'').trim()||'(none)';
+    const sys=`You are a TTRPG GM assistant. Based on two realm profiles, propose a diplomatic posture (one of: allied, friendly, neutral, hostile, at-war) and a 1-2 sentence rationale naming at least one concrete fact from each realm.
+
+# Current posture
+${currentPosture} — GM notes: ${currentNotes}
+
+You are REVIEWING an existing diplomatic stance. If the current posture still fits the two world-states, return it unchanged with a rationale that cites what sustains it. Propose a different posture ONLY when specific events/stats justify the change — cite them.
+
+Return JSON only: {"posture":"<value>","rationale":"<text>"}.`;
     const user='# Realm A (the one asking)\n'+ctxA+'\n\n# Realm B (the other)\n'+ctxB+'\n\nPropose Realm A\'s posture toward Realm B.';
-    const _data3a=await this._apiFetch([{role:'system',content:sys},{role:'user',content:user}],{stream:false,max_tokens:300,response_format:{type:'json_object'}});
-    const _raw3a=_data3a?.choices?.[0]?.message?.content||'{}';
-    try{return JSON.parse(_raw3a);}catch(e){const _c=_raw3a.replace(/```json|```/g,'').trim();try{return JSON.parse(_c);}catch(e2){return {};}}
+    // Routed through the shared retry-once JSON helper. A double parse failure becomes the
+    // friendly toast below; a real fetch/API error (no .raw) propagates so suggestAll's 429
+    // handling can see it.
+    try{
+      return await this._apiFetchJson([{role:'system',content:sys},{role:'user',content:user}],{stream:false,max_tokens:300});
+    }catch(e){
+      if(e&&typeof e.raw==='string')throw new Error('The model returned malformed JSON. Try again.');
+      throw e;
+    }
   },
   // ─── GENERATE CREATURE (r78) ───
   // B4 (probe-proven, P-1): the old one-liner produced a genuinely inventive creature, but with
@@ -23803,6 +23822,7 @@ const Relations={
       const rel=n.relations.find(r=>r.toNationId===other.id);
       const posture=rel?.posture||'neutral';
       const notes=rel?.notes||'';
+      const rationale=rel?.aiRationale||'';
       const color=this._POSTURE_COLORS[posture]||'#94a3b8';
       html+=`<div style="padding:12px 16px;border-bottom:1px solid var(--color-border-hairline)">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
@@ -23814,6 +23834,7 @@ const Relations={
         <div style="margin-top:6px">
           <input class="form-input" data-rel-notes="${E(other.id)}" value="${E(notes)}" placeholder="Notes on this relationship..." style="font-size:var(--text-body-sm);height:28px;padding:4px 8px" aria-label="Notes on relation with ${E(other.name)}">
         </div>
+        ${rationale?`<div style="margin-top:4px;font-size:var(--text-label-sm);color:var(--color-text-faint);font-style:italic">${E(rationale)}</div>`:''}
       </div>`;
     });
     rebuildPreserving(el,html);
@@ -23843,18 +23864,38 @@ const Relations={
     const btn=document.getElementById('relations-suggest-btn');
     if(btn){btn.disabled=true;btn.textContent='Suggesting...';}
     let successes=0;
+    let rateLimited=false;
     try{
-      for(const other of others){
+      for(let i=0;i<others.length;i++){
+        const other=others[i];
         try{
-          const result=await Copilot.suggestRelations(n,other);
+          // D3: read the EXISTING posture/notes first so the model reviews the current stance
+          // instead of guessing blind, and so a regenerate never clobbers the GM's own notes
+          // (see the setRelation call below — it passes existingNotes back, not the rationale).
+          const existingRel=State.getRelation(n.id,other.id);
+          const existingNotes=existingRel?.notes||'';
+          const existingPosture=existingRel?.posture||'neutral';
+          const result=await Copilot.suggestRelations(n,other,{posture:existingPosture,notes:existingNotes});
           if(result?.posture&&this._POSTURES.includes(result.posture)){
-            const notes=result.rationale||'';
-            State.setRelation(n.id,other.id,result.posture,notes);
+            // Pass the EXISTING notes back — never the AI rationale — so this never overwrites
+            // what the GM typed. The rationale gets its own additive field below instead.
+            State.setRelation(n.id,other.id,result.posture,existingNotes);
+            const savedRel=State.getRelation(n.id,other.id);
+            if(savedRel)savedRel.aiRationale=result.rationale||'';
+            State.persist();
             successes++;
           }
-        }catch(e){/* skip individual failures */}
+        }catch(e){
+          // E11: a free-model 429 shouldn't silently eat the rest of the batch — stop here,
+          // keep everything already suggested, and tell the GM plainly what happened.
+          if(/rate limited/i.test(e?.message||'')){rateLimited=true;break;}
+          /* skip individual failures */
+        }
+        if(i<others.length-1)await new Promise(r=>setTimeout(r,1200));
       }
-      showToast(`Postures suggested for ${successes} realm${successes!==1?'s':''}.`);
+      showToast(rateLimited
+        ?`Suggested ${successes} of ${others.length} — provider rate-limited, try the rest shortly.`
+        :`Postures suggested for ${successes} realm${successes!==1?'s':''}.`);
       this.render();
     }finally{if(btn){btn.disabled=false;btn.textContent='⌘ Suggest postures';}}
   },
