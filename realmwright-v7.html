@@ -17545,6 +17545,7 @@ const Campaign={
               </select>
               ${c.lastChangedAt?`<span class="cmp-clock__when" title="Last moved ${E(new Date(c.lastChangedAt).toLocaleString())}">${E(this._ago(c.lastChangedAt))}</span>`:''}
             </div>
+            ${c.filled>=c.size?`<button class="cmp-link" data-clock-canon="${id}" type="button" title="Seed a chronicle event for what this clock filling means">Record consequence →</button>`:''}
           </div>
           <div class="cmp-row__actions cmp-row__actions--clock">
             <button class="cmp-iconbtn cmp-iconbtn--danger" data-clock-del="${id}" type="button" aria-label="Delete clock" title="Delete">✕</button>
@@ -17831,6 +17832,13 @@ const Campaign={
         }else{
           showToast?showToast('Copied seed to clipboard — paste into Chronicle.'):0;
         }
+        return;
+      }
+      // A filled clock's "Record consequence" link — same seed-and-review path Run Mode's
+      // completion toast offers, exposed here too since a GM ticks clocks in prep as well.
+      if(d.clockCanon){
+        const clock=State.cp().clocks.find(x=>x.id===d.clockCanon);
+        if(clock&&typeof RunMode!=='undefined'&&RunMode._clockToCanon)RunMode._clockToCanon(clock);
         return;
       }
       // Standard row actions
@@ -19018,7 +19026,11 @@ const RunMode={
     if(c.filled>=c.size){showToast(`${nm} is already full.`,[],2000);return;}
     const next=c.filled+1;
     State.cpSetClockSeg(c.id,next);   // fires cp:changed → render()
-    if(next>=c.size)showToast(`${nm} is full — it happens now.`,[],2600);
+    if(next>=c.size){
+      showToast(`${nm} is full — record what happens.`,[
+        {label:'Record the consequence →',handler:()=>RunMode._clockToCanon(c)}
+      ],6000);
+    }
     else showToast(`${nm} advances → ${next}/${c.size}.`,[],2200);
   },
   easeFocus(){
@@ -19214,6 +19226,21 @@ const RunMode={
     const typeEl=document.getElementById('ev-type');if(typeEl)typeEl.value='Political';
     const visEl=document.getElementById('ev-vis');if(visEl)visEl.value='public';
     const errEl=document.getElementById('ev-name-err');if(errEl)errEl.textContent='';
+  },
+  // A filled doom clock should become a real consequence, not just a caption. Seeds the
+  // SAME inscribe form _askToCanon/_inscribeChip use (review-before-commit). Nothing
+  // auto-commits — the GM edits and presses Inscribe. Callable from Run Mode AND the
+  // Campaign prep board (both are globals), so a clock ticked in prep gets the same payoff.
+  _clockToCanon(clock){
+    if(typeof Modals==='undefined'||!Modals.open||!State.get()){showToast('Inscribe form unavailable.',[],3000);return;}
+    Modals.open('manual-event'); // resets fields + clears ev-edit-id → real addEvent path
+    const nm=(clock.name||'A threat').trim();
+    const setV=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v;};
+    setV('ev-name', nm+' comes to pass');
+    setV('ev-desc', `The "${nm}" clock filled (${clock.size}/${clock.size}). ` );
+    setV('ev-type','Political');
+    setV('ev-vis','public');
+    const err=document.getElementById('ev-name-err');if(err)err.textContent='';
   },
 
   // ── RIGHT — ORACLE. A held question + the persistent world chaos factor, resolved
