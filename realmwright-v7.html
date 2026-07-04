@@ -13987,10 +13987,11 @@ const Copilot={
       'moveType is one of: "event" (a private development the faction sets in motion — needs "name" and "description", optional "type" and "weight" -30..30), "stance" (the faction\'s position shifts — needs "position": gaining|holding|losing), or "front" (the faction nudges a developing threat — needs "frontId" and "delta": +1 or -1).',
       'HARD RULES — a move that breaks any of these will be rejected: (1) "motivatingEventId" MUST be one of the [#id] codes from the chronicle ledger below — copy it exactly; NEVER invent an id. (2) "interest" MUST echo the faction\'s stated interest verbatim. (3) Forbidden words — do NOT use prophecy, foretell, fate, omen, or destiny anywhere; these factions scheme and calculate, they do not divine.',
       'Keep each move small, grounded, and a plausible next step from the cited event.',
+      'A move must be the faction\'s BEST available move, not a generic escalation: prefer moves that exploit another faction\'s current weakness or a stat under 35 / over 65, and say which in the rationale.',
     ].join('\n');
     const user=`# Realm context\n${ctx}\n\n# Chronicle event ledger (cite ONE id per move, exactly)\n${eventLedger}\n\n# Active fronts (for "front" moves)\n${fronts}\n\n# Factions to move (one proposal each)\n${facList}\n\nReturn the JSON now.`;
     if(typeof TransparencyLog!=='undefined')TransparencyLog._pendingLabel='Faction Council';
-    const parsed=await this._apiFetchJson([{role:'system',content:sys},{role:'user',content:user}],{stream:false,max_tokens:1400});
+    const parsed=await this._apiFetchJson([{role:'system',content:sys},{role:'user',content:user}],{stream:false,max_tokens:1400,temperature:0.3});
     return Array.isArray(parsed&&parsed.proposals)?parsed.proposals:[];
   },
   // WIRE-UP (impure orchestrator): generate → run each raw through the pure gate → push ONLY
