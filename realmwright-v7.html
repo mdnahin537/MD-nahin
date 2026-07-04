@@ -15733,25 +15733,30 @@ Return JSON only: {"names":["..."], "pattern":"<one sentence: the naming rule yo
   // Proposes 3 progress clocks seeded from highest-pressure factions / unresolved
   // hooks. Surface 'campaign-clocks' carries the halal guard in its focus line.
   // Each variant: {name, size(4/6/8), justification}.
-  async generateClockSuggestions(nation){
+  async generateClockSuggestions(nation,opts={}){
     if(!this.isConfigured())throw new Error('Copilot not configured. Add an API key in Settings.');
     const n=nation||State.get();
     if(!n)throw new Error('No active realm.');
+    const extra=opts.extra||'';
     // Route through the F1 brain: buildAIContext injects the 'campaign-clocks'
     // focus line (which carries the halal guard) into the system prompt.
     const tier=(typeof AccuracyChip!=='undefined')?AccuracyChip._tierFor('campaign-clocks'):'mid';
     const aic=this.buildAIContext({nation:n,tier,surface:'campaign-clocks'});
-    const sys=`${aic.systemPrompt}\n\nPropose three distinct progress clocks for tonight's session, each seeded from the realm's highest-pressure factions or unresolved hooks. A progress clock is a ticking countdown toward a concrete consequence.\n\nReturn exactly 3 distinct variants. Format: JSON {"variants":[{"name":"<short threat name, ≤6 words>","size":6,"justification":"<one sentence on why this pressure is live now and what filling it costs the realm>"}]}. size must be 4, 6, or 8. Each variant must be meaningfully different — a different faction, danger, or timescale. At least one should be uncomfortable, pushing the GM off the obvious threat.`;
-    const user=`# Realm State\n${aic.worldBlock}\n\nPropose three clocks now.`;
-    const data=await this._apiFetch([{role:'system',content:sys},{role:'user',content:user}],{stream:false,max_tokens:800,response_format:{type:'json_object'}});
-    const raw=(data?.choices?.[0]?.message?.content||'').trim();
-    let parsed=null;
-    try{parsed=JSON.parse(raw);}
-    catch(e){
-      let cleaned=raw.replace(/^```(?:json)?\s*/i,'').replace(/\s*```\s*$/,'').trim();
-      const fb=cleaned.indexOf('{'),lb=cleaned.lastIndexOf('}');
-      if(fb>=0&&lb>fb)cleaned=cleaned.slice(fb,lb+1);
-      try{parsed=JSON.parse(cleaned);}catch(e2){parsed=null;}
+    const sys=`${aic.systemPrompt}\n\nPropose three distinct progress clocks for tonight's session, each seeded from the realm's highest-pressure factions or unresolved hooks. A progress clock is a ticking countdown toward a concrete consequence.\n\nReturn exactly 3 distinct variants. Format: JSON {"variants":[{"name":"<short threat name, ≤6 words>","size":6,"justification":"<one sentence on why this pressure is live now and what filling it costs the realm>"}]}. size must be 4, 6, or 8. Each variant must be meaningfully different — a different faction, danger, or timescale. At least one should be uncomfortable, pushing the GM off the obvious threat. Each justification must cite the specific event, front, or faction position that makes this pressure live NOW.`;
+    let user=`# Realm State\n${aic.worldBlock}\n\nPropose three clocks now.`;
+    // E1: the Campaign board passes Campaign.boardBlock() as `extra` so this stops proposing
+    // clocks that duplicate what's already ticking on the board.
+    if(extra)user+=`\n\nDo not duplicate or reword a clock already on the board below. At least one clock should threaten something the GM's prep clearly values (a cast NPC, the stated stakes).\n\n${extra}`;
+    // E1: migrated onto the shared JSON-retry helper (was a weaker hand-rolled single-shot
+    // parse with no retry). On a terminal double-parse failure _apiFetchJson throws with .raw
+    // set — surface the friendly "malformed JSON" toast for that case; a real fetch/API error
+    // has no .raw and must propagate unchanged.
+    let parsed;
+    try{
+      parsed=await this._apiFetchJson([{role:'system',content:sys},{role:'user',content:user}],{stream:false,max_tokens:800,temperature:0.8});
+    }catch(e){
+      if(e&&typeof e.raw==='string')throw new Error('The model returned malformed JSON. Try again.');
+      throw e;
     }
     if(parsed&&Array.isArray(parsed.variants)&&parsed.variants.length){
       const vs=parsed.variants.filter(v=>v&&typeof v==='object'&&v.name).map(v=>({
@@ -17880,7 +17885,7 @@ const Campaign={
       A.push({label:'Pull NPCs for tonight (local)',kind:'local',run:()=>this._pullNpcsLocal()});
       A.push({label:'Cast a fresh NPC',kind:'variants',run:()=>Copilot.generateQuickNPC({surface:'campaign-quicknpc',extra:Campaign.boardBlock()}),render:v=>{const o=(v&&typeof v==='object')?v:{};return [o.name,o.role,o.drive||o.hook].filter(Boolean).join(' — ');},apply:v=>{const o=(v&&typeof v==='object')?v:{};State.cpInsertNpc({name:o.name||'',role:o.role||'',motivation:o.drive||o.hook||'',here:true});}});
     }else if(section==='clocks'){
-      A.push({label:'Suggest clocks from world',kind:'variants',run:()=>Copilot.generateClockSuggestions(State.get()),render:v=>{const o=(v&&typeof v==='object')?v:{};return `${o.name||'Clock'} (${o.size||6}-tick) — ${o.justification||''}`;},apply:v=>{const o=(v&&typeof v==='object')?v:{};State.cpInsertClock({name:o.name||'New Threat',size:[4,6,8].includes(o.size)?o.size:6});}});
+      A.push({label:'Suggest clocks from world',kind:'variants',run:()=>Copilot.generateClockSuggestions(State.get(),{extra:Campaign.boardBlock()}),render:v=>{const o=(v&&typeof v==='object')?v:{};return `${o.name||'Clock'} (${o.size||6}-tick) — ${o.justification||''}`;},apply:v=>{const o=(v&&typeof v==='object')?v:{};State.cpInsertClock({name:o.name||'New Threat',size:[4,6,8].includes(o.size)?o.size:6});}});
     }else if(section==='secrets'){
       A.push({label:'Generate 5 secrets',kind:'variants',run:async()=>{const arr=await Copilot.generateSecrets(State.get(),5,'campaign-secrets',Campaign.boardBlock());return {variants:Array.isArray(arr)?arr:[]};},apply:v=>{State.cpInsertSecret({text:typeof v==='string'?v:String(v||'')});},multi:true});
     }else if(section==='notes'){
