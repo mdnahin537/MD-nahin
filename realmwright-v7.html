@@ -15525,7 +15525,12 @@ No preamble, no markdown fences, only the JSON.`;
     return parsed;
   },
   // ─── GM MODE: Quick NPC ───
-  // Returns a single NPC ready to drop in. Non-streaming, structured JSON.
+  // Returns 3 NPC variants (single-NPC object tolerated as a back-compat fallback).
+  // A3: NPCs used to arrive disconnected — names risked colliding with canon (the P-3
+  // naming failure class: "fits the era" was read as "return the existing names"), and no
+  // rule tied them into the world's web. Redesigned so each of the three is anchored to a
+  // DIFFERENT existing entity (faction / named character / location or front), never parrots
+  // an existing name, and carries a playable contradiction in its role.
   async generateQuickNPC(opts={}){
     if(!this.isConfigured())throw new Error('Copilot not configured. Add an API key in Settings.');
     const n=State.get();
@@ -15534,43 +15539,54 @@ No preamble, no markdown fences, only the JSON.`;
     // 'tonight-quicknpc' settings key exists, AD-6); the Campaign board passes
     // 'campaign-quicknpc' so its OWN chip (campaignNpcTier) is the one actually read.
     const surface=opts.surface||'tonight';
+    const extra=opts.extra||'';
     const quicknpcTier=(typeof AccuracyChip!=='undefined')?AccuracyChip._tierFor(surface):'mid';
     const context=this.buildContext(n,{tier:quicknpcTier});
     // Phase 5D: request 3 NPC variants so the GM can pick the one that fits.
-    const systemPrompt=`You are generating NPCs for a tabletop RPG GM who needs someone to introduce immediately. Read the realm state below and produce three distinct NPC candidates — each someone the players might encounter at the start of tonight's session.
+    const systemPrompt=`You are casting NPCs for a tabletop RPG GM who needs someone to introduce immediately. Read the realm state below and produce three distinct NPC candidates the players could meet at the start of tonight's session.
 
-Each NPC should:
-- Have a name that fits the era and culture
-- Have a clear role in the realm (faction member, court figure, commoner with a problem, etc.)
-- Have one specific, concrete reason they matter to the current dramatic situation
-- Have a distinctive trait the GM can describe in one breath
+Requirements for the THREE together:
+- Tie each NPC to the live situation through a DIFFERENT existing entity: one to a faction, one to a named character, one to a location or front. State the tie inside "hook" (e.g. "her brother is <existing name>", "collects rents for <faction>", "squats in the ruined <location>").
+- Never reuse the name of anyone or anything already in the world-state. Invent names that follow the same linguistic pattern as the existing names without repeating them.
+
+Requirements for EACH NPC:
+- "role" must carry a contradiction that makes them playable in one breath (e.g. "war hero who now weighs grain", not "merchant").
+- "drive" is what they want; "fear" is what they fear; "trait" is a distinctive physical or behavioural detail the GM can describe in one breath.
+- "hook" names the existing entity they are tied to and why they matter tonight.
 
 Return exactly 3 distinct variants. Format: JSON {"variants":[<npc 1>,<npc 2>,<npc 3>]}. Each variant is an NPC object with this exact shape:
 {
   "name": "string",
-  "role": "string (one line, e.g. 'Disgraced former captain of the city watch')",
+  "role": "string (a one-line role carrying a contradiction)",
   "drive": "string (what they want, one sentence)",
   "fear": "string (what they fear, one sentence)",
   "trait": "string (a distinctive physical/behavioral trait, one sentence)",
-  "hook": "string (why they matter tonight, one sentence the GM can paraphrase)"
+  "hook": "string (why they matter tonight + which existing entity they're tied to)"
 }
 
-Each variant must be meaningfully different — not three rewordings of the same character. Differ in role, social class, motivation, or relationship to the central conflict. At least one variant should be uncomfortable or unexpected, pushing the GM out of obvious choices.
+The three must be meaningfully different — different social class, different faction alignment, different relationship to the central conflict. At least one should be uncomfortable or unexpected, pushing the GM out of obvious choices.
 
 No preamble, no markdown, only the JSON.`;
+    let user=`# Realm State\n${context}\n\nGenerate three NPC variants for tonight.`;
+    // X-3/BB-2: the Campaign board passes Campaign.boardBlock() as `extra` so this stops
+    // re-casting people already staged on the prep board. The anti-dup line points at the
+    // board section that follows it.
+    if(extra)user+=`\n\nDo not duplicate anyone already on the prep board below.\n\n${extra}`;
     const messages=[
       {role:'system',content:systemPrompt},
-      {role:'user',content:`# Realm State\n${context}\n\nGenerate three NPC variants for tonight.`},
+      {role:'user',content:user},
     ];
-    const data=await this._apiFetch(messages,{stream:false,max_tokens:1400,response_format:{type:'json_object'}});
-    const raw=data?.choices?.[0]?.message?.content||'';
+    // BB-4: routed through the shared retry-once JSON helper (was a weaker hand-rolled
+    // single-shot parse with no retry). On a terminal double-parse failure _apiFetchJson throws
+    // with .raw set — preserve the original friendly "malformed JSON" toast for that case (the
+    // Quick NPC card has its own Retry button); a real fetch/API error has no .raw and must
+    // propagate unchanged.
     let parsed;
-    try{parsed=JSON.parse(raw);}
-    catch(e){
-      let cleaned=raw.replace(/^```(?:json)?\s*/i,'').replace(/\s*```\s*$/,'').trim();
-      const fb=cleaned.indexOf('{'),lb=cleaned.lastIndexOf('}');
-      if(fb>=0&&lb>fb)cleaned=cleaned.slice(fb,lb+1);
-      try{parsed=JSON.parse(cleaned);}catch(e2){throw new Error('The model returned malformed JSON. Try again.');}
+    try{
+      parsed=await this._apiFetchJson(messages,{stream:false,max_tokens:1400,temperature:0.9});
+    }catch(e){
+      if(e&&typeof e.raw==='string')throw new Error('The model returned malformed JSON. Try again.');
+      throw e;
     }
     if(parsed&&Array.isArray(parsed.variants)&&parsed.variants.length){
       const vs=parsed.variants.filter(v=>v&&typeof v==='object'&&v.name);
@@ -17862,7 +17878,7 @@ const Campaign={
       A.push({label:'Suggest next beat',kind:'variants',run:()=>Copilot.generateBeatSuggestions(State.get(),{existingBeats:State.cp().beats,position:State.cp().beats.length}),apply:v=>{State.cpInsertBeat({text:typeof v==='string'?v:String(v||'')});}});
     }else if(section==='npcs'){
       A.push({label:'Pull NPCs for tonight (local)',kind:'local',run:()=>this._pullNpcsLocal()});
-      A.push({label:'Cast a fresh NPC',kind:'variants',run:()=>Copilot.generateQuickNPC({surface:'campaign-quicknpc'}),render:v=>{const o=(v&&typeof v==='object')?v:{};return [o.name,o.role,o.drive||o.hook].filter(Boolean).join(' — ');},apply:v=>{const o=(v&&typeof v==='object')?v:{};State.cpInsertNpc({name:o.name||'',role:o.role||'',motivation:o.drive||o.hook||'',here:true});}});
+      A.push({label:'Cast a fresh NPC',kind:'variants',run:()=>Copilot.generateQuickNPC({surface:'campaign-quicknpc',extra:Campaign.boardBlock()}),render:v=>{const o=(v&&typeof v==='object')?v:{};return [o.name,o.role,o.drive||o.hook].filter(Boolean).join(' — ');},apply:v=>{const o=(v&&typeof v==='object')?v:{};State.cpInsertNpc({name:o.name||'',role:o.role||'',motivation:o.drive||o.hook||'',here:true});}});
     }else if(section==='clocks'){
       A.push({label:'Suggest clocks from world',kind:'variants',run:()=>Copilot.generateClockSuggestions(State.get()),render:v=>{const o=(v&&typeof v==='object')?v:{};return `${o.name||'Clock'} (${o.size||6}-tick) — ${o.justification||''}`;},apply:v=>{const o=(v&&typeof v==='object')?v:{};State.cpInsertClock({name:o.name||'New Threat',size:[4,6,8].includes(o.size)?o.size:6});}});
     }else if(section==='secrets'){
