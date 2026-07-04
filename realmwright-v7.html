@@ -15023,13 +15023,19 @@ Without a CANON block, your response is conversational only — no simulation ef
     const context=this.buildContext(n,{message:eventDesc,tier:continuityTier});
     const systemPrompt=`You are a worldbuilding continuity checker. The user has marked one chronicle event for review against the rest of the nation's history. Your job: identify any contradictions, anachronisms, or implausibilities between this event and what's already established.
 
-Be concrete. Quote specific other events, stats, or facts you're comparing against. If the event is consistent, say so plainly. If it's mostly fine but raises a minor question, flag the question. If it directly contradicts something, name what.
+Be concrete. Quote specific other events, stats, or facts you're comparing against. Check specifically:
+(a) dates and sequence vs the chronicle;
+(b) named people vs the character roster — a deceased or missing person cannot act after their status date;
+(c) named factions vs the faction list — do positions and leaders match?;
+(d) plausibility vs current stats.
+
+If the event is consistent, say so plainly. If it's mostly fine but raises a minor question, flag the question. If it directly contradicts something, name what.
 
 Do NOT propose changes. Do NOT emit a [CANON] block. This is a verdict only.
 
 Format your response as:
 **Verdict:** Consistent / Minor concern / Contradiction
-**Reasoning:** 2-3 sentences explaining what you compared and why.
+**Reasoning:** Open with [Timeline], [Roster], or [Stats] naming which check above it concerns (or [General] if none fit specifically), then 2-3 sentences explaining what you compared and why.
 
 Keep the response under 200 words.`;
     const userPrompt=`# World State\n${context}\n\n# Event Under Review\n${eventDesc}\n\nCheck this event against the rest of the chronicle and stats above. Is it consistent?`;
@@ -15037,7 +15043,7 @@ Keep the response under 200 words.`;
       {role:'system',content:systemPrompt},
       {role:'user',content:userPrompt},
     ];
-    const data=await this._apiFetch(messages,{stream:false,max_tokens:400},signal);
+    const data=await this._apiFetch(messages,{stream:false,max_tokens:400,temperature:0.2},signal);
     const text=data?.choices?.[0]?.message?.content||'(No verdict returned.)';
     const usage=data?.usage;
     const costNote=usage?`${usage.prompt_tokens||0} prompt + ${usage.completion_tokens||0} completion tokens`:'';
@@ -20243,16 +20249,28 @@ const Lint={
     if(!okGo)return [];
     this._aiRunning=true;
     const findings=[];
+    let rateLimited=false;
+    let checkedCount=0;
+    let totalCount=0;
     try{
       // Sort events the same way the deterministic pass does so chunk membership is stable.
       const dated=chronicle.filter(e=>e).slice().sort((a,b)=>((a.year||0)-(b.year||0))||(String(a.id)<String(b.id)?-1:1));
-      for(let i=0;i<dated.length;i+=this.AI_CHUNK){
+      totalCount=dated.length;
+      for(let i=0;i<dated.length&&!rateLimited;i+=this.AI_CHUNK){
         const chunk=dated.slice(i,i+this.AI_CHUNK);
         // Reuse the verified single-event verdict pattern across the chunk's heaviest events so the
         // cost stays bounded; the model is given the whole world as context inside checkContinuity.
-        for(const ev of chunk){
+        for(let j=0;j<chunk.length&&!rateLimited;j++){
+          const ev=chunk[j];
           let res;
-          try{res=await Copilot.checkContinuity(ev);}catch(e){continue;}
+          try{res=await Copilot.checkContinuity(ev);}
+          catch(e){
+            // E11: a free-model 429 shouldn't silently eat the rest of the sweep — stop here and
+            // keep every finding already flagged; the toast below tells the GM what happened.
+            if(/rate limited/i.test(e?.message||'')){rateLimited=true;break;}
+            continue;
+          }
+          checkedCount++;
           const text=(res&&res.text)||'';
           // Only surface verdicts that flag a concern — "Consistent" verdicts are not findings.
           if(/Contradiction|Minor concern/i.test(text)){
@@ -20263,13 +20281,18 @@ const Lint={
             findings.push({severity:sev,kind:'ai-semantic',message:(this._nm(ev)+': '+text).slice(0,600),
               refs,dismissKey:'ai-semantic:'+ev.id,ai:true});
           }
+          if(!rateLimited&&(i+j)<dated.length-1)await new Promise(r=>setTimeout(r,1200));
         }
       }
     }finally{
       this._aiRunning=false;
     }
     this._lastAiFindings=findings;
-    if(typeof showToast!=='undefined')showToast(findings.length?`Semantic pass: ${findings.length} concern${findings.length===1?'':'s'} flagged (verdict-only).`:'Semantic pass: no concerns flagged.');
+    if(typeof showToast!=='undefined'){
+      showToast(rateLimited
+        ?`Checked ${checkedCount} of ${totalCount} — provider rate-limited, try the rest shortly.`
+        :(findings.length?`Semantic pass: ${findings.length} concern${findings.length===1?'':'s'} flagged (verdict-only).`:'Semantic pass: no concerns flagged.'));
+    }
     if(this._open)this.render();
     return findings;
   },
