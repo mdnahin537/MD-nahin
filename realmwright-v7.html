@@ -15693,6 +15693,9 @@ Return ONLY the paragraph as plain text. No preamble, no formatting.`;
   },
 
   // Delivery H: Glossary Builder
+  // D2: extends the GM's existing glossary instead of generating blind — the existing terms
+  // are listed so the model doesn't redefine them, and coverage is spread across real entities
+  // instead of leaning on invented vernacular. Save-side merge lives in GlossaryUI.save().
   async generateGlossary(nation,opts={}){
     if(!this.isConfigured())throw new Error('No API key configured');
     const scope=opts.scope||'all';
@@ -15701,17 +15704,29 @@ Return ONLY the paragraph as plain text. No preamble, no formatting.`;
     const glossaryTier=(typeof AccuracyChip!=='undefined')?AccuracyChip._tierFor('glossary'):'mid';
     const ctx=this.buildContext(nation,{tier:glossaryTier});
     const scopeNote=scope==='all'?'all domains (political, cultural, religious, geographic)':`${scope} terms only`;
-    const systemPrompt=`You are a TTRPG worldbuilding assistant. Generate an alphabetized glossary of world-specific terms for the given realm. Scope: ${scopeNote}. Target ~${count} entries. Each entry: TERM: one-to-two sentence definition in the realm's voice. Include proper nouns (people, factions, institutions, places), world-specific concepts, and realm-specific jargon. Do NOT include generic fantasy terms. Format as JSON: {"glossary":[{"term":"...","definition":"..."},...]}. Sort entries alphabetically by term.`;
+    const vernacularCap=Math.max(1,Math.floor(count/4));
+    const systemPrompt=`You are a TTRPG worldbuilding assistant. Generate an alphabetized glossary of world-specific terms for the given realm. Scope: ${scopeNote}. Target ~${count} entries. Each entry: TERM: one-to-two sentence definition in the realm's voice. Include proper nouns (people, factions, institutions, places), world-specific concepts, and realm-specific jargon. Do NOT include generic fantasy terms.
+Coverage: spread entries across people, institutions, places, events, and vernacular concepts — invent AT MOST ${vernacularCap} new vernacular terms (marked (new)); everything else must define entities that exist in the world-state. Each definition: 1-2 sentences in the realm's own voice, and where a term touches a live tension, say what is CONTESTED about it (e.g. "the Houses call it routine rotation; the provinces call it a purge").
+If an "Existing glossary" section is provided, do not redefine those terms — extend around them.
+Format as JSON: {"glossary":[{"term":"...","definition":"..."},...]}. Sort entries alphabetically by term.`;
+    const existingTerms=(nation?.glossary&&Array.isArray(nation.glossary.glossary)?nation.glossary.glossary:[]).map(e=>(e&&e.term||'').trim()).filter(Boolean);
+    let userMsg=`# Realm State\n${ctx}\n\nGenerate the glossary now.`;
+    if(existingTerms.length){
+      userMsg+=`\n\n# Existing glossary (do not redefine these — extend around them)\n${existingTerms.map(t=>'- '+t).join('\n')}`;
+    }
     const messages=[
       {role:'system',content:systemPrompt},
-      {role:'user',content:`# Realm State\n${ctx}\n\nGenerate the glossary now.`},
+      {role:'user',content:userMsg},
     ];
-    const raw=await this._apiFetch(messages,{stream:false,max_tokens:2000,response_format:{type:'json_object'}});
-    const text=(raw?.choices?.[0]?.message?.content||'').trim();
+    // D2: migrated onto the shared retry-once JSON helper (was a hand-rolled single-shot parse
+    // with no retry). A double parse failure becomes the friendly toast; a real fetch/API
+    // error (no .raw) propagates unchanged, same convention as generateQuickNPC.
     try{
-      const clean=text.replace(/```json|```/g,'').trim();
-      return JSON.parse(clean);
-    }catch(e){return{glossary:[{term:'Error',definition:'Could not parse glossary response. Try again.'}]};}
+      return await this._apiFetchJson(messages,{stream:false,max_tokens:2000,temperature:0.4});
+    }catch(e){
+      if(e&&typeof e.raw==='string')throw new Error('The model returned malformed JSON. Try again.');
+      throw e;
+    }
   },
 
   // Delivery H: Naming Generator
@@ -25985,12 +26000,28 @@ const GlossaryUI={
   save(){
     if(!this._lastResult){showToast('Generate a glossary first.');return;}
     const n=State.get();if(!n)return;
+    const incoming=Array.isArray(this._lastResult.glossary)?this._lastResult.glossary:[];
+    if(!incoming.length){showToast('No glossary entries to save.');return;}
     State.pushUndo();
-    n.glossary=JSON.parse(JSON.stringify(this._lastResult));
+    // D2: MERGE by lowercased term instead of replacing wholesale — a GM who saved 20
+    // hand-picked terms and regenerates must never lose them silently. A regenerated term
+    // with the same lowercased term overwrites that one entry; every other existing term
+    // is kept untouched.
+    const existing=(n.glossary&&Array.isArray(n.glossary.glossary))?n.glossary.glossary.slice():[];
+    const byKey=new Map(existing.map(e=>[(e&&e.term||'').trim().toLowerCase(),e]));
+    let mergedCount=0;
+    incoming.forEach(e=>{
+      const key=(e&&e.term||'').trim().toLowerCase();
+      if(!key)return;
+      const prior=byKey.get(key);
+      if(!prior||prior.definition!==e.definition)mergedCount++;
+      byKey.set(key,{term:e.term,definition:e.definition});
+    });
+    n.glossary={glossary:Array.from(byKey.values())};
     State.persist();
     const savedNote=document.getElementById('gloss-saved-note');
     if(savedNote)savedNote.style.display='block';
-    showToast('Glossary saved to '+n.name+'. It will appear in Story Bible exports.');
+    showToast(`Merged ${mergedCount} new term${mergedCount!==1?'s':''} into ${n.name}'s glossary.`);
   },
   copy(){
     if(!this._lastResult){showToast('Generate a glossary first.');return;}
