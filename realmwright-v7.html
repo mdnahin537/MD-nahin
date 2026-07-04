@@ -17820,18 +17820,21 @@ const Campaign={
         }
         return;
       }
-      // Log a delivered secret to the chronicle (seeds an inscribe form with deliveredTo context)
+      // Log a delivered secret to the chronicle (seeds the REAL inscribe form with
+      // deliveredTo context — review-before-commit, same proven path _inscribeChip/
+      // _askToCanon/_clockToCanon use). Nothing auto-commits.
       if(d.secretLog){
         const sec=State.cp().secrets.find(x=>x.id===d.secretLog);
         if(!sec)return;
+        if(typeof Modals==='undefined'||!Modals.open||!State.get()){showToast('Inscribe form unavailable.',[],3000);return;}
         const seed=`${sec.text}${sec.deliveredTo?` — delivered to ${sec.deliveredTo}`:''}`;
-        if(typeof InscribeModal!=='undefined'&&InscribeModal.open){InscribeModal.open({description:seed});}
-        else if(typeof Modals!=='undefined'&&Modals.open){
-          // Best-effort: copy seed to clipboard so the GM can paste into the existing Chronicle inscribe.
-          Utils.copyToClipboard?.(seed);
-        }else{
-          showToast?showToast('Copied seed to clipboard — paste into Chronicle.'):0;
-        }
+        Modals.open('manual-event');
+        const setV=(id,v)=>{const el=document.getElementById(id);if(el)el.value=v;};
+        setV('ev-name',(sec.text||'A revelation').split(/\s+/).slice(0,6).join(' '));
+        setV('ev-desc',seed);
+        setV('ev-type','Political');
+        setV('ev-vis','public');
+        const err=document.getElementById('ev-name-err');if(err)err.textContent='';
         return;
       }
       // A filled clock's "Record consequence" link — same seed-and-review path Run Mode's
