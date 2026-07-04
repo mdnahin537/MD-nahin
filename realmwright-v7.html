@@ -18303,9 +18303,12 @@ Return ONLY JSON: {"suggestions":[{"slot":"...","severity":"...","text":"..."}]}
     let n=null;try{n=State.get();}catch(e){}
     const tier=(State.data?.meta?.settings?.liveModeTier)||'mid';
     const context=this._compactContext(cp,n,tier);
+    // E10: tell the model WHAT board change triggered this fire — the rail used to comment
+    // blind to the actual trigger, reasoning only from the compact context snapshot.
+    const changeLine='# What just changed\n'+(source||'unknown')+'\n\n';
     const messages=[
       {role:'system',content:this._firePrompt()},
-      {role:'user',content:'# Campaign board\n'+context+'\n\nReturn the JSON now (≤2 suggestions, or an empty array if the board needs nothing).'},
+      {role:'user',content:changeLine+'# Campaign board\n'+context+'\n\nReturn the JSON now (≤2 suggestions, or an empty array if the board needs nothing).'},
     ];
     // Cancel any prior inflight so flurries collapse to the newest board state.
     if(this._abort){try{this._abort.abort();}catch(e){}}
