@@ -5976,6 +5976,10 @@ Return exactly 3 distinct variants. Format: JSON {"variants":[<encounter 1>,<enc
 
 Each variant must be meaningfully different — not three rewordings of the same encounter. Differ in setting, adversary type, or the central tactical problem. At least one variant should be uncomfortable or unexpected, pushing the GM out of obvious choices.
 
+Adversaries must be agents of the world-state: name their allegiance to one of the factions above (or explicitly independent) in their notes. Keep notes SYSTEM-AGNOSTIC — behaviour and tactics, never game statistics, AC, HP, or dice.
+The tactical_objective must advance or threaten a named hook, front, or faction interest from the world-state — say which in one clause.
+loot: at least one variant's reward must be information or leverage (a letter, a ledger, a name), not goods.
+
 Calibrate adversary count and lethality to difficulty=[DIFFICULTY].
 Pace=[PACE] shapes what the encounter IS: combat=violence likely; social=NPCs talk first; exploration=environment is the antagonist; mixed=both.
 Tone=[TONE] shapes mood and prose register.
@@ -26278,7 +26282,7 @@ const EncounterBuilder={
       {role:'system',content:filled.system},
       {role:'user',content:filled.user},
     ];
-    return await Copilot._apiFetchJson(messages,{stream:false,max_tokens:1200});
+    return await Copilot._apiFetchJson(messages,{stream:false,max_tokens:2400,temperature:0.9});
   },
 
   _renderResult(result){
