@@ -15647,9 +15647,11 @@ Return ONLY the paragraph as plain text. No preamble, no formatting.`;
     const surface=opts.surface||'campaign-notes';
     const notesTier=(typeof AccuracyChip!=='undefined')?AccuracyChip._tierFor(surface):'mid';
     const context=this.buildContext(n,{tier:notesTier});
-    const sys=`You are summarizing a fictional tabletop realm for its game master, for their private session notes. Read the realm state and write a tight summary of NO MORE THAN 4 lines (4 short sentences, each on its own line). Capture the realm by name, its current dramatic situation, and the one or two tensions that matter most right now. Plain prose, no headers, no bullet markers, no preamble. Return JSON only: {"text":"<line 1>\\n<line 2>\\n<line 3>\\n<line 4>"}.`;
+    // E3: replaced the generic "tight summary" instruction with 4 fixed registers so the GM
+    // gets a scan-able status line instead of 4 sentences that might all restate the same fact.
+    const sys=`You are summarizing a fictional tabletop realm for its game master, for their private session notes. Read the realm state and write EXACTLY 4 lines: (1) where the realm stands now, in one sentence; (2) the most recent meaningful development and who moved; (3) the pressure closest to breaking, naming the number or clock that says so; (4) the sharpest unresolved question for the GM. Plain prose, no labels, no headers, no bullet markers, no preamble. Return JSON only: {"text":"<line 1>\\n<line 2>\\n<line 3>\\n<line 4>"}.`;
     const user=`# Realm State\n${context}\n\nWrite the 4-line summary now.`;
-    const parsed=await this._apiFetchJson([{role:'system',content:sys},{role:'user',content:user}],{stream:false,max_tokens:300});
+    const parsed=await this._apiFetchJson([{role:'system',content:sys},{role:'user',content:user}],{stream:false,max_tokens:300,temperature:0.4});
     return String(parsed&&parsed.text||'').trim();
   },
   async generateNotesGaps(nation,opts={}){
@@ -15659,11 +15661,15 @@ Return ONLY the paragraph as plain text. No preamble, no formatting.`;
     // X-1: Campaign Notes is board-only (AD-6) — surface defaults straight to its own
     // knob so the mounted 'campaign-notes' chip (campaignNotesTier) is truthful.
     const surface=opts.surface||'campaign-notes';
+    const extra=opts.extra||'';
     const notesTier=(typeof AccuracyChip!=='undefined')?AccuracyChip._tierFor(surface):'mid';
     const context=this.buildContext(n,{tier:notesTier});
-    const sys=`You are a tabletop game master's prep assistant. Read the realm state and surface what the GM may have FORGOTTEN to think about: loose threads, unresolved hooks, factions or characters introduced but never developed, dangling tensions, and questions the world raises but does not answer. Be concrete — name the specific entities and threads. Write 3-6 short bullet lines, each starting with "- ", each a single actionable observation. No preamble, no closing summary. Return JSON only: {"text":"- <observation>\\n- <observation>\\n..."}.`;
-    const user=`# Realm State\n${context}\n\nList the loose threads and unaddressed elements now.`;
-    const parsed=await this._apiFetchJson([{role:'system',content:sys},{role:'user',content:user}],{stream:false,max_tokens:600});
+    const sys=`You are a tabletop game master's prep assistant. Read the realm state and surface what the GM may have FORGOTTEN to think about: loose threads, unresolved hooks, factions or characters introduced but never developed, dangling tensions, and questions the world raises but does not answer. Be concrete — name the specific entities and threads. Only surface what is absent BOTH from the world's open threads AND from the GM's prep below. Write 3-6 short bullet lines, each starting with "- ", each a single actionable observation. No preamble, no closing summary. Return JSON only: {"text":"- <observation>\\n- <observation>\\n..."}.`;
+    let user=`# Realm State\n${context}\n\nList the loose threads and unaddressed elements now.`;
+    // E3: the caller folds in Campaign.boardBlock() plus the GM's own notes (first 500 chars)
+    // under their own heading, so this stops re-suggesting gaps the GM already closed in prep.
+    if(extra)user+=`\n\n${extra}`;
+    const parsed=await this._apiFetchJson([{role:'system',content:sys},{role:'user',content:user}],{stream:false,max_tokens:600,temperature:0.4});
     return String(parsed&&parsed.text||'').trim();
   },
 
@@ -17898,7 +17904,14 @@ const Campaign={
       // shared JSON-parse-retry path, and APPENDS into Notes via cpSetText — never clobbers
       // existing notes. copyable:true gives the GM the insert-or-copy choice (UX-7).
       A.push({label:'Summarize the realm in 4 lines',kind:'single',copyable:true,run:()=>Copilot.generateNotesSummary(State.get(),{surface:'campaign-notes'}),apply:txt=>{State.cpSetText('notes',this._appendNotes(State.cp().notes,String(txt||'')));}});
-      A.push({label:'What did I forget to think about?',kind:'single',copyable:true,run:()=>Copilot.generateNotesGaps(State.get(),{surface:'campaign-notes'}),apply:txt=>{State.cpSetText('notes',this._appendNotes(State.cp().notes,String(txt||'')));}});
+      A.push({label:'What did I forget to think about?',kind:'single',copyable:true,run:()=>{
+        // E3: fold the prep board plus the GM's own notes (first 500 chars) into `extra` so
+        // Gaps stops re-surfacing loose threads the GM has already thought through in prep.
+        const existingNotes=(State.cp().notes||'').trim();
+        const prepBlock=existingNotes?`# The GM's current prep (already thought about — do not repeat)\n${existingNotes.slice(0,500)}`:'';
+        const extra=[Campaign.boardBlock(),prepBlock].filter(Boolean).join('\n\n');
+        return Copilot.generateNotesGaps(State.get(),{surface:'campaign-notes',extra});
+      },apply:txt=>{State.cpSetText('notes',this._appendNotes(State.cp().notes,String(txt||'')));}});
     }
     return A;
   },
