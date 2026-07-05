@@ -10260,17 +10260,23 @@ const Interact={
       if(btn)btn.setAttribute('aria-expanded',isTarget?'true':'false');
     });
   },
-  fillAndCopy(pid){
+  fillAndCopy(pid, opts={}){
     const prompt=PROMPTS.find(p=>p.id===pid);if(!prompt)return;
     const n=State.get();
     let text=SAFETY_PREAMBLE+'\n\n'+resolveVars(prompt.tpl,n);
     if(prompt.minDepth&&n.chronicle.length<prompt.minDepth){text+=`\n\nNOTE: This prompt typically benefits from at least ${prompt.minDepth} chronicle events. Current count: ${n.chronicle.length}. Generate from what's available and suggest gaps the user could fill manually.`;}
     text+=CANON_SUFFIX;
     const _doCopy=(txt)=>{
-      // Reset any previously copied button
-      document.querySelectorAll('.arsenal__fill-btn.is-copied').forEach(b=>{b.textContent='▶ Fill & Copy';b.classList.remove('is-copied');});
-      const btn=document.querySelector(`[data-fill="${pid}"]`);
-      if(btn){btn.textContent='✓ Copied';btn.classList.add('is-copied');setTimeout(()=>{btn.textContent='▶ Fill & Copy';btn.classList.remove('is-copied');},3000);}
+      if(typeof opts.onCopied==='function'){
+        opts.onCopied();
+      }else{
+        // Reset any previously copied button — SCOPED to the legacy arsenal card button only.
+        // (War-room cards share the [data-fill] attribute on the whole card div; matching bare
+        // [data-fill] here would find that card first and .textContent= would wipe its children.)
+        document.querySelectorAll('.arsenal__fill-btn.is-copied').forEach(b=>{b.textContent='▶ Fill & Copy';b.classList.remove('is-copied');});
+        const btn=document.querySelector(`.arsenal__fill-btn[data-fill="${pid}"]`);
+        if(btn){btn.textContent='✓ Copied';btn.classList.add('is-copied');setTimeout(()=>{btn.textContent='▶ Fill & Copy';btn.classList.remove('is-copied');},3000);}
+      }
       showToast('Copied to clipboard',[{url:'https://chat.openai.com',label:'Open ChatGPT'},{url:'https://claude.ai',label:'Open Claude'},{url:'https://gemini.google.com',label:'Open Gemini'}],6000);
       const pendingDot=document.querySelector('.arsenal__waiting-dot');
       if(pendingDot)pendingDot.classList.add('is-active');
