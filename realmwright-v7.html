@@ -17792,6 +17792,18 @@ const Campaign={
         </div>`;
       }).join(''):this._emptyNpcs();
     }
+    // Missing-tissue #3: refresh the "pull from bank" picker's options every render — the
+    // undeployed pool shrinks as secrets get staged here (or deployed elsewhere in the app).
+    // Hidden entirely when the realm has nothing undeployed to offer.
+    const bankPick=document.getElementById('cmp-secret-bank-pick');
+    if(bankPick){
+      const bankSecrets=(n&&Array.isArray(n.secrets))?n.secrets.filter(s=>s&&s.status==='undeployed'):[];
+      bankPick.innerHTML=`<option value="">+ From bank…</option>`+bankSecrets.map(s=>{
+        const label=(s.content||s.title||'Untitled secret').trim().slice(0,60);
+        return `<option value="${E(s.id)}">${E(label)}</option>`;
+      }).join('');
+      bankPick.style.display=bankSecrets.length?'':'none';
+    }
     // ─── Secrets — with Delivered-to chronicle seed ───
     const secEl=document.getElementById('cmp-secrets');
     if(secEl){
@@ -17967,6 +17979,24 @@ const Campaign={
         else if(t==='secret')State.cpAddSecret();
         this.render();
       });
+    });
+    // Missing-tissue #3: "pull from bank" — stage an existing realm secret onto tonight's
+    // board via the EXISTING cpInsertSecret, and mark it deployed in the realm's own bank
+    // via the EXISTING deploySecret (same {nid,sid,sessionId=null} shape the Secrets panel's
+    // own manual "Deploy" button already uses) — closing the loop both ways, no new methods.
+    document.getElementById('cmp-secret-bank-pick')?.addEventListener('change',e=>{
+      const sid=e.target.value;
+      e.target.value='';
+      if(!sid)return;
+      const n=State.get?.();if(!n)return;
+      const bankSecret=(n.secrets||[]).find(x=>x.id===sid);
+      if(!bankSecret)return;
+      const text=(bankSecret.content||bankSecret.title||'').trim();
+      if(!text)return;
+      State.cpInsertSecret({text});
+      State.deploySecret(n.id,sid,null);
+      this.render();
+      showToast('Pulled from the secret bank — staged on tonight\'s board.');
     });
     // ─── Delegated clicks for all dynamic content ───
     root.addEventListener('click',e=>{
@@ -27668,7 +27698,7 @@ window.__rwClearDevTheme=function(){localStorage.removeItem('rw_dev_theme');loca
       <div id="cmp-npcs"></div>
     </section>
     <section class="cmp-card" aria-label="Secrets and clues">
-      <div class="cmp-card__hd"><h2 class="cmp-card__title">Secrets &amp; Clues</h2><div class="cmp-card__hd-actions"><button class="cmp-ai-pill" data-cmp-ai="secrets" type="button" aria-haspopup="dialog" aria-expanded="false">⌘ AI</button><button class="cmp-add" data-cmp-add="secret" type="button">+ Secret</button></div></div>
+      <div class="cmp-card__hd"><h2 class="cmp-card__title">Secrets &amp; Clues</h2><div class="cmp-card__hd-actions"><select class="cmp-add" id="cmp-secret-bank-pick" aria-label="Pull a secret from the realm's secret bank onto tonight's board"><option value="">+ From bank…</option></select><button class="cmp-ai-pill" data-cmp-ai="secrets" type="button" aria-haspopup="dialog" aria-expanded="false">⌘ AI</button><button class="cmp-add" data-cmp-add="secret" type="button">+ Secret</button></div></div>
       <div id="cmp-secrets"></div>
     </section>
   </div>
