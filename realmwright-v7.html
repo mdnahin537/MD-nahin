@@ -939,6 +939,13 @@ body.theme-ember .wms-ae-panel{border-left:2px solid var(--ember-color)}
 .wms-ae-btn.is-copied{border-color:#8cd996;color:#8cd996}
 .wms-ae-btn:disabled{opacity:.6;cursor:default}
 .wms-ae-signpost{font-size:10.5px;line-height:1.55;color:var(--color-text-faint);margin-top:10px;font-weight:300}
+.wms-ae-input-label{display:block;font-family:var(--font-mono);font-size:9px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--color-text-faint);margin-bottom:5px;line-height:1.4}
+.wms-ae-input{width:100%;box-sizing:border-box;margin:0 0 10px;padding:8px 10px;font-family:inherit;
+  font-size:11px;line-height:1.5;color:var(--color-ink);background:rgba(255,255,255,.02);
+  border:1px solid var(--color-border-hairline);border-radius:3px;resize:vertical;min-height:56px}
+.wms-ae-input:focus{outline:none;border-color:var(--ember-color)}
+.wms-ae-input::placeholder{color:var(--color-text-faint);opacity:.7}
 .wms-ae-run-dot{display:inline-block;width:5px;height:5px;border-radius:50%;
   background:currentColor;margin-left:6px;vertical-align:middle;animation:pdot 1s ease-in-out infinite}
 .wms-paste-btn.is-waiting{border-style:solid;border-color:var(--ember-color);color:var(--ember-color)}
@@ -10296,6 +10303,8 @@ const Interact={
     const prompt=PROMPTS.find(p=>p.id===pid);if(!prompt)return;
     const n=State.get();
     let text=SAFETY_PREAMBLE+'\n\n'+resolveVars(prompt.tpl,n);
+    // Splice the GM's input-slot text into the copied prompt so the no-key copy is complete.
+    if(opts.slotFill&&opts.slotFill.value){text=text.split(opts.slotFill.token).join(opts.slotFill.value);}
     if(prompt.minDepth&&n.chronicle.length<prompt.minDepth){text+=`\n\nNOTE: This prompt typically benefits from at least ${prompt.minDepth} chronicle events. Current count: ${n.chronicle.length}. Generate from what's available and suggest gaps the user could fill manually.`;}
     text+=CANON_SUFFIX;
     const _doCopy=(txt)=>{
@@ -22832,6 +22841,23 @@ const Threads={
   },
 };
 
+// ─── ARSENAL RUN LANE ───
+// In-app execution for key-holders. Ephemeral, session-only: no persisted state.
+// Shares the copy lane's exact fill contract (resolveVars + CANON_SUFFIX) so both
+// lanes produce byte-identical prompts. _draft holds textarea values so they survive
+// innerHTML re-renders (a raw <textarea> would otherwise lose the GM's text on any
+// world-state change). The run()/modal machinery is added in the run-lane step.
+const ArsenalRun={
+  _running:null,   // pid while a call is in flight (render paints the spinner state)
+  _token:0,        // staleness counter — a newer run invalidates an older response
+  _abort:null,     // AbortController, aborted on modal close / new run
+  _last:null,      // {pid,name,text,costNote,canon,at,nationId} — session-only result cache
+  _draft:{},       // {pid: textarea value} — survives re-renders (inputs die on innerHTML)
+  SLOT_RE:/\[(Paste|Describe)[^\]]*\]/,      // freeform input slots (8 visible prompts)
+  CHOICE_RE:/\[(Choose|Select)[^\]]*\]/,     // model-self-selectable slots (s7, s9, m11)
+  needsInput(p){return this.SLOT_RE.test(p.tpl);},
+};
+
 // ─── WORLD SHELL MODULE ───
 // Three-panel dashboard view for Ember theme. All rendering reads from existing
 // State + Compute + PROMPTS — no data model changes. Called from applyTheme()
@@ -23294,7 +23320,7 @@ const WorldShell={
         if(act==='copy'){
           Interact?.fillAndCopy?.(pid,this._arsCopyOpts(pid));
         }else if(act==='run'){
-          if(typeof ArsenalRun!=='undefined')ArsenalRun.run(pid);
+          if(typeof ArsenalRun!=='undefined'&&typeof ArsenalRun.run==='function')ArsenalRun.run(pid);
         }
       });
     });
