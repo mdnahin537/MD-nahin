@@ -948,6 +948,12 @@ body.theme-ember .wms-ae-panel{border-left:2px solid var(--ember-color)}
 .wms-ae-input::placeholder{color:var(--color-text-faint);opacity:.7}
 .wms-ae-run-dot{display:inline-block;width:5px;height:5px;border-radius:50%;
   background:currentColor;margin-left:6px;vertical-align:middle;animation:pdot 1s ease-in-out infinite}
+.wms-ars-last{margin-bottom:10px}
+.wms-ars-last:empty{display:none}
+.wms-ars-last a{font-family:var(--font-mono);font-size:9px;letter-spacing:.10em;text-transform:uppercase;
+  color:var(--color-text-muted);cursor:pointer;border-bottom:1px dotted var(--color-border-hairline);
+  text-decoration:none;transition:color .15s}
+.wms-ars-last a:hover{color:var(--ember-color)}
 .wms-paste-btn.is-waiting{border-style:solid;border-color:var(--ember-color);color:var(--ember-color)}
 .wms-paste-btn.is-waiting::after{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;
   background:var(--ember-color);margin-left:8px;vertical-align:middle;animation:pdot 1.1s ease-in-out infinite}
@@ -4392,6 +4398,7 @@ SECTION 8: DOM STRUCTURE
         </div>
         <div class="wms-ars-list" id="wms-ars-list"></div>
         <div class="wms-ars-foot">
+          <div id="wms-ars-last" class="wms-ars-last"></div>
           <button class="wms-paste-btn" id="wms-paste-btn">▼ Paste AI Response</button>
         </div>
       </aside>
@@ -4823,6 +4830,27 @@ Description: A tunnel gave way, halting the eastern works.</pre>
   <div class="modal__footer">
     <button class="btn btn--secondary" data-close="continuity">Close</button>
     <button class="btn btn--primary" id="continuity-recheck-btn" style="display:none">Re-run check</button>
+  </div>
+</div>
+<!-- Arsenal Run result modal (in-app run lane; canon hands off to the same review pipeline as paste-back) -->
+<div class="modal modal--md" id="modal-arsenal-run" role="dialog" aria-modal="true" aria-labelledby="ars-run-title">
+  <div class="modal__header"><h2 class="modal__title" id="ars-run-title">Run prompt</h2><button class="modal__close" data-close="arsenal-run" aria-label="Close">×</button></div>
+  <div class="modal__body">
+    <div id="ars-run-summary" style="padding:var(--space-3);background:var(--color-parchment-warm);border-left:2px solid var(--color-gold);margin-bottom:var(--space-4);font-size:var(--text-body-sm)"></div>
+    <div id="ars-run-mismatch" style="display:none;padding:var(--space-2) var(--space-3);margin-bottom:var(--space-3);font-size:var(--text-body-sm);color:var(--color-amber-deep);border-left:2px solid var(--color-amber-deep)"></div>
+    <div id="ars-run-status" style="display:flex;align-items:center;gap:var(--space-2);padding:var(--space-3);font-size:var(--text-body-sm);color:var(--color-text-muted)">
+      <div class="copilot-panel__meta-dot is-active" style="animation:pulse 1.4s ease-in-out infinite"></div>
+      <span id="ars-run-status-text">Generating…</span>
+    </div>
+    <div id="ars-run-result" style="display:none;font-size:var(--text-body);line-height:1.6;color:var(--color-ink)"></div>
+    <div id="ars-run-cost" style="display:none;margin-top:var(--space-3);font-family:var(--font-mono);font-size:var(--text-mono-sm);color:var(--color-text-faint)"></div>
+    <div id="ars-run-note" style="display:none;margin-top:var(--space-2);font-size:var(--text-mono-sm);color:var(--color-text-faint)">Results aren't stored — copy or inscribe what you want to keep.</div>
+  </div>
+  <div class="modal__footer">
+    <button class="btn btn--secondary" data-close="arsenal-run">Close</button>
+    <button class="btn btn--secondary" id="ars-run-copy-btn" style="display:none">⧉ Copy result</button>
+    <button class="btn btn--secondary" id="ars-run-again-btn" style="display:none">Run again</button>
+    <button class="btn btn--primary" id="ars-run-review-btn" style="display:none">Review canon changes</button>
   </div>
 </div>
 <!-- Settings Modal -->
@@ -12443,6 +12471,8 @@ const Modals={
   close(id){
     // B28: if closing the continuity modal, abort any in-flight request
     if(id==='continuity'&&this._continuityAbort){try{this._continuityAbort.abort();}catch(_){}this._continuityAbort=null;}
+    // Arsenal run lane: closing the result modal aborts an in-flight generation.
+    if(id==='arsenal-run'&&typeof ArsenalRun!=='undefined'&&ArsenalRun._abort){try{ArsenalRun._abort.abort();}catch(_){}ArsenalRun._abort=null;}
     const modal=document.getElementById(`modal-${id}`);
     const bg=document.getElementById('modal-backdrop');
     if(!modal)return;
@@ -22856,6 +22886,140 @@ const ArsenalRun={
   SLOT_RE:/\[(Paste|Describe)[^\]]*\]/,      // freeform input slots (8 visible prompts)
   CHOICE_RE:/\[(Choose|Select)[^\]]*\]/,     // model-self-selectable slots (s7, s9, m11)
   needsInput(p){return this.SLOT_RE.test(p.tpl);},
+
+  // Build the two messages. The filled prompt (resolveVars) is byte-identical to the copy
+  // lane; the run lane adds a per-surface focus (system) and a self-select instruction for
+  // choice slots, since the model — not the GM — makes the pick here.
+  buildMessages(p,n,input){
+    let user=resolveVars(p.tpl,n);
+    if(input){const m=p.tpl.match(this.SLOT_RE);if(m)user=user.split(m[0]).join(input.trim());}
+    if(this.CHOICE_RE.test(p.tpl))user+='\n\nWhere the template says [Choose one] or [Select …], make the strongest choice from the world-state yourself and name what you chose.';
+    if(p.minDepth&&n.chronicle.length<p.minDepth)user+=`\n\nNOTE: This prompt typically benefits from at least ${p.minDepth} chronicle events. Current count: ${n.chronicle.length}. Generate from what's available and suggest gaps the user could fill manually.`;
+    user+=CANON_SUFFIX;
+    const focus=(typeof Copilot!=='undefined'&&Copilot._SURFACE_FOCUS&&(Copilot._SURFACE_FOCUS[p.surface]||Copilot._SURFACE_FOCUS.arsenal))||'';
+    const system=SAFETY_PREAMBLE+(focus?'\n\n'+focus:'');
+    return [{role:'system',content:system},{role:'user',content:user}];
+  },
+
+  async run(pid){
+    const p=PROMPTS.find(x=>x.id===pid);const n=State.get();
+    if(!p||!n)return;
+    if(!(typeof Copilot!=='undefined'&&Copilot.isConfigured&&Copilot.isConfigured())){showToast('Add an API key in Settings to run prompts in-app.');return;}
+    const input=(this._draft[pid]||'').trim();
+    if(this.needsInput(p)&&!input){showToast('This prompt works on your text — paste or describe it in the box first.');return;}
+    if(this._abort)try{this._abort.abort();}catch(_){}
+    const ctrl=new AbortController();this._abort=ctrl;
+    const token=++this._token;
+    this._running=pid;
+    if(typeof WorldShell!=='undefined')WorldShell._renderArsenal(n);
+    this.openModal(p,n);
+    try{
+      if(typeof TransparencyLog!=='undefined')TransparencyLog._pendingLabel='Arsenal · '+p.name;
+      const data=await Copilot._apiFetch(this.buildMessages(p,n,input),{
+        stream:false,
+        max_tokens:p.requires_full?2000:1200,          // requires_full forces max effort on this call only (vault-locked)
+        temperature:p.section==='diagnose'?0.4:p.section==='stress-test'?0.7:0.8,
+      },ctrl.signal);
+      if(token!==this._token)return;                    // a newer run superseded this one
+      const text=data&&data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content||'(No response returned.)';
+      const usage=data&&data.usage;
+      const costNote=usage?`${usage.prompt_tokens||0} prompt + ${usage.completion_tokens||0} completion tokens`:'';
+      const canon=(typeof Parse!=='undefined'&&Parse.canonBlock)?Parse.canonBlock(text,{detail:true}):null;
+      this._last={pid,name:p.name,text,costNote,canon,at:Utils.now(),nationId:n.id};
+      this.paintResult();
+    }catch(err){
+      if(err&&err.name==='AbortError')return;           // modal closed / superseded
+      if(token!==this._token)return;
+      this.paintError((err&&err.message)||'Run failed.');
+    }finally{
+      if(this._abort===ctrl)this._abort=null;
+      if(this._running===pid){this._running=null;const n2=State.get();if(n2&&typeof WorldShell!=='undefined')WorldShell._renderArsenal(n2);}
+    }
+  },
+
+  // Open the result modal in its running state and wire the footer actions.
+  openModal(p,n){
+    if(typeof Modals==='undefined')return;
+    n=n||State.get();
+    Modals.open('arsenal-run');
+    const E=Utils.escHtml;
+    const set=(id,fn)=>{const el=document.getElementById(id);if(el)fn(el);};
+    set('ars-run-title',el=>el.textContent=p.name);
+    set('ars-run-summary',el=>el.innerHTML=`<strong>${E(p.name)}</strong>${p.footprint?`<br><span style="color:var(--color-text-muted);font-family:var(--font-mono);font-size:var(--text-mono-sm)">${E(p.footprint)}</span>`:''}`);
+    set('ars-run-status',el=>el.style.display='flex');
+    set('ars-run-status-text',el=>el.textContent=`Generating from ${(n&&n.name)||'the realm'}'s world-state…`);
+    set('ars-run-result',el=>{el.style.display='none';el.innerHTML='';});
+    set('ars-run-cost',el=>{el.style.display='none';el.textContent='';});
+    set('ars-run-note',el=>el.style.display='none');
+    set('ars-run-mismatch',el=>el.style.display='none');
+    set('ars-run-copy-btn',el=>{el.style.display='none';el.onclick=()=>this._copyResult();});
+    set('ars-run-again-btn',el=>{el.style.display='none';el.onclick=()=>this.run(p.id);});
+    set('ars-run-review-btn',el=>{el.style.display='none';el.onclick=()=>{
+      const last=this._last;if(!last||!last.canon||typeof Modals==='undefined')return;
+      Modals.close('arsenal-run');
+      setTimeout(()=>Modals.openCanonReview(last.canon.candidates,last.nationId,last.canon.failures),300);
+    };});
+  },
+
+  // Paint the cached _last result into the modal. Canon is stripped from the displayed prose —
+  // it goes through the SAME review pipeline as paste-back, not raw display.
+  paintResult(){
+    const last=this._last;if(!last)return;
+    const E=Utils.escHtml;
+    const prose=last.text.replace(/\[CANON\][\s\S]*?\[\/CANON\]/,'').trim();
+    const set=(id,fn)=>{const el=document.getElementById(id);if(el)fn(el);};
+    set('ars-run-status',el=>el.style.display='none');
+    set('ars-run-result',el=>{el.style.display='block';el.innerHTML=(typeof Markdown!=='undefined'&&Markdown.render)?Markdown.render(prose||'(No response.)'):E(prose);});
+    set('ars-run-cost',el=>{el.style.display=last.costNote?'block':'none';el.textContent=last.costNote||'';});
+    set('ars-run-note',el=>el.style.display='block');
+    set('ars-run-copy-btn',el=>el.style.display='inline-block');
+    set('ars-run-again-btn',el=>el.style.display='inline-block');
+    // Realm-mismatch note: canon applies to the realm captured at run time.
+    set('ars-run-mismatch',el=>{
+      if(last.nationId!==State.data.meta.activeNationId){
+        const rn=State.data.nations.find(x=>x.id===last.nationId);
+        el.style.display='block';
+        el.textContent=`This was run for "${(rn&&rn.name)||'another realm'}". Canon changes will apply to that realm, not the one you're viewing.`;
+      }else{el.style.display='none';}
+    });
+    const nCanon=(last.canon&&last.canon.candidates)?last.canon.candidates.length:0;
+    set('ars-run-review-btn',el=>{
+      if(nCanon>0){el.style.display='inline-block';el.textContent=`Review canon changes (${nCanon})`;}
+      else{el.style.display='none';}
+    });
+    // Canon lines that failed to parse: same toast → openCanonFailures pattern as paste-back.
+    if(last.canon&&last.canon.failures&&last.canon.failures.length&&nCanon===0&&typeof Modals!=='undefined'){
+      const fs=last.canon.failures;
+      setTimeout(()=>showToast(`${fs.length} CANON line${fs.length===1?'':'s'} couldn't be parsed. Review?`,[{label:'Review',handler:()=>Modals.openCanonFailures(fs)}],8000),300);
+    }
+  },
+
+  paintError(msg){
+    const set=(id,fn)=>{const el=document.getElementById(id);if(el)fn(el);};
+    set('ars-run-status',el=>el.style.display='none');
+    set('ars-run-result',el=>{el.style.display='block';el.innerHTML=`<span style="color:var(--color-crisis)">${Utils.escHtml(msg)}</span>`;});
+    set('ars-run-again-btn',el=>el.style.display='inline-block');
+  },
+
+  // Copy the FULL result (prose + canon) so a key-holder can still paste it elsewhere.
+  _copyResult(){
+    const last=this._last;if(!last)return;
+    const text=last.text;
+    const done=()=>{const b=document.getElementById('ars-run-copy-btn');if(b){const o=b.textContent;b.textContent='✓ Copied';setTimeout(()=>{b.textContent=o;},2000);}};
+    if(location.protocol==='file:'||!navigator.clipboard){
+      const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';
+      document.body.appendChild(ta);ta.select();
+      try{document.execCommand('copy');done();}catch(e){window.prompt('Copy the text below:',text);}
+      document.body.removeChild(ta);
+    }else{
+      navigator.clipboard.writeText(text).then(done).catch(()=>{
+        const ta=document.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';
+        document.body.appendChild(ta);ta.select();
+        try{document.execCommand('copy');done();}catch(e){window.prompt('Copy the text below:',text);}
+        document.body.removeChild(ta);
+      });
+    }
+  },
 };
 
 // ─── WORLD SHELL MODULE ───
@@ -23296,6 +23460,17 @@ const WorldShell={
     // external answer is awaited. It clears itself when the paste is inscribed.
     const pasteBtn=document.getElementById('wms-paste-btn');
     if(pasteBtn)pasteBtn.classList.toggle('is-waiting',!!State.data.meta.workflowState?.promptPending);
+    // Quiet reopen link for the last in-app run result (session-only; nothing persisted).
+    const lastBox=document.getElementById('wms-ars-last');
+    if(lastBox){
+      const last=(typeof ArsenalRun!=='undefined')?ArsenalRun._last:null;
+      if(last){
+        lastBox.innerHTML=`<a role="button" tabindex="0" id="wms-ars-last-link">Last result · ${E(last.name)} →</a>`;
+        const link=document.getElementById('wms-ars-last-link');
+        const reopen=()=>{if(typeof ArsenalRun==='undefined'||!ArsenalRun._last)return;const lp=PROMPTS.find(x=>x.id===ArsenalRun._last.pid);if(lp){ArsenalRun.openModal(lp);ArsenalRun.paintResult();}};
+        if(link){link.addEventListener('click',reopen);link.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();reopen();}});}
+      }else{lastBox.innerHTML='';}
+    }
     // Card header: click / Enter / Space toggles expand — NEVER copies. All card
     // visuals derive from module state at render time, so a re-render can never wipe them.
     ctr.querySelectorAll('.wms-ae').forEach(head=>{
