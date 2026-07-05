@@ -17656,11 +17656,35 @@ const Campaign={
     }
     return `<svg class="cmp-clock__svg" viewBox="0 0 100 100" role="img" aria-label="Progress clock, ${filled} of ${size} filled">${paths}</svg>`;
   },
+  // Missing-tissue #4: a "you are here" breadcrumb between prep and play. Pure read
+  // over the durable session record (F2's boardSnapshot on n.sessions) — never the
+  // live board itself, which doesn't export. Hidden entirely until a session exists.
+  _renderLastSession(n){
+    const el=document.getElementById('cmp-last-session');
+    if(!el)return;
+    const sessions=(n&&Array.isArray(n.sessions))?n.sessions:[];
+    const last=sessions.length?sessions[sessions.length-1]:null;
+    if(!last){el.style.display='none';el.textContent='';return;}
+    let summary=(last.summary||'').trim()||'(no summary)';
+    if(summary.length>140)summary=summary.slice(0,140).trim()+'…';
+    let line=`Last session: ${summary}`;
+    const bs=last.boardSnapshot;
+    if(bs){
+      if(Array.isArray(bs.secretsDelivered)&&bs.secretsDelivered.length)
+        line+=` — Revealed: ${bs.secretsDelivered.map(x=>x.text).filter(Boolean).slice(0,3).join('; ')}`;
+      if(Array.isArray(bs.clocks)&&bs.clocks.some(c=>c&&c.filled>=c.size))
+        line+=` — Struck: ${bs.clocks.filter(c=>c&&c.filled>=c.size).map(c=>c.name).join(', ')}`;
+    }
+    el.style.display='block';
+    el.textContent=line;
+  },
   render(){
     if(!this.isOpen())return;
     const cp=State.cp();
     const E=Utils.escHtml;
     const n=State.get?.();
+    // ─── Last session banner — "you are here" between prep and play ───
+    this._renderLastSession(n);
     // ─── Clocks ───
     const clocksEl=document.getElementById('cmp-clocks');
     if(clocksEl){
@@ -27589,7 +27613,7 @@ window.__rwClearDevTheme=function(){localStorage.removeItem('rw_dev_theme');loca
 <!-- ─── CAMPAIGN MODE — GM session-prep center (single-screen prep board) ─── -->
 <div class="campaign-mode" id="campaign-mode" role="main" aria-label="Campaign session-prep center">
   <header class="cmp-header">
-    <h1 class="cmp-title">🎲 Campaign<small>Session-prep center — set the table, then run it.<br>This board stays on this device — session records (Sessions) travel with the realm.</small></h1>
+    <h1 class="cmp-title">🎲 Campaign<small>Session-prep center — set the table, then run it.<br>This board stays on this device — session records (Sessions) travel with the realm.</small><small class="cmp-last-session" id="cmp-last-session"></small></h1>
     <button class="cmp-exit" id="campaign-exit" type="button" aria-label="Return to world dashboard">← World</button>
   </header>
   <div class="cmp-grid">
