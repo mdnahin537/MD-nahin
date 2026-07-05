@@ -3437,8 +3437,8 @@ SECTION 7: MOTION & STATE STYLES
 .cmp-npc__link.is-linked{border-style:solid;color:var(--ember-color);border-color:var(--faction-tint,var(--ember-color))}
 .cmp-npc__link.is-linked:hover{background:rgba(127,127,127,.10)}
 /* Secrets — delivered-to block animates in when the secret is checked off. */
-.cmp-secret__delivered{margin-top:6px;padding-top:6px;border-top:1px dashed var(--color-border-hairline);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
-.cmp-secret__delivered label{flex-shrink:0}
+.cmp-secret__delivered,.cmp-beat__hookpick{margin-top:6px;padding-top:6px;border-top:1px dashed var(--color-border-hairline);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.cmp-secret__delivered label,.cmp-beat__hookpick label{flex-shrink:0}
 .cmp-input--ghost{flex:1;min-width:120px;font-size:11px;color:var(--color-text-muted)}
 .cmp-link{background:transparent;border:none;color:var(--ember-color);font-size:10px;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;padding:2px 4px}
 .cmp-link:hover{text-decoration:underline}
@@ -17678,6 +17678,27 @@ const Campaign={
     el.style.display='block';
     el.textContent=line;
   },
+  // Missing-tissue #2: playing a beat that resolves a hook OFFERS to close that hook —
+  // never auto-closes it (toast-action, opt-in, same shipped pattern as F1/F3). Callable
+  // from both the board's own beat-check handler and Run Mode's cockpit (both toggle
+  // beats through the same State.cpToggleBeat/cp.beats, so both surfaces should offer).
+  _offerHookClose(beatId){
+    try{
+      const b=State.cp().beats.find(x=>x.id===beatId);
+      if(!b||!b.done||!b.resolvesHookId)return;
+      const n=State.get?.();if(!n)return;
+      const h=(n.hooks||[]).find(x=>x.id===b.resolvesHookId);
+      if(!h||h.status==='closed')return;
+      const beatLabel=(b.text||'This beat').trim().slice(0,60)||'This beat';
+      showToast(`"${beatLabel}" resolves a hook.`,[
+        {label:`Close hook: ${(h.title||'Untitled hook').trim()} →`,handler:()=>{
+          State.updateHook(n.id,h.id,{status:'closed'});
+          if(this.isOpen())this.render();
+          showToast('Hook closed.',[],2200);
+        }}
+      ],6000);
+    }catch(e){}
+  },
   render(){
     if(!this.isOpen())return;
     const cp=State.cp();
@@ -17715,15 +17736,29 @@ const Campaign={
     // ─── Beats — first is Strong Start, drag-to-reorder enabled ───
     const beatsEl=document.getElementById('cmp-beats');
     if(beatsEl){
+      // Missing-tissue #2: beats can OPTIONALLY declare which of the realm's open hooks
+      // they resolve (board-local — see beat.resolvesHookId below, never exported as a
+      // whitelisted nation/meta field). Computed once per render, not per row.
+      const openHooks=(n&&Array.isArray(n.hooks))?n.hooks.filter(h=>h&&h.status==='open'):[];
       beatsEl.innerHTML=cp.beats.length?cp.beats.map((b,i)=>{
         const id=E(b.id);
         const playedHint=b.done&&b.playedAt?`played ${E(this._ago(b.playedAt))}`:'';
+        // Only offer the picker when there's something to pick (or the beat already
+        // links a hook, even one that has since closed — lets the GM clear a stale link).
+        const hookPick=(openHooks.length||b.resolvesHookId)?`<div class="cmp-beat__hookpick">
+          <label class="cmp-row__hint" for="cmp-beat-hook-${id}">Resolves hook:</label>
+          <select class="cmp-input cmp-input--ghost" id="cmp-beat-hook-${id}" data-beat-hook="${id}" aria-label="Resolves hook when this beat is played">
+            <option value="">— none —</option>
+            ${openHooks.map(h=>`<option value="${E(h.id)}"${b.resolvesHookId===h.id?' selected':''}>${E(h.title||'Untitled hook')}</option>`).join('')}
+          </select>
+        </div>`:'';
         return `<div class="cmp-row cmp-row--beat${b.done?' is-done':''}" data-beat="${id}" draggable="true" tabindex="0" role="listitem" aria-grabbed="false" aria-label="Beat ${i+1}${i===0?' (Strong Start)':''}">
           <span class="cmp-drag" aria-hidden="true" title="Drag to reorder — or Alt+↑/↓">⋮⋮</span>
           <button class="cmp-check" data-beat-check="${id}" type="button" role="checkbox" aria-checked="${b.done?'true':'false'}" aria-label="Mark beat played" title="${playedHint||'Mark played'}">${b.done?'✓':''}</button>
           <div class="cmp-row__body">
             ${i===0?'<div class="cmp-beat__start">Strong Start</div>':''}
             <textarea class="cmp-area" rows="2" data-beat-text="${id}" placeholder="A scene that could happen…" aria-label="Scene beat">${E(b.text)}</textarea>
+            ${hookPick}
             ${playedHint?`<div class="cmp-row__hint">${E(playedHint)}</div>`:''}
           </div>
           <div class="cmp-row__actions">
@@ -18005,7 +18040,7 @@ const Campaign={
       }
       // Standard row actions
       if(d.clockDel){if(confirm('Delete this clock?')){State.cpRemoveClock(d.clockDel);this.render();}return;}
-      if(d.beatCheck){State.cpToggleBeat(d.beatCheck);this.render();return;}
+      if(d.beatCheck){State.cpToggleBeat(d.beatCheck);this.render();this._offerHookClose(d.beatCheck);return;}
       if(d.beatUp){State.cpMoveBeat(d.beatUp,-1);this.render();return;}
       if(d.beatDown){State.cpMoveBeat(d.beatDown,1);this.render();return;}
       if(d.beatDel){State.cpRemoveBeat(d.beatDel);this.render();return;}
@@ -18022,6 +18057,7 @@ const Campaign={
         // re-clamp filled if the new size is smaller, then redraw
         const c=State.cp().clocks.find(x=>x.id===d.clockSize);if(c&&c.filled>c.size)State.cpUpdateClock(d.clockSize,{filled:c.size});this.render();}
       else if(d.beatText)State.cpUpdateBeat(d.beatText,{text:e.target.value});
+      else if(d.beatHook)State.cpUpdateBeat(d.beatHook,{resolvesHookId:e.target.value||null});
       else if(d.secretText)State.cpUpdateSecret(d.secretText,{text:e.target.value});
       else if(d.secretDeliveredto)State.cpUpdateSecret(d.secretDeliveredto,{deliveredTo:e.target.value});
       else if(d.npcName!=null&&d.npcName!=='')State.cpUpdateNpc(d.npcName,{name:e.target.value});
@@ -19526,7 +19562,7 @@ const RunMode={
         if(sec&&sec.dataset.secret){State.cpToggleSecret(sec.dataset.secret);return;}
         // F6: beat toggle — check off a scene beat as played, live from the table
         const beat=e.target.closest('.run-mode__beat');
-        if(beat&&beat.dataset.beat){State.cpToggleBeat(beat.dataset.beat);return;}
+        if(beat&&beat.dataset.beat){State.cpToggleBeat(beat.dataset.beat);if(typeof Campaign!=='undefined')Campaign._offerHookClose(beat.dataset.beat);return;}
         // cast bench: pull into / set aside from the scene (live, no trip to prep)
         const benchIn=e.target.closest('[data-bench-in]');
         if(benchIn){this._pullIntoScene(benchIn.dataset.benchIn);return;}
@@ -19567,7 +19603,7 @@ const RunMode={
           const sec=t.closest&&t.closest('.run-mode__secret');
           if(sec&&sec.dataset.secret){e.preventDefault();State.cpToggleSecret(sec.dataset.secret);return;}
           const beat=t.closest&&t.closest('.run-mode__beat');
-          if(beat&&beat.dataset.beat){e.preventDefault();State.cpToggleBeat(beat.dataset.beat);}
+          if(beat&&beat.dataset.beat){e.preventDefault();State.cpToggleBeat(beat.dataset.beat);if(typeof Campaign!=='undefined')Campaign._offerHookClose(beat.dataset.beat);}
         }
       });
       // Cockpit-scoped hotkeys (only while open, never inside a field). Single letters are
