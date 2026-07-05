@@ -3607,6 +3607,23 @@ body:has(.run-mode.is-open) .toast-host,body:has(.run-mode.is-open) #toast-host,
 .run-mode__secret[aria-checked="true"] .run-mode__secret-check{background:var(--ember-color);border-color:var(--ember-color);color:var(--color-ink-elevated)}
 .run-mode__secret[aria-checked="true"] .run-mode__secret-text{color:var(--color-text-faint);text-decoration:line-through;text-decoration-color:var(--color-text-faint)}
 
+/* ═══ CENTER — TONIGHT'S BEATS (F6): the ordered scene plan built in Campaign prep,
+   surfaced at the table above the doom clock. Reorder/edit/delete stay prep-time-only —
+   this strip is check-to-mark-played only, same "spent but visible" language as the
+   secret bank above. ═══ */
+.run-mode__beats-label{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);padding:var(--space-3) var(--space-4) 0;font-family:var(--font-mono);font-size:var(--text-label-sm);letter-spacing:.14em;text-transform:uppercase;color:var(--color-text-faint)}
+.run-mode__beats{flex-shrink:0;max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:var(--space-3) var(--space-4);border-bottom:1px solid var(--color-border-hairline)}
+.run-mode__beat{display:grid;grid-template-columns:22px 1fr;align-items:start;gap:var(--space-3);padding:8px 10px;border:1px solid var(--color-border-hairline);border-radius:var(--radius-none);background:var(--color-surface);cursor:pointer;text-align:left;width:100%;transition:border-color var(--duration-instant),background var(--duration-instant),opacity var(--duration-instant)}
+.run-mode__beat:hover{background:var(--color-parchment-warm);border-color:var(--color-border-default)}
+.run-mode__beat:focus-visible{outline:2px solid var(--ember-color-pale);outline-offset:1px}
+.run-mode__beat-check{width:22px;height:22px;margin-top:1px;display:grid;place-items:center;border:1px solid var(--color-border-default);border-radius:var(--radius-none);background:var(--color-parchment-pale);color:transparent;font-size:13px;line-height:1;padding:0;flex-shrink:0}
+.run-mode__beat-start{font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ember-color);margin-bottom:2px}
+.run-mode__beat-text{font-size:var(--text-body-sm);color:var(--color-ink);line-height:1.4;overflow-wrap:anywhere}
+/* played — dims but stays visible/legible; never disappears (a GM wants to see what's done) */
+.run-mode__beat[aria-checked="true"]{background:var(--color-bg);border-color:var(--color-border-hairline);opacity:.6}
+.run-mode__beat[aria-checked="true"] .run-mode__beat-check{background:var(--ember-color);border-color:var(--ember-color);color:var(--color-ink-elevated)}
+.run-mode__beat[aria-checked="true"] .run-mode__beat-text{color:var(--color-text-faint);text-decoration:line-through;text-decoration-color:var(--color-text-faint)}
+
 /* ═══ CENTER — THE STAGE (the Doom Clock, the signature anchor) ═══ */
 .run-mode__region--stage{background:var(--color-parchment);align-items:stretch}
 .run-mode__stage{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--space-5);padding:var(--space-6) var(--space-5);text-align:center}
@@ -19005,6 +19022,7 @@ const RunMode={
     const hadFocus=!!(root&&document.activeElement&&root.contains(document.activeElement));
     this._renderSessionName();
     this._renderCast();
+    this._renderBeats();       // F6: tonight's ordered scene plan, above the doom stage
     this._renderClocks();      // the doom stage (kept name: bind/cp:changed call this)
     this._renderSecrets();
     this._renderDicePad();
@@ -19099,6 +19117,35 @@ const RunMode={
         crisis:'var(--color-crisis)',collapsing:'var(--color-crisis)',hostile:'var(--color-crisis)'};
       return map[pos]||'var(--color-text-faint)';
     }catch(e){return 'var(--color-text-faint)';}
+  },
+
+  // F6 — the ordered scene plan built in Campaign prep, surfaced at the table above the
+  // doom stage. Read-only order here (reorder/edit/delete stay prep-time); the only
+  // control is check-to-mark-played, wired to the board's own cpToggleBeat so playing a
+  // beat here updates the board live and feeds F2's session-snapshot beatsPlayed. Beat #1
+  // is always the Strong Start slot (mirrors the Campaign board's own treatment). Played
+  // beats dim but stay visible — a GM wants to see what's done, not lose it.
+  _renderBeats(){
+    const host=document.getElementById('run-beats');if(!host)return;
+    const E=Utils.escHtml;
+    const beats=(State.cp().beats||[]).filter(Boolean);
+    const countEl=document.getElementById('run-beats-count');
+    const played=beats.filter(b=>b.done).length;
+    if(countEl)countEl.textContent=beats.length?`${played}/${beats.length}`:'none';
+    if(!beats.length){
+      host.innerHTML=`<div class="run-mode__empty">No beats prepped. Build tonight's scene plan in Campaign prep.</div>`;
+      return;
+    }
+    host.innerHTML=beats.map((b,i)=>{
+      const txt=(b.text||'').trim()||'(empty beat)';
+      return `<div class="run-mode__beat" data-beat="${E(b.id)}" role="checkbox" aria-checked="${b.done?'true':'false'}" tabindex="0" aria-label="Beat ${i+1}${i===0?', Strong Start':''}, mark played">
+        <button class="run-mode__beat-check" type="button" tabindex="-1" aria-hidden="true">✓</button>
+        <div class="run-mode__beat-body">
+          ${i===0?'<div class="run-mode__beat-start">Strong Start</div>':''}
+          <div class="run-mode__beat-text">${E(txt)}</div>
+        </div>
+      </div>`;
+    }).join('');
   },
 
   // CENTER — the doom clock stage. Renders into #run-clocks (kept id). One focused
@@ -19453,6 +19500,9 @@ const RunMode={
         // secret toggle
         const sec=e.target.closest('.run-mode__secret');
         if(sec&&sec.dataset.secret){State.cpToggleSecret(sec.dataset.secret);return;}
+        // F6: beat toggle — check off a scene beat as played, live from the table
+        const beat=e.target.closest('.run-mode__beat');
+        if(beat&&beat.dataset.beat){State.cpToggleBeat(beat.dataset.beat);return;}
         // cast bench: pull into / set aside from the scene (live, no trip to prep)
         const benchIn=e.target.closest('[data-bench-in]');
         if(benchIn){this._pullIntoScene(benchIn.dataset.benchIn);return;}
@@ -19491,7 +19541,9 @@ const RunMode={
         if(e.key==='Escape'){this.close();return;}
         if((e.key===' '||e.key==='Enter')){
           const sec=t.closest&&t.closest('.run-mode__secret');
-          if(sec&&sec.dataset.secret){e.preventDefault();State.cpToggleSecret(sec.dataset.secret);}
+          if(sec&&sec.dataset.secret){e.preventDefault();State.cpToggleSecret(sec.dataset.secret);return;}
+          const beat=t.closest&&t.closest('.run-mode__beat');
+          if(beat&&beat.dataset.beat){e.preventDefault();State.cpToggleBeat(beat.dataset.beat);}
         }
       });
       // Cockpit-scoped hotkeys (only while open, never inside a field). Single letters are
@@ -27625,6 +27677,9 @@ window.__rwClearDevTheme=function(){localStorage.removeItem('rw_dev_theme');loca
         <h2>Turning Point</h2>
         <span class="run-mode__chip" id="run-clock-chip">—</span>
       </div>
+      <!-- F6: the ordered scene plan from Campaign prep, surfaced at the table. -->
+      <div class="run-mode__beats-label">Tonight's Beats<span class="run-mode__chip" id="run-beats-count">—</span></div>
+      <div class="run-mode__beats" id="run-beats" aria-label="Tonight's beats, in order"></div>
       <div class="run-mode__stage" id="run-clocks" aria-live="polite"></div>
     </section>
 
