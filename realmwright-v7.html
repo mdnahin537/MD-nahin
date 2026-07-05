@@ -21160,6 +21160,14 @@ const Intake={
 const Tonight={
   // Stored results for "Save secrets" (activated in Delivery C)
   _lastSecrets:[],
+  // F5: stashed pack pieces + the resolved Strong Start text, so "send to prep board"
+  // (per-item buttons and the whole-pack button) always reads THIS render's data even
+  // after a retry re-renders the panel. Reset in _resetResults and at the top of
+  // _renderResults so a failed/pending piece never leaks stale data into a send.
+  _lastHooks:[],
+  _lastNpcs:[],
+  _lastTensions:'',
+  _resolvedStrongStart:'',
   // Bug 5: tracks which nation was generated for this Tonight session so
   // saveSecretsToRealm writes to the right nation even after a nation switch.
   _generatedNationId:null,
@@ -21261,6 +21269,10 @@ const Tonight={
     if(results){results.innerHTML='';results.classList.remove('is-visible');}
     if(spinner)spinner.classList.remove('is-visible');
     this._lastSecrets=[];
+    this._lastHooks=[];
+    this._lastNpcs=[];
+    this._lastTensions='';
+    this._resolvedStrongStart='';
     this._generatedNationId=null;
     this._currentWorldMode=false;
   },
@@ -21427,6 +21439,10 @@ const Tonight={
     if(!results)return;
     if(intro)intro.style.display='none';
 
+    // F5: clear last render's "send to board" state so an errored/pending piece can't
+    // leak stale data into a send (set again below only where real text is known).
+    this._resolvedStrongStart='';
+
     // Phase 5D: stash retry inputs so a single-piece failure can be retried inline.
     this._lastRetryInputs=retryInputs||null;
 
@@ -21443,7 +21459,8 @@ const Tonight={
       html+=`<div class="tonight-section"><div class="tonight-section__label">Strong Start — Pick One</div><div id="tonight-strong-variants"></div></div>`;
     }else{
       const txt=typeof strongStart==='string'?strongStart:(strongStart?.variants?.[0]||'');
-      html+=`<div class="tonight-section"><div class="tonight-section__label">Strong Start — Read Aloud</div><div class="tonight-strong-start" style="white-space:pre-wrap">${Markdown.render(txt||'No opening generated.')}</div>${TransparencyLog.costStampHtml()}</div>`;
+      this._resolvedStrongStart=txt||'';
+      html+=`<div class="tonight-section"><div class="tonight-section__label">Strong Start — Read Aloud</div><div class="tonight-strong-start" style="white-space:pre-wrap">${Markdown.render(txt||'No opening generated.')}</div>${TransparencyLog.costStampHtml()}${txt?`<button class="btn btn--secondary btn--sm tonight-add-btn" data-add-kind="strongstart" type="button" style="margin-top:8px">+ board</button>`:''}</div>`;
     }
 
     // Session Prep — error fallback with retry button if it failed.
@@ -21453,10 +21470,11 @@ const Tonight={
 
     // Three Scenes (hooks mapped to scene ideas)
     const hooks=prep?.hooks||[];
+    this._lastHooks=hooks;
     if(hooks.length){
       html+=`<div class="tonight-section"><div class="tonight-section__label">Scenes & Hooks</div><ul class="tonight-list">`;
-      hooks.forEach(h=>{
-        html+=`<li><strong>${E(h.name||'')}</strong> — ${Markdown.render(h.description||'')}</li>`;
+      hooks.forEach((h,i)=>{
+        html+=`<li><strong>${E(h.name||'')}</strong> — ${Markdown.render(h.description||'')} <button class="btn btn--tertiary btn--sm tonight-add-btn" data-add-kind="hook" data-add-idx="${i}" type="button" style="margin-left:6px">+ board</button></li>`;
       });
       html+='</ul></div>';
     }
@@ -21466,25 +21484,27 @@ const Tonight={
     if(secrets.length){
       html+=`<div class="tonight-section"><div class="tonight-section__label">Secrets & Clues (${secrets.length})</div>`;
       secrets.forEach((s,i)=>{
-        html+=`<div class="tonight-secret"><span class="tonight-secret__num">${i+1}.</span><span>${E(s)}</span></div>`;
+        html+=`<div class="tonight-secret"><span class="tonight-secret__num">${i+1}.</span><span>${E(s)}</span><button class="btn btn--tertiary btn--sm tonight-add-btn" data-add-kind="secret" data-add-idx="${i}" type="button">+ board</button></div>`;
       });
       html+='</div>';
     }
 
     // NPCs from session prep
+    this._lastNpcs=prep?.npcs||[];
     if(prep?.npcs?.length){
       html+=`<div class="tonight-section"><div class="tonight-section__label">Key Figures</div>`;
-      prep.npcs.forEach(npc=>{
+      prep.npcs.forEach((npc,i)=>{
         html+=`<div class="tonight-npc"><div class="tonight-npc__name">${E(npc.name||'')}</div><div class="tonight-npc__role">${E(npc.role||'')}</div>`;
         if(npc.hook)html+=`<div class="tonight-npc__fact"><em>Tonight:</em> ${E(npc.hook)}</div>`;
-        html+='</div>';
+        html+=`<button class="btn btn--tertiary btn--sm tonight-add-btn" data-add-kind="npc" data-add-idx="${i}" type="button" style="margin-top:4px">+ board</button></div>`;
       });
       html+='</div>';
     }
 
     // Tensions summary
+    this._lastTensions=(prep?.tensions||'').trim();
     if(prep?.tensions){
-      html+=`<div class="tonight-section"><div class="tonight-section__label">Current Tensions</div><div class="tonight-strong-start" style="border-left-color:var(--color-tense)">${E(prep.tensions)}</div></div>`;
+      html+=`<div class="tonight-section"><div class="tonight-section__label">Current Tensions</div><div class="tonight-strong-start" style="border-left-color:var(--color-tense)">${E(prep.tensions)}</div><button class="btn btn--secondary btn--sm tonight-add-btn" data-add-kind="tensions" type="button" style="margin-top:8px">+ board (append to stakes)</button></div>`;
     }
 
     // Action bar
@@ -21497,6 +21517,7 @@ const Tonight={
     html+=`<div class="tonight-actions">
       <button class="btn btn--primary" id="tonight-print-btn" type="button">Print / Save PDF</button>
       <button class="btn btn--secondary" id="tonight-new-btn" type="button">Generate another</button>
+      <button class="btn btn--secondary" id="tonight-send-board-btn" type="button">Send this pack to prep board</button>
       ${tonightNationId?`<button class="btn btn--secondary" id="tonight-keep-btn" type="button">Keep this realm</button>`:''}
       ${secrets.length?`<button class="btn btn--secondary" id="tonight-save-secrets-btn" type="button">Save ${secrets.length} secrets to realm</button>`:''}
     </div>`;
@@ -21536,6 +21557,71 @@ const Tonight={
       const saveBtn=document.getElementById('tonight-save-secrets-btn');
       if(saveBtn){saveBtn.disabled=true;saveBtn.textContent='Secrets saved \u2713';}
     });
+    // F5: "Send this pack to prep board" \u2014 deposits the whole generated pack into the
+    // persistent Campaign board through the board's own cpInsert*/cpSet methods (zero
+    // schema change). Strong Start lands as beat #1 (the board's own Strong Start slot);
+    // hooks/secrets/NPCs append; tensions APPEND to stakes \u2014 stakes is a single string,
+    // so existing GM notes are never silently overwritten.
+    document.getElementById('tonight-send-board-btn')?.addEventListener('click',()=>{
+      let count=0;
+      if(this._resolvedStrongStart){State.cpInsertBeat({text:this._resolvedStrongStart},0);count++;}
+      (this._lastHooks||[]).forEach(h=>{
+        const t=[h?.name,h?.description].filter(Boolean).join(': ').trim();
+        if(t){State.cpInsertBeat({text:t});count++;}
+      });
+      (this._lastSecrets||[]).forEach(s=>{
+        const t=String(s||'').trim();
+        if(t){State.cpInsertSecret({text:t});count++;}
+      });
+      (this._lastNpcs||[]).forEach(npc=>{
+        if(!npc?.name)return;
+        State.cpInsertNpc({name:npc.name||'',role:npc.role||'',motivation:npc.drive||npc.hook||'',here:false});
+        count++;
+      });
+      if(this._lastTensions){
+        const cur=(State.cp().stakes||'').trim();
+        State.cpSet('stakes',(cur?cur+'\n\n':'')+this._lastTensions);
+        count++;
+      }
+      if(typeof Campaign!=='undefined'&&Campaign.isOpen())Campaign.render();
+      const sendBtn=document.getElementById('tonight-send-board-btn');
+      if(sendBtn){sendBtn.disabled=true;sendBtn.textContent='Sent to board \u2713';}
+      showToast(count?'Added to prep board.':'Nothing to send yet.',count&&typeof Campaign!=='undefined'?[{label:'Open board \u2192',handler:()=>Campaign.open()}]:[],3500);
+    });
+    // F5: per-item "+ board" buttons \u2014 one delegated listener, guarded so a retry
+    // re-render never double-binds. Always reads this._last*/\u200b_resolvedStrongStart,
+    // which _renderResults keeps current, so it can't act on stale data after a retry.
+    if(!results.dataset.boardWired){
+      results.dataset.boardWired='1';
+      results.addEventListener('click',e=>{
+        const addBtn=e.target.closest('.tonight-add-btn');
+        if(!addBtn)return;
+        const kind=addBtn.dataset.addKind;
+        const idx=addBtn.dataset.addIdx!=null?parseInt(addBtn.dataset.addIdx,10):null;
+        let added=false;
+        if(kind==='strongstart'&&this._resolvedStrongStart){
+          State.cpInsertBeat({text:this._resolvedStrongStart},0);added=true;
+        }else if(kind==='hook'){
+          const h=(this._lastHooks||[])[idx];
+          const t=h?[h.name,h.description].filter(Boolean).join(': ').trim():'';
+          if(t){State.cpInsertBeat({text:t});added=true;}
+        }else if(kind==='secret'){
+          const t=String((this._lastSecrets||[])[idx]||'').trim();
+          if(t){State.cpInsertSecret({text:t});added=true;}
+        }else if(kind==='npc'){
+          const npc=(this._lastNpcs||[])[idx];
+          if(npc?.name){State.cpInsertNpc({name:npc.name||'',role:npc.role||'',motivation:npc.drive||npc.hook||'',here:false});added=true;}
+        }else if(kind==='tensions'&&this._lastTensions){
+          const cur=(State.cp().stakes||'').trim();
+          State.cpSet('stakes',(cur?cur+'\n\n':'')+this._lastTensions);
+          added=true;
+        }
+        if(!added)return;
+        if(typeof Campaign!=='undefined'&&Campaign.isOpen())Campaign.render();
+        addBtn.disabled=true;addBtn.textContent='Added \u2713';
+        showToast('Added to prep board.',typeof Campaign!=='undefined'?[{label:'Open board \u2192',handler:()=>Campaign.open()}]:[],3000);
+      });
+    }
 
     // Phase 5D: strong-start variant picker \u2192 on pick, replace with chosen text.
     const variantsCtr=document.getElementById('tonight-strong-variants');
@@ -21548,7 +21634,8 @@ const Tonight={
           if(section){
             const label=section.querySelector('.tonight-section__label');
             if(label)label.textContent='Strong Start \u2014 Read Aloud';
-            variantsCtr.outerHTML=`<div class="tonight-strong-start" style="white-space:pre-wrap">${Markdown.render(variant||'')}</div>${TransparencyLog.costStampHtml()}`;
+            this._resolvedStrongStart=variant||'';
+            variantsCtr.outerHTML=`<div class="tonight-strong-start" style="white-space:pre-wrap">${Markdown.render(variant||'')}</div>${TransparencyLog.costStampHtml()}<button class="btn btn--secondary btn--sm tonight-add-btn" data-add-kind="strongstart" type="button" style="margin-top:8px">+ board</button>`;
           }
         },
       });
