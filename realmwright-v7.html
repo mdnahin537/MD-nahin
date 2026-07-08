@@ -2796,6 +2796,18 @@ body.theme-ember .toast__link{color:var(--ember-color)}
 .detail-panel__desc{font-family:var(--font-display);font-size:var(--text-body);
   color:var(--color-ink);line-height:1.5;margin-bottom:var(--space-4)}
 .detail-panel__actions{display:flex;gap:var(--space-3);margin-top:var(--space-4)}
+/* V-PANEL-1: a subtle backdrop dim behind every slide-in drawer, so the drawer reads
+   as a focused surface instead of a thin strip tacked onto the still-live page behind
+   it (worst on light Manuscript, where the drawer's near-white fill barely differed
+   from the war room's own off-white). Two ids, not one shared z-index, because
+   copilot-panel (z:11) and .sc-panel (z:7000) sit in very different stacking bands —
+   see the HTML comment by these elements. Purely decorative: pointer-events stays off
+   even while visible, so this is not a new click-to-dismiss affordance. */
+.rw-panel-scrim{position:fixed;inset:0;background:rgba(8,10,14,0);opacity:0;
+  pointer-events:none;transition:opacity var(--duration-default) var(--ease-out)}
+.rw-panel-scrim.is-visible{opacity:1;background:rgba(8,10,14,.40)}
+#copilot-panel-scrim{z-index:10}
+#sc-panel-scrim{z-index:6999}
 /* Copilot panel — slides in from right, covers arsenal width */
 .copilot-panel{position:fixed;right:0;top:60px;bottom:0;width:420px;max-width:90vw;
   background:var(--color-parchment);border-left:1px solid var(--color-gold);
@@ -2804,6 +2816,14 @@ body.theme-ember .toast__link{color:var(--ember-color)}
   display:flex;flex-direction:column;
   box-shadow:-4px 0 16px rgba(13,27,42,.08)}
 .copilot-panel.is-open{transform:translateX(0)}
+/* Manuscript/Modern never had their own copilot-panel elevation (only Ember does,
+   further down) — it fell back to background:var(--color-parchment), the exact same
+   tone as the body behind it, so the "thin left border only" was all that separated
+   them. Mirrors the existing .sc-panel treatment for the same two themes below. */
+body.theme-manuscript .copilot-panel{background:var(--color-parchment-pale);
+  box-shadow:-8px 0 28px rgba(24,34,48,0.12);border-left:1px solid var(--color-gold)}
+body.theme-modern .copilot-panel{background:var(--color-parchment-pale);
+  box-shadow:-8px 0 28px rgba(0,0,0,0.4)}
 /* ── SESSIONS / HOOKS / SECRETS SLIDE-IN PANELS ── */
 .sc-panel{position:fixed;right:0;top:60px;bottom:0;width:480px;max-width:95vw;
   background:var(--color-bg);border-left:1px solid var(--color-border-hairline);
@@ -4462,6 +4482,15 @@ SECTION 8: DOM STRUCTURE
   </div>
   <div id="dp-content"></div>
 </div>
+<!-- Slide-in panel scrims (V-PANEL-1): purely decorative dim behind the Copilot panel
+     and the .sc-panel family (Sessions/Hooks/Secrets/Fronts/Locations/Bestiary/
+     Relations/Web/Solo/Threads/Continuity). Two separate elements because the two
+     panel families sit at very different z-indices (copilot-panel is z:11, deliberately
+     low so toasts still surface over it; .sc-panel is z:7000) — one shared z-index
+     can't sit correctly under both. pointer-events stays off even when visible, so
+     this never intercepts a click; it is visual-only, not a new dismiss affordance. -->
+<div class="rw-panel-scrim" id="copilot-panel-scrim"></div>
+<div class="rw-panel-scrim" id="sc-panel-scrim"></div>
 <!-- Copilot Panel -->
 <div class="copilot-panel" id="copilot-panel" role="dialog" aria-label="Copilot">
   <div class="copilot-panel__header">
@@ -13654,6 +13683,7 @@ const Copilot={
   open(){
     this._open=true;
     document.getElementById('copilot-panel')?.classList.add('is-open');
+    document.getElementById('copilot-panel-scrim')?.classList.add('is-visible');
     // Hide the floating launcher so it never overlaps the open panel (bottom-right).
     document.getElementById('copilot-launch')?.classList.add('is-hidden');
     this._lastNationId=State.data?.meta?.activeNationId;
@@ -13665,6 +13695,7 @@ const Copilot={
   close(){
     this._open=false;
     document.getElementById('copilot-panel')?.classList.remove('is-open');
+    document.getElementById('copilot-panel-scrim')?.classList.remove('is-visible');
     document.getElementById('copilot-launch')?.classList.remove('is-hidden');
   },
   toggle(){this._open?this.close():this.open();},
@@ -20671,12 +20702,14 @@ const Lint={
     if(typeof SHSPanels!=='undefined')SHSPanels.closeAll();
     if(!panel)return;
     panel.classList.add('is-open');
+    document.getElementById('sc-panel-scrim')?.classList.add('is-visible');
     this._open=true;
     document.querySelectorAll('.wms-nav__item[data-route]').forEach(el=>el.classList.toggle('is-active',el.dataset.route==='continuity'));
     this.render();
   },
   close(){
     document.getElementById('panel-continuity')?.classList.remove('is-open');
+    document.getElementById('sc-panel-scrim')?.classList.remove('is-visible');
     this._open=false;
     document.querySelectorAll('.wms-nav__item[data-route]').forEach(el=>el.classList.toggle('is-active',el.dataset.route==='war-room'));
   },
@@ -21861,6 +21894,7 @@ const SHSPanels={
     const panel=document.getElementById(`panel-${which}`);
     if(!panel)return;
     panel.classList.add('is-open');
+    document.getElementById('sc-panel-scrim')?.classList.add('is-visible');
     this._open=which;
     this[`render${which.charAt(0).toUpperCase()+which.slice(1)}`]();
   },
@@ -21869,6 +21903,7 @@ const SHSPanels={
     ['sessions','hooks','secrets','fronts','locations','bestiary','relations','web','solo','threads'].forEach(p=>{
       document.getElementById(`panel-${p}`)?.classList.remove('is-open');
     });
+    document.getElementById('sc-panel-scrim')?.classList.remove('is-visible');
     // Restore war-room as active
     document.querySelectorAll('.wms-nav__item[data-route]').forEach(el=>{
       el.classList.toggle('is-active',el.dataset.route==='war-room');
@@ -23870,6 +23905,11 @@ const WorldShell={
         // Chronicle is rendered persistently in the footer band — clicking the nav
         // item simply closes any open SHS panels so the main view (with chronicle visible) is shown.
         if(typeof SHSPanels!=='undefined')SHSPanels.closeAll();
+        // Bonus-bug fix: Continuity is owned by Lint, not SHSPanels (same split the
+        // P5.5 comment in openPanel() already documents), so closeAll() alone left the
+        // Continuity Sweep panel (and its scrim) stuck open when a GM navigated to War
+        // Room directly from it instead of via another panel or its own × button.
+        if(typeof Lint!=='undefined')Lint.close();
         return;
       }
       if(route==='continuity'){
