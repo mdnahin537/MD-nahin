@@ -23921,12 +23921,13 @@ const WorldShell={
       ];
       const picker=document.createElement('div');
       picker.id='wms-adv-picker';
-      picker.style.cssText='position:absolute;z-index:600;background:var(--color-parchment-warm);border:1px solid var(--color-gold-pale);border-radius:6px;padding:12px 0;min-width:220px;box-shadow:var(--shadow-modal);display:flex;flex-direction:column;gap:0';
+      // Bonus-bug fix (V-OVERFLOW-1): max-height + scroll is a safety net for any
+      // viewport too short even for the flipped-upward placement below (visibility
+      // stays hidden until that placement is computed, so there's no flash at the
+      // wrong spot).
+      picker.style.cssText='position:fixed;z-index:600;background:var(--color-parchment-warm);border:1px solid var(--color-gold-pale);border-radius:6px;padding:12px 0;min-width:220px;max-height:calc(100vh - 16px);overflow-y:auto;box-shadow:var(--shadow-modal);display:flex;flex-direction:column;gap:0;visibility:hidden';
       const btn=document.getElementById('wms-advance-world-btn');
       const rect=btn.getBoundingClientRect();
-      picker.style.left=rect.left+'px';
-      picker.style.top=(rect.bottom+6)+'px';
-      picker.style.position='fixed';
       // Label
       const lbl=document.createElement('div');
       lbl.style.cssText='padding:6px 16px 10px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--color-text-muted);border-bottom:1px solid var(--color-border-hairline);margin-bottom:4px';
@@ -23953,6 +23954,19 @@ const WorldShell={
         picker.appendChild(row);
       });
       document.body.appendChild(picker);
+      // Collision handling: this always opened downward anchored to the button, which
+      // sits low in the left rail — the 1-year/2-year rows fell 98-132px below the
+      // viewport in every theme (measured via computed geometry). Now that the picker
+      // is in the DOM its real height is known, so flip it upward when there isn't
+      // room below and there IS room above; otherwise clamp it to the viewport (the
+      // max-height + scroll set above catches the rest).
+      const pickerH=picker.offsetHeight,pickerW=picker.offsetWidth;
+      const spaceBelow=window.innerHeight-rect.bottom-6,spaceAbove=rect.top-6;
+      picker.style.top=(pickerH>spaceBelow&&spaceAbove>spaceBelow)
+        ?Math.max(8,rect.top-pickerH-6)+'px'
+        :Math.min(rect.bottom+6,window.innerHeight-pickerH-8)+'px';
+      picker.style.left=Math.max(8,Math.min(rect.left,window.innerWidth-pickerW-8))+'px';
+      picker.style.visibility='visible';
       // Dismiss on click outside
       const dismiss=(e)=>{if(!picker.contains(e.target)&&e.target!==btn){picker.remove();document.removeEventListener('click',dismiss,true);}};
       setTimeout(()=>document.addEventListener('click',dismiss,true),0);
