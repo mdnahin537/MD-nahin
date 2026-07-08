@@ -1372,9 +1372,14 @@ body.theme-manuscript .wms-paste-btn{border-color:var(--color-border-default)}
 /* Feature drawers — a fresh chart sheet slid in from the right. */
 body.theme-manuscript .sc-panel{background-color:var(--color-parchment-pale);
   color:var(--color-ink);
-  box-shadow:-8px 0 28px rgba(24,34,48,0.12);
   border-left:1px solid var(--color-gold);
   transition:transform 200ms var(--ease-out),opacity 200ms var(--ease-out)}
+/* V-EDGE-1 (confirmed via computed geometry — this is the exact rule that produced
+   the dark vertical band bleeding along the right edge of the light Manuscript war
+   room): box-shadow was unconditional on .sc-panel, so all ~11 drawer instances kept
+   painting their -8px/28px-blur shadow even fully closed/off-screen, and the blur
+   reached back across the viewport edge. Scoped to .is-open only. */
+body.theme-manuscript .sc-panel.is-open{box-shadow:-8px 0 28px rgba(24,34,48,0.12)}
 body.theme-manuscript .sc-panel *{color:inherit}
 body.theme-manuscript .sc-panel__title{font-family:var(--font-display);
   font-weight:700;color:var(--color-gold)}
@@ -1541,8 +1546,9 @@ body.theme-modern .ember-divider::after{content:'';flex:1;height:1px;
   background:var(--color-border-hairline)}
 body.theme-modern .ember-divider__gem{display:none}
 /* Feature drawers — flat graphite; functional slide only. */
-body.theme-modern .sc-panel{box-shadow:-8px 0 28px rgba(0,0,0,0.4);
-  transition:transform 200ms var(--ease-out),opacity 200ms var(--ease-out)}
+body.theme-modern .sc-panel{transition:transform 200ms var(--ease-out),opacity 200ms var(--ease-out)}
+/* V-EDGE-1: same off-screen shadow-bleed bug as Manuscript above — scoped to .is-open. */
+body.theme-modern .sc-panel.is-open{box-shadow:-8px 0 28px rgba(0,0,0,0.4)}
 body.theme-modern .sc-panel__title{font-family:var(--font-display);
   font-weight:600;color:var(--color-gold)}
 
@@ -2017,7 +2023,10 @@ body.theme-ember .detail-panel__close:hover{color:var(--ember-color)}
 /* ── COPILOT PANEL CHROME ────────────────────────────────────────────── */
 body.theme-ember .copilot-panel{
   background:#150f09;
-  border-left:4px solid var(--ember-color);
+  border-left:4px solid var(--ember-color)}
+/* V-EDGE-1: was unconditional, so this large dark shadow kept painting (and bleeding
+   across the viewport's right edge) even while the panel sat translated off-screen. */
+body.theme-ember .copilot-panel.is-open{
   box-shadow:-2px 0 10px rgba(255,185,100,0.5),-20px 0 50px rgba(0,0,0,0.95)}
 
 /* Header */
@@ -2820,17 +2829,23 @@ body.theme-ember .toast__link{color:var(--ember-color)}
   background:var(--color-parchment);border-left:1px solid var(--color-gold);
   z-index:calc(var(--z-sticky) + 1);transform:translateX(100%);
   transition:transform var(--duration-default) var(--ease-out);
-  display:flex;flex-direction:column;
-  box-shadow:-4px 0 16px rgba(13,27,42,.08)}
-.copilot-panel.is-open{transform:translateX(0)}
+  display:flex;flex-direction:column}
+/* Bonus-bug fix (V-EDGE-1): box-shadow used to be unconditional on .copilot-panel, so
+   even fully closed (translated off-screen) it kept painting its own shadow — and
+   since translateX(100%) leaves zero gap, the blur radius bled back across the
+   viewport's right edge as a faint dark vertical band (same structural bug confirmed
+   on the .sc-panel family below, worst on light Manuscript where a dark band on pale
+   paper is most visible). Scoped to .is-open — nothing to hide when off-screen. */
+.copilot-panel.is-open{transform:translateX(0);box-shadow:-4px 0 16px rgba(13,27,42,.08)}
 /* Manuscript/Modern never had their own copilot-panel elevation (only Ember does,
    further down) — it fell back to background:var(--color-parchment), the exact same
    tone as the body behind it, so the "thin left border only" was all that separated
    them. Mirrors the existing .sc-panel treatment for the same two themes below. */
 body.theme-manuscript .copilot-panel{background:var(--color-parchment-pale);
-  box-shadow:-8px 0 28px rgba(24,34,48,0.12);border-left:1px solid var(--color-gold)}
-body.theme-modern .copilot-panel{background:var(--color-parchment-pale);
-  box-shadow:-8px 0 28px rgba(0,0,0,0.4)}
+  border-left:1px solid var(--color-gold)}
+body.theme-manuscript .copilot-panel.is-open{box-shadow:-8px 0 28px rgba(24,34,48,0.12)}
+body.theme-modern .copilot-panel{background:var(--color-parchment-pale)}
+body.theme-modern .copilot-panel.is-open{box-shadow:-8px 0 28px rgba(0,0,0,0.4)}
 /* ── SESSIONS / HOOKS / SECRETS SLIDE-IN PANELS ── */
 .sc-panel{position:fixed;right:0;top:60px;bottom:0;width:480px;max-width:95vw;
   background:var(--color-bg);border-left:1px solid var(--color-border-hairline);
