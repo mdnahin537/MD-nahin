@@ -910,11 +910,22 @@ button.wms-sec-link{background:none;border:none;padding:0;cursor:pointer}
   .wms-ae-arrow{opacity:.55;transform:translateY(-50%) translateX(-4px)}
 }
 .wms-ars-foot{padding:16px 24px;border-top:1px solid var(--color-border-hairline);flex-shrink:0}
-.wms-paste-btn{width:100%;padding:12px;background:none;border:1px dashed rgba(255,185,100,.28);
+/* Bonus-bug fix: Decipher Notes used to be a separate global position:fixed FAB
+   (bottom:80px;right:32px;z-index:600) hardcoded to an ember-brown gradient in every
+   theme. It overlapped the Arsenal cards AND the Copilot compose bar (two reported
+   overlaps) and read as a dark blob on light Manuscript paper (theme-leak). It is now
+   a normal in-flow toolbar button living right where its output goes — beside Paste AI
+   Response in the Arsenal foot — sharing that button's theme-aware recipe below. */
+.wms-ars-foot-row{display:flex;gap:8px}
+.wms-ars-foot-row .wms-paste-btn{width:auto;flex:1 1 0}
+.wms-paste-btn{width:100%;padding:12px;background:none;border:1px dashed var(--color-border-default);
   color:var(--color-text-muted);font-family:'Cinzel',serif;font-size:10px;font-weight:500;
-  letter-spacing:.20em;text-transform:uppercase;cursor:pointer;
+  letter-spacing:.14em;text-transform:uppercase;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:6px;min-width:0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   transition:border-color .2s,color .2s,border-style .2s}
 .wms-paste-btn:hover{border-color:var(--ember-color);border-style:solid;color:var(--ember-color)}
+.wms-paste-btn .material-symbols-outlined{font-size:15px;flex-shrink:0}
 /* ── Arsenal two-lane upgrade: section headers, expand panel, action lanes ── */
 .wms-ars-sec{font-family:var(--font-mono);font-size:9px;letter-spacing:.22em;text-transform:uppercase;
   color:var(--color-text-faint);padding:16px 0 6px;border-bottom:1px solid var(--color-border-hairline)}
@@ -2974,18 +2985,25 @@ body.theme-ember .sc-panel__title{color:var(--ember-color)}
    Was position:absolute inside the scrolling .living-nation column, so it scrolled
    out of view and only existed on the dashboard. Fixed floats it over every surface
    where a world is active. z-index 120 clears page content + the top-left cost meter
-   (90) but stays under modals (1010) and the full-screen modes (8000) by design. */
+   (90) but stays under modals (1010) and the full-screen modes (8000) by design.
+   Bonus-bug fix: background/color used to be var(--color-ink)/var(--color-parchment) —
+   "ink" is each theme's TEXT colour, which is pale cream in Ember and steel in Modern
+   (so the pill came out light there) but near-black in Manuscript (so the SAME pill
+   rendered as a dark-navy blob on the light chart paper — one of the two "black colour"
+   complaints). Switched to the accent (--color-gold, i.e. --ember-color's own source)
+   as the fill: amber in Ember, drafting-blue in Manuscript, teal in Modern — one solid
+   accent-coloured pill, consistent and correctly-contrasted in all three themes. */
 .copilot-launch{position:fixed;bottom:calc(140px + var(--space-4));right:var(--space-4);
-  background:var(--color-ink);color:var(--color-parchment);
+  background:var(--color-gold);color:var(--color-parchment);
   padding:var(--space-2) var(--space-4);border-radius:var(--radius-pill);
-  border:1px solid var(--color-gold);cursor:pointer;
+  border:1px solid var(--color-gold-deep);cursor:pointer;
   font-family:var(--font-display);font-size:var(--text-body-sm);
   display:flex;align-items:center;gap:var(--space-2);
   transition:all var(--duration-instant);
   box-shadow:0 4px 14px rgba(13,27,42,.28);z-index:120}
-.copilot-launch:hover{background:var(--color-ink-elevated);border-color:var(--color-gold-deep);
+.copilot-launch:hover{background:var(--color-gold-deep);border-color:var(--color-gold-deep);
   box-shadow:0 6px 18px rgba(13,27,42,.34);transform:translateY(-1px)}
-.copilot-launch__mark{color:var(--color-gold);font-size:1.1em}
+.copilot-launch__mark{color:var(--color-parchment);font-size:1.1em}
 /* Hidden while onboarding (no world yet) and while the Copilot panel is open. */
 .is-onboarding-active .copilot-launch,
 .copilot-launch.is-hidden{display:none}
@@ -3934,33 +3952,9 @@ body.theme-manuscript .run-mode{--run-exc-yes:#1f9d57;--run-exc-yes-glow:transpa
 .wms-cn-loc{font-size:8px;font-family:var(--font-mono);color:var(--color-thriving);opacity:.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:52px;margin-top:1px}
 .loc-type-icon{vertical-align:middle;font-size:14px;color:var(--color-text-faint)}
 
-/* ── DELIVERY G CSS (Decipher FAB, Relationship Web, Global Search) ─── */
-
-/* Notes Decipher FAB */
-/* Bonus-bug fix: was bottom:32px, which put this FAB's 44px-tall box (32-76px up from
-   the viewport bottom) squarely on top of #copilot-send (a constant 35-67px up from the
-   bottom whenever the Copilot panel is open, at every viewport width — measured, not
-   guessed). z-index 600 also clears the panel (11), so the overlap was fully visible,
-   not just hit-tested. Raised to clear the send button's band with margin; this is a
-   pure vertical relationship so it holds at any width, unlike an offset tied to the
-   panel's own responsive breakpoint. */
-.decipher-fab{
-  position:fixed;bottom:80px;right:32px;z-index:600;
-  display:flex;align-items:center;gap:8px;
-  padding:12px 20px;
-  background:linear-gradient(135deg,#1a1208,#2a1c10);
-  border:1px solid rgba(255,185,100,0.5);
-  color:var(--ember-color,#fbd38d);
-  font-family:'Cinzel',serif;font-size:11px;letter-spacing:.1em;
-  cursor:pointer;transition:all .2s;
-  box-shadow:0 4px 24px rgba(0,0,0,.5),0 0 0 0 rgba(255,185,100,0);
-}
-.decipher-fab:hover{
-  border-color:rgba(255,185,100,0.9);
-  box-shadow:0 4px 32px rgba(0,0,0,.6),0 0 16px rgba(255,185,100,.15);
-  transform:translateY(-1px);
-}
-.decipher-fab .material-symbols-outlined{font-size:18px}
+/* ── DELIVERY G CSS (Relationship Web, Global Search) ─── */
+/* Decipher Notes was a global position:fixed FAB here — demoted to a normal in-flow
+   .wms-paste-btn in the Arsenal foot (see .wms-ars-foot-row); no standalone CSS needed. */
 
 /* Relationship Web Panel */
 #panel-web{width:100%;max-width:none;overflow:hidden}
@@ -4416,7 +4410,10 @@ SECTION 8: DOM STRUCTURE
         <div class="wms-ars-list" id="wms-ars-list"></div>
         <div class="wms-ars-foot">
           <div id="wms-ars-last" class="wms-ars-last"></div>
-          <button class="wms-paste-btn" id="wms-paste-btn">▼ Paste AI Response</button>
+          <div class="wms-ars-foot-row">
+            <button class="wms-paste-btn" id="decipher-fab" aria-label="Decipher notes"><span class="material-symbols-outlined">auto_fix_high</span>Decipher</button>
+            <button class="wms-paste-btn" id="wms-paste-btn">▼ Paste AI Response</button>
+          </div>
         </div>
       </aside>
     </div>
@@ -27900,12 +27897,6 @@ window.__rwClearDevTheme=function(){localStorage.removeItem('rw_dev_theme');loca
   </div>
 </div>
 <div class="search-modal__overlay" id="search-overlay"></div>
-
-<!-- ─── NOTES DECIPHER FAB ─── -->
-<button class="decipher-fab" id="decipher-fab" aria-label="Decipher notes" style="display:none">
-  <span class="material-symbols-outlined">auto_fix_high</span>
-  Decipher Notes
-</button>
 
 <!-- ─── TRANSPARENCY LOG ─── -->
 <div id="transparency-log" class="tlog is-collapsed" aria-label="AI call transparency log">
