@@ -669,10 +669,19 @@ body.theme-ember .gm-badge{
    per-theme --hb-* tokens (front=crisis, threshold=caution, pressure=accent),
    refined to read "instrument", not "alarm". Motion: ONE element animates (the
    rank-1 rail), fully gated by reduced-motion. */
-.wms-heartbeat{display:flex;flex-direction:column;gap:8px;
-  /* Per-theme severity ramp; overridden in each body.theme-* block below. */
-  --hb-front:#ff7a5c;--hb-threshold:var(--color-tense);--hb-pressure:#c89a5e;
-  --hb-rail-track:rgba(255,255,255,.07)}
+/* Bonus-bug fix: this used to redeclare --hb-front/--hb-threshold/--hb-pressure/
+   --hb-rail-track directly on .wms-heartbeat itself (as a "default"), but a custom
+   property declared directly ON an element always wins over one it would otherwise
+   INHERIT from an ancestor — so this local default permanently shadowed every one of
+   the three carefully-tuned body.theme-*{...} severity ramps below (comment literally
+   said "overridden in each body.theme-* block below," but nothing actually could:
+   body.theme-manuscript sets these on <body>, .wms-heartbeat re-sets them on itself,
+   and the closer declaration always wins for inheritance purposes). Every theme was
+   silently rendering the SAME hardcoded ramp — this is the actual root cause of the
+   "1/2/3 ACTIVE PRESSURE" numbers reading pale-tan on white in Manuscript instead of
+   that theme's intended AA-safe drafting-blue. Removed the shadowing declarations so
+   each theme's own values (already authored, just never reachable) finally apply. */
+.wms-heartbeat{display:flex;flex-direction:column;gap:8px}
 .wms-hb-item{position:relative;display:grid;
   grid-template-columns:3px 1fr;gap:0 15px;align-items:stretch;
   padding:13px 16px 13px 0;
