@@ -1750,8 +1750,14 @@ body.mobile-gate-open{overflow:hidden}
 .tlog__clear{background:none;border:none;cursor:pointer;font-size:var(--text-label-sm,.75rem);letter-spacing:0.10em;text-transform:uppercase;color:var(--color-text-faint,#7a7058);padding:0;transition:color var(--duration-instant,80ms)}
 .tlog__clear:hover{color:var(--color-crisis,#ffb4ab)}
 
-/* ── F7 · COST METER (top-left, shares ornament area with F3 thinking indicator) ── */
-.rw-cost-meter{position:fixed;top:calc(72px + var(--sample-banner-height,0px));left:var(--space-4);z-index:90;display:inline-flex;align-items:center;gap:var(--space-2);padding:5px var(--space-3);border-radius:999px;border:0.5px solid var(--color-border-default,rgba(160,142,124,0.30));background:var(--color-bg,#120c07);color:var(--color-text-muted,#c0b898);font-size:var(--text-label-sm,.75rem);letter-spacing:0.04em;cursor:pointer;font-family:var(--font-mono);transition:border-color 80ms,color 80ms,box-shadow 160ms;user-select:none}
+/* ── F7 · COST METER (top-left, shares ornament area with F3 thinking indicator) ──
+   Hidden per Hunter's ruling: dev-facing cost telemetry ("$0.000 · 0 calls") pinned
+   over content reads as a dev build, not a $29 product. The bottom-left transparency
+   log pill ("No AI calls yet", #tlog-pill-btn) is the one surviving, user-facing entry
+   point to the same call log — left untouched. display:none only; the JS mount/update
+   logic (CostMeter.render, TransparencyLog totals) is unchanged and harmless to keep
+   running off-screen in case a future surface wants to read _usd/_calls. */
+.rw-cost-meter{display:none;position:fixed;top:calc(72px + var(--sample-banner-height,0px));left:var(--space-4);z-index:90;align-items:center;gap:var(--space-2);padding:5px var(--space-3);border-radius:999px;border:0.5px solid var(--color-border-default,rgba(160,142,124,0.30));background:var(--color-bg,#120c07);color:var(--color-text-muted,#c0b898);font-size:var(--text-label-sm,.75rem);letter-spacing:0.04em;cursor:pointer;font-family:var(--font-mono);transition:border-color 80ms,color 80ms,box-shadow 160ms;user-select:none}
 .rw-cost-meter:hover{border-color:var(--ember-color,#ffb964);color:var(--ember-color,#ffb964)}
 .rw-cost-meter__dot{color:var(--ember-color,#ffb964);font-size:9px}
 .rw-cost-meter__usd{color:var(--color-ink,#f4ecd8);letter-spacing:0.02em}
