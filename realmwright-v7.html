@@ -4478,10 +4478,10 @@ SECTION 8: DOM STRUCTURE
     <div class="copilot-panel__meta-item" style="margin-left:auto">
       <label for="copilot-depth-select" style="font-size:var(--text-label-sm);color:var(--color-text-muted);margin-right:4px">Depth:</label>
       <select class="form-input" id="copilot-depth-select" style="width:auto;font-size:var(--text-label-sm);padding:2px 6px" aria-label="Context depth">
-        <option value="low">Low · 10 events · ~$0.005/turn</option>
-        <option value="medium" selected>Medium · 30 events · ~$0.015/turn</option>
-        <option value="high">High · 50 events · ~$0.04/turn</option>
-        <option value="full">Full · everything · variable</option>
+        <option value="low">Low · 10 events</option>
+        <option value="medium" selected>Medium · 30 events</option>
+        <option value="high">High · 50 events</option>
+        <option value="full">Full · everything</option>
       </select>
     </div>
   </div>
@@ -6898,17 +6898,22 @@ const AccuracyChip={
   },
   _color(tok){return tok<=2000?'ok':tok<=8000?'warn':'hot';},
   _fmtTok(n){if(n>=1000)return`${(n/1000).toFixed(1)}k`;return String(n);},
+  // Bonus-bug fix: this chip used to print raw dev telemetry to buyers — an approx
+  // token count ("~2.2k tok") and an internal tier code ("mid"/"xhigh"/"cached") that
+  // doesn't even match the user-facing Low/Medium/High/Full depth vocabulary shown in
+  // the Depth dropdown. It's also the exact text that was truncating in the Copilot
+  // footer (the string was simply too long for the chip's width). Dropped both; kept
+  // the plain-English event count. The token count still silently drives _color()
+  // (the dot tints green/amber/red) so the "how much context" signal survives, just
+  // without exposing the internal number. Click-to-open-tier-picker is bound to the
+  // whole button, not this text, so removing the tier span doesn't touch that.
   render(meta){
     const m=meta||{};
     const total=m.eventsTotal||0,full=m.eventsFull||0,tok=m.approxTokens||0;
     const color=this._color(tok);
-    const tier=(m.tier||'mid').toLowerCase();
-    const cacheable=m.cacheable?' · cached':'';
-    const promoted=m.autoPromoted?' · auto-promote':'';
     return`<button type="button" class="rw-acc-chip rw-acc-chip--${color}" data-surface="${m.surface||''}" aria-label="Context being sent — click to change effort">`+
       `<span class="rw-acc-chip__dot" aria-hidden="true">●</span>`+
-      `<span class="rw-acc-chip__main">Sending: ${full}${total>full?` of ${total}`:''} event${total===1?'':'s'} · realm snapshot · ~${this._fmtTok(tok)} tok</span>`+
-      `<span class="rw-acc-chip__tier">${tier}${promoted}${cacheable}</span>`+
+      `<span class="rw-acc-chip__main">Sending: ${full}${total>full?` of ${total}`:''} event${total===1?'':'s'} · realm snapshot</span>`+
       `</button>`;
   },
   // Mount inline: containerEl receives the chip + a hidden tier-picker popover. Re-renders
@@ -13626,8 +13631,19 @@ const Copilot={
     if(cents<10)return `≈ ${cents.toFixed(1)}¢ per message`;
     return `≈ ${Math.round(cents)}¢ per message`;
   },
+  // Bonus-bug fix (V-CHROME-2): this is a DISPLAY label only — purely derived from the
+  // functional model id (State...copilotModel) for rendering in the status line and the
+  // Audience chat header. It never feeds back into the API call or any model-detection
+  // logic (that all keys off Copilot.NEMOTRON_FREE / the raw id directly), so relabelling
+  // it here is safe and can't break the AI connection. The free default's raw name —
+  // "NVIDIA Nemotron Ultra" — was showing as a PERMANENT status line to the non-technical
+  // GMs it's aimed at ("Free by NVIDIA" is the one-click path for exactly that audience)
+  // and read as a dev build. Paid models keep their existing friendly names (Claude
+  // Haiku/Sonnet/Opus, GPT-4o, Gemini) — those are deliberate user choices worth
+  // confirming, and are already reasonably professional.
   modelLabel(){
     const model=State.data?.meta?.settings?.copilotModel||'anthropic/claude-sonnet-latest';
+    if(model===Copilot.NEMOTRON_FREE)return 'Free Model';
     const opt=document.querySelector(`#copilot-model-select option[value="${model}"]`);
     if(opt){
       // Pull just the friendly name (text before " — ")
