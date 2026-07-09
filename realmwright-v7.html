@@ -5049,7 +5049,7 @@ Description: A tunnel gave way, halting the eastern works.</pre>
       <div class="rw-ai-rec">
         <div class="rw-ai-rec__badge">Recommended</div>
         <div class="rw-ai-rec__title">✨ Free by NVIDIA</div>
-        <div class="rw-ai-rec__sub">Free 550B AI · one click, free sign-in (via OpenRouter, no card).</div>
+        <div class="rw-ai-rec__sub" id="copilot-free-nvidia-sub">Free AI from NVIDIA · one click, free sign-in (via OpenRouter, no card).</div>
         <button class="btn btn--primary rw-ai-rec__btn" id="copilot-free-nvidia">Use Free by NVIDIA</button>
         <div class="rw-ai-rec__note">Opens a quick OpenRouter sign-in (Google works) and saves a free key for you — nothing to copy or paste.</div>
       </div>
@@ -5101,17 +5101,9 @@ Description: A tunnel gave way, halting the eastern works.</pre>
         <div class="settings-row">
           <div style="flex:1">
             <div class="settings-label">Model</div>
-            <div class="settings-desc">Nemotron Ultra is free to run, but it's a slow shared reasoning model — it can be busy and may occasionally not answer. Free tier caps at ~20 requests/minute and ~50/day (1000/day once you've bought $10 of credits). For speed or reliability, the paid models below cost a few cents per message: Sonnet balances cost and reasoning, Haiku is fast/cheap, Opus is for hard problems.</div>
-            <select class="form-select" id="copilot-model-select" style="width:100%;margin-top:var(--space-2)">
-              <option value="nvidia/nemotron-3-ultra-550b-a55b:free" selected>NVIDIA Nemotron Ultra — Free (via OpenRouter) · slow, reasons deeply</option>
-              <option value="anthropic/claude-haiku-latest">Claude Haiku (latest) — Fast &amp; Cheap (~$1 / $5 per Mtok)</option>
-              <option value="anthropic/claude-sonnet-latest">Claude Sonnet (latest) — Balanced (~$3 / $15 per Mtok)</option>
-              <option value="anthropic/claude-opus-latest">Claude Opus (latest) — Deep Reasoning (~$15 / $75 per Mtok)</option>
-              <option value="openai/gpt-4o-mini">GPT-4o mini — Fast & Cheap (~$0.15 / $0.60 per Mtok)</option>
-              <option value="openai/gpt-4o">GPT-4o — Balanced (~$2.50 / $10 per Mtok)</option>
-              <option value="google/gemini-2.5-flash">Gemini 2.5 Flash — Fast (~$0.30 / $2.50 per Mtok)</option>
-              <option value="google/gemini-2.5-pro">Gemini 2.5 Pro — Balanced (~$1.25 / $10 per Mtok)</option>
-            </select>
+            <div class="settings-desc">The free NVIDIA model is great for casual play but shared and slow — it can be busy and may occasionally not answer (~20 requests/minute, ~50/day; 1000/day after $10 of OpenRouter credits). Prices below are pulled live from OpenRouter and update automatically, so they're never out of date. Paid models cost a few cents per message and are faster and more reliable. New models appear here automatically too — nothing to update.</div>
+            <input class="form-input" type="text" id="copilot-model-filter" placeholder="Search models — try &quot;gemini&quot;, &quot;gpt&quot;, or &quot;free&quot;…" style="width:100%;margin-top:var(--space-2)" autocomplete="off">
+            <select class="form-select" id="copilot-model-select" style="width:100%;margin-top:var(--space-2)"></select>
           </div>
         </div>
       </div>
@@ -26669,9 +26661,28 @@ function bindEventListeners(){
   });
   // Model select
   document.getElementById('copilot-model-select')?.addEventListener('change',(e)=>{
+    if(!e.target.value)return; // the "No models match" placeholder has no value
     State.setSetting('copilotModel',e.target.value);
     Copilot.updateStatus();
   });
+  // Live search over the picker — narrows every group (Recommended, OpenAI,
+  // Anthropic, Google, Other) to a substring match on name or id. This is what
+  // keeps a 300+ model catalog usable instead of one giant flat list.
+  document.getElementById('copilot-model-filter')?.addEventListener('input',(e)=>{
+    Copilot._populateModelSelect(e.target.value);
+  });
+  // Repopulate the picker whenever the live catalog changes in the background
+  // (first fetch landing, or a later refresh) — cheap and idempotent, and the
+  // only way a Settings panel left open during the initial fetch ever sees the
+  // full 300+ list instead of the 4-model offline fallback.
+  if(typeof ModelCatalog!=='undefined'){
+    ModelCatalog.onUpdate(()=>{
+      const filterEl=document.getElementById('copilot-model-filter');
+      if(typeof Copilot._populateModelSelect==='function')Copilot._populateModelSelect(filterEl?filterEl.value:'');
+      if(typeof Copilot._refreshFreeCardCopy==='function')Copilot._refreshFreeCardCopy();
+      if(typeof Copilot.updateStatus==='function')Copilot.updateStatus();
+    });
+  }
 
   // P6.11 — Copilot write scope: gates which write tools the model may call
   // (see COPILOT_TOOLS_STANDARD_ALLOWED / _executeTool's scope check).
@@ -26758,6 +26769,53 @@ function bindEventListeners(){
       dl.innerHTML=data.models.map(m=>`<option value="${Utils.escHtml(m.name)}">`).join('');
     }catch(e){ warn(); }
   };
+  // Populate the model picker from the live OpenRouter catalog: a curated
+  // shortlist first (free NVIDIA / newest Sonnet / newest Gemini Flash), then
+  // every other model grouped by vendor (newest first), with live per-Mtok
+  // pricing in each option. `filterText` narrows every group to a substring
+  // match on name or id — this is what a 300+ model catalog needs to stay
+  // usable instead of one giant flat list. Safe to call anytime (settings
+  // open, catalog refresh landing, boot) — it's idempotent.
+  Copilot._populateModelSelect=function(filterText){
+    const sel=document.getElementById('copilot-model-select');
+    if(!sel||typeof ModelCatalog==='undefined')return;
+    const q=(filterText||'').trim().toLowerCase();
+    const matches=m=>!q||(m.id+' '+(m.name||'')).toLowerCase().indexOf(q)!==-1;
+    const groups=ModelCatalog.curated();
+    const opt=m=>`<option value="${Utils.escHtml(m.id)}">${Utils.escHtml(ModelCatalog.displayName(m)+' — '+ModelCatalog.priceLabel(m))}</option>`;
+    const optgroup=(label,list)=>{
+      const f=list.filter(matches);
+      return f.length?`<optgroup label="${Utils.escHtml(label)}">${f.map(opt).join('')}</optgroup>`:'';
+    };
+    const html=optgroup('Recommended',[groups.freeNvidia,groups.sonnet,groups.geminiFlash].filter(Boolean))
+      +optgroup('OpenAI / ChatGPT',groups.openai)
+      +optgroup('Anthropic / Claude',groups.anthropic)
+      +optgroup('Google / Gemini',groups.google)
+      +optgroup('Other models',groups.other);
+    sel.innerHTML=html||'<option value="" disabled selected>No models match your search</option>';
+    const cur=State.data?.meta?.settings?.copilotModel;
+    if(!cur)return;
+    if(sel.querySelector(`option[value="${cur}"]`)){
+      sel.value=cur;
+    }else if(!q){
+      // The saved model isn't in the current (possibly stale-cache, possibly
+      // offline-fallback) list — never let the picker silently hide the GM's
+      // actual choice. Only when not actively searching, so this can't fight
+      // with the live filter results.
+      const m=ModelCatalog.byId(cur)||{id:cur,name:cur.split('/').pop(),pricing:{prompt:'0',completion:'0'}};
+      sel.insertAdjacentHTML('afterbegin',optgroup('Currently selected',[m]));
+      sel.value=cur;
+    }
+  };
+  // Keeps the "Free by NVIDIA" card honest about which model it actually runs
+  // — shows the real catalog name instead of a fixed description that would go
+  // stale the moment NVIDIA ships a newer free model.
+  Copilot._refreshFreeCardCopy=function(){
+    const el=document.getElementById('copilot-free-nvidia-sub');
+    if(!el||typeof ModelCatalog==='undefined'||typeof Copilot.freeNvidiaModelId!=='function')return;
+    const name=ModelCatalog.displayName(Copilot.freeNvidiaModelId());
+    el.textContent=(name?name+' · ':'')+'Free · one click, free sign-in (via OpenRouter, no card).';
+  };
   // Helper to update the Settings UI (key indicator, button visibility)
   Copilot._refreshKeySettingsUI=function(){
     const input=document.getElementById('copilot-key-input');
@@ -26780,10 +26838,15 @@ function bindEventListeners(){
       if(clear)clear.style.display='none';
       if(del)del.style.display='none';
     }
-    // Sync model select to current setting
+    // Repopulate from the live catalog (curated + grouped + live prices) — this
+    // also syncs the select to the current setting internally, but we set it
+    // again explicitly below as a harmless belt-and-suspenders in case a future
+    // caller populates without going through this path.
+    Copilot._populateModelSelect(document.getElementById('copilot-model-filter')?.value||'');
+    Copilot._refreshFreeCardCopy();
     const modelSel=document.getElementById('copilot-model-select');
     const m=State.data?.meta?.settings?.copilotModel;
-    if(modelSel&&m)modelSel.value=m;
+    if(modelSel&&m&&modelSel.querySelector(`option[value="${m}"]`))modelSel.value=m;
     // B39: Sync provider radio + Ollama fields
     const provider=State.data?.meta?.settings?.copilotProvider||'openrouter';
     _applyProviderUI(provider);
