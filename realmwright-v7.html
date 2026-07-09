@@ -208,6 +208,30 @@ body.theme-ember {
   --wms-rail-pad:24px 0;
   --wms-nav-item-pad:12px 16px;
   --wms-panel-pad:var(--space-4);
+  /* Bonus-bug fix (V-CONTRAST-2 root cause): --color-text-body/-heading, --color-border,
+     --color-danger/-warning/-success/-positive and --color-surface-1/-raised were only
+     declared at :root, referencing OTHER vars that ARE correctly per-theme (e.g.
+     --color-text-primary). CSS custom properties resolve var() at their OWN declaration
+     point's cascade, then inherit as an already-fixed value — a single :root alias that
+     references a theme-varying var does NOT itself vary by theme, it's permanently
+     frozen to whatever :root's own base tokens were. Confirmed via computed style at
+     every element from <html> down through 4 levels of body.theme-modern descendants:
+     the alias stayed rgb(13,27,42) (the :root default) the entire way, even where the
+     var it references was correctly rgb(232,237,242) starting at body. This is why the
+     Settings "Free by NVIDIA" card body text (which uses --color-text-body) rendered
+     as near-black-on-graphite in Modern. Re-declaring the same aliases in each theme
+     block — mirroring how --color-text-primary itself already is — makes them finally
+     compute fresh using that theme's own tokens, same as everywhere else in the file. */
+  --color-text:var(--color-text-primary);
+  --color-text-body:var(--color-text-primary);
+  --color-text-heading:var(--color-text-primary);
+  --color-border:var(--color-border-default);
+  --color-danger:var(--color-crisis);
+  --color-warning:var(--color-tense);
+  --color-success:var(--color-thriving);
+  --color-positive:var(--color-thriving);
+  --color-surface-1:var(--color-parchment-warm);
+  --color-surface-raised:var(--color-parchment-pale);
 }
 
 /* ============================================================================
@@ -299,6 +323,19 @@ body.theme-manuscript {
   --wms-rail-pad:28px 0;
   --wms-nav-item-pad:14px 20px;
   --wms-panel-pad:var(--space-5);
+  /* Bonus-bug fix (V-CONTRAST-2) — see the Ember theme block above for the full
+     writeup: these P6.7 aliases only ever compute using :root's base tokens unless
+     redeclared per-theme like this. */
+  --color-text:var(--color-text-primary);
+  --color-text-body:var(--color-text-primary);
+  --color-text-heading:var(--color-text-primary);
+  --color-border:var(--color-border-default);
+  --color-danger:var(--color-crisis);
+  --color-warning:var(--color-tense);
+  --color-success:var(--color-thriving);
+  --color-positive:var(--color-thriving);
+  --color-surface-1:var(--color-parchment-warm);
+  --color-surface-raised:var(--color-parchment-pale);
 }
 
 /* ============================================================================
@@ -372,6 +409,21 @@ body.theme-modern {
   --wms-rail-pad:16px 0;
   --wms-nav-item-pad:9px 14px;
   --wms-panel-pad:var(--space-3);
+  /* Bonus-bug fix (V-CONTRAST-2) — see the Ember theme block above for the full
+     writeup: these P6.7 aliases only ever compute using :root's base tokens unless
+     redeclared per-theme like this. This is the one that actually mattered here —
+     .rw-ai-rec__sub (the "Free by NVIDIA" card body copy) uses --color-text-body and
+     was rendering near-black text on Modern's graphite card. */
+  --color-text:var(--color-text-primary);
+  --color-text-body:var(--color-text-primary);
+  --color-text-heading:var(--color-text-primary);
+  --color-border:var(--color-border-default);
+  --color-danger:var(--color-crisis);
+  --color-warning:var(--color-tense);
+  --color-success:var(--color-thriving);
+  --color-positive:var(--color-thriving);
+  --color-surface-1:var(--color-parchment-warm);
+  --color-surface-raised:var(--color-parchment-pale);
 }
 
 body.theme-ember{
@@ -1320,9 +1372,15 @@ body.theme-manuscript .wms-cp{background-color:var(--color-parchment);
   color:var(--color-ink);
   box-shadow:inset 0 0 0 1px var(--color-border-hairline)}
 body.theme-manuscript .wms-cp *{color:inherit}
+/* Bonus-bug fix: --color-parchment-pale (the card fill) is only a couple of RGB steps
+   lighter than the war-room stage behind it, so a 1px hairline border was the ONLY
+   separation — cards read as "almost floating" rather than distinct objects. Added a
+   very soft drop shadow (same rgba(24,34,48,…) ink used for this theme's other
+   elevated surfaces, just much lower alpha) so each card reads as a raised card at a
+   glance, not just an outline. */
 body.theme-manuscript .wms-pc,body.theme-manuscript .wms-fc{
   background:var(--color-parchment-pale);border:1px solid var(--color-border-default);
-  box-shadow:none;transition:border-color .2s,box-shadow .2s}
+  box-shadow:0 1px 4px rgba(24,34,48,.07);transition:border-color .2s,box-shadow .2s}
 body.theme-manuscript .wms-pc:hover,body.theme-manuscript .wms-fc:hover{
   transform:none;border-color:var(--color-gold);
   box-shadow:inset 0 0 0 1px rgba(31,81,112,0.12)}
@@ -1415,6 +1473,12 @@ body.theme-manuscript .identity-strip__nation-switcher-btn{
 body.theme-manuscript .identity-strip__nation-switcher-btn:hover{border-bottom-color:var(--color-gold)}
 body.theme-manuscript .identity-strip__stability{display:none}
 body.theme-manuscript .identity-strip__actions{margin-left:auto}
+/* Bonus-bug fix: no override existed here, so the "Saved" status text fell back to
+   the base rgba(244,232,208,.6) — warm cream at 60% opacity, tuned for Ember's dark
+   void background. On light Manuscript paper that's near-invisible pale-on-pale text
+   (the "top-right Saved status is near-invisible" finding). Same var(--color-text-muted)
+   treatment already used for the settings/export buttons right next to it. */
+body.theme-manuscript .identity-strip__save-indicator{color:var(--color-text-muted)}
 body.theme-manuscript .identity-strip__settings-btn{color:var(--color-text-muted)}
 body.theme-manuscript .identity-strip__settings-btn:hover{color:var(--color-gold)}
 body.theme-manuscript .identity-strip__export-btn{
