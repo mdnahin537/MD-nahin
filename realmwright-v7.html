@@ -6691,15 +6691,6 @@ ${pivots.length?`<ol class="solo-pivot-list">${pivots.map((p,pi)=>`<li><span cla
 const TransparencyLog={
   _entries:[],
   _MAX:50,
-  _RATES:{
-    'anthropic/claude-haiku-latest':[0.25,1.25],
-    'anthropic/claude-sonnet-latest':[3.00,15.00],
-    'anthropic/claude-opus-latest':[15.0,75.00],
-    'openai/gpt-4o-mini':[0.15,0.60],
-    'openai/gpt-4o':[2.50,10.00],
-    'google/gemini-2.5-flash':[0.30,2.50],
-    'google/gemini-2.5-pro':[1.25,10.00],
-  },
   _pendingLabel:null,
   push(entry){
     const{label='AI call',model='unknown',inputTokens=0,outputTokens=0}=entry;
@@ -6715,10 +6706,14 @@ const TransparencyLog={
     // so the meter keeps its own running session total beyond the rolling window.
     try{document.dispatchEvent(new CustomEvent('tlog:push',{detail:rec}));}catch(e){}
   },
+  // Live per-Mtok pricing straight from the OpenRouter catalog — never a
+  // hand-typed rate table that quietly goes stale when a provider reprices.
   _calcCost(model,inTok,outTok){
-    const rates=this._RATES[model];
-    if(!rates)return 0;
-    return(inTok/1_000_000)*rates[0]+(outTok/1_000_000)*rates[1];
+    const info=typeof ModelCatalog!=='undefined'?ModelCatalog.byId(model):null;
+    if(!info||!info.pricing)return 0;
+    const promptRate=Number(info.pricing.prompt||0);
+    const completionRate=Number(info.pricing.completion||0);
+    return inTok*promptRate+outTok*completionRate;
   },
   _fmtUSD(n){
     if(n===0)return'$0.000';
@@ -11877,7 +11872,7 @@ const Audience={
       url = 'https://openrouter.ai/api/v1/chat/completions';
       headers = { 'Authorization': `Bearer ${settings.copilotKey}`, 'Content-Type': 'application/json',
         'HTTP-Referer': window.location.origin || 'https://realmwright.app', 'X-Title': 'RealmWright' };
-      model = settings.copilotModel || 'anthropic/claude-sonnet-latest';
+      model = settings.copilotModel || Copilot.NEMOTRON_FREE;
     }
     const history = this._logFor(npc)
       .filter(m => m.role === 'gm' || m.role === 'npc')
@@ -12142,7 +12137,7 @@ const Audience={
       url = 'https://openrouter.ai/api/v1/chat/completions';
       headers = { 'Authorization': `Bearer ${settings.copilotKey}`, 'Content-Type': 'application/json',
         'HTTP-Referer': window.location.origin || 'https://realmwright.app', 'X-Title': 'RealmWright' };
-      model = settings.copilotModel || 'anthropic/claude-sonnet-latest';
+      model = settings.copilotModel || Copilot.NEMOTRON_FREE;
     }
     // Message array: the dossier-built system prompt + this NPC's prior turns (mapped gm→user,
     // npc→assistant) + the new user line. NO buildContext, NO tools.
@@ -13760,36 +13755,77 @@ const ModelCatalog={
 const Copilot={
   _open:false,
   _lastNationId:null,
-  // OpenRouter free reasoning model. Slow shared 550B; ~20 req/min, 50/day free
-  // (1000/day after $10 of credits). Reasoning streams as delta.reasoning.
+  // Static safety-net id for the free NVIDIA path — used only as a last resort
+  // before the live OpenRouter catalog has loaded (or if it never loads, e.g.
+  // fully offline with no cache yet). The one-click "Free by NVIDIA" button and
+  // a fresh OpenRouter sign-in both call freeNvidiaModelId() below, which
+  // resolves the CURRENT newest free NVIDIA chat model from the live catalog
+  // and only falls back to this id when that isn't available yet. Today those
+  // two happen to be the same model — that won't stay true forever, which is
+  // the point of resolving it live instead of hardcoding it here.
   NEMOTRON_FREE:'nvidia/nemotron-3-ultra-550b-a55b:free',
-  // Only the Nemotron-free model takes OpenRouter's reasoning control. Paid
-  // Claude/GPT/Gemini ids return {} so no `reasoning` key ever attaches to them.
+  // Resolves to whatever NVIDIA's newest FREE chat model is RIGHT NOW via the
+  // live catalog (ModelCatalog.curated() — never a frozen id, and never a
+  // content-safety/guardrail model masquerading as "newest free"). Falls back
+  // to the static seed above only if the catalog isn't available.
+  freeNvidiaModelId(){
+    try{
+      if(typeof ModelCatalog!=='undefined'){
+        const cur=ModelCatalog.curated();
+        if(cur&&cur.freeNvidia&&cur.freeNvidia.id)return cur.freeNvidia.id;
+      }
+    }catch(e){}
+    return Copilot.NEMOTRON_FREE;
+  },
+  // Any model the live catalog says accepts OpenRouter's unified `reasoning`
+  // control gets it — gated on supported_parameters, NOT a frozen model id, so
+  // picking ANY reasoning-capable model (not just today's free Nemotron) gets
+  // the same safe treatment instead of silently getting nothing. Before the
+  // catalog has loaded, falls back to the one id we can vouch for directly.
+  _supportsReasoning(model){
+    const info=typeof ModelCatalog!=='undefined'?ModelCatalog.byId(model):null;
+    if(info)return Array.isArray(info.supported_parameters)&&info.supported_parameters.includes('reasoning');
+    return model===Copilot.NEMOTRON_FREE;
+  },
+  // Picks a valid effort level for THIS model rather than assuming every
+  // reasoning model accepts 'medium' — some (o3-mini-high, deepseek-v4-pro,
+  // mistral-medium-3-5, ...) only support one or two levels, and none of them
+  // include 'medium'. Prefers the lowest-friction level the model actually
+  // lists; OpenRouter also maps an unsupported effort to the nearest one it
+  // does support, so this is belt-and-suspenders, not the only thing standing
+  // between a bad guess and a 400.
   //
-  // WHY medium, not high: Nemotron is a REASONING model — it spends completion
-  // tokens *thinking* (streamed as delta.reasoning) BEFORE it writes a single
-  // token of the answer, and OpenRouter's max_tokens caps reasoning+answer
-  // COMBINED. Measured on the bundled Solis Prime world, effort:'high' burned
-  // 430–1050 reasoning tokens on simple generation tasks, so a 400-token Stakes
-  // call finished on reasoning alone (finish_reason:'length', zero answer) and
-  // an 1800-token Session Prep truncated its JSON mid-field. These are bounded
-  // authoring tasks, not math proofs; 'medium' still reasons but leaves the
-  // answer room to actually land. Paired with _budgetMaxTokens (reasoning
-  // headroom on top of the caller's answer budget) this is what makes the free
-  // model usable instead of returning empty/truncated output.
+  // WHY prefer the low end at all: reasoning models spend completion tokens
+  // *thinking* (streamed as delta.reasoning) BEFORE writing a single token of
+  // the answer, and OpenRouter's max_tokens caps reasoning+answer COMBINED.
+  // Measured on the bundled Solis Prime world, effort:'high' burned 430–1050
+  // reasoning tokens on simple generation tasks, so a 400-token Stakes call
+  // finished on reasoning alone (finish_reason:'length', zero answer) and an
+  // 1800-token Session Prep truncated its JSON mid-field. These are bounded
+  // authoring tasks, not math proofs; a lower effort still reasons but leaves
+  // the answer room to actually land.
+  _reasoningEffortFor(model){
+    const info=typeof ModelCatalog!=='undefined'?ModelCatalog.byId(model):null;
+    const supported=info&&info.reasoning&&Array.isArray(info.reasoning.supported_efforts)?info.reasoning.supported_efforts:null;
+    if(!supported||!supported.length)return 'medium';
+    const pref=['medium','low','minimal','none','high','xhigh','max'];
+    for(const p of pref)if(supported.includes(p))return p;
+    return supported[0];
+  },
   _reasoningParamFor(model){
-    return model===Copilot.NEMOTRON_FREE?{reasoning:{effort:'medium'}}:{};
+    return Copilot._supportsReasoning(model)?{reasoning:{effort:Copilot._reasoningEffortFor(model)}}:{};
   },
   // Reasoning models consume max_tokens on their private thinking before the
-  // answer. Callers set max_tokens for the ANSWER they want; for Nemotron we add
-  // a fixed reasoning headroom on top so the thinking doesn't eat the answer.
-  // No-op for paid non-reasoning models (their max_tokens means answer-only).
-  // 2000 covers the measured worst case (~1050 high-effort reasoning tokens on
-  // Solis Prime) with margin even though we've dropped to medium effort.
-  _NEMOTRON_REASONING_HEADROOM:2000,
+  // answer. Callers set max_tokens for the ANSWER they want; for any reasoning
+  // model we add a fixed headroom on top so the thinking doesn't eat the
+  // answer. No-op for non-reasoning models (their max_tokens means answer-only).
+  // 2000 covers the measured worst case on Nemotron (~1050 high-effort
+  // reasoning tokens on Solis Prime) with margin, and is a reasonable general
+  // safety net for other reasoning models this app hasn't individually measured.
+  _REASONING_HEADROOM:2000,
   _budgetMaxTokens(model,requestedMaxTokens){
-    if(model!==Copilot.NEMOTRON_FREE||typeof requestedMaxTokens!=='number')return requestedMaxTokens;
-    return requestedMaxTokens+Copilot._NEMOTRON_REASONING_HEADROOM;
+    if(typeof requestedMaxTokens!=='number')return requestedMaxTokens;
+    return Copilot._supportsReasoning(model)?requestedMaxTokens+Copilot._REASONING_HEADROOM:requestedMaxTokens;
   },
   // ─── OPENROUTER ONE-CLICK OAUTH (PKCE) ───────────────────────────────────────
   // Authorize once in the browser; OpenRouter sends back a free key via PKCE. The
@@ -13872,7 +13908,8 @@ const Copilot={
       State.setSetting('copilotProvider','openrouter');
       // Default a fresh connector to the free model, but never overwrite a chosen one.
       const cur=State.data?.meta?.settings?.copilotModel;
-      if(!cur||cur===Copilot.NEMOTRON_FREE)State.setSetting('copilotModel',Copilot.NEMOTRON_FREE);
+      const freeId=Copilot.freeNvidiaModelId();
+      if(!cur||cur===Copilot.NEMOTRON_FREE||cur===freeId)State.setSetting('copilotModel',freeId);
       await State.persist();
       if(reopen&&typeof Modals!=='undefined')Modals.open('settings');
       if(typeof this._refreshKeySettingsUI==='function')this._refreshKeySettingsUI();
@@ -13894,11 +13931,15 @@ const Copilot={
       // Ollama too, which would leave provider='ollama' and the free model never runs.
       const s=State.data?.meta?.settings;
       const hasOrKey=!!(s&&s.copilotKey&&s.copilotKey.length>10);
+      // Resolve the CURRENT newest free NVIDIA chat model once, up front — both
+      // branches below select this same id, so a stale/half-loaded catalog can't
+      // make them disagree with each other.
+      const freeId=Copilot.freeNvidiaModelId();
       if(hasOrKey){
         // Already have a key — no sign-in needed. Force the OpenRouter free path
         // (even over an existing Ollama setup) so the model actually runs.
         State.setSetting('copilotProvider','openrouter');
-        State.setSetting('copilotModel',Copilot.NEMOTRON_FREE);
+        State.setSetting('copilotModel',freeId);
         await State.persistNow();
         if(typeof this._refreshKeySettingsUI==='function')this._refreshKeySettingsUI();
         this.updateStatus();
@@ -13908,7 +13949,7 @@ const Copilot={
       }
       // No key yet — pin the free OpenRouter path, then let orConnect do the sign-in.
       State.setSetting('copilotProvider','openrouter');
-      State.setSetting('copilotModel',Copilot.NEMOTRON_FREE);
+      State.setSetting('copilotModel',freeId);
       await this.orConnect();
     }catch(e){
       showToast('Couldn\'t start the free NVIDIA setup: '+(e&&e.message||e)+'. You can paste a key under Other options instead.',[],7000);
@@ -13924,24 +13965,18 @@ const Copilot={
     return !!(s.copilotKey&&s.copilotKey.length>10);
   },
   costEstimateLabel(){
-    const model=State.data?.meta?.settings?.copilotModel||'anthropic/claude-sonnet-latest';
-    if(model===Copilot.NEMOTRON_FREE)return 'Free (slow shared model)';
-    // Rough per-message estimate at standard scope (~2K input + ~600 output tokens)
-    // Format: "≈ X¢ per message"
-    const rates={
-      'anthropic/claude-haiku-latest':[1,5],
-      'anthropic/claude-sonnet-latest':[3,15],
-      'anthropic/claude-opus-latest':[15,75],
-      'openai/gpt-4o-mini':[0.15,0.60],
-      'openai/gpt-4o':[2.50,10],
-      'google/gemini-2.5-flash':[0.30,2.50],
-      'google/gemini-2.5-pro':[1.25,10],
-    };
-    const r=rates[model];
-    if(!r)return '— ¢ per message';
+    const model=State.data?.meta?.settings?.copilotModel||Copilot.NEMOTRON_FREE;
+    const info=typeof ModelCatalog!=='undefined'?ModelCatalog.byId(model):null;
+    if(info&&ModelCatalog.isFree(info))return model===Copilot.NEMOTRON_FREE?'Free (slow shared model)':'Free';
+    if(!info||!info.pricing)return '— ¢ per message';
+    // Rough per-message estimate at standard scope (~2K input + ~600 output tokens).
+    // Rates are live per-Mtok $ figures straight from the OpenRouter catalog —
+    // never hand-typed, so a provider repricing can't silently go stale here.
+    const promptRate=Number(info.pricing.prompt||0)*1e6;
+    const completionRate=Number(info.pricing.completion||0)*1e6;
     // Estimate input tokens from the context the next message would actually send
     // (frozen system + world state, ~4 chars/token) plus a short user turn. Falls
-    // back to a standard-scope figure when no realm is active. Prices per million.
+    // back to a standard-scope figure when no realm is active.
     let inTok=2000;
     try{
       const n=State.get();
@@ -13950,29 +13985,27 @@ const Copilot={
         inTok=Math.round((sysLen+this.buildContext(n).length)/4)+400;
       }
     }catch(e){/* keep the fallback estimate */}
-    const cents=((inTok/1e6)*r[0]+(600/1e6)*r[1])*100;
+    const cents=((inTok/1e6)*promptRate+(600/1e6)*completionRate)*100;
     if(cents<0.5)return `≈ ${cents.toFixed(2)}¢ per message`;
     if(cents<10)return `≈ ${cents.toFixed(1)}¢ per message`;
     return `≈ ${Math.round(cents)}¢ per message`;
   },
-  // Bonus-bug fix (V-CHROME-2): this is a DISPLAY label only — purely derived from the
-  // functional model id (State...copilotModel) for rendering in the status line and the
-  // Audience chat header. It never feeds back into the API call or any model-detection
-  // logic (that all keys off Copilot.NEMOTRON_FREE / the raw id directly), so relabelling
-  // it here is safe and can't break the AI connection. The free default's raw name —
-  // "NVIDIA Nemotron Ultra" — was showing as a PERMANENT status line to the non-technical
-  // GMs it's aimed at ("Free by NVIDIA" is the one-click path for exactly that audience)
-  // and read as a dev build. Paid models keep their existing friendly names (Claude
-  // Haiku/Sonnet/Opus, GPT-4o, Gemini) — those are deliberate user choices worth
-  // confirming, and are already reasonably professional.
+  // DISPLAY label only — purely derived from the functional model id
+  // (State...copilotModel) for rendering in the status line and the Audience
+  // chat header. It never feeds back into the API call or any model-detection
+  // logic (that all keys off the raw id / live catalog capability lookups), so
+  // relabelling it here is safe and can't break the AI connection.
+  // Sourced straight from the live OpenRouter catalog's own `name` field, so
+  // whatever model is actually active shows its real name here — including the
+  // free NVIDIA default, which used to show a fixed "Free Model" placeholder.
   modelLabel(){
-    const model=State.data?.meta?.settings?.copilotModel||'anthropic/claude-sonnet-latest';
-    if(model===Copilot.NEMOTRON_FREE)return 'Free Model';
-    const opt=document.querySelector(`#copilot-model-select option[value="${model}"]`);
-    if(opt){
-      // Pull just the friendly name (text before " — ")
-      return opt.textContent.split(' — ')[0];
+    const model=State.data?.meta?.settings?.copilotModel||Copilot.NEMOTRON_FREE;
+    if(typeof ModelCatalog!=='undefined'){
+      const name=ModelCatalog.displayName(model);
+      if(name)return name;
     }
+    const opt=document.querySelector(`#copilot-model-select option[value="${model}"]`);
+    if(opt)return opt.textContent.split(' — ')[0];
     return model.split('/').pop();
   },
   open(){
@@ -14845,7 +14878,7 @@ const Copilot={
     const systemPrompt=this.buildSystemPrompt(surf,this.isConfigured&&this.isConfigured());
     const settings=(typeof State!=='undefined'&&State.data?.meta?.settings)||{};
     const provider=settings.copilotProvider||'openrouter';
-    const model=provider==='ollama'?(settings.ollamaModel||'llama3.1'):(settings.copilotModel||'anthropic/claude-sonnet-latest');
+    const model=provider==='ollama'?(settings.ollamaModel||'llama3.1'):(settings.copilotModel||Copilot.NEMOTRON_FREE);
     const approxTokens=Math.round(((systemPrompt||'').length+(ctxRes.text||'').length)/4);
     // _apiFetch wires cache_control for Anthropic. Conservative gate at the Haiku 1024-tok floor.
     const cacheable=provider!=='ollama'&&/^anthropic\//.test(model)&&approxTokens>=1024;
@@ -15018,7 +15051,7 @@ Without a CANON block, your response is conversational only — no simulation ef
         'HTTP-Referer':window.location.origin||'https://realmwright.app',
         'X-Title':'RealmWright',
       };
-      model=settings.copilotModel||'anthropic/claude-sonnet-latest';
+      model=settings.copilotModel||Copilot.NEMOTRON_FREE;
     }
     // Tool-calling is only enabled when we have a real API key on a hosted provider.
     // Ollama's local chat-completions endpoint doesn't reliably support OpenAI tool-calls.
@@ -15408,7 +15441,7 @@ Without a CANON block, your response is conversational only — no simulation ef
         'HTTP-Referer':window.location.origin||'https://realmwright.app',
         'X-Title':'RealmWright',
       };
-      model=settings.copilotModel||'anthropic/claude-sonnet-latest';
+      model=settings.copilotModel||Copilot.NEMOTRON_FREE;
     }
     let finalExtras={...bodyExtras,...Copilot._reasoningParamFor(model)};
     // Reasoning models: grow the cap so private thinking doesn't eat the answer
@@ -20911,8 +20944,17 @@ const Lint={
     const perChunkIn=600+Math.min(events,this.AI_CHUNK)*120;
     const estTokensIn=perChunkIn*chunks;
     const estTokensOut=400*chunks; // checkContinuity caps verdicts at 400 tok
-    // Sonnet-ish blended rate for the preview ($3/Mtok in, $15/Mtok out).
-    const estUsd=(estTokensIn/1e6)*3+(estTokensOut/1e6)*15;
+    // Live per-Mtok rate for whatever model is actually configured — this pass
+    // runs on it, not a fixed model, so a free-tier GM shouldn't see a paid-model
+    // cost scare. Falls back to a Sonnet-ish blended rate ($3/$15 per Mtok) if
+    // the catalog hasn't loaded yet, so the preview is never wildly wrong.
+    let promptRate=3,completionRate=15;
+    try{
+      const model=(typeof State!=='undefined')?State.data?.meta?.settings?.copilotModel:null;
+      const info=(model&&typeof ModelCatalog!=='undefined')?ModelCatalog.byId(model):null;
+      if(info&&info.pricing){promptRate=Number(info.pricing.prompt||0)*1e6;completionRate=Number(info.pricing.completion||0)*1e6;}
+    }catch(e){/* keep the Sonnet-ish fallback */}
+    const estUsd=(estTokensIn/1e6)*promptRate+(estTokensOut/1e6)*completionRate;
     return {chunks,events,estTokensIn,estTokensOut,estUsd};
   },
   // The AI run. Loops checkContinuity per chunk; collects verdicts that name a concern. Each
