@@ -13573,6 +13573,189 @@ const COPILOT_TOOLS=[
 ];
 // Write tools allowed when copilotScope='standard'. Others require 'full'.
 const COPILOT_TOOLS_STANDARD_ALLOWED=['add_chronicle_entry','add_npc','add_plot_seed','mark_hook_resolved'];
+// ─── OPENROUTER MODEL CATALOG ────────────────────────────────────────────────
+// Live model list + live pricing, so the Copilot's model picker never needs a
+// human to hand-type a model id or a price again. GET /api/v1/models is public
+// (no key needed) and returns every model OpenRouter currently routes to. We
+// fetch it once per session (cached in localStorage across reloads), trim it
+// to the fields the app actually uses, and resolve "recommended" picks (free
+// NVIDIA / newest Sonnet / newest Gemini Flash) by comparing live `created`
+// timestamps — never a frozen id that can quietly stop existing.
+const ModelCatalog={
+  _URL:'https://openrouter.ai/api/v1/models',
+  _CACHE_KEY:'rw_or_models_cache',
+  _CACHE_TTL_MS:6*60*60*1000, // 6h — fresh enough; avoids re-fetching ~500KB on every reopen
+  _models:[],   // trimmed model records (see _trim) — current best-known catalog
+  _byId:null,   // lazy id->record map, invalidated whenever _models changes
+  _fetchedAt:0,
+  _loading:null,
+  _listeners:[],
+
+  // Last-resort seed: used only until the first real fetch lands (or forever, if
+  // this device is offline / the endpoint is unreachable). Deliberately tiny and
+  // NOT hand-maintained as a source of truth — the live fetch always wins once it
+  // succeeds; this only guarantees the "Free by NVIDIA" path and the picker are
+  // never empty. Shape matches _trim()'s output exactly.
+  FALLBACK:[
+    {id:'nvidia/nemotron-3-ultra-550b-a55b:free',name:'NVIDIA: Nemotron 3 Ultra (free)',created:1780551208,
+      architecture:{output_modalities:['text']},pricing:{prompt:'0',completion:'0'},
+      supported_parameters:['reasoning','tools'],reasoning:{supported_efforts:['high','medium'],default_effort:'high',default_enabled:true}},
+    {id:'anthropic/claude-sonnet-5',name:'Anthropic: Claude Sonnet 5',created:1782843083,
+      architecture:{output_modalities:['text']},pricing:{prompt:'0.000002',completion:'0.00001'},
+      supported_parameters:['tools'],reasoning:null},
+    {id:'google/gemini-3.5-flash',name:'Google: Gemini 3.5 Flash',created:1779193800,
+      architecture:{output_modalities:['text']},pricing:{prompt:'0.0000015',completion:'0.000009'},
+      supported_parameters:['tools'],reasoning:null},
+    {id:'openai/gpt-5.5',name:'OpenAI: GPT-5.5',created:1777051893,
+      architecture:{output_modalities:['text']},pricing:{prompt:'0.000005',completion:'0.00003'},
+      supported_parameters:['tools'],reasoning:null},
+  ],
+
+  // Seeds synchronously from FALLBACK, then from any cached catalog, then kicks
+  // off a background refresh. Never awaits the network, so app boot is never
+  // blocked on it — the picker just upgrades in place once the fetch lands.
+  init(){
+    this._setModels(this.FALLBACK,0);
+    try{
+      const raw=localStorage.getItem(this._CACHE_KEY);
+      if(raw){
+        const parsed=JSON.parse(raw);
+        if(parsed&&Array.isArray(parsed.models)&&parsed.models.length)this._setModels(parsed.models,parsed.fetchedAt||0);
+      }
+    }catch(e){/* corrupt or inaccessible cache — keep the fallback seed */}
+    this.refresh();
+  },
+
+  _setModels(list,fetchedAt){
+    this._models=list;
+    this._byId=null;
+    this._fetchedAt=fetchedAt||0;
+  },
+
+  // Keep only what the app reads. Cuts ~500KB of benchmarks/descriptions/etc
+  // down to the fields the picker, pricing, and reasoning-gating actually use.
+  _trim(list){
+    return list.filter(m=>m&&m.id).map(m=>({
+      id:m.id,
+      name:m.name||m.id,
+      created:typeof m.created==='number'?m.created:0,
+      architecture:{output_modalities:(m.architecture&&Array.isArray(m.architecture.output_modalities))?m.architecture.output_modalities:['text']},
+      pricing:{prompt:(m.pricing&&m.pricing.prompt)||'0',completion:(m.pricing&&m.pricing.completion)||'0'},
+      supported_parameters:Array.isArray(m.supported_parameters)?m.supported_parameters:[],
+      reasoning:m.reasoning?{supported_efforts:Array.isArray(m.reasoning.supported_efforts)?m.reasoning.supported_efforts:null,default_effort:m.reasoning.default_effort||null,default_enabled:!!m.reasoning.default_enabled}:null,
+    }));
+  },
+
+  isStale(){return !this._fetchedAt||(Date.now()-this._fetchedAt)>this._CACHE_TTL_MS;},
+
+  async refresh(force){
+    if(this._loading)return this._loading;
+    if(!force&&this._fetchedAt&&!this.isStale())return false;
+    this._loading=(async()=>{
+      try{
+        const resp=await fetch(this._URL,{headers:{'Accept':'application/json'}});
+        if(!resp.ok)throw new Error('HTTP '+resp.status);
+        const data=await resp.json();
+        const raw=data&&Array.isArray(data.data)?data.data:null;
+        if(!raw||!raw.length)throw new Error('empty catalog');
+        const trimmed=this._trim(raw);
+        const fetchedAt=Date.now();
+        this._setModels(trimmed,fetchedAt);
+        try{localStorage.setItem(this._CACHE_KEY,JSON.stringify({models:trimmed,fetchedAt}));}
+        catch(e){/* quota or privacy mode — cache is a nice-to-have, not required */}
+        this._notify();
+        return true;
+      }catch(e){
+        return false; // offline / blocked — keep whatever we already have (cache or FALLBACK)
+      }finally{
+        this._loading=null;
+      }
+    })();
+    return this._loading;
+  },
+
+  onUpdate(fn){if(typeof fn==='function')this._listeners.push(fn);},
+  _notify(){this._listeners.forEach(fn=>{try{fn();}catch(e){}});},
+
+  byId(id){
+    if(!this._byId){
+      this._byId=new Map();
+      for(const m of this._models)this._byId.set(m.id,m);
+    }
+    return this._byId.get(id)||null;
+  },
+
+  // General-purpose TEXT→TEXT chat models only. Excludes:
+  //  - OpenRouter's own floating "-latest" alias ids (id starts with "~", e.g.
+  //    ~anthropic/claude-sonnet-latest) — these always redirect to whatever's
+  //    newest server-side, which would show up as a confusing near-duplicate of
+  //    the concrete dated model already in the list, and their id shape
+  //    (~vendor/... not vendor/...) breaks vendor grouping.
+  //  - OpenRouter's own meta-routers (openrouter/auto, openrouter/free, ...) —
+  //    each call can land on a different underlying model, so there is no one
+  //    stable name/price/reasoning-capability to show for it.
+  //  - non-text output (image/audio generation: Nano Banana, GPT Image, Lyria,
+  //    gpt-audio, ...) — a GM copilot needs to show a text reply, not raw bytes.
+  //  - moderation/guardrail/classifier models that share the catalog but are not
+  //    conversational (Nemotron Content Safety, gpt-oss-safeguard, Llama Guard).
+  isChatModel(m){
+    if(!m||!m.id)return false;
+    if(m.id.startsWith('~'))return false;
+    if(m.id.startsWith('openrouter/'))return false;
+    const out=m.architecture&&m.architecture.output_modalities;
+    if(!Array.isArray(out)||out.length!==1||out[0]!=='text')return false;
+    const hay=(m.id+' '+(m.name||'')).toLowerCase();
+    if(/guard|safety|moderat|\bembed|rerank|classif|reward.?model/.test(hay))return false;
+    return true;
+  },
+
+  chatModels(){return this._models.filter(m=>this.isChatModel(m));},
+  isFree(m){return !!m&&Number((m.pricing&&m.pricing.prompt)||0)===0&&Number((m.pricing&&m.pricing.completion)||0)===0;},
+  vendor(m){return m&&m.id?m.id.split('/')[0]:'';},
+
+  // Curated order (spec): free NVIDIA, newest Sonnet, newest Gemini Flash pinned
+  // first — each resolved live by `created`, never a frozen id — then every
+  // remaining chat model grouped by vendor, newest-first. Nothing is hidden,
+  // just ordered so the curated picks aren't buried in 300+ entries.
+  curated(){
+    const chat=this.chatModels().slice().sort((a,b)=>(b.created||0)-(a.created||0));
+    const used=new Set();
+    const take=pred=>{const m=chat.find(x=>!used.has(x.id)&&pred(x));if(m)used.add(m.id);return m||null;};
+    const freeNvidia=take(x=>this.vendor(x)==='nvidia'&&this.isFree(x));
+    const sonnet=take(x=>/sonnet/i.test(x.id)||/sonnet/i.test(x.name||''));
+    const geminiFlash=take(x=>this.vendor(x)==='google'&&/flash/i.test(x.id));
+    const byVendor=v=>{const list=chat.filter(x=>!used.has(x.id)&&this.vendor(x)===v);list.forEach(x=>used.add(x.id));return list;};
+    const openai=byVendor('openai');
+    const anthropic=byVendor('anthropic');
+    const google=byVendor('google');
+    const other=chat.filter(x=>!used.has(x.id));
+    return {freeNvidia,sonnet,geminiFlash,openai,anthropic,google,other};
+  },
+
+  _fmtRate(n){
+    if(!isFinite(n)||n<0)return '?';
+    if(n===0)return '0';
+    if(n>=10)return String(Math.round(n));
+    if(n>=1)return String(Math.round(n*100)/100);
+    return String(Math.round(n*1000)/1000);
+  },
+  // Live per-Mtok price, formatted the way the old hand-typed labels were
+  // ("~$3 / $15 per Mtok") — just sourced from OpenRouter instead of memory.
+  priceLabel(m){
+    if(!m)return '';
+    if(this.isFree(m))return 'Free';
+    const p=this._fmtRate(Number((m.pricing&&m.pricing.prompt)||0)*1e6);
+    const c=this._fmtRate(Number((m.pricing&&m.pricing.completion)||0)*1e6);
+    return `~$${p} / $${c} per Mtok`;
+  },
+
+  displayName(idOrModel){
+    const m=typeof idOrModel==='string'?this.byId(idOrModel):idOrModel;
+    if(m&&m.name)return m.name;
+    if(typeof idOrModel==='string')return idOrModel.split('/').pop();
+    return 'Unknown model';
+  },
+};
 // ─── COPILOT MODULE (delivery 1: UI + persistence; delivery 2 will add API calls) ───
 const Copilot={
   _open:false,
@@ -27358,6 +27541,10 @@ const LicenseGateUI={
 };
 
 async function bootstrap(){
+  // Kick off the live OpenRouter catalog fetch as early as possible. init() seeds
+  // synchronously (fallback, then cache) and never awaits the network, so this
+  // never delays boot — the picker just upgrades in place once the fetch lands.
+  if(typeof ModelCatalog!=='undefined')ModelCatalog.init();
   await State.load();
   applyDriftOverrides(State.data); // P5.1: re-apply persisted House-Rules drift edits onto the live engine array.
   bindEventListeners();
