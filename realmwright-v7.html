@@ -2393,6 +2393,7 @@ SECTION 6: COMPONENT STYLES
   transition:background var(--duration-quick)}
 .save-dot--saving{background:var(--color-amber);animation:pdot 480ms ease-in-out infinite}
 .save-dot--error{background:var(--color-crisis);animation:pdot 480ms ease-in-out infinite}
+.save-dot--sample{background:var(--color-text-muted)}
 .identity-strip__export-btn{font-size:var(--text-label);color:rgba(244,232,208,1);
   background:none;border:none;cursor:pointer;padding:var(--space-1) 0;
   border-bottom:.5px solid transparent;transition:border-color var(--duration-instant)}
@@ -5187,9 +5188,16 @@ Description: A tunnel gave way, halting the eastern works.</pre>
           <input type="file" id="vault-chip-test-file" accept=".json" style="display:none">
         </div>
       </div>
+      <!-- P3 honesty fix: persist() being denied was previously signalled ONLY by the save-label's
+           title tooltip — invisible on desktop unless hovering, unreachable on touch. This is a
+           persistent, always-visible banner instead, toggled by VaultChip.refresh(). -->
+      <div id="storage-evictable-banner" style="display:none;margin-bottom:12px;padding:10px 14px;border-radius:6px;border:1px solid var(--color-crisis);background:rgba(199,69,69,.08);font-size:var(--text-body-sm);color:var(--color-text-muted)">This browser has not granted persistent storage — it may clear your realm under storage pressure, without warning. Set up the on-disk backup above, or export regularly.</div>
       <!-- P2.8 — Restore drill result panel (read-only; never writes) -->
       <div id="vault-drill-result" style="display:none;margin-bottom:12px;padding:10px 14px;border-radius:6px;border:1px solid var(--color-border-hairline);background:rgba(0,0,0,.1);font-size:var(--text-body-sm);color:var(--color-text-muted)"></div>
-      <p style="font-size:var(--text-body-sm);color:var(--color-text-muted);margin-bottom:12px">RealmWright auto-saves a snapshot every 24 hours. The last 7 are kept. Use "Preview restore" to see what changes before committing.</p>
+      <!-- P2/M1 honesty fix: state the device-local/no-cloud fact plainly, and be clear that
+           snapshots share the SAME evictable browser storage as the realm — they protect
+           against corruption/mistakes, not against a cleared cache or a storage eviction. -->
+      <p style="font-size:var(--text-body-sm);color:var(--color-text-muted);margin-bottom:12px">RealmWright lives entirely in this browser on this device — there's no account, no cloud, no sync to another device. It also auto-saves a snapshot every 24 hours (last 7 kept) so mistakes are undoable, but those snapshots share this same browser storage — they won't survive a cleared cache or a storage eviction. For that, use the on-disk backup above, or export regularly. Use "Preview restore" to see what changes before committing.</p>
       <div id="snapshot-list" style="display:flex;flex-direction:column;gap:6px"></div>
       <p id="snapshot-list-empty" style="font-size:var(--text-label-sm);color:var(--color-text-faint);display:none">No snapshots yet — one will be created after 24 hours of use.</p>
     </div>
@@ -7779,6 +7787,9 @@ const VaultChip={
     }
     // Show "Test my backup" whenever there is something to test (any state that has data)
     if(testBtn)testBtn.style.display=persisted===false?'none':'';
+    // P3 honesty fix: persistent banner (not just a tooltip) when storage isn't persisted.
+    const banner=document.getElementById('storage-evictable-banner');
+    if(banner)banner.style.display=(persisted!==true)?'':'none';
   },
   init(){
     // Wire the "Test my backup" button to the hidden file input (P2.8)
@@ -8289,6 +8300,24 @@ const IDB={
 };
 const STORAGE_KEY='realmwright_data';
 const LEGACY_KEY='sovereign_codex_data';
+// P3 honesty fix: request persistent storage and record the result on State._storagePersisted.
+// Previously this ran inline (duplicated) at both State.load() call sites with no user-facing
+// signal beyond the save-label's hover tooltip. Factored into one function that ALSO fires a
+// one-time toast — so a GM without persistent storage hears about the eviction risk at least
+// once, not only if they happen to hover the save label or open Settings › Backups (which now
+// also shows a persistent banner — see VaultChip.refresh()).
+let _storagePersistNudgeShown=false;
+function _checkStoragePersistence(){
+  if(!(navigator.storage&&navigator.storage.persist))return;
+  navigator.storage.persisted().then(p=>p?null:navigator.storage.persist()).then(p=>{
+    State._storagePersisted=!!p;
+    if(!p&&!_storagePersistNudgeShown){
+      _storagePersistNudgeShown=true;
+      showToast("This browser hasn't granted persistent storage — it could clear your realm under storage pressure. See Settings › Backups.",[],9000);
+    }
+    if(typeof VaultChip!=='undefined')VaultChip.refresh();
+  }).catch(()=>{State._storagePersisted=null;});
+}
 // P1.13: secrets live in a dedicated IDB key so they never sit inside
 // the State JSON that gets mirrored to localStorage (which any XSS can
 // read). The Secrets helper centralises load/save/migration.
@@ -8344,7 +8373,7 @@ const State={
       const cold=await Secrets.loadKey();
       if(cold)this.data.meta.settings.copilotKey=cold;
       await this.persistNow();
-      if(navigator.storage&&navigator.storage.persist){navigator.storage.persisted().then(p=>p?null:navigator.storage.persist()).then(p=>{State._storagePersisted=!!p;}).catch(()=>{State._storagePersisted=null;});}
+      _checkStoragePersistence();
       return;
     }
     try{
@@ -8384,7 +8413,7 @@ const State={
         localStorage.removeItem(LEGACY_KEY);
       }catch(e){}
     }catch(e){handleCorruptStorage(typeof raw==='string'?raw:JSON.stringify(raw));}
-    if(navigator.storage&&navigator.storage.persist){navigator.storage.persisted().then(p=>p?null:navigator.storage.persist()).then(p=>{State._storagePersisted=!!p;}).catch(()=>{State._storagePersisted=null;});}
+    _checkStoragePersistence();
   },
   pushUndo(){
     if(this._suppressUndo)return;
@@ -8434,7 +8463,7 @@ const State={
     if(ub){ub.disabled=!this._undoStack.length;ub.title=this._undoStack.length?`Undo (${this._undoStack.length} step${this._undoStack.length>1?'s':''})`:'Nothing to undo';}
   },
   persist:Utils.debounce(function(){
-    if(State.data.meta?._sampleMode){UI.setSave('saved');return;}
+    if(State.data.meta?._sampleMode){UI.setSave('sample');return;}
     UI.setSave('saving');
     // P1.13: scrub copilotKey from the serialized blob.
     const json=JSON.stringify(_stateForPersist());
@@ -10013,6 +10042,10 @@ const UI={
     dot.className='save-dot';
     if(s==='saving'){dot.classList.add('save-dot--saving');lbl.textContent='Saving…';}
     else if(s==='error'){dot.classList.add('save-dot--error');lbl.textContent='Save failed — export now';}
+    // LG1 honesty fix: sample worlds are never written to storage (see State.persist/persistNow) —
+    // showing "Saved" here would tell a GM editing a sample that their edits are safe when a tab
+    // close loses every one of them. Distinct label + a neutral (not "safe green") dot.
+    else if(s==='sample'){dot.classList.add('save-dot--sample');lbl.textContent='Sample — not saved';lbl.title='Sample worlds are never written to storage. Load or create your own realm to save.';}
     else{lbl.textContent='Saved';lbl.title=State._storagePersisted===true?'Saved · storage protected':'Saved · best-effort storage — set up a backup';}
   }
 };
@@ -12692,7 +12725,7 @@ const Modals={
       importInput._rwBound=true;
       importInput.onchange=e=>{
         const f=e.target.files[0];if(!f)return;
-        const r=new FileReader();r.onload=ev=>{try{const data=JSON.parse(ev.target.result);handleImport(data);}catch(e){alert('Invalid JSON file.');}};
+        const r=new FileReader();r.onload=ev=>{try{const data=JSON.parse(ev.target.result);handleImport(data);}catch(e){showToast("That file isn't valid JSON — nothing was imported.");}};
         r.readAsText(f);
       };
     }
@@ -26547,7 +26580,7 @@ function bindEventListeners(){
   });
   document.getElementById('settings-import-file')?.addEventListener('change',e=>{
     const f=e.target.files[0];if(!f)return;
-    const r=new FileReader();r.onload=ev=>{try{handleImport(JSON.parse(ev.target.result));}catch(e){alert('Invalid JSON.');}};
+    const r=new FileReader();r.onload=ev=>{try{handleImport(JSON.parse(ev.target.result));}catch(e){showToast("That file isn't valid JSON — nothing was imported.");}};
     r.readAsText(f);e.target.value='';
   });
 
@@ -26920,7 +26953,7 @@ function bindEventListeners(){
   // Global import file
   document.getElementById('global-import-file')?.addEventListener('change',e=>{
     const f=e.target.files[0];if(!f)return;
-    const r=new FileReader();r.onload=ev=>{try{handleImport(JSON.parse(ev.target.result));}catch(e){alert('Invalid JSON.');}};
+    const r=new FileReader();r.onload=ev=>{try{handleImport(JSON.parse(ev.target.result));}catch(e){showToast("That file isn't valid JSON — nothing was imported.");}};
     r.readAsText(f);e.target.value='';
   });
 
@@ -27673,7 +27706,11 @@ const LicenseGateUI={
     if(sub){sub.disabled=true;sub.textContent='Activating…';}
     const result=await LicenseGate.activate(key);
     if(result.success){
-      showToast('RealmWright activated. Welcome.');
+      // M2/L1a honesty fix: the license is device-local (IDB) with no cross-device sync — a
+      // cleared browser or a new device means re-entering this exact key, and there was no
+      // prompt anywhere to save it. One-time reminder with a real copy action (Utils.copyToClipboard
+      // already handles the file:// / no-clipboard-API fallback chain used elsewhere in the app).
+      showToast("RealmWright activated. Welcome. Save your license key somewhere safe — you'll need it again on a new device or after clearing browser data.",[{label:'Copy key',handler:()=>Utils.copyToClipboard(key)}],12000);
       if(typeof Modals!=='undefined')Modals.close('license-activate');
       this._updateModalStatus();
     }else{
