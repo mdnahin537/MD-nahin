@@ -5,6 +5,8 @@ import { checkReportLimit } from '../lib/ratelimit.js';
 import { isHeld } from '../lib/blocklist.js';
 import { buildVoteStatements } from '../lib/votes.js';
 import { composeTitle } from '../lib/titles.js';
+import { buildFollowupQuestion } from '../lib/followup.js';
+import { runText } from '../lib/ai.js';
 
 const ONE_LINE_MAX = 300;
 const TEXTAREA_MAX = 2000;
@@ -152,7 +154,14 @@ export async function handlePostReport(request, env, url) {
 
   await env.DB.batch([reportInsert, countsUpdate, ...voteStatements]);
 
-  return json({ ok: true, itemId, title, held: !!textIsHeld });
+  // The report's own id — needed so the confirmation screen's micro-interview
+  // (§5.5) can patch answers onto THIS report. It's the only report on a
+  // freshly created item by this user.
+  const reportIdRow = await env.DB.prepare(
+    'SELECT id FROM reports WHERE item_id = ?1 AND user_sub = ?2 ORDER BY id DESC LIMIT 1'
+  ).bind(itemId, session.sub).first();
+
+  return json({ ok: true, itemId, reportId: reportIdRow?.id ?? null, title, held: !!textIsHeld });
 }
 
 /** PATCH /api/report/:id/followup — micro-interview answers (design §5.5), author-only. */
@@ -183,4 +192,32 @@ export async function handlePatchFollowup(request, env, url, reportId) {
 
   await env.DB.prepare('UPDATE reports SET payload = ?1 WHERE id = ?2').bind(JSON.stringify(payload), reportId).run();
   return json({ ok: true });
+}
+
+/**
+ * GET /api/report/:id/followup-question — the post-submit micro-interview
+ * (design §5.5). Runs AFTER the report is saved, off the critical path, so
+ * the confirmation renders instantly regardless. Author-only. Returns the
+ * next tap-only question (deterministic gap table, AI only rephrases) or
+ * { question: null } when there's nothing worth asking, the flag is off, or
+ * 2 questions were already answered.
+ */
+export async function handleGetFollowupQuestion(request, env, url, reportId) {
+  const session = await getSession(request, env);
+  if (!session) return jsonError(401, 'Sign in required.');
+
+  const report = await env.DB.prepare('SELECT user_sub, payload FROM reports WHERE id = ?1').bind(reportId).first();
+  if (!report) return jsonError(404, 'Report not found.');
+  if (report.user_sub !== session.sub) return jsonError(403, 'Only the reporter can see this.');
+
+  let payload;
+  try {
+    payload = JSON.parse(report.payload);
+  } catch {
+    return json({ question: null });
+  }
+  const alreadyAsked = Array.isArray(payload.followups) ? payload.followups.map((f) => f.q) : [];
+
+  const result = await buildFollowupQuestion(env, payload, alreadyAsked, runText);
+  return json(result);
 }

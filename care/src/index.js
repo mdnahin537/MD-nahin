@@ -1,6 +1,6 @@
 import { routeAuth } from './routes/auth.js';
 import { json, jsonError, notFound, isSameOrigin } from './lib/http.js';
-import { handlePostReport, handlePatchFollowup } from './routes/report.js';
+import { handlePostReport, handlePatchFollowup, handleGetFollowupQuestion } from './routes/report.js';
 import { handlePutVote } from './routes/vote.js';
 import { handlePostComment } from './routes/comment.js';
 import { handleGetRelated } from './routes/related.js';
@@ -58,6 +58,10 @@ async function routeApi(request, env, ctx, url) {
   }
   if (method === 'POST' && pathname === '/api/report') {
     return handlePostReport(request, env, url);
+  }
+  const followupQMatch = pathname.match(/^\/api\/report\/(\d+)\/followup-question$/);
+  if (method === 'GET' && followupQMatch) {
+    return handleGetFollowupQuestion(request, env, url, Number(followupQMatch[1]));
   }
   const followupMatch = pathname.match(/^\/api\/report\/(\d+)\/followup$/);
   if (method === 'PATCH' && followupMatch) {
