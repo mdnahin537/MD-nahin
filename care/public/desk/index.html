@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Owner Desk — RealmWright</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/desk/desk.css">
+</head>
+<body class="desk-body">
+  <header class="desk-strip" id="desk-strip" aria-label="Since your last visit">
+    <span class="desk-strip__brand mono">DESK</span>
+    <span id="strip-summary" class="desk-strip__summary">Loading…</span>
+    <span class="desk-strip__spacer"></span>
+    <span id="strip-gauge" class="desk-strip__gauge" title="Today's free-tier usage"></span>
+    <button id="refresh-digest" class="desk-btn">Refresh</button>
+  </header>
+
+  <nav class="desk-tabs" role="tablist">
+    <button class="desk-tab is-active" data-tab="digest" role="tab">Digest</button>
+    <button class="desk-tab" data-tab="queue" role="tab">Decisions</button>
+    <button class="desk-tab" data-tab="brief" role="tab">Build Brief</button>
+  </nav>
+
+  <main class="desk-main">
+    <section id="tab-digest" class="desk-panel" role="tabpanel">
+      <div id="digest-body"><div class="skeleton desk-skel"></div></div>
+    </section>
+    <section id="tab-queue" class="desk-panel" hidden role="tabpanel">
+      <div id="queue-body"><div class="skeleton desk-skel"></div></div>
+    </section>
+    <section id="tab-brief" class="desk-panel" hidden role="tabpanel">
+      <div class="brief-controls">
+        <p class="desk-hint">Selected threads (tick items in the digest, or type serials):</p>
+        <input id="brief-ids" class="desk-input" placeholder="e.g. 1, 3, 5" aria-label="Item serials for the brief">
+        <button id="brief-go" class="desk-btn desk-btn--primary">Compose brief</button>
+      </div>
+      <pre id="brief-out" class="brief-out" aria-live="polite"></pre>
+      <button id="brief-copy" class="desk-btn" hidden>Copy brief</button>
+    </section>
+  </main>
+
+  <div id="desk-toast" class="desk-toast" hidden></div>
+  <div class="desk-keys" aria-hidden="true">keys: <b>j/k</b> move · <b>s</b> status · <b>m</b> merge · <b>b</b> brief · <b>1/2/3</b> tabs</div>
+
+  <script src="/js/care.js"></script>
+  <script src="/desk/desk.js"></script>
+</body>
+</html>
