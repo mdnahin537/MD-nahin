@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Privacy &amp; terms — RealmWright Community Board</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/board.css">
+</head>
+<body>
+  <header class="masthead">
+    <div class="container masthead__inner">
+      <a class="masthead__brand" href="/">
+        <span class="masthead__mark mono">RW</span>
+        <span class="masthead__titles">
+          <span class="masthead__title">Community Board</span>
+          <span class="masthead__sub">What GMs want built next</span>
+        </span>
+      </a>
+    </div>
+  </header>
+
+  <main class="container" style="max-width: 42rem; padding-top: 2rem; padding-bottom: 4rem;">
+    <a class="backlink" href="/" style="display:inline-block;color:var(--ink-dim);margin-bottom:1.25rem;">← Back to the board</a>
+    <h1 class="display" style="font-size: 2rem;">Privacy &amp; terms</h1>
+    <p style="color: var(--ink-dim);">Plain language. No surprises.</p>
+
+    <h2 class="display">What this is</h2>
+    <p>This board is where RealmWright players report bugs and request features. Reading it needs no account. Posting a report, agreeing, disagreeing, or commenting needs a Google sign-in — so each contribution has a name we can follow up with.</p>
+
+    <h2 class="display">What we store</h2>
+    <ul style="line-height:1.7;">
+      <li><strong>Your Google display name and profile photo</strong> — shown publicly on your reports and comments.</li>
+      <li><strong>Your email address</strong> — stored so the owner can follow up with you about a tricky report. <strong>It is never shown publicly.</strong></li>
+      <li><strong>Your reports, votes, and comments</strong> — these are public.</li>
+      <li><strong>Coarse technical context you choose to attach</strong> — app version, mode, theme, and your browser/OS family. You see exactly what will be attached before you send, and you can remove any of it. We never receive your world data, your files, or any API keys.</li>
+    </ul>
+
+    <h2 class="display">What is public</h2>
+    <p>Your reports, ideas, comments, votes, display name, and photo are visible to anyone. Your email is not. The board doubles as our public roadmap, so it may be linked from our store pages.</p>
+
+    <h2 class="display">Deleting your data</h2>
+    <p>Email us and we will remove your account. Your past reports and comments stay on the board but are renamed to “a GM”, so the record of what was reported isn’t lost.</p>
+
+    <h2 class="display">Terms, briefly</h2>
+    <p>Be kind and keep it on-topic. Spam, abuse, and off-topic content may be hidden. One account per person; one vote per report. That’s it.</p>
+
+    <h2 class="display">Contact</h2>
+    <p>Questions or deletion requests: <a id="contact-link" href="#">contact the owner</a>.</p>
+
+    <p style="color: var(--ink-faint); font-size: 0.85rem; margin-top: 2rem;">This page is set at deploy time; the contact address is configured by the site owner.</p>
+  </main>
+
+  <script>
+    // The contact address is a deploy-time var so it is never hard-coded in
+    // the repo. If CONTACT_EMAIL is unset, the link stays a gentle placeholder.
+    (function () {
+      var email = window.__CONTACT_EMAIL__ || '';
+      var el = document.getElementById('contact-link');
+      if (email) { el.href = 'mailto:' + email; el.textContent = email; }
+      else { el.removeAttribute('href'); el.textContent = 'the address on our store page'; }
+    })();
+  </script>
+</body>
+</html>
