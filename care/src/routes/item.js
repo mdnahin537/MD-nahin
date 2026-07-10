@@ -119,9 +119,13 @@ export async function handleGetItem(request, env, url, itemId) {
   };
 
   // Signed-in viewers get a per-user field (myVote), so don't shared-cache
-  // those; anonymous reads are cacheable at the edge for 30s.
+  // those; anonymous reads are cacheable at the edge for 30s. `Vary: Cookie`
+  // is essential: without it a browser that cached the anonymous response
+  // would keep serving it (stale net, no myVote) to the SAME user after they
+  // sign in and vote — because the URL is identical. Varying on Cookie means
+  // the cookieless cached copy is not reused once the user has a session.
   const headers = session
-    ? { 'Cache-Control': 'private, no-store' }
-    : { 'Cache-Control': `public, max-age=${CACHE_TTL_SECONDS}` };
+    ? { 'Cache-Control': 'private, no-store', Vary: 'Cookie' }
+    : { 'Cache-Control': `public, max-age=${CACHE_TTL_SECONDS}`, Vary: 'Cookie' };
   return json(body, 200, headers);
 }

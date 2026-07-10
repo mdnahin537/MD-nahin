@@ -8,7 +8,7 @@
 // pointed at scripts/mock-google.mjs for local verification — no branching
 // "if test mode" logic anywhere in here.
 
-import { signHS256, verifyHS256, verifyRS256WithJwks } from './jwt.js';
+import { signHS256, verifyHS256, verifyRS256WithJwks, decodeJwtUnsafe } from './jwt.js';
 import { parseCookies, serializeCookie, clearCookie } from './cookies.js';
 
 const OAUTH_STATE_COOKIE = 'rw_oauth_state';
@@ -22,9 +22,9 @@ const SESSION_TTL_SECONDS = 90 * 24 * 60 * 60; // 90 days (locked shape #7 / §3
 let jwksCache = { url: null, body: null, fetchedAt: 0 };
 const JWKS_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
-async function fetchJwks(jwksUrl) {
+async function fetchJwks(jwksUrl, { force = false } = {}) {
   const now = Date.now();
-  if (jwksCache.url === jwksUrl && now - jwksCache.fetchedAt < JWKS_CACHE_TTL_MS) {
+  if (!force && jwksCache.url === jwksUrl && now - jwksCache.fetchedAt < JWKS_CACHE_TTL_MS) {
     return jwksCache.body;
   }
   const res = await fetch(jwksUrl);
@@ -32,6 +32,14 @@ async function fetchJwks(jwksUrl) {
   const body = await res.json();
   jwksCache = { url: jwksUrl, body, fetchedAt: now };
   return body;
+}
+
+// Google rotates its signing keys periodically; a token can legitimately be
+// signed with a key that isn't in our cached JWKS yet. If the token's kid
+// isn't present, force ONE refetch before giving up — otherwise valid logins
+// would fail for up to the cache TTL after every Google key rotation.
+async function jwksHasKid(jwks, kid) {
+  return !!(jwks && jwks.keys && jwks.keys.some((k) => k.kid === kid));
 }
 
 function isSecureEnv(env) {
@@ -125,7 +133,14 @@ export async function handleCallback(request, env, url) {
   const idToken = tokenBody.id_token;
   if (!idToken) return authErrorResponse('Google did not return an identity token.');
 
-  const jwks = await fetchJwks(env.GOOGLE_JWKS_ENDPOINT);
+  // Verify the ID token's signature against Google's JWKS. If the token's kid
+  // isn't in our cached key set (Google rotated keys since we last fetched),
+  // force one refresh before trusting or rejecting it.
+  const decoded = decodeJwtUnsafe(idToken);
+  let jwks = await fetchJwks(env.GOOGLE_JWKS_ENDPOINT);
+  if (decoded && !(await jwksHasKid(jwks, decoded.header.kid))) {
+    jwks = await fetchJwks(env.GOOGLE_JWKS_ENDPOINT, { force: true });
+  }
   const claims = await verifyRS256WithJwks(idToken, jwks);
   if (!claims) return authErrorResponse('Could not verify your Google identity.');
   if (claims.iss !== env.GOOGLE_ISSUER) return authErrorResponse('Unexpected identity issuer.');

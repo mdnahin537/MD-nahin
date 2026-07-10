@@ -23,13 +23,22 @@ import { webcrypto as crypto } from 'node:crypto';
 
 const PORT = Number(process.argv[2]) || 8790;
 const ISSUER = `http://127.0.0.1:${PORT}`;
-const KID = 'mock-key-1';
+// A fresh kid each startup, like real Google (whose keys rotate with new kids).
+// This also means a restarted mock's tokens carry a kid the Worker hasn't
+// cached, exercising the callback's refetch-on-unknown-kid path.
+const KID = 'mock-key-' + Date.now();
+
+// A self-contained data-URI avatar so the avatar-render path is exercised in
+// local testing without a network request to a fake host (real Google returns
+// a real https avatar; this stands in without ever erroring in the browser).
+const DEFAULT_AVATAR =
+  'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"%3E%3Ccircle cx="16" cy="16" r="16" fill="%23f4a94f"/%3E%3Ctext x="16" y="21" font-size="15" text-anchor="middle" fill="%23241505" font-family="sans-serif"%3EG%3C/text%3E%3C/svg%3E';
 
 const DEFAULT_USER = {
   sub: 'mock-gm-sub-001',
   name: 'Test GM',
   email: 'testgm@example.com',
-  picture: 'https://example.com/avatar/testgm.png',
+  picture: DEFAULT_AVATAR,
 };
 
 let nextUser = null; // one-shot override
@@ -137,7 +146,9 @@ const server = http.createServer(async (req, res) => {
         sub: body.sub || DEFAULT_USER.sub,
         name: body.name || DEFAULT_USER.name,
         email: body.email || DEFAULT_USER.email,
-        picture: body.picture ?? DEFAULT_USER.picture,
+        // Respect an explicitly-provided picture (including null for "no
+        // avatar"); only fall back to the default when the field is absent.
+        picture: 'picture' in body ? body.picture : DEFAULT_USER.picture,
       };
       return sendJson(res, 200, { ok: true, willLoginAs: nextUser });
     } catch {
@@ -147,6 +158,14 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === 'GET' && url.pathname === '/_test/health') {
     return sendJson(res, 200, { ok: true, issuer: ISSUER });
+  }
+
+  // Browsers auto-request /favicon.ico when they briefly land on this origin
+  // during the OAuth redirect; answer 204 so it doesn't surface as a console
+  // error during Playwright runs. Not part of the real Google surface.
+  if (req.method === 'GET' && url.pathname === '/favicon.ico') {
+    res.writeHead(204);
+    return res.end();
   }
 
   sendJson(res, 404, { error: 'no such mock-google route', path: url.pathname });
