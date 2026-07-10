@@ -4,18 +4,88 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>RealmWright — Community Board</title>
-  <meta name="description" content="Report bugs, request features, and see what's shipping next for RealmWright.">
+  <meta name="description" content="What GMs want built next for RealmWright. Report a bug, request a feature, and watch it move up the list.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/board.css">
 </head>
 <body>
-  <div class="container" style="padding-top: 5rem; text-align: center; max-width: 40rem;">
-    <p class="serial mono" style="font-size: 0.85rem; letter-spacing: 0.08em;">REALMWRIGHT</p>
-    <h1 class="display" style="font-size: 2.25rem;">Community Board</h1>
-    <p style="color: var(--ink-dim);">
-      This is the scaffold placeholder — Phase 2 replaces this page with the
-      live feed (top module, shipped strip, woven ranking, filters, search).
-    </p>
-    <p><a href="/api/health">/api/health</a></p>
-  </div>
+  <header class="masthead">
+    <div class="container masthead__inner">
+      <a class="masthead__brand" href="/">
+        <span class="masthead__mark mono">RW</span>
+        <span class="masthead__titles">
+          <span class="masthead__title">Community Board</span>
+          <span class="masthead__sub">What GMs want built next</span>
+        </span>
+      </a>
+      <div class="masthead__actions">
+        <a class="btn btn-primary" href="/report/">Report a problem or idea</a>
+        <span id="auth-slot" class="masthead__auth"></span>
+      </div>
+    </div>
+  </header>
+
+  <main class="container board">
+    <!-- Top-10 module: the dominant anchor (design §6.3, §8). Hidden on a young board. -->
+    <section id="module" class="module" hidden aria-labelledby="module-heading">
+      <div class="module__head">
+        <h1 id="module-heading" class="module__heading">Top of the board</h1>
+        <p class="module__note">The most-wanted, by how many GMs agree. Every item keeps its number.</p>
+      </div>
+      <ol id="module-list" class="module__list"></ol>
+    </section>
+
+    <!-- Shipped strip: the care loop, made visible. Hidden when empty. -->
+    <section id="shipped" class="strip" hidden aria-labelledby="shipped-heading">
+      <h2 id="shipped-heading" class="strip__heading">Recently shipped</h2>
+      <div id="shipped-list" class="strip__rail"></div>
+    </section>
+
+    <!-- Controls: filters, search, sort. -->
+    <section class="controls" aria-label="Filter the board">
+      <div class="controls__row">
+        <div id="type-chips" class="chip-row" role="group" aria-label="Type"></div>
+        <div class="controls__spacer"></div>
+        <label class="sort-toggle">
+          <input type="checkbox" id="sort-newest">
+          <span>Newest first</span>
+        </label>
+      </div>
+      <div class="controls__row">
+        <div id="area-chips" class="chip-row chip-row--scroll" role="group" aria-label="Area"></div>
+      </div>
+      <div class="controls__row">
+        <div class="search">
+          <input type="search" id="search-input" class="search__input" placeholder="Search the board…" aria-label="Search the board by title" autocomplete="off">
+        </div>
+        <div id="status-chips" class="chip-row" role="group" aria-label="Status"></div>
+      </div>
+    </section>
+
+    <!-- The woven feed. -->
+    <section class="feed" aria-label="All reports and ideas" aria-live="polite">
+      <div id="feed-list" class="feed__list"></div>
+      <div id="feed-empty" class="empty-state" hidden></div>
+      <div id="feed-loading" class="feed__loading">
+        <div class="skeleton feed__skel"></div>
+        <div class="skeleton feed__skel"></div>
+        <div class="skeleton feed__skel"></div>
+      </div>
+      <div class="feed__more">
+        <button id="load-more" class="btn" hidden>Show more</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer__inner">
+      <p>A living record of what GMs report and want. Reports are public; your email never is.</p>
+      <p><a href="/privacy/">Privacy &amp; terms</a></p>
+    </div>
+  </footer>
+
+  <script src="/js/care.js"></script>
+  <script src="/js/board.js"></script>
 </body>
 </html>

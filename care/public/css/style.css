@@ -5,7 +5,26 @@
    parchment accent, serif headlines, humanist sans body, mono for serials.
    Respects prefers-color-scheme with a Manuscript-like light variant. */
 
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600&display=swap');
+/* Fonts are SELF-HOSTED (latin subset, from Google Fonts) — no external CDN
+   request at runtime, so the board loads with no third-party dependency,
+   works for privacy-blocker users, and matches the product's self-contained
+   discipline (§8). Work Sans is one variable file covering 400-600; Fraunces
+   headlines are a single 600 weight. Anything heavier/lighter falls back to
+   the stacks below, which are chosen to still read as intentional. */
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/fraunces-600.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Work Sans';
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url('/fonts/worksans-var.woff2') format('woff2');
+}
 
 :root {
   color-scheme: dark;
