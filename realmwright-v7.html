@@ -7474,7 +7474,9 @@ const LicenseGate={
       const json=await res.json().catch(()=>({}));
       if(res.status===403&&!json.activated){
         // Device cap hit — Worker has already rolled back the LS instance.
-        return{success:false,error:json.error||'Device limit reached.'};
+        // L1b: tag the reason (client-side classification only — no worker/ change) so the UI
+        // can show a real help line instead of leaving the GM stuck on a bare error string.
+        return{success:false,error:json.error||'Device limit reached.',reason:'device_limit'};
       }
       if(!json.activated){
         return{success:false,error:json.error||'Activation failed.'};
@@ -27755,7 +27757,16 @@ const LicenseGateUI={
       if(typeof Modals!=='undefined')Modals.close('license-activate');
       this._updateModalStatus();
     }else{
-      if(err){err.textContent=result.error||'Activation failed.';err.style.display='block';}
+      // L1b: the device-limit case left a GM stuck on a bare error with no idea what to do.
+      // Add a real, honest help line — using ONLY the self-service action already in this
+      // app (deactivate on another device to free a slot) — not an invented support channel.
+      if(err){
+        const base=result.error||'Activation failed.';
+        err.textContent=result.reason==='device_limit'
+          ?base+" If you've activated RealmWright on another device before, open Settings on that device and click \"Deactivate this device\" to free a slot for this one."
+          :base;
+        err.style.display='block';
+      }
       if(sub){sub.disabled=false;sub.textContent='Activate';}
     }
   },
