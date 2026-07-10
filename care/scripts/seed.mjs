@@ -76,7 +76,10 @@ function addUsers(count, prefix) {
   return { rows, subs };
 }
 
-function chunkedInsert(table, columns, rows, chunkSize = 400) {
+// Keep each generated INSERT well under D1's per-statement size ceiling.
+// Small default; big-payload tables (reports carry a ~400-char JSON blob
+// each) override to an even smaller chunk at their call site.
+function chunkedInsert(table, columns, rows, chunkSize = 100) {
   for (let i = 0; i < rows.length; i += chunkSize) {
     const chunk = rows.slice(i, i + chunkSize);
     if (chunk.length === 0) continue;
@@ -344,7 +347,8 @@ chunkedInsert(
 chunkedInsert(
   'reports',
   'id, item_id, user_sub, payload, created_at, held',
-  reportRows.map((r) => `(${r.id}, ${r.itemId}, ${sqlStr(r.userSub)}, ${sqlStr(r.payload)}, ${r.createdAt}, ${r.held})`)
+  reportRows.map((r) => `(${r.id}, ${r.itemId}, ${sqlStr(r.userSub)}, ${sqlStr(r.payload)}, ${r.createdAt}, ${r.held})`),
+  40 // each row carries a ~400-char JSON payload
 );
 
 // votes: dedupe to one row per (item_id,user_sub) — last write wins, mirrors
@@ -354,13 +358,15 @@ for (const v of voteRows) voteMap.set(`${v.itemId}:${v.userSub}`, v);
 chunkedInsert(
   'votes',
   'item_id, user_sub, value, created_at',
-  Array.from(voteMap.values()).map((v) => `(${v.itemId}, ${sqlStr(v.userSub)}, ${v.value}, ${v.createdAt})`)
+  Array.from(voteMap.values()).map((v) => `(${v.itemId}, ${sqlStr(v.userSub)}, ${v.value}, ${v.createdAt})`),
+  300 // tiny rows
 );
 
 chunkedInsert(
   'vote_events',
   'item_id, user_sub, value, created_at',
-  voteEventRows.map((v) => `(${v.itemId}, ${sqlStr(v.userSub)}, ${v.value}, ${v.createdAt})`)
+  voteEventRows.map((v) => `(${v.itemId}, ${sqlStr(v.userSub)}, ${v.value}, ${v.createdAt})`),
+  300
 );
 
 chunkedInsert(

@@ -5,6 +5,8 @@ import { handlePutVote } from './routes/vote.js';
 import { handlePostComment } from './routes/comment.js';
 import { handleGetRelated } from './routes/related.js';
 import { handleGetMe } from './routes/me.js';
+import { handleGetFeed } from './routes/feed.js';
+import { handleGetItem } from './routes/item.js';
 
 const WRITE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
@@ -72,13 +74,11 @@ async function routeApi(request, env, ctx, url) {
     return handleGetRelated(request, env, url);
   }
   if (method === 'GET' && pathname === '/api/feed') {
-    // Phase 1 (in progress): §6.3 module + shipped strip + woven feed + guardrail.
-    return jsonError(501, 'Not built yet.');
+    return handleGetFeed(request, env, ctx, url);
   }
   const itemMatch = pathname.match(/^\/api\/item\/(\d+)$/);
   if (method === 'GET' && itemMatch) {
-    // Phase 1/2: item detail + roll-up.
-    return jsonError(501, 'Not built yet.');
+    return handleGetItem(request, env, url, Number(itemMatch[1]));
   }
   if (pathname.startsWith('/api/desk/')) {
     // Owner-only — Phase 4 wires the real OWNER_SUB gate. Until then, and for
