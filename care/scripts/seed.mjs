@@ -115,15 +115,19 @@ let nextItemId = 1;
 let nextReportId = 1;
 let nextCommentId = 1;
 
-function makeItem({ type, area, status, createdAt, pinned = 0, held = 0, ownerNoteAt = null }) {
+function makeItem({ type, area, part = null, status, createdAt, pinned = 0, held = 0, ownerNoteAt = null, title = null, createdBy = 'mock-owner-sub-001' }) {
   const id = nextItemId++;
-  const title = `${area} — seeded ${type} #${id}`;
-  itemRows.push({ id, type, area, status, createdAt, pinned, held, ownerNoteAt, title });
+  const finalTitle = title || `${area} — seeded ${type} #${id}`;
+  itemRows.push({ id, type, area, part, status, createdAt, pinned, held, ownerNoteAt, title: finalTitle, createdBy });
   return id;
 }
 
-function addFoundingReportAndVote(itemId, userSub, createdAt, voteValue = 1) {
-  const contract = buildContract(itemRows.find((i) => i.id === itemId).type, itemRows.find((i) => i.id === itemId).area);
+function addFoundingReportAndVote(itemId, userSub, createdAt, voteValue = 1, contractOverride = null) {
+  const it = itemRows.find((i) => i.id === itemId);
+  // The founding reporter is the item's creator — keeps created_by real so the
+  // desk's "prolific author" anomaly and any per-author view are meaningful.
+  if (it && it.createdBy === 'mock-owner-sub-001') it.createdBy = userSub;
+  const contract = contractOverride || buildContract(it.type, it.area);
   reportRows.push({ id: nextReportId++, itemId, userSub, payload: contract, createdAt, held: 0 });
   if (voteValue !== 0) {
     voteRows.push({ itemId, userSub, value: voteValue, createdAt });
@@ -299,6 +303,106 @@ if (N === 5000) {
 }
 
 // =====================================================================
+// N = 200 : Owner-Desk fixture — realistic small board with the exact
+// shapes the desk must surface (§7): hot threads with real reports for the
+// digest + Build Brief, near-duplicate titles for merge suspects, held
+// items/comments, velocity movers, a controversial net-negative thread, and
+// a prolific same-user burst. ~200 reports total.
+// =====================================================================
+if (N === 200) {
+  const { rows: u, subs: users } = addUsers(80, 'desk');
+  userRows.push(...u);
+  const U = (i) => users[i % users.length];
+
+  // Realistic titles per area (used so trigram merge-suspects are meaningful).
+  const HOT = [
+    { area: 'campaign', part: 'clocks', title: 'Campaign clocks reset after reload', symptom: 'work_disappeared', detail: 'after_reload' },
+    { area: 'campaign', part: 'clocks', title: 'Campaign clocks reset when I reload', symptom: 'work_disappeared', detail: 'after_reload' }, // near-dup of the above -> merge suspect
+    { area: 'exports-data', part: null, title: 'Story Bible PDF is missing the last chapter', symptom: 'pdf_missing_content', detail: null },
+    { area: 'ai', part: 'chat', title: 'Copilot forgets my world between sessions', symptom: 'ai_wrong_answer', detail: null },
+    { area: 'war-room', part: 'stability-math', title: 'Stability score jumps for no reason', symptom: 'wrong_thing', detail: null },
+    { area: 'run-sessions', part: 'dice-doom', title: 'Doom pool does not roll on mobile', symptom: 'nothing_happened', detail: null },
+  ];
+
+  let hotIds = [];
+  HOT.forEach((h, hi) => {
+    const createdAt = NOW - randInt(5, 40) * DAY;
+    const id = makeItem({ type: 'bug', area: h.area, part: h.part, status: 'open', createdAt, title: h.title });
+    hotIds.push(id);
+    // 6-14 GMs each file a real structured report (rich roll-up + Build Brief).
+    const nReports = randInt(6, 14);
+    for (let r = 0; r < nReports; r++) {
+      const contract = JSON.stringify({
+        type: 'bug', area: h.area, part: h.part, symptom: h.symptom, symptom_detail: h.detail,
+        frequency: pick(['every_time', 'sometimes', 'sometimes', 'once']),
+        expected: r === 0 ? 'clock stays at 3/6' : '', actual: r === 0 ? 'reset to 0' : '', freetext: r === 1 ? 'lost a whole session of prep' : '',
+        importance: null,
+        ctx: { v: pick(['2.3.0', '2.3.0', '2.2.0']), schema: '2.5.0', build: 'full', mode: pick(['campaign', 'world']), theme: 'ember', ai: 'openrouter', os: pick(['windows', 'windows', 'mac', 'ios']), browser: pick(['chrome', 'safari', 'firefox']), screen: pick(['desktop', 'desktop', 'phone']), lang: 'en' },
+        followups: [],
+      });
+      addFoundingReportAndVote(id, U(hi * 7 + r), createdAt + r * 3600, r === 0 ? 1 : 0, contract);
+      if (r > 0) addVote(id, U(hi * 7 + r), 1, createdAt + r * 3600); // each joiner also agrees
+    }
+    // recent burst so a couple of these are velocity movers
+    if (hi % 2 === 0) for (let v = 0; v < 6; v++) addVote(id, U(200 + hi * 6 + v), 1, NOW - randInt(0, 5) * DAY);
+  });
+
+  // A batch of ordinary single-report items spread across areas (fills the
+  // digest's per-area counts). Three word arrays of coprime lengths (13/11/17)
+  // so all 70 filler titles are distinct combos with low mutual trigram
+  // overlap — no false merge suspects; only the real near-dup clocks pair
+  // above should surface. Mirrors how real reports read.
+  const SUBJ = ['The map export', 'A saved snapshot', 'The dice tray', 'My faction notes', 'The NPC picker', 'The timeline zoom', 'The oracle roll', 'The handout preview', 'The stat wheel', 'The clue tracker', 'The name list', 'The scene pivot', 'The relation web'];
+  const PRED = ['loads blank', 'drops my edits', 'ignores the theme', 'skips the last row', 'renders too small', 'freezes briefly', 'forgets my choice', 'reorders itself', 'clips off screen', 'double-counts', 'needs a keyboard shortcut'];
+  const TAIL = ['on tablets', 'after a reload', 'in dark mode', 'when I switch realms', 'on first open', 'during a session', 'with a long list', 'on a slow laptop', 'after import', 'in landscape', 'once it syncs', 'with many factions', 'right at startup', 'after undo', 'when zoomed in', 'past midnight', 'on retina screens'];
+  for (let i = 0; i < 70; i++) {
+    const createdAt = NOW - randInt(1, 120) * DAY;
+    const area = AREAS[i % AREAS.length];
+    const title = `${SUBJ[i % SUBJ.length]} ${PRED[i % PRED.length]} ${TAIL[i % TAIL.length]}`;
+    const id = makeItem({ type: pick(['bug', 'idea']), area, status: pick(['open', 'open', 'planned', 'in_progress']), createdAt, title });
+    addFoundingReportAndVote(id, U(i * 3), createdAt, 1);
+    const extra = Math.floor(rand() * rand() * 8);
+    for (let v = 0; v < extra; v++) addVote(id, U(i * 3 + v + 1), rand() < 0.85 ? 1 : -1, createdAt + v * DAY);
+  }
+
+  // A controversial thread: many reports but net-negative (anomaly).
+  {
+    const createdAt = NOW - 25 * DAY;
+    const id = makeItem({ type: 'idea', area: 'ai', part: null, status: 'open', createdAt, title: 'Auto-post my world to social media' });
+    for (let r = 0; r < 5; r++) addFoundingReportAndVote(id, U(300 + r), createdAt + r * DAY, 0);
+    for (let v = 0; v < 12; v++) addVote(id, U(310 + v), -1, createdAt + v * DAY);
+    for (let v = 0; v < 4; v++) addVote(id, U(340 + v), 1, createdAt + v * DAY);
+  }
+
+  // Two shipped items (shipped strip + "recently shipped" digest signal).
+  for (let i = 0; i < 2; i++) {
+    const createdAt = NOW - randInt(40, 90) * DAY;
+    const id = makeItem({ type: 'bug', area: pick(AREAS), status: 'shipped', createdAt, ownerNoteAt: NOW - randInt(1, 10) * DAY, title: 'Fixed: import no longer drops NPCs' });
+    addFoundingReportAndVote(id, U(i), createdAt, 1);
+  }
+
+  // Held item + held comment (holds queue).
+  {
+    const createdAt = NOW - 3 * DAY;
+    const id = makeItem({ type: 'idea', area: 'other', part: null, status: 'open', createdAt, held: 1, title: 'buy followers for my stream please' });
+    addFoundingReportAndVote(id, U(400), createdAt, 1);
+  }
+  // held comment on a hot thread
+  commentRows.push({ id: nextCommentId++, itemId: hotIds[0], userSub: U(401), parentId: null, body: 'click this link now for free followers', createdAt: NOW - DAY, held: 1 });
+  // a couple of normal comments too
+  commentRows.push({ id: nextCommentId++, itemId: hotIds[0], userSub: U(5), parentId: null, body: 'Same here, lost my clocks twice this week.', createdAt: NOW - 2 * DAY, held: 0 });
+  commentRows.push({ id: nextCommentId++, itemId: hotIds[2], userSub: U(6), parentId: null, body: 'The PDF also drops my appendix.', createdAt: NOW - 2 * DAY, held: 0 });
+
+  // Prolific same-user burst today (anomaly): one user files 5 items.
+  for (let i = 0; i < 5; i++) {
+    const id = makeItem({ type: 'idea', area: pick(AREAS), status: 'open', createdAt: NOW - randInt(0, 20) * 3600, title: `Spammy idea ${i} from one account` });
+    addFoundingReportAndVote(id, 'desk-u1', NOW - randInt(0, 20) * 3600, 1); // all by users[1]
+  }
+
+  console.log(`N=200 desk fixture: ${itemRows.length} items, ${reportRows.length} reports, ${users.length} users; 6 hot threads (1 merge-suspect pair), 1 controversial, holds, movers, prolific burst.`);
+}
+
+// =====================================================================
 // Emit SQL
 // =====================================================================
 statements.push('DELETE FROM comments;');
@@ -336,7 +440,7 @@ const itemInsertRows = itemRows.map((it) => {
   const disagree = disagreeCountByItem.get(it.id) || 0;
   const reports = reportsCountByItem.get(it.id) || 0;
   const comments = commentsCountByItem.get(it.id) || 0;
-  return `(${it.id}, ${sqlStr(it.type)}, ${sqlStr(it.area)}, NULL, ${sqlStr(it.title)}, ${sqlStr(it.status)}, ${it.createdAt}, ${sqlStr('mock-owner-sub-001')}, ${it.pinned}, ${it.held}, NULL, ${agree}, ${disagree}, ${reports}, ${comments}, NULL, ${sqlNum(it.ownerNoteAt)})`;
+  return `(${it.id}, ${sqlStr(it.type)}, ${sqlStr(it.area)}, ${sqlStr(it.part)}, ${sqlStr(it.title)}, ${sqlStr(it.status)}, ${it.createdAt}, ${sqlStr(it.createdBy || 'mock-owner-sub-001')}, ${it.pinned}, ${it.held}, NULL, ${agree}, ${disagree}, ${reports}, ${comments}, NULL, ${sqlNum(it.ownerNoteAt)})`;
 });
 chunkedInsert(
   'items',

@@ -7,6 +7,7 @@ import { handleGetRelated } from './routes/related.js';
 import { handleGetMe } from './routes/me.js';
 import { handleGetFeed } from './routes/feed.js';
 import { handleGetItem } from './routes/item.js';
+import { routeDeskApi, serveDeskShell } from './routes/desk.js';
 
 const WRITE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
@@ -31,8 +32,9 @@ export default {
       }
 
       if (url.pathname === '/desk' || url.pathname.startsWith('/desk/')) {
-        // Phase 4 fills this in: server-side OWNER_SUB gate + desk shell.
-        return notFound(env);
+        // Owner-gated shell (HTML/JS/CSS). A non-owner gets the public 404 —
+        // the whole /desk tree is invisible, not merely locked (§7).
+        return await serveDeskShell(request, env, url);
       }
 
       // Anything else that somehow reached the Worker — hand it to the
@@ -85,10 +87,9 @@ async function routeApi(request, env, ctx, url) {
     return handleGetItem(request, env, url, Number(itemMatch[1]));
   }
   if (pathname.startsWith('/api/desk/')) {
-    // Owner-only — Phase 4 wires the real OWNER_SUB gate. Until then, and for
-    // any non-owner always, this must look exactly like a normal 404 JSON,
-    // never reveal that the path exists.
-    return jsonError(404, 'Not found.');
+    // Owner-gated inside routeDeskApi; a non-owner gets the public 404,
+    // indistinguishable from any other not-found path.
+    return routeDeskApi(request, env, url);
   }
 
   return jsonError(404, 'Not found.');
