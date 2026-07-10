@@ -1,0 +1,231 @@
+{
+  "version": 1,
+  "note": "Single source of truth for the intake wizard (B1/B2/I1), board area filters, and Owner Desk grouping (design §5.4). Icons are Material Symbols Outlined — the same icon font realmwright-v7.html's own nav uses (verified: fort/history_edu/connecting_airports/pets/flag/public/today/auto_stories against the live nav; the rest are the same icon family chosen for semantic fit, not individually re-verified against the app).",
+  "ideaExtraTile": { "key": "new", "label": "Something completely new", "icon": "auto_awesome" },
+  "areas": [
+    {
+      "key": "war-room",
+      "label": "War Room & Stats",
+      "icon": "fort",
+      "parts": [
+        { "key": "stability-math", "label": "The 10 stats & stability math" },
+        { "key": "pressures", "label": "Pressures" },
+        { "key": "hold-audience", "label": "Hold Audience" },
+        { "key": "world-turn", "label": "World Turn (While You Were Away)" },
+        { "key": "sandtable", "label": "Sandtable scenario" },
+        { "key": "dashboard", "label": "Dashboard display" }
+      ]
+    },
+    {
+      "key": "chronicle",
+      "label": "Chronicle & Timeline",
+      "icon": "history_edu",
+      "parts": [
+        { "key": "events", "label": "Adding/editing events" },
+        { "key": "eras", "label": "Eras & ordering" },
+        { "key": "visibility-forecasts", "label": "Public/private & forecasts" },
+        { "key": "timeline-display", "label": "Timeline display" }
+      ]
+    },
+    {
+      "key": "factions",
+      "label": "Factions & Relations",
+      "icon": "connecting_airports",
+      "parts": [
+        { "key": "faction-editing", "label": "Faction editing" },
+        { "key": "faction-hq", "label": "Faction HQ" },
+        { "key": "cross-realm-relations", "label": "Cross-realm relations" },
+        { "key": "relationship-web", "label": "Relationship web" }
+      ]
+    },
+    {
+      "key": "characters",
+      "label": "Characters & Bestiary",
+      "icon": "pets",
+      "parts": [
+        { "key": "characters-npcs", "label": "Characters/NPCs" },
+        { "key": "bestiary", "label": "Bestiary & creatures" },
+        { "key": "quick-npc", "label": "Quick NPC" }
+      ]
+    },
+    {
+      "key": "hooks-secrets",
+      "label": "Hooks, Secrets, Threads & Fronts",
+      "icon": "flag",
+      "parts": [
+        { "key": "hooks", "label": "Hooks" },
+        { "key": "secrets", "label": "Secrets" },
+        { "key": "plot-threads", "label": "Plot threads" },
+        { "key": "fronts-clocks", "label": "Fronts & clocks" }
+      ]
+    },
+    {
+      "key": "locations",
+      "label": "Locations",
+      "icon": "public",
+      "parts": [
+        { "key": "adding-editing", "label": "Adding/editing" },
+        { "key": "hierarchy-control", "label": "Hierarchy & control" },
+        { "key": "location-display", "label": "Display" }
+      ]
+    },
+    {
+      "key": "campaign",
+      "label": "Campaign Board",
+      "icon": "space_dashboard",
+      "parts": [
+        { "key": "clocks", "label": "Clocks" },
+        { "key": "beats", "label": "Beats" },
+        { "key": "board-npcs", "label": "Board NPCs" },
+        { "key": "board-secrets", "label": "Board secrets" },
+        { "key": "session-roll-forward", "label": "Session roll-forward" },
+        { "key": "board-display", "label": "Board display" }
+      ]
+    },
+    {
+      "key": "run-sessions",
+      "label": "Run Mode & Sessions",
+      "icon": "today",
+      "parts": [
+        { "key": "running-table", "label": "Running the table screen" },
+        { "key": "dice-doom", "label": "Dice & doom" },
+        { "key": "narration-live-rail", "label": "Narration & live rail" },
+        { "key": "logging-session", "label": "Logging a session" },
+        { "key": "session-history", "label": "Session history" }
+      ]
+    },
+    {
+      "key": "tonight-solo",
+      "label": "Tonight & Solo",
+      "icon": "auto_stories",
+      "parts": [
+        { "key": "tonight-pack", "label": "Tonight one-shot pack" },
+        { "key": "use-current-world", "label": "\"Use my current world\"" },
+        { "key": "solo-oracle", "label": "Solo oracle" },
+        { "key": "random-events", "label": "Random events" }
+      ]
+    },
+    {
+      "key": "ai",
+      "label": "AI Copilot & Generators",
+      "icon": "smart_toy",
+      "parts": [
+        { "key": "provider-setup", "label": "Setting up a provider/key" },
+        { "key": "chat", "label": "Chat answers & memory" },
+        { "key": "canon-review-sweep", "label": "Canon review & sweep" },
+        {
+          "key": "generator",
+          "label": "A specific generator",
+          "children": [
+            { "key": "gen-session-prep", "label": "Session Prep" },
+            { "key": "gen-strong-start", "label": "Strong Start" },
+            { "key": "gen-stakes", "label": "Stakes" },
+            { "key": "gen-secrets", "label": "Secrets" },
+            { "key": "gen-encounter", "label": "Encounter" },
+            { "key": "gen-names", "label": "Names" },
+            { "key": "gen-creature", "label": "Creature" },
+            { "key": "gen-glossary", "label": "Glossary" },
+            { "key": "gen-relations", "label": "Relations" },
+            { "key": "gen-continuity", "label": "Continuity" },
+            { "key": "gen-decipher", "label": "Decipher" },
+            { "key": "gen-clocks-beats-notes", "label": "Clocks/Beats/Notes" },
+            { "key": "gen-faction-advisor", "label": "Faction advisor" },
+            { "key": "gen-import-from-text", "label": "Import from text" },
+            { "key": "gen-other", "label": "Other" }
+          ]
+        },
+        { "key": "cost-budget", "label": "Cost & budget controls" }
+      ]
+    },
+    {
+      "key": "arsenal-press",
+      "label": "Arsenal & Handouts",
+      "icon": "inventory_2",
+      "parts": [
+        { "key": "prompt-library", "label": "Finding/using a prompt" },
+        { "key": "run-with-ai", "label": "Run-with-AI lane" },
+        { "key": "handouts", "label": "Proclamation/News/Letter handouts" },
+        { "key": "news-wall-recap", "label": "News wall & recap" }
+      ]
+    },
+    {
+      "key": "exports-data",
+      "label": "Exports, PDFs & Backups",
+      "icon": "download",
+      "parts": [
+        { "key": "json-export-import", "label": "JSON export/import" },
+        { "key": "story-bible-pdf", "label": "Story Bible PDF" },
+        { "key": "session-prep-pdf", "label": "Session Prep PDF" },
+        { "key": "foundry-vtt", "label": "Foundry VTT" },
+        { "key": "printing", "label": "Printing" },
+        { "key": "snapshots-restore", "label": "Snapshots & restore" }
+      ]
+    },
+    {
+      "key": "license-setup",
+      "label": "Buying, License & Setup",
+      "icon": "settings",
+      "parts": [
+        { "key": "activating-license", "label": "Activating a license" },
+        { "key": "demo-sample-limits", "label": "Demo/sample limits" },
+        { "key": "opening-loading-file", "label": "Opening/loading the file" },
+        { "key": "themes-display", "label": "Themes & display" },
+        { "key": "settings", "label": "Settings" }
+      ]
+    },
+    {
+      "key": "other",
+      "label": "Somewhere else / not sure",
+      "icon": "more_horiz",
+      "parts": []
+    }
+  ],
+  "symptomsUniversal": [
+    { "key": "nothing_happened", "label": "Nothing happened when I clicked" },
+    { "key": "wrong_thing", "label": "It did the wrong thing" },
+    {
+      "key": "work_disappeared",
+      "label": "My work disappeared / didn't save",
+      "followups": [
+        { "key": "after_reload", "label": "After reloading" },
+        { "key": "after_switching_realms", "label": "After switching realms" },
+        { "key": "while_editing", "label": "While editing" },
+        { "key": "other", "label": "Other" }
+      ]
+    },
+    { "key": "display_broken", "label": "The display looks broken" },
+    { "key": "froze_crashed", "label": "It froze or crashed" },
+    { "key": "slow", "label": "It's slow" },
+    { "key": "error_message", "label": "An error message appeared" },
+    { "key": "something_else", "label": "Something else" }
+  ],
+  "symptomsByArea": {
+    "ai": [
+      { "key": "ai_wrong_answer", "label": "The AI's answer was wrong or nonsense" },
+      { "key": "ai_call_failed", "label": "The AI call failed" }
+    ],
+    "exports-data": [
+      { "key": "wont_import", "label": "The file wouldn't import elsewhere" },
+      { "key": "pdf_missing_content", "label": "The PDF is missing content" }
+    ],
+    "license-setup": [
+      { "key": "license_wont_activate", "label": "My license won't activate" }
+    ]
+  },
+  "frequency": [
+    { "key": "every_time", "label": "Every time" },
+    { "key": "sometimes", "label": "Sometimes" },
+    { "key": "once", "label": "Happened once" }
+  ],
+  "ideaKinds": [
+    { "key": "new_tool", "label": "A new tool" },
+    { "key": "improve_existing", "label": "Improve an existing tool" },
+    { "key": "easier_faster", "label": "Make something easier or faster" },
+    { "key": "finish_incomplete", "label": "Finish something that feels incomplete" }
+  ],
+  "importance": [
+    { "key": "nice_to_have", "label": "Nice to have" },
+    { "key": "every_session", "label": "I'd use it every session" },
+    { "key": "cant_run_without", "label": "I can't run my game without it" }
+  ]
+}
