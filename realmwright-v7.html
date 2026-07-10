@@ -5947,14 +5947,15 @@ const IDB_KEY_DEMO_USES='rw_demo_uses';
 const IDB_KEY_FINGERPRINT='rw_device_fp';
 const IDB_KEY_DEVICE_TOKEN='rw_device_token'; // server-issued opaque UUID (Phase 1a P1.3)
 
-const SCHEMA_VERSION='2.5.0';
+const SCHEMA_VERSION='2.5.1';
 // Every schemaVersion the migrateIfNeeded chain (L7166) has an explicit block for.
 // Used by the recovery guard to tell a known-old save (route it back to the start
 // of the chain) from a genuinely unknown/future one (which must NOT be migrated).
-const KNOWN_SCHEMA_VERSIONS=['1.2.0','2.0.0','2.1.0','2.2.0','2.3.0','2.4.0','2.4.1','2.4.2','2.5.0'];
-// Empty Campaign prep board. Lives at meta level (one board per save) so it
-// survives nation switches and reloads. Self-contained: its own session clocks,
-// distinct from the per-nation `fronts` model that feeds the stability engine.
+const KNOWN_SCHEMA_VERSIONS=['1.2.0','2.0.0','2.1.0','2.2.0','2.3.0','2.4.0','2.4.1','2.4.2','2.5.0','2.5.1'];
+// Empty Campaign prep board. Lives PER-NATION (on n.campaignPrep) so it exports/imports with
+// the realm and never bleeds across realms on switch (was global on meta until schema 2.5.1 —
+// see the 2.5.0→2.5.1 migration). Self-contained: its own session clocks, distinct from the
+// per-nation `fronts` model that feeds the stability engine.
 // Campaign v2: schema is additive — older saves get fields filled by migrateCampaignPrep.
 function emptyCampaignPrep(){return{
   stakes:'',notes:'',clocks:[],beats:[],npcs:[],secrets:[],
@@ -7922,6 +7923,12 @@ function buildNationFromSeed(seed){
     // Same named landmine as turnLog — without this whitelist every printed recap is
     // silently wiped on the next re-import. Non-array → [] (a tampered import can't inject junk).
     pressArchive:Array.isArray(seed.pressArchive)?seed.pressArchive:[],
+    // CC-LM1 (P-CAMP/D-CAMP fix, schema 2.5.1): the Campaign prep board (clocks/beats/npcs/
+    // secrets/stakes/notes) is now per-nation, not global — whitelist it like turnLog/
+    // pressArchive above so export→import round-trips the board instead of silently dropping
+    // it. migrateCampaignPrep guarantees a complete shape whether seed.campaignPrep is a full
+    // board (re-import), partial (older export), or absent (a brand-new/template nation).
+    campaignPrep:migrateCampaignPrep(seed.campaignPrep?{...seed.campaignPrep}:emptyCampaignPrep()),
     metadata:{
       createdAt:seed.metadata?.createdAt||Utils.now(),
       lastUpdatedAt:Utils.now(),
@@ -8012,7 +8019,7 @@ function buildNationFromSeed(seed){
   n.tables=Array.isArray(seed.tables)?JSON.parse(JSON.stringify(seed.tables)):[];
   return n;
 }
-function createDefaultState(){const m=buildNationFromSeed(SEED_NATIONS[0]);return{schemaVersion:SCHEMA_VERSION,meta:{activeNationId:m.id,createdAt:Utils.now(),lastUpdatedAt:Utils.now(),settings:{...DEFAULT_SETTINGS},workflowState:{promptPending:null},firstRunComplete:false,preferredMode:null,snapshots:[],lastSnapshotAt:null,campaignPrep:emptyCampaignPrep()},nations:[m]};}
+function createDefaultState(){const m=buildNationFromSeed(SEED_NATIONS[0]);return{schemaVersion:SCHEMA_VERSION,meta:{activeNationId:m.id,createdAt:Utils.now(),lastUpdatedAt:Utils.now(),settings:{...DEFAULT_SETTINGS},workflowState:{promptPending:null},firstRunComplete:false,preferredMode:null,snapshots:[],lastSnapshotAt:null},nations:[m]};}
 // P6.10 — pure semver compare. Splits on '.', compares numerically part-by-part,
 // missing parts count as 0 (so '1.2' == '1.2.0'). Returns 1 / 0 / -1.
 function _cmpVer(a,b){
@@ -8181,6 +8188,23 @@ function migrateIfNeeded(d){
     d.meta.campaignPrep.npcs   =Array.isArray(cp.npcs)   ?cp.npcs   :[];
     d.meta.campaignPrep.secrets=Array.isArray(cp.secrets)?cp.secrets:[];
     d.schemaVersion='2.5.0';
+  }
+  // v2.5.0 → v2.5.1: Campaign prep board moves from meta (GLOBAL) onto the ACTIVE NATION
+  // (per-realm). The global model bled one board across every realm on switch and — because
+  // export/backup always excluded meta — was silently absent from every export (P-CAMP/D-CAMP).
+  // Best-effort for saves with multiple nations: the board can only ever have reflected ONE
+  // realm's prep at a time (there was no per-nation keying to recover), so it is handed to
+  // whichever nation was active when the save was last written — the realm it was actually
+  // being used for. Other nations start with a fresh empty board, not a stolen copy of it.
+  if(d.schemaVersion==='2.5.0'){
+    d.meta=d.meta||{};
+    const cp=d.meta.campaignPrep;
+    if(cp&&Array.isArray(d.nations)&&d.nations.length){
+      const target=d.nations.find(n=>n.id===d.meta.activeNationId)||d.nations[0];
+      if(target&&!target.campaignPrep)target.campaignPrep=migrateCampaignPrep(cp);
+    }
+    delete d.meta.campaignPrep;
+    d.schemaVersion='2.5.1';
   }
   return d;
 }
@@ -9113,8 +9137,17 @@ const State={
     this.persist();
   },
 
-  // ─── CAMPAIGN PREP BOARD (meta level — one per save) ───
-  cp(){this.data.meta.campaignPrep=migrateCampaignPrep(this.data.meta.campaignPrep||emptyCampaignPrep());return this.data.meta.campaignPrep;},
+  // ─── CAMPAIGN PREP BOARD (per-nation — see migration 2.5.0→2.5.1) ───
+  // Resolves against the ACTIVE nation so switching realms switches boards (fixes D-CAMP:
+  // the board no longer bleeds across realms, and NPC linkedCharacterId always resolves
+  // against ITS OWN realm's characters) and so the board rides the nation object through
+  // export/import (fixes P-CAMP: it's no longer silently excluded from every backup).
+  cp(){
+    const n=this.get();
+    if(!n)return migrateCampaignPrep(emptyCampaignPrep()); // no nation yet (pathological) — throwaway empty board, nothing to persist against
+    n.campaignPrep=migrateCampaignPrep(n.campaignPrep||emptyCampaignPrep());
+    return n.campaignPrep;
+  },
   cpSet(field,value){this.pushUndo();this.cp()[field]=value;this._touchMeta();this.persist();this._cpEmit([field]);},
   // Notes/Stakes autosave on a debounce — no undo snapshot per keystroke.
   cpSetText(field,value){this.cp()[field]=value;this._touchMeta();this.persist();this._cpEmit([field],{trivial:true});},
@@ -16665,7 +16698,7 @@ const SampleMode={
     // world characters (so Ask-the-NPC is grounded), progress clocks, and a staged secret bank.
     // Built AFTER buildNationFromSeed so linkedCharacterId points at the freshly-minted character
     // ids. Without this a loaded sample showed empty cast/clocks/secrets in Run Mode.
-    freshState.meta.campaignPrep=SampleMode._buildCampaignPrep(sampleNation,sampleId);
+    sampleNation.campaignPrep=SampleMode._buildCampaignPrep(sampleNation,sampleId);
     State.data=freshState;
     SampleMode._active=true;
     SampleMode._activeSampleId=sampleId;
