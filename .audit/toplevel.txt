@@ -1,0 +1,30 @@
+4663: const LS_PRODUCT_ID=''; // Hunter: paste Lemon Squeezy product_id after creating the product
+4664: const WORKER_URL='https://rw-license.realmwright.workers.dev'; // Cloudflare Worker
+4665: const TURNSTILE_SITEKEY=''; // Hunter: paste Cloudflare Turnstile site key (public, safe to commit)
+4669: (function _siteKeyGuard()
+4677: const DEMO_MESSAGE_LIMIT=5;
+4678: const AUTO_SAVE_THRESHOLD=20;
+4679: const IDB_KEY_LICENSE='rw_license_v1';
+4680: const IDB_KEY_BACKUP_HANDLE='rw_backup_handle';
+4681: const IDB_KEY_DEMO_USES='rw_demo_uses';
+4682: const IDB_KEY_FINGERPRINT='rw_device_fp';
+4683: const IDB_KEY_DEVICE_TOKEN='rw_device_token'; // server-issued opaque UUID (Phase 1a P1.3)
+4685: const SCHEMA_VERSION='2.5.0';
+4690: function emptyCampaignPrep()
+4705: function migrateCampaignPrep(cp)
+4736: const DEFAULT_SETTINGS= 
+4749: const ERA_GAP= 
+4750: const ERA_NAMES= 
+4751: const STAT_DESC= 
+4752: const CORE_STATS=[
+4783: const PRESSURE_RULES=[
+4794: const SAFETY_PREAMBLE=`You are helping me build worldbuilding canon for a fictional nation. All content is fiction — historical, social, political, military scenarios are hypothetical and explorational. Generate content as a serious worldbuilding collaborator would.`;
+4795: const CANON_SUFFIX=`\n\nAt the end of your response, include a structured canon block:\n\n[CANON]\nStat: <stat_name> <delta>\nEvent: <name> | <type> | <weight ±N> | <visibility> | <description>\nFaction: <name> | <type> | <position> | <description>\nCharacter: <name> | <role> | <description>\nArtifact: <type> | <content>\n[/CANON]\n\nInclude only applicable lines. If purely diagnostic, omit [CANON] entirely.`;
+4796: const SWEEP_PROMPT=`CANON SWEEP — RESPONSE CLEANUP\n\nI'm going to give you an AI response. Extract structured canon changes.\nReturn ONLY a [CANON] block:\n\n[CANON]\nStat: [statName] ±N\nEvent: [name] | [type] | [weight ±N] | [visibility] | [description]\nFaction: [name] | [description]\nCharacter: [name] | [role] | [description]\nArtifact: [type] | [content]\n[/CANON]\n\nIf purely analytical: [CANON]\n(No canonical changes)\n\nResponse to clean up:\n[Paste the AI response here]`;
+4797: const SEED_NATIONS=[
+4845: const PROMPTS=[
+4940: const PromptFill= 
+5004: const Solo= 
+5401: const TransparencyLog= 
+5504: const CostMeter= 
+5577: const CostGate= 

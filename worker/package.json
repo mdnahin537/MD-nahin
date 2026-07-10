@@ -1,0 +1,20 @@
+{
+  "name": "rw-license-worker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "RealmWright license/demo Worker. Proxies the Lemon Squeezy license API with a product/store paywall, verifies itch.io download keys, issues opaque device tokens (3-device cap), and runs a server-fenced free-demo OpenRouter proxy (Turnstile + per-IP/global daily caps).",
+  "main": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --import ./test/register-ts.mjs --test \"test/*.test.mjs\""
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240909.0",
+    "typescript": "^5.5.4",
+    "wrangler": "^3.78.0"
+  }
+}

@@ -20,8 +20,17 @@ High-quality thinking + AI execution = maximum leverage with minimum time.
 HARD CONSTRAINTS — non-negotiable on every task:
 - Halal only: no gambling, interest-based finance, adult content, haram verticals
   → Flag any haram adjacency proactively before building anything
-- Payouts: Gumroad + Payoneer only. Stripe-dependent platforms are non-viable.
+- Payouts: Payoneer-compatible rails only. Hunter confirmed (2026-06-11, firsthand):
+  itch.io supports Payoneer; Lemon Squeezy and Gumroad acceptable; may sell on multiple
+  storefronts → product licensing must be UNIVERSAL (storefront-agnostic Worker adapters).
+  → RealmWright decision (2026-06-17): [REJECTED] Gumroad — Hunter dropped it. Live scope =
+    Lemon Squeezy + itch.io + free-demo only. Keep the Worker platform layer extensible
+    (adding a store later is cheap) but do NOT build a Gumroad adapter unless Hunter revisits.
 - Never commit secrets. Never expose credentials. Always use .env.example.
+  → RealmWright money-path Worker is BUILT and lives at `worker/` on the magical-mayer/PR#9
+    branch (assembled from PR#4 base + PR#5 demo/itch/paywall, security-audited, paywall hole
+    closed, 21/21 tests). It was NEVER missing — earlier `NEEDS-WORKER-SOURCE` tags were wrong;
+    the source was always on PR#4/#5. Inert until Hunter does the §8 deploy (wrangler secrets).
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -316,6 +325,14 @@ Decision tree (run silently at session start):
   4. Approach rejected? → Write to CLAUDE.md immediately. Tag [REJECTED] + reason.
   5. Session ending? → Compress key decisions to CLAUDE.md. Let claude-mem handle logs.
 
+VOCABULARY STANDARD — NEW SURFACES (blueprint P1.4):
+Every NEW player-facing surface (Sandtable, Press, Almanac, Tables, future screens) ships with
+market-default language that reads well to halal-conscious and secular buyers alike. Existing
+Solo/oracle copy STAYS as Hunter ruled — do not retrofit it.
+  USE:   "project", "model", "forecast", "the math says", "simulate", "odds".
+  NEVER (on new surfaces): "foretell", "fate", "omen", "prophecy", "destiny".
+  ("oracle" is kept ONLY on the existing Solo surface per Hunter's ruling — not on new ones.)
+
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ## MODEL & EFFORT SELECTION — AUTOMATIC
@@ -358,6 +375,12 @@ AUTOMATIC MODEL RULES:
   Simple task (rename, format, small fix) → /model haiku + /effort low
   Codebase is huge (many files open)      → /model opus[1m] (1M context)
   Mid-build consultation needed           → Stay in session, say "ultrathink about [X]"
+
+  → RealmWright ruling (Hunter, 2026-06-18): EVERY new feature build = Opus 4.8 subagent,
+    NOT Sonnet. Overrides the "Sonnet = default execution" line above FOR BUILDS. Rationale:
+    quality floor for the paid product — the 4-pass quality sweep found craft gaps in the
+    Phase-2 Sonnet surfaces. Applies Phase 4 onward (P4.x / P5.x / P6.x). Haiku still fine for
+    trivial doc/file ops; planning/review still per-fit. "Anything getting built new = Opus."
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -547,3 +570,29 @@ claude update        # update to latest version
 /config               # open settings menu
 /help                 # all slash commands
 ```
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+## REALMWRIGHT AUTOPILOT — DURABLE DOCTRINE (2026-07-02)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Standing operating doctrine for the RealmWright quality push. Permanent memory — survives restart.
+
+MODEL STRENGTH RANKING (Hunter's ruling — for this work, overrides older opusplan lines):
+  Fable 5  (model:"fable")  = STRONGEST. Finding, verifying, "what to do next / how best", when lost or need advice, exhaustive investigation.
+  Opus 4.8 (model:"opus")   = planning / hard thinking.
+  Sonnet 5 (model:"sonnet") = doing / fixing / legwork / browser. (Sonnet 5, NOT Sonnet 4.6.)
+
+OPERATING METHOD (every task):
+  - Main agent orchestrates ONLY: plan → delegate → verify. Stays lean (protects its context). Does NOT do the heavy reading/finding/fixing itself.
+  - FIND/verify → Fable 5 (set it up right: quote the CURRENT code per claim, prove it real, give it live verification). DO/fix → Sonnet 5. PLAN → Opus 4.8. Lost / "what next" → Fable 5.
+  - ONE agent at a time (Hunter on a tight Pro/weekly limit; agents die at ~119 bytes when a 5h window is spent). Agents use 4–12 skills (named + actually used); subagents 1–5.
+  - Verify EVERY claim against live code before editing; verify EVERY fix (compile "3/4 compiled" + live browser) before trusting; commit + push each verified fix.
+  - Continuity across the tight limit: timers re-enter the working session every ~5h5m and continue from the scratchpad state file.
+
+ROADMAP: (1) Copilot fixes → (2) Campaign mode fixes → (3) SEND HUNTER THE PRODUCT FILE (realmwright-v7.html) as his backup before going further → (4) continuously find NEW broken / disconnected / useless things and make them genuinely useful (Fable picks what's next). Bar: a GM must be SATISFIED and AMAZED; what a feature SAYS it does must be what it ACTUALLY does; everything connects to everything.
+
+LIVE WORKING STATE (ephemeral, session-only): scratchpad/AUTOPILOT-STATE.md holds current findings, verification status, and the progress log. If it and the timers are lost to a container reclaim, rebuild from git history + this doctrine + a fresh Fable finding pass, then re-arm the timers.
+
+MECHANICS: single-file app realmwright-v7.html (~1.23MB inline script → use `grep -a`). Compile: `node /tmp/synA.mjs realmwright-v7.html` → "3/4 compiled" = HEALTHY (block#1 DOMPurify false error expected). Never commit/echo the OpenRouter test key (scratchpad only; Hunter rotates it when done). Halal only; market-default vocabulary on new player copy; no audit .md in the repo; never touch the money-path / worker.
+
+FABLE-BRIEFING PRINCIPLE (Hunter, 2026-07-03 — apply EVERY time): Fable 5 is SUPERIOR to the main agent (Opus 4.8). Do NOT command Fable with prescriptive checklists — that limits its thinking. Give it the VISION / goal expansively and unleash it to invent the best solution; tell it to read skills for IDEAS / inspiration, NOT to follow like slogans (an inventor, not a follower). Reserve directive, step-by-step briefs for Sonnet (the doer). Fable designs / produces everything; Sonnet does the code edit.

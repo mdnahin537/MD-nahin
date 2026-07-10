@@ -1,0 +1,79 @@
+name = "rw-license"
+main = "src/index.ts"
+compatibility_date = "2024-09-25"
+compatibility_flags = ["nodejs_compat"]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# KV namespaces
+#   DEVICES   — { license_key -> JSON{ tokens:[{token, created_at, last_seen_at, instance_id}] } }
+#               (itch buyers are stored under an "itch:<key>" namespace inside
+#                the same binding). TTL 90d.
+#   RATELIMIT — per-IP license-endpoint counters AND the demo per-IP/global
+#               daily counters (demo:ip:* / demo:global:*).
+#
+# Create them with:
+#   wrangler kv:namespace create DEVICES
+#   wrangler kv:namespace create RATELIMIT
+# then paste the IDs below.
+# ─────────────────────────────────────────────────────────────────────────────
+[[kv_namespaces]]
+binding = "DEVICES"
+id = "REPLACE_WITH_DEVICES_KV_ID"
+
+[[kv_namespaces]]
+binding = "RATELIMIT"
+id = "REPLACE_WITH_RATELIMIT_KV_ID"
+
+# Cron — fortnightly orphan reaper. 5-field syntax; fires 03:00 UTC on the
+# 1st and 15th of each month.
+[triggers]
+crons = ["0 3 1,15 * *"]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Non-secret config (safe to commit).
+# ─────────────────────────────────────────────────────────────────────────────
+[vars]
+# Comma-separated production origin allowlist. file:// loads (itch.io desktop
+# bundles, local opens) send Origin: null, which the Worker allows WITHOUT
+# credentials. An unknown/disallowed origin is refused before any side effect.
+# Hunter: tighten this before public ship.
+ALLOWED_ORIGINS = "https://realmwright.app,https://www.realmwright.app,https://html-classic.itch.zone,https://v6p9d9t4.ssl.hwcdn.net"
+
+# Device cap (shared by Lemon Squeezy activations and itch buyers).
+DEVICE_CAP = "3"
+DEVICE_TTL_SECONDS = "7776000"   # 90 days
+
+# Per-IP per-minute cap on the license endpoints (abuse prevention, not auth).
+RATE_LIMIT_PER_MIN = "30"
+
+# Lemon Squeezy paywall identity. BOTH must be set or activate/validate fail
+# closed (an unconfigured paywall is worse than a down one). These are the
+# numeric store_id and product_id from the LS dashboard — NOT secrets, but they
+# are required. The LS license API itself needs no API key.
+LS_STORE_ID = "REPLACE_WITH_LS_STORE_ID"
+LS_PRODUCT_ID = "REPLACE_WITH_LS_PRODUCT_ID"
+
+# itch.io game id this Worker guards (numeric). NOT a secret. The matching API
+# key IS a secret — see the secrets list in README / set via `wrangler secret put`.
+ITCHIO_GAME_ID = "REPLACE_WITH_ITCHIO_GAME_ID"
+
+# Free-demo (OpenRouter) controls. DEMO_MODEL is REQUIRED — the demo route
+# returns 503 without it. The Worker forces this model and ignores the client's.
+DEMO_MODEL = "REPLACE_WITH_OPENROUTER_MODEL_SLUG"   # e.g. an exact OpenRouter slug
+DEMO_PER_IP_DAILY = "5"
+DEMO_GLOBAL_DAILY = "300"
+DEMO_MAX_TOKENS = "1200"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SECRETS — set via `wrangler secret put <NAME>` (NEVER write values here).
+# Listed by name only; values live only in the Cloudflare secret store / .dev.vars.
+#
+#   OPENROUTER_KEY    (required) — Bearer key for the free-demo OpenRouter proxy.
+#   TURNSTILE_SECRET  (required) — Cloudflare Turnstile secret for the demo human check.
+#   ITCHIO_API_KEY    (required for itch) — seller's itch.io API key (used server-side only).
+#   CLEANUP_TOKEN     (required to enable the manual cleanup-orphans HTTP route;
+#                      if unset, that route is disabled — the cron still runs).
+#
+# Local dev: copy .dev.vars.example to .dev.vars and fill in real values there
+# (.dev.vars is gitignored). `wrangler dev` loads it automatically.
+# ─────────────────────────────────────────────────────────────────────────────

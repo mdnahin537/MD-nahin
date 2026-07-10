@@ -1,0 +1,14 @@
+# Local-dev secrets for `wrangler dev`. Copy to `.dev.vars` and fill REAL values
+# there — `.dev.vars` is gitignored. NEVER commit real secret values.
+# In production these are set with `wrangler secret put <NAME>` instead.
+
+# Required for the free-demo OpenRouter proxy:
+OPENROUTER_KEY="sk-or-REPLACE_ME"
+TURNSTILE_SECRET="REPLACE_ME"
+
+# Required for itch.io key verification:
+ITCHIO_API_KEY="REPLACE_ME"
+
+# Required only to enable the manual cleanup-orphans HTTP route (the fortnightly
+# cron runs regardless). If unset, that route is disabled (returns 404).
+CLEANUP_TOKEN="REPLACE_ME"
