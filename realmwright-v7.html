@@ -849,6 +849,13 @@ body.theme-ember .gm-badge{
 .wms-fc:hover{border-color:rgba(255,185,100,.30);background:rgba(255,185,100,.05);
   box-shadow:0 12px 36px rgba(0,0,0,.45),0 0 16px rgba(255,185,100,.08)}
 .wms-fc-inner{pointer-events:none}
+/* M3: faction delete control — every sibling entity has one, factions didn't. A direct child
+   of .wms-fc (not .wms-fc-inner, which is pointer-events:none for the 3D-tilt hit-test reason
+   noted below), positioned in the corner, subtle until hover. */
+.wms-fc-del{position:absolute;top:8px;right:8px;background:transparent;border:none;
+  color:var(--color-text-faint);cursor:pointer;font-size:13px;line-height:1;
+  padding:3px 6px;border-radius:4px;z-index:2}
+.wms-fc-del:hover{color:#d04545;background:rgba(199,69,69,.08)}
 .wms-fc-head{display:flex;justify-content:space-between;align-items:flex-start;
   gap:12px;margin-bottom:10px}
 .wms-fc-name{font-family:'Cinzel',serif;font-size:15px;font-weight:500;
@@ -8852,6 +8859,25 @@ const State={
     n.characters=n.characters.filter(c=>c.id!==cid);
     this._touch(nid);
     document.dispatchEvent(new CustomEvent('sc:changed',{detail:{fields:['character'],nid}}));
+    this.persist();
+  },
+  // M3: every sibling entity (character/event/hook/secret/front/location) has a delete path —
+  // factions didn't (could be created via canon/AI or import, then only renamed, never removed).
+  // Mirrors removeCharacter, plus a back-ref sweep (mirrors removeEvent's chronicleLinks sweep):
+  // consumers already guard a missing faction gracefully (dangling ids don't crash anything), so
+  // this is continuity hygiene, not crash-prevention — the Continuity Sweep's dangling-ref check
+  // would otherwise flag every legitimate faction deletion as a "contradiction" the GM never made.
+  removeFaction(nid,fid){
+    const n=this.data.nations.find(n=>n.id===nid);
+    if(!n||!n.factions)return;
+    this.pushUndo();
+    n.factions=n.factions.filter(f=>f.id!==fid);
+    (n.characters||[]).forEach(c=>{if(c.factionId===fid)c.factionId=null;});
+    (n.hooks||[]).forEach(h=>{if(Array.isArray(h.relatedFactions))h.relatedFactions=h.relatedFactions.filter(x=>x!==fid);});
+    (n.secrets||[]).forEach(s=>{if(Array.isArray(s.relatedFactions))s.relatedFactions=s.relatedFactions.filter(x=>x!==fid);});
+    (n.fronts||[]).forEach(fr=>{if(Array.isArray(fr.linkedFactionIds))fr.linkedFactionIds=fr.linkedFactionIds.filter(x=>x!==fid);});
+    this._touch(nid);
+    document.dispatchEvent(new CustomEvent('sc:changed',{detail:{fields:['faction'],nid}}));
     this.persist();
   },
   setWorkflow(ws){Object.assign(this.data.meta.workflowState,ws);this._touchMeta();this.persist();},
@@ -23981,6 +24007,7 @@ const WorldShell={
       const sc=posClass(f.position||f.stance||'');
       const icon=iconFor(f.type||'');
       html+=`<div class="wms-fc" data-fid="${E(f.id||'')}">
+        <button class="wms-fc-del" type="button" data-faction-del="${E(f.id||'')}" aria-label="Delete ${E(f.name||'faction')}" title="Delete faction">✕</button>
         <div class="wms-fc-inner">
           <div class="wms-fc-head" style="margin-bottom:10px">
             <span class="wms-fc-name">${E(f.name||'Unnamed')}</span>
@@ -24022,6 +24049,20 @@ const WorldShell={
       if(typeof Copilot==='undefined')return;
       if(!Copilot.isConfigured()){showToast('Add your API key in Settings to convene the Faction Council.');return;}
       Copilot.convFactionCouncil(State.get());
+    });
+    // M3: faction delete — mirrors the confirm()+removeX()+Render.all() pattern used for
+    // characters/events/hooks/secrets/fronts/locations. stopPropagation so it doesn't also
+    // trigger the card's own click-to-expand-political-domain handler below.
+    ctr.querySelectorAll('[data-faction-del]').forEach(btn=>{
+      btn.addEventListener('click',e=>{
+        e.stopPropagation();
+        const fid=btn.dataset.factionDel;
+        const fac=factions.find(x=>x.id===fid);
+        if(!fac)return;
+        if(!confirm(`Delete "${fac.name}"? You can undo with Ctrl+Z.`))return;
+        State.removeFaction(nat.id,fid);
+        Render.all();
+      });
     });
     // 3D tilt + click. Click goes on .wms-fc-inner (not the card) to survive hit-test shift from transform.
     ctr.querySelectorAll('.wms-fc').forEach(card=>{
