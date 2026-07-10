@@ -18142,7 +18142,7 @@ const Campaign={
       // Missing-tissue #2: beats can OPTIONALLY declare which of the realm's open hooks
       // they resolve (board-local — see beat.resolvesHookId below, never exported as a
       // whitelisted nation/meta field). Computed once per render, not per row.
-      const openHooks=(n&&Array.isArray(n.hooks))?n.hooks.filter(h=>h&&h.status==='open'):[];
+      const openHooks=(n&&Array.isArray(n.hooks))?n.hooks.filter(h=>h&&(h.status==='open'||(!h.status&&!h.resolved))):[];
       beatsEl.innerHTML=cp.beats.length?cp.beats.map((b,i)=>{
         const id=E(b.id);
         const playedHint=b.done&&b.playedAt?`played ${E(this._ago(b.playedAt))}`:'';
@@ -18200,7 +18200,7 @@ const Campaign={
     // Hidden entirely when the realm has nothing undeployed to offer.
     const bankPick=document.getElementById('cmp-secret-bank-pick');
     if(bankPick){
-      const bankSecrets=(n&&Array.isArray(n.secrets))?n.secrets.filter(s=>s&&s.status==='undeployed'):[];
+      const bankSecrets=(n&&Array.isArray(n.secrets))?n.secrets.filter(s=>s&&s.status!=='deployed'):[];
       bankPick.innerHTML=`<option value="">+ From bank…</option>`+bankSecrets.map(s=>{
         const label=(s.content||s.title||'Untitled secret').trim().slice(0,60);
         return `<option value="${E(s.id)}">${E(label)}</option>`;
@@ -22241,6 +22241,17 @@ const Tonight={
 const SHSPanels={
   _open:null, // 'sessions'|'hooks'|'secrets'|'fronts'|'locations'|'bestiary'|'relations'|null
 
+  // Tolerant status checks (audit B1 — field-model drift). A hook/secret authored as a raw
+  // fixture (shipped sample worlds, some older imports) can carry no `status` field at all:
+  // hooks fall back to the older boolean `resolved` field (mirrors Threads._isOpen); secrets
+  // never had a boolean equivalent, so a missing status defaults to 'undeployed' — the same
+  // default State.addSecret itself uses for a brand-new secret. Every filter in this panel (and
+  // the New Session picker) goes through these so a statusless hook/secret still shows up
+  // instead of silently vanishing from every group/picker (a hook visible in one panel and "No
+  // open hooks" in another reads as broken on exactly the first-run sample-world path).
+  _isHookOpen(h){return !!h&&(h.status==='open'||(!h.status&&!h.resolved));},
+  _isSecretUndeployed(s){return !!s&&s.status!=='deployed';},
+
   openPanel(which){
     // Close any open panel first
     ['sessions','hooks','secrets','fronts','locations','bestiary','relations','web','solo','threads'].forEach(p=>{
@@ -22320,7 +22331,7 @@ const SHSPanels={
     document.querySelectorAll('#ns-advance-group .char-status-pill').forEach(b=>b.classList.toggle('is-selected',b.dataset.advance==='0'));
     // Hooks closed multi-select
     const hctr=document.getElementById('ns-hooks-closed');
-    const openHooks=(n.hooks||[]).filter(h=>h.status==='open');
+    const openHooks=(n.hooks||[]).filter(h=>this._isHookOpen(h));
     if(hctr){
       hctr.innerHTML=openHooks.length
         ?openHooks.map(h=>`<label style="display:flex;align-items:center;gap:8px;font-size:var(--text-body-sm);margin-bottom:4px"><input type="checkbox" data-hid="${Utils.escHtml(h.id)}"> ${Utils.escHtml(h.title)}</label>`).join('')
@@ -22328,7 +22339,7 @@ const SHSPanels={
     }
     // Secrets deployed multi-select
     const sctr=document.getElementById('ns-secrets-deployed');
-    const undeployed=(n.secrets||[]).filter(s=>s.status==='undeployed');
+    const undeployed=(n.secrets||[]).filter(s=>this._isSecretUndeployed(s));
     if(sctr){
       sctr.innerHTML=undeployed.length
         ?undeployed.map(s=>`<label style="display:flex;align-items:center;gap:8px;font-size:var(--text-body-sm);margin-bottom:4px"><input type="checkbox" data-secret-deploy="${Utils.escHtml(s.id)}"> ${Utils.escHtml(s.content.slice(0,80))}${s.content.length>80?'…':''}</label>`).join('')
@@ -22448,7 +22459,11 @@ const SHSPanels={
     const n=State.get();const ctr=document.getElementById('hooks-body');if(!ctr)return;
     const E=Utils.escHtml;
     const hooks=n.hooks||[];
-    const groups={open:hooks.filter(h=>h.status==='open'),closed:hooks.filter(h=>h.status==='closed'),failed:hooks.filter(h=>h.status==='failed')};
+    const groups={
+      open:hooks.filter(h=>this._isHookOpen(h)),
+      closed:hooks.filter(h=>h.status==='closed'||(!h.status&&h.resolved===true)),
+      failed:hooks.filter(h=>h.status==='failed'),
+    };
     // Lookup helpers for related-entity names
     const charName=id=>(n.characters||[]).find(c=>c.id===id)?.name||null;
     const factionName=id=>(n.factions||[]).find(f=>(f.id||f.name)===id)?.name||id;
@@ -22472,7 +22487,7 @@ const SHSPanels={
             ${h.description?`<div style="font-size:var(--text-body-sm);color:var(--color-text-muted);margin-bottom:4px">${E(h.description)}</div>`:''}
             ${relatedLine}${originLine}
             <div class="sc-hook-actions">
-              ${h.status==='open'?`<button class="sc-hook-btn" data-hook-resolve="${E(h.id)}">Resolve</button><button class="sc-hook-btn" data-hook-fail="${E(h.id)}">Failed</button>`:''}
+              ${status==='open'?`<button class="sc-hook-btn" data-hook-resolve="${E(h.id)}">Resolve</button><button class="sc-hook-btn" data-hook-fail="${E(h.id)}">Failed</button>`:''}
               <button class="sc-hook-btn" data-hook-edit="${E(h.id)}">Edit</button>
               <button class="sc-hook-btn" data-hook-del="${E(h.id)}">Delete</button>
             </div>
@@ -22571,7 +22586,7 @@ const SHSPanels={
     const n=State.get();const ctr=document.getElementById('secrets-body');if(!ctr)return;
     const E=Utils.escHtml;
     const secrets=n.secrets||[];
-    const undeployed=secrets.filter(s=>s.status==='undeployed');
+    const undeployed=secrets.filter(s=>this._isSecretUndeployed(s));
     const deployed=secrets.filter(s=>s.status==='deployed');
     let html='';
     const renderSecretGroup=(label,list,statusKey)=>{
