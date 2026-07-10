@@ -5174,7 +5174,7 @@ Description: A tunnel gave way, halting the eastern works.</pre>
     <div class="settings-section">
       <div class="settings-section__title">Backups</div>
       <!-- P2.7 — Vault status chip. VaultChip.refresh() keeps this live. -->
-      <!-- Four states: Protected / Backup ready / No on-disk backup / Best-effort -->
+      <!-- Four states: Protected / Backup ready / No on-disk backup / No auto-backup (non-FSA browser) -->
       <div id="vault-chip-wrap" style="margin-bottom:14px;padding:10px 14px;border-radius:6px;border:1px solid var(--color-border-hairline);background:rgba(0,0,0,.15);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
         <div style="display:flex;align-items:center;gap:8px">
           <span id="vault-chip-dot" style="width:8px;height:8px;border-radius:50%;background:var(--color-text-muted);flex-shrink:0"></span>
@@ -7601,11 +7601,14 @@ const Demo={
   },
 };
 
-// ── P2.7 — AutoSave with _lastWriteAt timestamp and once-per-session fallback reminder ──
+// ── P2.7 — AutoSave with _lastWriteAt timestamp and a periodic fallback reminder ──
 // Key changes from pre-P2.7:
 //   • _lastWriteAt: set inside _write() every time a real on-disk write succeeds.
-//   • _fallbackReminderShown: gates the once-per-session reminder so there are zero
-//     unsolicited downloads from the auto/action path anywhere in the app.
+//   • _fallbackReminderEveryNTicks (P1 honesty fix): on a browser with no File System Access
+//     API (Firefox/Safari — there is no possible auto-save-to-disk path there, ever, not just
+//     "not set up yet"), the reminder now RECURS every N auto-save ticks instead of firing once
+//     per session and going silent — a long uninterrupted session shouldn't let the GM assume
+//     they're covered just because the first nudge scrolled past.
 //   • _fallbackDownload() is now a DOWNLOAD UTILITY only — never auto-called from
 //     _triggerSave(). The action loop now shows a toast reminder instead.
 //   • VaultChip.refresh() is called after every successful _write() so the chip stays live.
@@ -7615,7 +7618,7 @@ const AutoSave={
   _supported:'showSaveFilePicker' in window,
   _promptPending:false,
   _lastWriteAt:null,           // P2.7: ISO timestamp of the last successful on-disk write
-  _fallbackReminderShown:false, // P2.7: once-per-session guard — no unsolicited auto-downloads
+  _fallbackReminderEveryNTicks:10, // P1: re-nudge every 10th tick (~200 actions), plus the first
   async init(){
     if(!this._supported)return;
     try{this._handle=await IDB.get(IDB_KEY_BACKUP_HANDLE)||null;}catch(e){this._handle=null;}
@@ -7627,11 +7630,13 @@ const AutoSave={
     if(this._counter%AUTO_SAVE_THRESHOLD===0)this._triggerSave();
   },
   async _triggerSave(){
-    // P2.7: non-FSA path → once-per-session reminder toast (no download). manualSave() downloads.
+    // P1 honesty fix: non-FSA browsers (Firefox/Safari) have no auto-save-to-disk path at all —
+    // this is a permanent browser limitation, not a "not set up yet" state, so say so plainly
+    // and keep reminding periodically (no download here; manualSave() does the actual export).
     if(!this._supported){
-      if(!this._fallbackReminderShown){
-        this._fallbackReminderShown=true;
-        showToast('Your data is stored in the browser. Export a backup to keep it safe.',[
+      const tickNum=this._counter/AUTO_SAVE_THRESHOLD; // _triggerSave only runs on exact multiples
+      if(tickNum===1||tickNum%this._fallbackReminderEveryNTicks===0){
+        showToast("This browser can't auto-save to your device — export a backup to keep your realm safe.",[
           {label:'Export now',handler:()=>this.manualSave()}
         ],12000);
         if(typeof VaultChip!=='undefined')VaultChip.refresh();
@@ -7714,7 +7719,8 @@ const AutoSave={
 //   1. "Protected — backed up <N> ago"  (persisted + handle + _lastWriteAt)
 //   2. "Backup ready — not yet written"  (handle set, no write yet)
 //   3. "No on-disk backup — set one up"  (FSA supported, no handle) → CTA opens setupPicker
-//   4. "Best-effort storage — export weekly" (FSA unsupported) → CTA = Export now
+//   4. "No auto-backup on this browser — export manually" (FSA unsupported — Firefox/Safari;
+//      a PERMANENT browser limitation, not a setup step) → CTA = Export now (P1 honesty fix)
 // VaultChip.refresh() is called by AutoSave._write() and by the settings modal open event.
 const VaultChip={
   // Pure helper — formats a timestamp as a human-readable relative string.
@@ -7762,9 +7768,11 @@ const VaultChip={
       cta.onclick=()=>AutoSave.setupPicker();
       cta.style.display='';
     }else{
-      // State 4: non-Chromium / FSA unavailable — best-effort browser storage
+      // State 4 (P1 honesty fix): non-Chromium / FSA unavailable. This browser cannot
+      // auto-save to disk — ever, not just "not yet" — so say that plainly instead of the
+      // softer "best-effort storage" hedge, and keep the manual-export CTA front and center.
       dot.style.background='var(--color-crisis,#c74545)';
-      lbl.textContent='Best-effort storage — export weekly';
+      lbl.textContent='No auto-backup on this browser — export manually';
       cta.textContent='Export now';
       cta.onclick=()=>AutoSave.manualSave();
       cta.style.display='';
