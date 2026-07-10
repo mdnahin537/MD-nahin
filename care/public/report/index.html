@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tell Hunter what you found — RealmWright</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/wizard.css">
+</head>
+<body class="wizard-body">
+  <div class="wiz">
+    <header class="wiz__bar">
+      <button class="wiz__back" id="wiz-back" hidden aria-label="Go back">←</button>
+      <div class="wiz__progress" id="wiz-progress" aria-hidden="true"></div>
+      <a class="wiz__close" href="/" aria-label="Close and go to the board">✕</a>
+    </header>
+
+    <main class="wiz__stage" id="wiz-stage" aria-live="polite">
+      <!-- screens render here -->
+      <div class="wiz__loading"><div class="skeleton wiz__skel"></div></div>
+    </main>
+  </div>
+
+  <script src="/js/care.js"></script>
+  <script src="/js/wizard.js"></script>
+</body>
+</html>

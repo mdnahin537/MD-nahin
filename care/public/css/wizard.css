@@ -1,0 +1,166 @@
+/* ★ Intake wizard (design §5, §8). Crown jewel: the flow must feel like
+   effortless navigation, not a form. Big tap targets, one decision per
+   screen, generous space, calm motion. Built on style.css tokens. */
+
+.wizard-body { min-height: 100vh; background: var(--surface); }
+
+.wiz {
+  max-width: 34rem;
+  margin: 0 auto;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 0 1.25rem;
+}
+
+.wiz__bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 0;
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  z-index: 5;
+}
+.wiz__back, .wiz__close {
+  background: none; border: none; cursor: pointer;
+  color: var(--ink-dim); font-size: 1.3rem; line-height: 1;
+  width: 2.2rem; height: 2.2rem; border-radius: 8px;
+  display: grid; place-items: center; text-decoration: none;
+}
+.wiz__back:hover, .wiz__close:hover { background: var(--surface-overlay); color: var(--ink); }
+.wiz__progress { flex: 1; display: flex; gap: 0.4rem; justify-content: center; }
+.dot { width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--line); transition: background 0.2s ease, transform 0.2s ease; }
+.dot--on { background: var(--accent-strong); transform: scale(1.15); }
+
+.wiz__stage { flex: 1; padding-bottom: 3rem; }
+.wiz__loading { padding-top: 3rem; }
+.wiz__skel { height: 12rem; }
+
+.wiz__screen { animation: wizIn 0.22s ease; }
+@keyframes wizIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.wiz__center { text-align: center; padding-top: 2.5rem; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
+
+.wiz__h { font-size: 1.65rem; line-height: 1.2; margin: 0.5rem 0 0.3rem; }
+.wiz__sub { color: var(--ink-dim); margin: 0 0 1.5rem; font-size: 0.98rem; }
+.wiz__center .wiz__sub { max-width: 26rem; }
+.wiz__fine { color: var(--ink-faint); font-size: 0.85rem; }
+
+.wiz__mark {
+  display: grid; place-items: center; width: 3rem; height: 3rem;
+  border: 2px solid var(--accent-strong); border-radius: 12px;
+  color: var(--accent-strong); font-weight: 700; margin-bottom: 0.5rem;
+}
+
+.btn--big { font-size: 1.05rem; padding: 0.85rem 1.6rem; width: 100%; max-width: 22rem; }
+
+/* tile grid — the anchor of the intake (§8) */
+.tilegrid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; }
+.tilegrid--two { grid-template-columns: 1fr 1fr; }
+.tile {
+  display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 0.5rem;
+  min-height: 5.2rem; padding: 1rem;
+  border: 1px solid var(--line); border-radius: 14px;
+  background: var(--surface-raised); color: var(--ink);
+  cursor: pointer; text-align: left; font: inherit;
+  transition: border-color 0.14s ease, transform 0.08s ease, background 0.14s ease;
+}
+.tile:hover { border-color: var(--accent-strong); background: var(--surface-overlay); }
+.tile:active { transform: scale(0.98); }
+.tile__icon { color: var(--accent-strong); font-size: 1.1rem; }
+.tile__label { font-family: var(--serif); font-weight: 600; font-size: 1.02rem; line-height: 1.2; }
+.tilegrid--two .tile { min-height: 6.5rem; align-items: center; text-align: center; }
+.tilegrid--two .tile__label { font-size: 1.1rem; }
+
+/* choice chips — parts, symptoms, frequency, kinds */
+.choicechips { display: flex; flex-direction: column; gap: 0.6rem; }
+.choicechip {
+  display: block; width: 100%; text-align: left;
+  padding: 0.9rem 1.1rem; border-radius: 12px;
+  border: 1px solid var(--line); background: var(--surface-raised); color: var(--ink);
+  font: inherit; font-size: 1rem; cursor: pointer;
+  transition: border-color 0.14s ease, transform 0.08s ease, background 0.14s ease;
+}
+.choicechip:hover { border-color: var(--accent-strong); background: var(--surface-overlay); }
+.choicechip:active { transform: scale(0.99); }
+.choicechip.is-active { border-color: var(--accent-strong); background: color-mix(in oklab, var(--accent) 14%, var(--surface-raised)); color: var(--ink); }
+
+.symptom-followup { margin-top: 0.8rem; padding-top: 0.8rem; border-top: 1px dashed var(--line); }
+.wiz__inline-q { font-size: 0.9rem; color: var(--ink-dim); margin: 0 0 0.5rem; font-weight: 500; }
+
+/* prior art */
+.priorart { display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 1.2rem; }
+.priorart__row {
+  display: flex; align-items: center; gap: 0.8rem; text-align: left;
+  padding: 0.85rem 1rem; border-radius: 12px; border: 1px solid var(--line);
+  background: var(--surface-raised); color: var(--ink); cursor: pointer; font: inherit;
+  transition: border-color 0.14s ease, background 0.14s ease;
+}
+.priorart__row:hover { border-color: var(--accent-strong); background: var(--surface-overlay); }
+.priorart__serial { color: var(--ink-faint); font-weight: 600; }
+.priorart__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.15rem; }
+.priorart__title { font-weight: 600; line-height: 1.25; }
+.priorart__meta { font-size: 0.82rem; color: var(--ink-dim); }
+.priorart__join { font-size: 0.85rem; color: var(--accent-strong); font-weight: 600; white-space: nowrap; }
+
+/* write / ask screens */
+.writefields { display: flex; flex-direction: column; gap: 0.9rem; margin-bottom: 1.2rem; }
+.wfield { display: flex; flex-direction: column; gap: 0.35rem; }
+.wfield__label { font-size: 0.9rem; color: var(--ink-dim); }
+.wfield__input {
+  font: inherit; font-size: 1rem; padding: 0.7rem 0.85rem; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--surface-raised); color: var(--ink); width: 100%;
+}
+.wfield__input:focus { outline: 2px solid var(--accent-strong); outline-offset: 1px; border-color: var(--accent-strong); }
+.wfield__area { resize: vertical; }
+.importance { margin-bottom: 1.2rem; }
+
+/* context card — agency = trust (§5.2) */
+.ctxcard { border: 1px solid var(--line); border-radius: 12px; background: var(--surface-raised); padding: 0.9rem 1rem; margin-bottom: 1.2rem; }
+.ctxcard__head { font-size: 0.82rem; color: var(--ink-dim); margin-bottom: 0.6rem; }
+.ctxcard__rows { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.ctxpill {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  font-size: 0.8rem; padding: 0.25rem 0.35rem 0.25rem 0.6rem; border-radius: 999px;
+  border: 1px solid var(--line); color: var(--ink-dim); font-family: var(--mono);
+}
+.ctxpill__x { background: none; border: none; color: var(--ink-faint); cursor: pointer; font-size: 0.75rem; padding: 0 0.15rem; line-height: 1; }
+.ctxpill__x:hover { color: var(--bad); }
+.ctxcard__note { font-size: 0.76rem; color: var(--ink-faint); margin-top: 0.6rem; }
+
+/* title preview */
+.titleprev { display: flex; flex-direction: column; gap: 0.3rem; margin-bottom: 1.4rem; }
+.titleprev__label { font-size: 0.8rem; color: var(--ink-faint); }
+.titleprev__input {
+  font-family: var(--serif); font-size: 1.05rem; font-weight: 600; color: var(--ink);
+  padding: 0.6rem 0.75rem; border-radius: 10px; border: 1px dashed var(--line); background: transparent; width: 100%;
+}
+.titleprev__input:focus { outline: 2px solid var(--accent-strong); outline-offset: 1px; border-style: solid; }
+
+.wiz__actions { display: flex; flex-direction: column; align-items: center; gap: 0.6rem; margin-top: 0.5rem; }
+.wiz__skip { text-align: center; margin-top: 1rem; }
+.wiz__error { background: color-mix(in oklab, var(--bad) 18%, var(--surface-raised)); border: 1px solid var(--bad); color: var(--ink); padding: 0.7rem 0.9rem; border-radius: 10px; margin-bottom: 1rem; font-size: 0.9rem; }
+
+/* confirmation + micro-interview */
+.confirm__check {
+  width: 3.4rem; height: 3.4rem; border-radius: 50%;
+  display: grid; place-items: center; font-size: 1.6rem; font-weight: 700;
+  background: color-mix(in oklab, var(--good) 22%, var(--surface-raised)); color: var(--good);
+  border: 1px solid var(--good); margin-bottom: 0.5rem;
+}
+.confirm__actions { display: flex; gap: 0.6rem; margin-top: 1.4rem; flex-wrap: wrap; justify-content: center; }
+.micro {
+  margin-top: 1.4rem; padding: 1rem; border: 1px solid var(--line); border-radius: 12px;
+  background: var(--surface-raised); text-align: left; max-width: 26rem; width: 100%; animation: wizIn 0.22s ease;
+}
+.micro__q { font-size: 0.82rem; color: var(--ink-dim); margin: 0 0 0.3rem; }
+.micro__prompt { font-weight: 600; margin: 0 0 0.7rem; }
+.micro__opts { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.5rem; }
+.micro__opts .choicechip { width: auto; display: inline-block; padding: 0.5rem 0.8rem; font-size: 0.9rem; }
+.micro__skip { font-size: 0.85rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  .wiz__screen, .micro { animation: none; }
+  * { transition: none !important; }
+}
