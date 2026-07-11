@@ -8,6 +8,9 @@ export async function handlePutVote(request, env, url, itemId) {
   const session = await getSession(request, env);
   if (!session) return jsonError(401, 'Sign in to agree or disagree.');
 
+  const user = await env.DB.prepare('SELECT banned FROM users WHERE sub = ?1').bind(session.sub).first();
+  if (user && user.banned) return jsonError(403, 'This account can no longer post to the board.');
+
   const item = await env.DB.prepare('SELECT id, merged_into FROM items WHERE id = ?1').bind(itemId).first();
   if (!item) return jsonError(404, 'Report not found.');
   if (item.merged_into) {
