@@ -1,6 +1,9 @@
 import { getSession } from '../lib/auth.js';
 import { json, jsonError } from '../lib/http.js';
-import { isValidArea, isValidPart, loadTaxonomy } from '../lib/taxonomy.js';
+import {
+  isValidArea, isValidPart, loadTaxonomy,
+  isValidSymptom, isValidSymptomDetail, isValidFrequency, isValidIdeaKind, isValidImportance,
+} from '../lib/taxonomy.js';
 import { checkReportLimit } from '../lib/ratelimit.js';
 import { isHeld } from '../lib/blocklist.js';
 import { buildVoteStatements } from '../lib/votes.js';
@@ -88,6 +91,19 @@ export async function handlePostReport(request, env, url) {
   if (!['bug', 'idea'].includes(body.type)) return jsonError(400, 'type must be "bug" or "idea".');
   if (!(await isValidArea(env, body.area))) return jsonError(400, "That area isn't recognized.");
   if (!(await isValidPart(env, body.area, body.part))) return jsonError(400, "That part isn't recognized for this area.");
+
+  // Taxonomy fields beyond area/part — validated here so an arbitrary value
+  // (or object, e.g. `{evil:'object'}`) can never reach the stored payload
+  // and get tallied verbatim on the Owner Desk digest/Build Brief ("[object
+  // Object]" pollution). Same reject-with-400 pattern as area/part above.
+  if (body.type === 'bug') {
+    if (!(await isValidSymptom(env, body.area, body.symptom))) return jsonError(400, "That symptom isn't recognized.");
+    if (!(await isValidSymptomDetail(env, body.area, body.symptom, body.symptomDetail))) return jsonError(400, "That symptom detail isn't recognized.");
+    if (!(await isValidFrequency(env, body.frequency))) return jsonError(400, "That frequency isn't recognized.");
+  } else {
+    if (!(await isValidIdeaKind(env, body.ideaKind))) return jsonError(400, "That idea type isn't recognized.");
+    if (!(await isValidImportance(env, body.importance))) return jsonError(400, "That importance isn't recognized.");
+  }
 
   const mode = body.mode === 'join' ? 'join' : 'create';
   if (mode === 'join' && !Number.isInteger(body.joinItemId)) {
