@@ -64,7 +64,14 @@ async function computeFeed(env, url) {
     binds.push(type);
   }
   if (q) {
-    where.push(`title LIKE ?${binds.length + 1}`);
+    // ESCAPE '\' is required for the backslash-prefixing below to actually
+    // neutralize literal % / _ in the search text — SQLite's LIKE has no
+    // default escape character, so without this clause a title containing a
+    // literal "%" (e.g. "50% of my map is blank") would never be found by
+    // searching its own exact text (confirmed via a live repro: search for
+    // "50% of my map" against a title containing exactly that text returned
+    // zero results before this fix).
+    where.push(`title LIKE ?${binds.length + 1} ESCAPE '\\'`);
     binds.push(`%${q.replace(/[%_]/g, (m) => '\\' + m)}%`);
   }
 
