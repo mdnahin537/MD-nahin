@@ -1,0 +1,188 @@
+/* RealmWright Care — shared design tokens (design §8: "good-enough tier,
+   deliberately" — clean and on-brand everywhere; extra polish is reserved
+   for the 3 crown jewels: the wizard, the board's ranking, the owner desk).
+   Kinship with the product's Ember character: warm ceremonial dark,
+   parchment accent, serif headlines, humanist sans body, mono for serials.
+   Respects prefers-color-scheme with a Manuscript-like light variant. */
+
+/* Fonts are SELF-HOSTED (latin subset, from Google Fonts) — no external CDN
+   request at runtime, so the board loads with no third-party dependency,
+   works for privacy-blocker users, and matches the product's self-contained
+   discipline (§8). Work Sans is one variable file covering 400-600; Fraunces
+   headlines are a single 600 weight. Anything heavier/lighter falls back to
+   the stacks below, which are chosen to still read as intentional. */
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/fraunces-600.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Work Sans';
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url('/fonts/worksans-var.woff2') format('woff2');
+}
+
+:root {
+  color-scheme: dark;
+  --surface: #0f1219;
+  --surface-raised: #171b25;
+  --surface-overlay: #1d2230;
+  --ink: #ede6da;
+  --ink-dim: #a39a8c;
+  --ink-faint: #6b6459;
+  --accent: #fed7aa;
+  --accent-strong: #f4a94f;
+  --accent-ink: #241505;
+  --line: #2a2f3d;
+  --good: #8fbf8f;
+  --bad: #e08a7a;
+  --held: #d9b25c;
+
+  --serif: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --sans: 'Work Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  --mono: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+
+  --radius: 10px;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+    --surface: #faf6ee;
+    --surface-raised: #ffffff;
+    --surface-overlay: #fffdf9;
+    --ink: #241f16;
+    --ink-dim: #6b6255;
+    --ink-faint: #948a7a;
+    --accent: #b3541e;
+    --accent-strong: #8a3d12;
+    --accent-ink: #fff6ec;
+    --line: #e4dbc9;
+    --good: #2f7a3d;
+    --bad: #a83e2c;
+    --held: #8a6a1a;
+    --shadow: 0 1px 2px rgba(60, 40, 10, 0.06), 0 8px 24px rgba(60, 40, 10, 0.08);
+  }
+}
+
+:root[data-theme='dark'] { color-scheme: dark; }
+:root[data-theme='light'] { color-scheme: light; }
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+
+body {
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, .display {
+  font-family: var(--serif);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin: 0 0 0.4em;
+}
+
+a { color: var(--accent-strong); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.mono, .serial { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+.serial {
+  color: var(--ink-faint);
+  font-weight: 600;
+}
+
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 1.25rem;
+}
+
+.card {
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-family: var(--sans);
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 0.6rem 1.1rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  transition: transform 0.08s ease, background 0.15s ease, border-color 0.15s ease;
+}
+.btn:hover { border-color: var(--accent-strong); }
+.btn:active { transform: scale(0.98); }
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+.btn-primary:hover { background: var(--accent-strong); border-color: var(--accent-strong); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.tag {
+  display: inline-block;
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+}
+.tag-top { color: var(--accent-strong); }
+.tag-trending { color: var(--good); }
+.tag-new { color: #7fb6d9; }
+
+.chip {
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 0.4rem 0.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--line);
+  background: var(--surface-overlay);
+  color: var(--ink-dim);
+}
+.chip.status-open { color: var(--ink-dim); }
+.chip.status-planned { color: #7fb6d9; }
+.chip.status-in_progress { color: var(--held); }
+.chip.status-shipped { color: var(--good); }
+.chip.status-declined { color: var(--ink-faint); text-decoration: line-through; }
+
+.skeleton {
+  background: linear-gradient(90deg, var(--surface-overlay) 25%, var(--surface-raised) 50%, var(--surface-overlay) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease infinite;
+  border-radius: var(--radius);
+}
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+.empty-state {
+  text-align: center;
+  padding: 3rem 1.5rem;
+  color: var(--ink-dim);
+}
+.empty-state h2 { color: var(--ink); }

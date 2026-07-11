@@ -3,6 +3,12 @@
 .env.*
 !.env.example
 
+# Cloudflare Workers (care/) — local dev secrets & local D1/state
+care/.dev.vars
+care/.dev.vars.*
+!care/.dev.vars.example
+care/.wrangler/
+
 # Claude Code local settings — machine-specific, not shared
 .claude/settings.local.json
 

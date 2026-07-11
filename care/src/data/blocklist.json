@@ -1,0 +1,19 @@
+{
+  "note": "Compact content-check list (design §3.4 — 'kept minimal on purpose'). A match sets held=1: never auto-rejected, just queued in the Owner Desk for a human look. This seed list proves the mechanism end-to-end with uncontroversial spam examples. Hunter: add real slur/abuse terms to `phrases` before real launch — plain lowercase words/phrases, one edit, no code change needed. Kept out of this build deliberately rather than fabricated.",
+  "phrases": [
+    "buy followers",
+    "forex signals",
+    "crypto giveaway",
+    "click this link now",
+    "work from home guaranteed",
+    "act now limited time offer",
+    "free followers instantly",
+    "seo backlinks cheap",
+    "nudes",
+    "onlyfans"
+  ],
+  "patterns": [
+    "(https?:\\/\\/[^\\s]+){3,}",
+    "(.)\\1{9,}"
+  ]
+}

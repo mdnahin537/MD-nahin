@@ -1,0 +1,37 @@
+# Copy this file to `.dev.vars` for local development (that file is
+# gitignored — never commit real secrets to either file; this one only
+# ever holds dummy placeholders).
+#
+# In production these are set with `wrangler secret put <NAME>` — see
+# care/README.md for the full click-by-click list.
+
+GOOGLE_CLIENT_SECRET=dummy-local-client-secret
+SESSION_SECRET=dummy-local-session-secret-replace-with-openssl-rand-hex-32
+OWNER_SUB=mock-owner-sub-001
+
+# Optional — only needed if you want to exercise the OpenRouter fallback
+# path for the Owner Desk AI digest (used when Workers AI is unavailable).
+OPENROUTER_KEY=
+
+# Optional — the public contact address the /privacy page links to. Not a
+# secret (it's meant to be published). In production set it in wrangler.toml
+# [vars] instead; this local override just lets you see the working mailto
+# during `wrangler dev`. Leave empty to preview the "set at deploy"
+# placeholder. example.com is the reserved test domain — put your real
+# address here only for local testing.
+CONTACT_EMAIL=
+
+# Local-only. Marks cookies non-Secure so they work over plain http://
+# during `wrangler dev`. wrangler.toml sets ENVIRONMENT="production" for
+# the real deploy — do not set this in production.
+ENVIRONMENT=development
+
+# Local-only. Points the OAuth flow at scripts/mock-google.mjs instead of
+# real Google, so login can be exercised end-to-end with no live Google
+# Cloud project. Run `npm run mock-google` in another terminal first.
+# Delete/comment these out once real Google credentials are wired up —
+# wrangler.toml's [vars] already default to the real Google endpoints.
+GOOGLE_AUTH_ENDPOINT=http://127.0.0.1:8790/o/oauth2/v2/auth
+GOOGLE_TOKEN_ENDPOINT=http://127.0.0.1:8790/token
+GOOGLE_JWKS_ENDPOINT=http://127.0.0.1:8790/certs
+GOOGLE_ISSUER=http://127.0.0.1:8790

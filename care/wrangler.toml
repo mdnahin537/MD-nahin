@@ -1,0 +1,56 @@
+name = "realmwright-care"
+main = "src/index.js"
+compatibility_date = "2026-07-01"
+
+# ── Static assets: intake wizard, board, owner-desk SHELL are all plain
+# files served by Cloudflare's asset layer directly — free & unlimited,
+# never touch the Worker request budget (design §2.2, lever #1).
+# run_worker_first lists the ONLY paths that must go through the Worker
+# first: the JSON API, auth redirects, and /desk (needs a server-side
+# owner check before it will even hand out the HTML — "invisible" 404
+# for non-owners, not just client-side hidden).
+[assets]
+directory = "./public"
+binding = "ASSETS"
+html_handling = "auto-trailing-slash"
+not_found_handling = "404-page"
+run_worker_first = ["/api/*", "/auth/*", "/desk", "/desk/*", "/privacy", "/privacy/"]
+
+# ── D1 (SQLite). This is the REAL database id of the live deployment
+# (created via `wrangler d1 create realmwright-care`). It is not a secret —
+# it only identifies the database and is useless without account credentials.
+# `wrangler dev --local` ignores it (local mode keys its sqlite file off the
+# binding + database_name).
+[[d1_databases]]
+binding = "DB"
+database_name = "realmwright-care"
+database_id = "4d9ddc05-5e6f-4a56-b657-31a52ed99209"
+migrations_dir = "migrations"
+
+# ── Workers AI: owner-desk digests + Build Brief + micro-interview phrasing.
+# Design's fallback chain (§7.2): Workers AI → OPENROUTER_KEY secret (optional)
+# → deterministic (counts + top items). The app must work with this absent.
+[ai]
+binding = "AI"
+
+# ── Non-secret config. Secrets (GOOGLE_CLIENT_SECRET, SESSION_SECRET,
+# OWNER_SUB, optional OPENROUTER_KEY) are set with `wrangler secret put`
+# at deploy time — see care/README.md. GOOGLE_CLIENT_ID is not secret
+# (it is visible in the browser's OAuth redirect URL either way) so it
+# lives here as a plain var Hunter edits directly.
+[vars]
+ENVIRONMENT = "production"
+GOOGLE_CLIENT_ID = "REPLACE-WITH-YOUR-GOOGLE-OAUTH-CLIENT-ID.apps.googleusercontent.com"
+GOOGLE_AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth"
+GOOGLE_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
+GOOGLE_JWKS_ENDPOINT = "https://www.googleapis.com/oauth2/v3/certs"
+GOOGLE_ISSUER = "https://accounts.google.com"
+SITE_NAME = "RealmWright — Community Board"
+FEATURE_MICRO_INTERVIEW = "true"
+SESSION_COOKIE_NAME = "rw_care_session"
+# Public contact address shown on the /privacy page (deletion/questions).
+# Not a secret — it's meant to be published — so it lives here, not in the
+# secret store. Left EMPTY on purpose: fill in your own address at deploy
+# (see care/README.md). While empty, the privacy page shows a plain
+# "set at deploy" placeholder instead of a broken mailto link.
+CONTACT_EMAIL = ""

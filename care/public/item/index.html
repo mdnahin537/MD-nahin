@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Report — RealmWright Community Board</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/board.css">
+  <link rel="stylesheet" href="/css/item.css">
+</head>
+<body>
+  <header class="masthead">
+    <div class="container masthead__inner">
+      <a class="masthead__brand" href="/">
+        <span class="masthead__mark mono">RW</span>
+        <span class="masthead__titles">
+          <span class="masthead__title">Community Board</span>
+          <span class="masthead__sub">What GMs want built next</span>
+        </span>
+      </a>
+      <div class="masthead__actions">
+        <a class="btn btn-primary" href="/report/">Report a problem or idea</a>
+        <span id="auth-slot" class="masthead__auth"></span>
+      </div>
+    </div>
+  </header>
+
+  <main class="container item-page">
+    <a class="backlink" href="/">← Back to the board</a>
+    <div id="item-root" aria-live="polite">
+      <div class="skeleton item-skel"></div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container footer__inner">
+      <p>A living record of what GMs report and want. Reports are public; your email never is.</p>
+      <p><a href="/privacy/">Privacy &amp; terms</a></p>
+    </div>
+  </footer>
+
+  <script src="/js/care.js"></script>
+  <script src="/js/item.js"></script>
+</body>
+</html>
