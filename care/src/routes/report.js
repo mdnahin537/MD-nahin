@@ -197,6 +197,9 @@ export async function handlePatchFollowup(request, env, url, reportId) {
   const session = await getSession(request, env);
   if (!session) return jsonError(401, 'Sign in required.');
 
+  const user = await env.DB.prepare('SELECT banned FROM users WHERE sub = ?1').bind(session.sub).first();
+  if (user && user.banned) return jsonError(403, 'This account can no longer post to the board.');
+
   const report = await env.DB.prepare('SELECT id, user_sub, payload FROM reports WHERE id = ?1').bind(reportId).first();
   if (!report) return jsonError(404, 'Report not found.');
   if (report.user_sub !== session.sub) return jsonError(403, 'Only the reporter can answer this.');
@@ -233,6 +236,9 @@ export async function handlePatchFollowup(request, env, url, reportId) {
 export async function handleGetFollowupQuestion(request, env, url, reportId) {
   const session = await getSession(request, env);
   if (!session) return jsonError(401, 'Sign in required.');
+
+  const user = await env.DB.prepare('SELECT banned FROM users WHERE sub = ?1').bind(session.sub).first();
+  if (user && user.banned) return jsonError(403, 'This account can no longer post to the board.');
 
   const report = await env.DB.prepare('SELECT user_sub, payload FROM reports WHERE id = ?1').bind(reportId).first();
   if (!report) return jsonError(404, 'Report not found.');
