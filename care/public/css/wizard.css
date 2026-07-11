@@ -29,6 +29,12 @@
   width: 2.2rem; height: 2.2rem; border-radius: 8px;
   display: grid; place-items: center; text-decoration: none;
 }
+/* The `display: grid` above is a class selector (specificity 0,1,0), which
+   ties with — and being later, beats — the UA's [hidden]{display:none}. So
+   without this, wizard.js's backBtn.hidden = true left the Back button
+   visible AND made it the first Tab stop on the signin/branch/confirm
+   screens. This class+attribute rule (0,2,0) lets [hidden] win again. */
+.wiz__back[hidden], .wiz__close[hidden] { display: none; }
 .wiz__back:hover, .wiz__close:hover { background: var(--surface-overlay); color: var(--ink); }
 .wiz__progress { flex: 1; display: flex; gap: 0.4rem; justify-content: center; }
 .dot { width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--line); transition: background 0.2s ease, transform 0.2s ease; }
