@@ -564,21 +564,15 @@
   };
 
   async function maybeAskMicroInterview() {
-    // Reports that JOINED an existing item don't have their own reportId here;
-    // only fresh creates carry a followup opportunity.
+    // Both the create and the join response always include the new report's
+    // id (report.js returns reportId on both paths), stashed here as
+    // state.resultReportId by submitReport. If it's somehow absent, skip
+    // gracefully — the confirmation is already on screen and the
+    // micro-interview must never block it.
     const reportId = state.resultReportId || null;
-    // For fresh creates we didn't get reportId in the response; fetch it lazily
-    // via the item's latest report is overkill — instead the create response
-    // could include it. Guard: if no reportId, skip gracefully.
-    if (!reportId && !state.resultReportId) {
-      // try the create-report id path: the POST create response doesn't include
-      // reportId, so micro-interview only runs for joins that returned one, OR
-      // we skip silently. Skipping keeps the promise "never blocks".
-    }
-    const rid = reportId;
-    if (!rid) return; // nothing to enrich; confirmation already complete
+    if (!reportId) return; // nothing to enrich; confirmation already complete
     let asked = 0;
-    await askOne(rid);
+    await askOne(reportId);
 
     async function askOne(reportId) {
       if (asked >= 2) return;
