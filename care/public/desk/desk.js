@@ -259,9 +259,30 @@
     if (cursor >= 0 && rows[cursor]) rows[cursor].classList.remove('is-cursor');
     cursor = Math.max(0, Math.min(rows.length - 1, cursor + delta));
     const el = rows[cursor];
+    ensureRowVisible(el);
     el.classList.add('is-cursor');
     el.scrollIntoView({ block: 'nearest' });
     el.focus();
+  }
+  // A Digest thread lives inside a collapsed `.area__threads` group (and, for
+  // a rolled-up area, inside a SECOND collapsed group above it). A hidden
+  // element can't take focus, so j/k/s silently no-op on the default Digest
+  // tab until something is expanded. Expand every collapsed group on the
+  // path to this row — and sync each group's toggle glyph/aria — so the
+  // keyboard cockpit works from first paint without forcing the whole
+  // digest open (Queue rows have no such ancestor, so this is a no-op there).
+  function ensureRowVisible(el) {
+    let group = el.closest('.area__threads');
+    while (group) {
+      if (group.hidden) {
+        group.hidden = false;
+        const header = group.previousElementSibling;
+        const toggle = header && header.querySelector('.area__toggle');
+        if (toggle) { toggle.textContent = '▾'; toggle.setAttribute('aria-expanded', 'true'); }
+      }
+      const parent = group.parentElement;
+      group = parent ? parent.closest('.area__threads') : null;
+    }
   }
   function currentRow() { return cursor >= 0 ? rows[cursor] : null; }
 
