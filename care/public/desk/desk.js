@@ -53,25 +53,57 @@
     return `<span class="gauge gauge--${cls}" title="${used}/${limit}">${label} ${pct}%</span>`;
   }
 
-  // ---- digest ----------------------------------------------------------
+  // ---- digest ------------------------------------------------------------
+  // Design §7.2 target: readable in ~20-25 lines. At real scale the taxonomy
+  // has more active areas than that fits, so the digest applies a floor
+  // (an area with only one thread doesn't earn a full header) and a cap
+  // (only the top DIGEST_AREA_CAP areas — already net-sorted server-side —
+  // get shown in full). Everything past either line rolls into one
+  // "+N more areas" entry that expands to the SAME per-area rendering, so
+  // nothing is ever dropped — only deprioritized. Lossless: expand it and
+  // every area, thread, and (via each thread's "open" link) every raw
+  // report is still exactly one or two clicks away.
+  const DIGEST_AREA_FLOOR = 2;
+  const DIGEST_AREA_CAP = 7;
+
   async function loadDigest(refresh) {
     $('digest-body').innerHTML = '<div class="skeleton desk-skel"></div>';
     digest = await api('/digest', refresh ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' } : undefined);
     renderDigest();
   }
+  function areaBlock(a) {
+    const hdr =
+      `<div class="area" data-area="${a.area}">` +
+      `<button class="area__toggle" aria-expanded="false">▸</button>` +
+      `<span class="area__name">${C.esc(areaLabel(a.area))}</span>` +
+      `<span class="area__stat mono">${a.threads} threads · ${a.reports} reports · ${fmtNet(a.net)}</span>` +
+      `</div>`;
+    const threads = a.topThreads.map((t) => threadLine(t)).join('');
+    return hdr + `<div class="area__threads" hidden>${threads}</div>`;
+  }
   function renderDigest() {
-    const areas = digest.areas.filter((a) => a.threads > 0);
-    if (areas.length === 0) { $('digest-body').innerHTML = '<p class="desk-empty">No open threads yet.</p>'; return; }
-    const html = areas.map((a) => {
-      const hdr =
-        `<div class="area" data-area="${a.area}">` +
+    const allAreas = digest.areas.filter((a) => a.threads > 0);
+    if (allAreas.length === 0) { $('digest-body').innerHTML = '<p class="desk-empty">No open threads yet.</p>'; return; }
+
+    const headline = [];
+    const rolledUp = [];
+    for (const a of allAreas) {
+      if (a.threads >= DIGEST_AREA_FLOOR && headline.length < DIGEST_AREA_CAP) headline.push(a);
+      else rolledUp.push(a);
+    }
+
+    let html = headline.map(areaBlock).join('');
+    if (rolledUp.length) {
+      const threads = rolledUp.reduce((n, a) => n + a.threads, 0);
+      const reports = rolledUp.reduce((n, a) => n + a.reports, 0);
+      html +=
+        `<div class="area area--rollup" data-area="__more">` +
         `<button class="area__toggle" aria-expanded="false">▸</button>` +
-        `<span class="area__name">${C.esc(areaLabel(a.area))}</span>` +
-        `<span class="area__stat mono">${a.threads} threads · ${a.reports} reports · ${fmtNet(a.net)}</span>` +
-        `</div>`;
-      const threads = a.topThreads.map((t) => threadLine(t)).join('');
-      return hdr + `<div class="area__threads" hidden>${threads}</div>`;
-    }).join('');
+        `<span class="area__name">+${rolledUp.length} more area${rolledUp.length === 1 ? '' : 's'} <span class="area__rollup-hint">(lower activity)</span></span>` +
+        `<span class="area__stat mono">${threads} threads · ${reports} reports</span>` +
+        `</div>` +
+        `<div class="area__threads" hidden>${rolledUp.map(areaBlock).join('')}</div>`;
+    }
     $('digest-body').innerHTML = html;
 
     $('digest-body').querySelectorAll('.area__toggle').forEach((btn) => {

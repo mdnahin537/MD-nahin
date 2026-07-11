@@ -46,6 +46,8 @@
 .area__name { font-weight: 600; }
 .area__stat { color: var(--ink-dim); font-size: 0.78rem; margin-left: auto; }
 .area__threads { padding-left: 1.3rem; }
+.area--rollup .area__name { color: var(--ink-dim); font-weight: 500; }
+.area__rollup-hint { font-weight: 400; font-size: 0.78rem; }
 
 .thread { padding: 0.45rem 0.3rem; border-top: 1px dashed var(--line); display: grid; grid-template-columns: auto auto 1fr auto; gap: 0.4rem 0.5rem; align-items: baseline; }
 .thread.is-cursor { background: var(--surface-overlay); outline: 1px solid var(--accent-strong); border-radius: 4px; }
