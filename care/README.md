@@ -200,9 +200,11 @@ Never commit real secrets. `care/.dev.vars` (local dummies) is gitignored;
   `npx wrangler d1 export realmwright-care --remote --output backup-YYYY-MM-DD.sql`
   (Cloudflare also keeps automatic point-in-time restore for D1.)
 - **Add real blocklist words before launch:** edit
-  `public/data/blocklist.json` (plain lowercase phrases), then `npm run deploy`.
+  `src/data/blocklist.json` (plain lowercase phrases), then `npm run deploy`.
   A match hides the post from public view and queues it in the desk — it never
-  auto-rejects.
+  auto-rejects. (It lives under `src/`, not `public/`, on purpose — anything
+  under `public/` is servable directly by URL, and the list itself shouldn't
+  be readable by whoever it's meant to catch.)
 - **Free-tier headroom:** the Owner Desk header shows today's usage. The board
   feed is edge-cached, and every page is a static asset, so even a big traffic
   spike costs almost nothing.
