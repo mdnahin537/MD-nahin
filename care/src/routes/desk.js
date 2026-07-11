@@ -249,7 +249,10 @@ async function deskMerge(env, loserId, winnerId) {
 async function recomputeCounts(env, itemId) {
   const agree = await env.DB.prepare('SELECT COUNT(*) AS n FROM votes WHERE item_id = ?1 AND value = 1').bind(itemId).first();
   const disagree = await env.DB.prepare('SELECT COUNT(*) AS n FROM votes WHERE item_id = ?1 AND value = -1').bind(itemId).first();
-  const reports = await env.DB.prepare('SELECT COUNT(*) AS n FROM reports WHERE item_id = ?1').bind(itemId).first();
+  // Held reports are hidden from the public rollup and are not counted toward
+  // reports_count at write time (routes/report.js) — exclude them here too, or
+  // a merge would silently resurrect a held join's inflation of the count.
+  const reports = await env.DB.prepare('SELECT COUNT(*) AS n FROM reports WHERE item_id = ?1 AND held = 0').bind(itemId).first();
   const comments = await env.DB.prepare('SELECT COUNT(*) AS n FROM comments WHERE item_id = ?1 AND deleted = 0').bind(itemId).first();
   await env.DB.prepare('UPDATE items SET agree_count = ?1, disagree_count = ?2, reports_count = ?3, comments_count = ?4 WHERE id = ?5')
     .bind(agree.n, disagree.n, reports.n, comments.n, itemId).run();

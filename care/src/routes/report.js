@@ -126,19 +126,31 @@ export async function handlePostReport(request, env, url) {
     }
     if (item.type !== body.type) return jsonError(400, "That report is a different type (bug vs. idea).");
 
-    const { statements: voteStatements } = await buildVoteStatements(env, item.id, session.sub, 1);
     const reportInsert = env.DB.prepare(
       'INSERT INTO reports (item_id, user_sub, payload, created_at, held) VALUES (?1, ?2, ?3, ?4, ?5)'
     ).bind(item.id, session.sub, JSON.stringify(contract), now, textIsHeld ? 1 : 0);
-    const countsUpdate = env.DB.prepare('UPDATE items SET reports_count = reports_count + 1 WHERE id = ?1').bind(item.id);
 
-    await env.DB.batch([reportInsert, countsUpdate, ...voteStatements]);
+    // A held (blocklist-flagged) join is hidden from the public rollup, so it
+    // must not inflate the PUBLIC item it joined: skip the reports_count bump
+    // and the auto-agree vote while it's held (unlike a create, where the
+    // whole item is held and its counters stay self-consistent behind the
+    // hold). A clean join applies both as before. If a report-level approval
+    // path is added later, that's where these would be applied.
+    const batch = [reportInsert];
+    if (!textIsHeld) {
+      const { statements: voteStatements } = await buildVoteStatements(env, item.id, session.sub, 1);
+      batch.push(
+        env.DB.prepare('UPDATE items SET reports_count = reports_count + 1 WHERE id = ?1').bind(item.id),
+        ...voteStatements
+      );
+    }
+    await env.DB.batch(batch);
 
     const reportIdRow = await env.DB.prepare('SELECT id FROM reports WHERE item_id = ?1 AND user_sub = ?2 ORDER BY id DESC LIMIT 1')
       .bind(item.id, session.sub)
       .first();
 
-    return json({ ok: true, itemId: item.id, reportId: reportIdRow?.id ?? null, joined: true });
+    return json({ ok: true, itemId: item.id, reportId: reportIdRow?.id ?? null, joined: true, held: !!textIsHeld });
   }
 
   // mode === 'create'
