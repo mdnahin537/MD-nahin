@@ -16,14 +16,15 @@ html_handling = "auto-trailing-slash"
 not_found_handling = "404-page"
 run_worker_first = ["/api/*", "/auth/*", "/desk", "/desk/*", "/privacy", "/privacy/"]
 
-# ── D1 (SQLite). `database_id` below is a LOCAL-ONLY placeholder — it is
-# never read by `wrangler dev --local` (local mode keys its sqlite file
-# off the binding + database_name). Hunter fills in the REAL id after
-# `wrangler d1 create realmwright-care` at deploy time (see care/README.md).
+# ── D1 (SQLite). This is the REAL database id of the live deployment
+# (created via `wrangler d1 create realmwright-care`). It is not a secret —
+# it only identifies the database and is useless without account credentials.
+# `wrangler dev --local` ignores it (local mode keys its sqlite file off the
+# binding + database_name).
 [[d1_databases]]
 binding = "DB"
 database_name = "realmwright-care"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "4d9ddc05-5e6f-4a56-b657-31a52ed99209"
 migrations_dir = "migrations"
 
 # ── Workers AI: owner-desk digests + Build Brief + micro-interview phrasing.
