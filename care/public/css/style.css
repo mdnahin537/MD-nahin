@@ -172,14 +172,6 @@ a:hover { text-decoration: underline; }
 .chip.status-shipped { color: var(--good); }
 .chip.status-declined { color: var(--ink-faint); text-decoration: line-through; }
 
-.visually-hidden {
-  position: absolute;
-  width: 1px; height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-}
-
 .skeleton {
   background: linear-gradient(90deg, var(--surface-overlay) 25%, var(--surface-raised) 50%, var(--surface-overlay) 75%);
   background-size: 200% 100%;

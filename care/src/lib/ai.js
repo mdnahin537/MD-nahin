@@ -87,7 +87,3 @@ export async function runJson(env, prompt, opts = {}) {
     return null;
   }
 }
-
-export function aiAvailable(env) {
-  return !!(env.AI && typeof env.AI.run === 'function') || !!env.OPENROUTER_KEY;
-}
