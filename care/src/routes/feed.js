@@ -138,6 +138,11 @@ async function computeFeed(env, url) {
     totalCount,
     hasMore: pageStart + PAGE_SIZE < totalCount,
     sort,
+    // When this snapshot was computed — identical for every viewer of this
+    // cache entry (NOT per-user), so it's safe inside the shared cache. Lets
+    // a logged-in client tell whether a since-cast vote of theirs predates
+    // or postdates the net numbers on screen (see /api/me/votes + board.js).
+    generatedAt: now,
   };
 
   return json(body, 200, {

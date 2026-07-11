@@ -4,7 +4,7 @@ import { handlePostReport, handlePatchFollowup, handleGetFollowupQuestion } from
 import { handlePutVote } from './routes/vote.js';
 import { handlePostComment } from './routes/comment.js';
 import { handleGetRelated } from './routes/related.js';
-import { handleGetMe } from './routes/me.js';
+import { handleGetMe, handleGetMyVotes } from './routes/me.js';
 import { handleGetFeed } from './routes/feed.js';
 import { handleGetItem } from './routes/item.js';
 import { routeDeskApi, serveDeskShell } from './routes/desk.js';
@@ -57,6 +57,9 @@ async function routeApi(request, env, ctx, url) {
   }
   if (method === 'GET' && pathname === '/api/me') {
     return handleGetMe(request, env, url);
+  }
+  if (method === 'GET' && pathname === '/api/me/votes') {
+    return handleGetMyVotes(request, env, url);
   }
   if (method === 'POST' && pathname === '/api/report') {
     return handlePostReport(request, env, url);

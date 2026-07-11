@@ -169,8 +169,8 @@
     }
     feedLoading.hidden = true;
 
-    // Merge my current votes (only known when logged in and on page 0 fetch of item detail);
-    // the feed endpoint doesn't return per-user votes, so board votes start neutral and update optimistically.
+    // /api/feed never carries per-user data (it's the shared edge cache) —
+    // the viewer's own vote is reflected afterwards by syncMyVotes() below.
     if (state.page === 0) {
       renderModule(data);
       renderShipped(data);
@@ -184,6 +184,15 @@
       feedList.insertAdjacentHTML('beforeend', data.items.map(feedRow).join(''));
     }
     loadMoreBtn.hidden = !data.hasMore;
+
+    // Reflect the viewer's own vote (button highlighted, no arithmetic —
+    // the net shown already includes it) on exactly the rows THIS call
+    // just rendered — never the whole accumulated `loadedItems` list, so
+    // the id list stays small regardless of how many pages are loaded.
+    // Module only (re)renders on page 0; shipped cards carry no vote UI.
+    const newIds = data.items.map((it) => it.id);
+    if (state.page === 0) newIds.push(...data.module.map((it) => it.id));
+    await syncMyVotes(newIds, data.generatedAt);
   }
 
   function renderModule(data) {
@@ -254,11 +263,68 @@
     down.setAttribute('aria-pressed', String(newValue === -1));
   }
 
+  // Toggle button state only — no net arithmetic. Used to reflect a vote
+  // that the server already counted (the row's net, freshly rendered from
+  // /api/feed, already includes it) — unlike applyVoteToDom, which is for
+  // a change that hasn't been counted yet.
+  function markVoteState(wrap, value) {
+    const up = wrap.querySelector('.vote__up');
+    const down = wrap.querySelector('.vote__down');
+    up.classList.toggle('is-on', value === 1);
+    down.classList.toggle('is-on', value === -1);
+    up.setAttribute('aria-pressed', String(value === 1));
+    down.setAttribute('aria-pressed', String(value === -1));
+  }
+
+  // Fetch the signed-in viewer's own votes for `ids` via a separate
+  // authenticated call (⚠ never fold this into /api/feed — that response is
+  // shared-cached across every anonymous reader; see src/routes/me.js) and
+  // paint them onto the DOM. Failure just leaves the board at its correct
+  // (unhighlighted) public state — never blocks or breaks rendering.
+  //
+  // `feedGeneratedAt` is the cached feed snapshot's own timestamp. The feed
+  // is edge-cached up to 60s (design §6.3/§6.4 — deliberate, for stability
+  // and cost), so a vote cast inside that window can be NEWER than the net
+  // currently on screen. If so its contribution isn't counted yet and must
+  // be added (applyVoteToDom's delta math); if the vote predates the
+  // snapshot, the net already includes it and only the button should change
+  // (markVoteState) — adding the delta again would double-count.
+  async function syncMyVotes(ids, feedGeneratedAt) {
+    if (!me.loggedIn || !ids.length) return;
+    try {
+      const res = await fetch('/api/me/votes?ids=' + ids.join(','), { headers: { Accept: 'application/json' } });
+      if (!res.ok) return;
+      const data = await res.json();
+      const votes = data.votes || {};
+      document.querySelectorAll('.vote[data-item]').forEach((wrap) => {
+        const id = wrap.dataset.item;
+        const v = votes[id];
+        if (!v) return;
+        if (typeof feedGeneratedAt === 'number' && v.createdAt > feedGeneratedAt) {
+          applyVoteToDom(wrap, v.value);
+        } else {
+          markVoteState(wrap, v.value);
+        }
+      });
+    } catch {
+      // network hiccup — board stays fully usable, just unhighlighted
+    }
+  }
+
   async function replayPendingIfAny() {
     const pending = C.takePending();
     if (!pending || pending.kind !== 'vote') return;
     if (me.loggedIn) {
-      await C.vote(pending.itemId, pending.value);
+      // loadFeed(true) already awaited syncMyVotes, so the DOM's current
+      // button state is the viewer's PRE-replay vote (whatever it was
+      // before this pending tap) — applyVoteToDom's delta math is only
+      // correct if it reads that as "prev". Casting first, then applying,
+      // keeps that ordering intact.
+      const result = await C.vote(pending.itemId, pending.value);
+      if (result.ok) {
+        const wrap = document.querySelector('.vote[data-item="' + pending.itemId + '"]');
+        if (wrap) applyVoteToDom(wrap, pending.value);
+      }
     }
     if (pending.scrollTo) {
       const el = document.getElementById(pending.scrollTo);
