@@ -37,6 +37,15 @@ export default {
         return await serveDeskShell(request, env, url);
       }
 
+      if (url.pathname === '/privacy' || url.pathname === '/privacy/') {
+        // The privacy page is a static asset that reads window.__CONTACT_EMAIL__,
+        // but nothing ever set it (assets don't run the Worker). Route it
+        // through here so the deploy-time CONTACT_EMAIL var gets injected —
+        // otherwise the contact link is a dead placeholder. Listed in
+        // wrangler.toml run_worker_first so this handler actually receives it.
+        return await servePrivacy(env);
+      }
+
       // Anything else that somehow reached the Worker — hand it to the
       // asset layer rather than erroring; this keeps the Worker's own
       // fallback behavior identical to what a direct static request would do.
@@ -46,6 +55,26 @@ export default {
     }
   },
 };
+
+/**
+ * Serve the static privacy page with the deploy-time CONTACT_EMAIL var
+ * injected as window.__CONTACT_EMAIL__, which the page's own inline script
+ * turns into a working mailto (or a plain placeholder when it's empty). The
+ * value is JSON.stringify'd before injection so an owner-set address can
+ * never break out of the script context — defense in depth even though it's
+ * owner-controlled config.
+ */
+async function servePrivacy(env) {
+  const res = await env.ASSETS.fetch(new Request('https://internal/privacy/index.html'));
+  let html = await res.text();
+  const email = (env.CONTACT_EMAIL || '').trim();
+  const inject = `<script>window.__CONTACT_EMAIL__=${JSON.stringify(email)};</script>`;
+  html = html.replace('</head>', inject + '</head>');
+  return new Response(html, {
+    status: res.status,
+    headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=300' },
+  });
+}
 
 /** Plain if/else path dispatch for /api/* — no router library, per §8's no-framework stance. */
 async function routeApi(request, env, ctx, url) {

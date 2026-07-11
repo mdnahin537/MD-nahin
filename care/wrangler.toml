@@ -14,7 +14,7 @@ directory = "./public"
 binding = "ASSETS"
 html_handling = "auto-trailing-slash"
 not_found_handling = "404-page"
-run_worker_first = ["/api/*", "/auth/*", "/desk", "/desk/*"]
+run_worker_first = ["/api/*", "/auth/*", "/desk", "/desk/*", "/privacy", "/privacy/"]
 
 # ── D1 (SQLite). `database_id` below is a LOCAL-ONLY placeholder — it is
 # never read by `wrangler dev --local` (local mode keys its sqlite file
@@ -47,3 +47,9 @@ GOOGLE_ISSUER = "https://accounts.google.com"
 SITE_NAME = "RealmWright — Community Board"
 FEATURE_MICRO_INTERVIEW = "true"
 SESSION_COOKIE_NAME = "rw_care_session"
+# Public contact address shown on the /privacy page (deletion/questions).
+# Not a secret — it's meant to be published — so it lives here, not in the
+# secret store. Left EMPTY on purpose: fill in your own address at deploy
+# (see care/README.md). While empty, the privacy page shows a plain
+# "set at deploy" placeholder instead of a broken mailto link.
+CONTACT_EMAIL = ""

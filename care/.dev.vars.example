@@ -13,6 +13,14 @@ OWNER_SUB=mock-owner-sub-001
 # path for the Owner Desk AI digest (used when Workers AI is unavailable).
 OPENROUTER_KEY=
 
+# Optional — the public contact address the /privacy page links to. Not a
+# secret (it's meant to be published). In production set it in wrangler.toml
+# [vars] instead; this local override just lets you see the working mailto
+# during `wrangler dev`. Leave empty to preview the "set at deploy"
+# placeholder. example.com is the reserved test domain — put your real
+# address here only for local testing.
+CONTACT_EMAIL=
+
 # Local-only. Marks cookies non-Secure so they work over plain http://
 # during `wrangler dev`. wrangler.toml sets ENVIRONMENT="production" for
 # the real deploy — do not set this in production.

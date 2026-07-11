@@ -125,6 +125,13 @@ npm run migrate:remote
 5. Open **`care/wrangler.toml`** and set `GOOGLE_CLIENT_ID` to the Client ID
    (the Client ID is not secret — it's visible in the browser during login
    either way, so it lives in the config file, not the secret store).
+6. While you have `care/wrangler.toml` open, set **`CONTACT_EMAIL`** to the
+   address you want the **Privacy & terms** page to link to for questions and
+   data-deletion requests (e.g. `CONTACT_EMAIL = "you@yourdomain.com"`). It is
+   not a secret — it's meant to be public — so it lives here, not in the secret
+   store. If you leave it empty, the privacy page still works; it just shows a
+   plain "the address on our store page" placeholder instead of a live mailto
+   link. (Use an address you're comfortable publishing.)
 
 ### Step 5 — Deploy, then set your secrets
 
