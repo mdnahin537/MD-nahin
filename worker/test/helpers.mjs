@@ -110,9 +110,10 @@ export function demoEnv(overrides = {}) {
     OPENROUTER_KEY: 'test-openrouter-key',
     TURNSTILE_SECRET: 'test-turnstile-secret',
     DEMO_MODEL: 'test/demo-model',
-    DEMO_PER_IP_DAILY: '5',
+    DEMO_PER_VISITOR_LIMIT: '5',
     DEMO_GLOBAL_DAILY: '300',
     DEMO_MAX_TOKENS: '1200',
+    DEMO_TRIAL_TTL_SECONDS: '7776000',
     ...overrides,
   };
 }

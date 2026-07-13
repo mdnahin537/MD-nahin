@@ -99,7 +99,7 @@ test('demo: per-IP counter decrements remaining_today and refuses at the cap', a
   ]);
   const restore = withFetch(fetchMock);
   try {
-    const env = demoEnv({ DEMO_PER_IP_DAILY: '3' });
+    const env = demoEnv({ DEMO_PER_VISITOR_LIMIT: '3' });
     const mk = () => jsonRequest({ turnstileToken: 'good', messages: [{ role: 'user', content: 'hi' }] });
 
     const r1 = await (await handleDemoGenerate(mk(), env)).json();
@@ -128,9 +128,11 @@ test('demo: an OpenRouter network failure refunds the reserved slot', async () =
   ]);
   const restore = withFetch(fetchMock);
   try {
-    const env = demoEnv({ DEMO_PER_IP_DAILY: '5' });
+    const env = demoEnv({ DEMO_PER_VISITOR_LIMIT: '5' });
     const day = new Date().toISOString().slice(0, 10);
-    const ipKey = `demo:ip:203.0.113.7:${day}`;
+    // PIVOT FIX: the per-visitor key is no longer day-scoped (see src/demo.ts) —
+    // only the global ceiling still carries the UTC day in its key.
+    const ipKey = `demo:ip:203.0.113.7`;
     const globalKey = `demo:global:${day}`;
 
     const res = await handleDemoGenerate(
@@ -155,9 +157,8 @@ test('demo: an OpenRouter 5xx also refunds the reserved slot', async () => {
   ]);
   const restore = withFetch(fetchMock);
   try {
-    const env = demoEnv({ DEMO_PER_IP_DAILY: '5' });
-    const day = new Date().toISOString().slice(0, 10);
-    const ipKey = `demo:ip:203.0.113.7:${day}`;
+    const env = demoEnv({ DEMO_PER_VISITOR_LIMIT: '5' });
+    const ipKey = `demo:ip:203.0.113.7`; // PIVOT FIX: no longer day-scoped — see src/demo.ts
     const res = await handleDemoGenerate(
       jsonRequest({ turnstileToken: 'good', messages: [{ role: 'user', content: 'hi' }] }),
       env,
@@ -180,10 +181,73 @@ test('demo: a successful generation DOES consume one slot', async () => {
   const restore = withFetch(fetchMock);
   try {
     const env = demoEnv();
-    const day = new Date().toISOString().slice(0, 10);
-    const ipKey = `demo:ip:203.0.113.7:${day}`;
+    const ipKey = `demo:ip:203.0.113.7`; // PIVOT FIX: no longer day-scoped — see src/demo.ts
     await handleDemoGenerate(jsonRequest({ turnstileToken: 'good', messages: [{ role: 'user', content: 'hi' }] }), env);
     assert.equal(await env.RATELIMIT.get(ipKey), '1', 'a real success consumes exactly one slot');
+  } finally {
+    restore();
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PIVOT FIX regression test: "exactly 5 messages per visitor" must be a
+// one-time trial, NOT a nightly-resetting allowance — otherwise the free demo
+// never converts to a $23 sale. The per-visitor key carries no day component,
+// so a slot used up on any previous day still blocks a request made "today".
+// ─────────────────────────────────────────────────────────────────────────────
+test('demo: the per-visitor cap does NOT reset daily (persists across a day boundary)', async () => {
+  const fetchMock = makeFetch([
+    { match: (u) => u.includes(URLS.TURNSTILE), respond: () => ({ status: 200, body: { success: true } }) },
+    { match: (u) => u.includes(URLS.OPENROUTER), respond: () => ({ status: 200, body: { choices: [{ message: { content: 'ok' } }], usage: {} } }) },
+  ]);
+  const restore = withFetch(fetchMock);
+  try {
+    const env = demoEnv({ DEMO_PER_VISITOR_LIMIT: '5' });
+    // Simulate "this visitor already used their 5 messages on some earlier
+    // day" by pre-seeding the day-less counter directly, rather than making 5
+    // real calls — proves the cap is keyed independent of `today()`.
+    await env.RATELIMIT.put('demo:ip:203.0.113.7', '5');
+    const res = await handleDemoGenerate(
+      jsonRequest({ turnstileToken: 'good', messages: [{ role: 'user', content: 'hi' }] }),
+      env,
+    );
+    assert.equal(res.status, 429, 'a visitor who used up their trial on a prior day must still be capped today');
+    const body = await res.json();
+    assert.equal(body.fallback, true);
+  } finally {
+    restore();
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PIVOT FIX regression test: demo.ts previously had no top-level try/catch
+// (unlike license.ts/itch.ts's "AUDIT FIX HIGH #1"), so an unexpected KV throw
+// escaped as an unhandled, CORS-less crash instead of a graceful fallback.
+// ─────────────────────────────────────────────────────────────────────────────
+test('demo: an unexpected KV throw degrades gracefully instead of crashing', async () => {
+  const fetchMock = makeFetch([
+    { match: (u) => u.includes(URLS.TURNSTILE), respond: () => ({ status: 200, body: { success: true } }) },
+  ]);
+  const restore = withFetch(fetchMock);
+  try {
+    const env = demoEnv({
+      RATELIMIT: {
+        async get() {
+          throw new Error('KV unavailable');
+        },
+        async put() {
+          throw new Error('KV unavailable');
+        },
+      },
+    });
+    const res = await handleDemoGenerate(
+      jsonRequest({ turnstileToken: 'good', messages: [{ role: 'user', content: 'hi' }] }),
+      env,
+    );
+    assert.equal(res.status, 503, 'a KV throw must degrade gracefully, never crash uncaught');
+    assert.ok(res.headers.get('Access-Control-Allow-Origin'), 'failure response must still carry CORS headers');
+    const body = await res.json();
+    assert.equal(body.fallback, true, 'steers the client to Sample Mode');
   } finally {
     restore();
   }
