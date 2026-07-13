@@ -2865,6 +2865,17 @@ body.theme-manuscript .mode-dropdown__desc{color:var(--color-text-muted)}
 .form-hint{font-size:var(--text-label-sm);color:var(--color-text-muted);margin-top:var(--space-1);line-height:1.4}
 .license-gate-banner{display:none;background:rgba(255,185,100,0.06);border-top:1px solid rgba(255,185,100,0.15);padding:var(--space-3) var(--space-4);text-align:center;font-size:var(--text-label-sm);color:var(--color-text-muted)}
 .license-gate-banner a,.license-gate-banner button{color:var(--ember-color);cursor:pointer;background:none;border:none;padding:0;font:inherit;text-decoration:underline}
+/* ── PIVOT — Build Agent 2: Copilot panel lock + Settings unlock field ──── */
+.copilot-lock-notice{background:rgba(255,185,100,0.06);border:1px solid rgba(255,185,100,0.22);border-radius:var(--radius-md);padding:var(--space-4);margin-bottom:var(--space-4)}
+.copilot-lock-notice__title{font-family:var(--font-mono);font-size:var(--text-label-sm);letter-spacing:.08em;text-transform:uppercase;color:var(--ember-color);margin-bottom:8px}
+.copilot-lock-notice__desc{font-size:var(--text-body-sm);color:var(--color-text-muted);margin-bottom:14px;line-height:1.5}
+#copilot-settings-controls.is-locked{display:none}
+.unlock-field{background:rgba(255,185,100,0.06);border:1px solid rgba(255,185,100,0.22);border-radius:var(--radius-md);padding:var(--space-4)}
+.unlock-field__desc{font-size:var(--text-body-sm);color:var(--color-text-muted);margin-bottom:var(--space-3);line-height:1.5}
+.unlock-field__row{display:flex;gap:var(--space-2);flex-wrap:wrap}
+.unlock-field__row .form-input{flex:1;min-width:200px;font-family:var(--font-mono);font-size:var(--text-mono-sm)}
+.unlock-field__err{color:var(--color-crisis,#ff6b6b);font-size:var(--text-label-sm);margin-top:var(--space-2);display:none}
+.unlock-field__licensed{display:none;align-items:center;gap:8px;font-size:var(--text-body-sm);color:var(--color-thriving)}
 body.theme-ember .toast{background:#0a0705;border-color:rgba(255,185,100,0.30);box-shadow:0 8px 32px rgba(0,0,0,0.7),0 0 24px rgba(255,185,100,0.06)}
 body.theme-ember .toast__msg{color:var(--color-ink)}
 body.theme-ember .toast__link{color:var(--ember-color)}
@@ -5028,6 +5039,22 @@ Description: A tunnel gave way, halting the eastern works.</pre>
   <div class="modal__body">
     <div class="settings-section"><div class="settings-section__title">About</div>
       <p style="font-size:var(--text-body-sm);color:var(--color-text-muted)">RealmWright · Version 2.3.0</p></div>
+    <!-- PIVOT — Build Agent 2: prominent product-key unlock field. First thing after About,
+         so it's the most visible settings-section for a demo user. Toggled by
+         LicenseGateUI._updateStatusUI() — the field disappears (consumed) once licensed. -->
+    <div class="settings-section" id="settings-unlock-section"><div class="settings-section__title">Full version</div>
+      <div class="unlock-field" id="unlock-field">
+        <div class="unlock-field__desc">You're using the free demo — every feature works, capped on scale (1 realm, 8 NPCs, 6 locations, 3 factions, 10 chronicle entries) plus 5 free AI previews. Paste your Lemon Squeezy or itch.io product key below to unlock unlimited everything and the full Copilot.</div>
+        <div class="unlock-field__row">
+          <input class="form-input" type="text" id="unlock-key-input" placeholder="Lemon Squeezy UUID or itch.io key" autocomplete="off" spellcheck="false" aria-describedby="unlock-key-err">
+          <button class="btn btn--primary" type="button" id="unlock-key-submit">Unlock</button>
+        </div>
+        <p class="unlock-field__err" id="unlock-key-err" role="alert" aria-live="polite"></p>
+      </div>
+      <div class="unlock-field__licensed" id="unlock-field-licensed">
+        <span>✓ Full version unlocked — thank you.</span>
+      </div>
+    </div>
     <div class="settings-section"><div class="settings-section__title">Display</div>
       <div class="settings-row">
         <div>
@@ -5053,6 +5080,16 @@ Description: A tunnel gave way, halting the eastern works.</pre>
       </div>
     </div>
     <div class="settings-section"><div class="settings-section__title">Copilot</div>
+      <!-- PIVOT — Build Agent 2: locked (no active license) users get the whole panel below
+           disabled — no provider choice, no NVIDIA free key, no BYOK, no Ollama, no model
+           picker. Copilot.isConfigured() is also hardened to require an active license, so
+           this is UI-level, not the only enforcement. Toggled by LicenseGateUI._updateStatusUI(). -->
+      <div class="copilot-lock-notice" id="copilot-lock-notice" style="display:none">
+        <div class="copilot-lock-notice__title">Unlock RealmWright to enable the Copilot</div>
+        <div class="copilot-lock-notice__desc">The full AI Copilot — chat, session prep, NPCs, the Faction Council, and more — turns on with a one-time product key. No key yet? The front door gives you 5 free AI previews and 3 fully-built Sample Realms, no key needed.</div>
+        <button class="btn btn--primary" type="button" id="copilot-lock-activate-btn">Paste your product key</button>
+      </div>
+      <div id="copilot-settings-controls">
       <!-- RECOMMENDED: one-click free AI for non-technical GMs. Wraps OpenRouter PKCE + free Nemotron. -->
       <div class="rw-ai-rec">
         <div class="rw-ai-rec__badge">Recommended</div>
@@ -5158,6 +5195,7 @@ Description: A tunnel gave way, halting the eastern works.</pre>
         </div>
       </div>
       </details>
+      </div>
     </div>
     <div class="settings-section"><div class="settings-section__title">Cost guardrails</div>
       <p style="font-size:var(--text-body-sm);color:var(--color-text-muted);margin-bottom:12px">The meter (top-left) always shows session spend. Both fields below are opt-in — leave blank to disable. Soft warn fires once per session. Hard cap pauses AI until you resume from the meter or raise the limit here.</p>
@@ -5940,16 +5978,25 @@ SECTION 9: DATA & STATE
    ══════════════════════════════════════════════════════════════════════ */
 // Phase 5A: DEMO_API_KEY removed — Worker now holds the OpenRouter key server-side.
 // Free-demo requests go through WORKER_URL + '/api/demo/generate' with Turnstile.
-const LS_PRODUCT_ID=''; // Hunter: paste Lemon Squeezy product_id after creating the product
+// PIVOT — Build Agent 2 (task 7): this MUST be byte-identical to worker/wrangler.toml's
+// LS_PRODUCT_ID, or the client's own placeholder-guard below logs (and a future check
+// could act on) a mismatch even against a correctly-configured server. Both currently
+// carry the SAME documented placeholder — Hunter replaces BOTH with the real Lemon
+// Squeezy numeric product_id at deploy time (see the README/DEPLOY notes).
+const LS_PRODUCT_ID='REPLACE_WITH_LS_PRODUCT_ID'; // Hunter: paste Lemon Squeezy product_id after creating the product — MUST match worker/wrangler.toml's LS_PRODUCT_ID exactly
 const WORKER_URL='https://rw-license.realmwright.workers.dev'; // Cloudflare Worker
 const TURNSTILE_SITEKEY=''; // Hunter: paste Cloudflare Turnstile site key (public, safe to commit)
 // Build-time guard — scream loudly if a public (non-file://) build was shipped
-// with the license/demo site keys still blank. Silent on file:// loads so
-// itch.io desktop bundles and local opens don't nag during development.
+// with the license/demo site keys still blank OR still the documented placeholder.
+// Silent on file:// loads so itch.io desktop bundles and local opens don't nag
+// during development. PIVOT — Build Agent 2: LS_PRODUCT_ID is no longer EVER blank
+// (it now matches worker/wrangler.toml's own placeholder — task 7), so the old
+// falsy-check alone would stop catching "still a placeholder" — check for the
+// literal placeholder string too so this stays a real pre-launch tripwire.
 (function _siteKeyGuard(){
   try{
     if(location.protocol==='file:')return;
-    if(!LS_PRODUCT_ID||!TURNSTILE_SITEKEY){
+    if(!LS_PRODUCT_ID||LS_PRODUCT_ID==='REPLACE_WITH_LS_PRODUCT_ID'||!TURNSTILE_SITEKEY){
       console.error('[RealmWright] Missing site keys — license/demo disabled. Set LS_PRODUCT_ID and TURNSTILE_SITEKEY in src/index.html before publishing.');
     }
   }catch(e){}
@@ -7552,8 +7599,10 @@ const LicenseGate={
 };
 
 // DemoCounter is now a client-side UX hint only. Real enforcement lives in the
-// Worker (per-IP daily cap in Cloudflare KV). Resetting rw_demo_uses in DevTools
-// is harmless — the Worker still rejects after DEMO_PER_IP_DAILY.
+// Worker (a one-time per-visitor cap in Cloudflare KV — NOT daily, see demo.ts's
+// PIVOT FIX comment; only the separate global ceiling resets daily). Resetting
+// rw_demo_uses in DevTools is harmless — the Worker still rejects after
+// DEMO_PER_VISITOR_LIMIT regardless of what this local counter says.
 const DemoCounter={
   _uses:0,
   _lastWasDemo:false,
@@ -7615,6 +7664,58 @@ const Demo={
       if(!res.ok){return{error:data.error||'Demo request failed.',status:res.status};}
       return data;
     }catch(e){return{error:'Could not reach demo server. Try Sample Mode below.'};}
+  },
+};
+
+// ── CAPACITY CAP (PIVOT — Build Agent 2) ──────────────────────────────────
+// RealmWright is a FREE hosted demo: every feature works for a locked (no active
+// license) user, but SCALE is capped — never features. A locked user may hold at
+// most LIMITS.<kind> pieces of THEIR OWN content, counted GLOBALLY across every
+// realm they have. Sample Mode realms are entirely exempt (that content lives in
+// a swapped-in State.data that is never persisted — see SampleMode.isActive() /
+// AutoSave.tick() / State.persist()'s _sampleMode guard), and an unlocked
+// (LicenseGate.isActive()) user is never capped.
+//
+// Counts are read LIVE off State.data on every check — never a separate stored
+// counter — so they can never drift from what's actually saved, and a pre-pivot
+// save that already has MORE than the new cap (e.g. 3 realms built before this
+// limit existed) is handled correctly: existing content is untouched and fully
+// usable, only the NEXT creation beyond the cap is blocked (count>=limit).
+const CapGate={
+  LIMITS:{world:1,npc:8,location:6,faction:3,chronicle:10},
+  LABELS:{world:'realm',npc:'NPC',location:'location',faction:'faction',chronicle:'chronicle entry'},
+  _lastToastAt:0,
+  // Silent predicate — true when creating one more `kind` should be BLOCKED.
+  // No side effects, safe to call in a tight loop (Parse.applyCandidates).
+  _atCap(kind){
+    if(!this.LIMITS[kind])return false; // not a capped kind — never blocked
+    if(typeof LicenseGate!=='undefined'&&LicenseGate.isActive())return false; // unlocked — unlimited
+    if(typeof SampleMode!=='undefined'&&SampleMode.isActive())return false;   // sample preview — exempt, never persisted
+    return this._count(kind)>=this.LIMITS[kind];
+  },
+  _count(kind){
+    const d=(typeof State!=='undefined')?State.data:null;
+    if(!d)return 0;
+    if(kind==='world')return Array.isArray(d.nations)?d.nations.length:0;
+    const key={npc:'characters',location:'locations',faction:'factions',chronicle:'chronicle'}[kind];
+    if(!key)return 0;
+    return (d.nations||[]).reduce((sum,n)=>sum+((n&&Array.isArray(n[key]))?n[key].length:0),0);
+  },
+  // Call at the top of every single-shot creation path for a capped kind.
+  // Returns true = allowed (proceed). Returns false = blocked — a friendly,
+  // on-brand toast (with a "Paste key" CTA) has already been shown, throttled
+  // to at most one per 4s so a batch of blocked attempts can't spam the user.
+  check(kind){
+    if(!this._atCap(kind))return true;
+    const now=Date.now();
+    if(now-this._lastToastAt<4000)return false;
+    this._lastToastAt=now;
+    const limit=this.LIMITS[kind],label=this.LABELS[kind]||kind;
+    if(typeof showToast==='function'){
+      showToast(`You've reached the demo limit — ${limit} ${label}${limit===1?'':'s'} max. Unlock the full version with a key to keep going.`,
+        [{label:'Paste key',handler:()=>{if(typeof LicenseGateUI!=='undefined')LicenseGateUI.openModal();}}],7000);
+    }
+    return false;
   },
 };
 
@@ -8114,6 +8215,14 @@ function migrateIfNeeded(d){
       n.locations =n.locations ||[];
       n.bestiary  =n.bestiary  ||[];
       n.relations =n.relations ||[];
+      // GUILTY-UNTIL-PROVEN-CORRECT FIX (Build Agent 2, found during pivot verification):
+      // this block backfilled every other per-nation array except factions, even though the
+      // very next migration step (2.1.0→2.2.0, below) already reads (n.factions||[]) defensively
+      // — proof this WAS reachable as missing. An undefined n.factions doesn't just render wrong,
+      // it THROWS in Parse.applyCandidates (n.factions.find/.push, no ||[] guard there) the moment
+      // a demo user pastes/generates a faction candidate against an old save. One-line, same
+      // pattern as its siblings above — never touches a value that's already present.
+      n.factions  =n.factions  ||[];
     });
     d.meta=d.meta||{};
     d.meta.firstRunComplete=d.meta.firstRunComplete??false;
@@ -8536,6 +8645,7 @@ const State={
   addEvent(nid,ev){
     const n=this.data.nations.find(n=>n.id===nid);
     if(!n)return;
+    if(typeof CapGate!=='undefined'&&!CapGate.check('chronicle'))return false;
     this.pushUndo();
     ev.id=ev.id||Utils.uuid();ev.createdAt=ev.createdAt||Utils.now();ev.source=ev.source||'manual';
     n.chronicle.push(ev);
@@ -8543,6 +8653,7 @@ const State={
     document.dispatchEvent(new CustomEvent('sc:eventAdded',{detail:{eid:ev.id,nid}}));
     document.dispatchEvent(new CustomEvent('sc:changed',{detail:{fields:['stat','chronicle'],nid}}));
     this.persist();
+    return ev.id;
   },
   removeEvent(nid,eid){
     const n=this.data.nations.find(n=>n.id===nid);
@@ -8571,6 +8682,7 @@ const State={
     this.persist();
   },
   addNation(nation){
+    if(typeof CapGate!=='undefined'&&!CapGate.check('world'))return null;
     this.pushUndo();
     nation.id=nation.id||Utils.uuid();
     // P1.5: shallow-merge metadata so seed-time fields (soloMode, chaosFactor) are preserved.
@@ -8617,6 +8729,7 @@ const State={
     this._touchMeta();
     document.dispatchEvent(new CustomEvent('sc:changed',{detail:{fields:['nation'],nid:nation.id}}));
     this.persist();
+    return nation.id;
   },
   getById(id){
     return this.data.nations.find(n=>n.id===id)||null;
@@ -8811,6 +8924,7 @@ const State={
   addCharacter(nid,cfg){
     const n=this.data.nations.find(n=>n.id===nid);
     if(!n)return null;
+    if(typeof CapGate!=='undefined'&&!CapGate.check('npc'))return false;
     n.characters=n.characters||[];
     this.pushUndo();
     // Faction stored as ID (not display name) for referential integrity — renaming a
@@ -9291,6 +9405,7 @@ const State={
   },
   addLocation(nid,cfg){
     const n=this.data.nations.find(x=>x.id===nid);if(!n)return null;
+    if(typeof CapGate!=='undefined'&&!CapGate.check('location'))return false;
     n.locations=n.locations||[];
     const newId=Utils.uuid();
     this.pushUndo();
@@ -10805,6 +10920,7 @@ const Parse={
     const touched=new Set(); // tracks which kinds were touched, for accurate dispatch fields
     const errors=[]; // per-candidate failures — a single bad candidate must not abort the batch
     const skipped={event:0,faction:0,character:0,artifact:0,location:0}; // dedupe skip counts, surfaced below
+    const capped={event:0,faction:0,character:0,location:0}; // demo-cap block counts, surfaced below (PIVOT — Build Agent 2)
     const updated={character:0}; // C1: character-update merges (not a dupe-skip, not a create)
     try{
     candidates.forEach(c=>{
@@ -10827,26 +10943,34 @@ const Parse={
         // this is byte-identical to the old expression for every pre-existing (yearless) candidate.
         const evYear=CLAMP.year(c.year,n.currentYear);
         const dupe=n.chronicle.find(e=>(e.name||'').toLowerCase()===(c.name||'').toLowerCase()&&e.year===evYear);
-        if(!dupe){const ev={id:Utils.uuid(),name:c.name,type:CLAMP.eventType(c.evType),weight:CLAMP.eventWeight(c.weight),description:c.description||'',year:evYear,visibility:CLAMP.visibility(c.visibility),relatedStats:[],source:'ai-canon',createdAt:Utils.now()};n.chronicle.push(ev);touched.add('chronicle');}
-        else skipped.event++;
+        if(dupe){skipped.event++;}
+        // PIVOT — Build Agent 2: this branch bypasses State.addEvent with a direct push (see the
+        // comment on State.addLocation below for why location doesn't need this) — cap it here too,
+        // via the same silent predicate CapGate.check() uses, so a demo user can't paste/generate
+        // past the chronicle cap through Decipher / Import-from-text / the manual CANON paste box.
+        else if(typeof CapGate!=='undefined'&&CapGate._atCap('chronicle')){capped.event++;}
+        else{const ev={id:Utils.uuid(),name:c.name,type:CLAMP.eventType(c.evType),weight:CLAMP.eventWeight(c.weight),description:c.description||'',year:evYear,visibility:CLAMP.visibility(c.visibility),relatedStats:[],source:'ai-canon',createdAt:Utils.now()};n.chronicle.push(ev);touched.add('chronicle');}
       }
       else if(c.type==='faction'){
         // Deduplicate: skip if a faction with the same name (case-insensitive) already exists.
         // Guard with (f.name||'') so a stored name-less faction can't throw and abort the batch.
         const dupe=n.factions.find(f=>(f.name||'').toLowerCase()===(c.name||'').toLowerCase());
-        if(!dupe){
+        if(dupe){skipped.faction++;}
+        // PIVOT — Build Agent 2: THE bypass — faction creation has no State.addFaction chokepoint,
+        // it's a direct array push, so the demo cap must be enforced right here.
+        else if(typeof CapGate!=='undefined'&&CapGate._atCap('faction')){capped.faction++;}
+        else{
           // AI-declared structure preserved: honor c.facType/c.position when valid, else safe defaults.
           // Type allowlist mirrors importFromText's contract; unknown → 'Unknown' (never dropped).
           const facType=(c.facType&&['Government','Opposition','Religious','Economic','Military'].includes(c.facType))?c.facType:'Unknown';
           const position=['holding','gaining','losing','fragmenting'].includes((c.position||'').toLowerCase())?(c.position||'').toLowerCase():'holding';
           n.factions.push({id:Utils.uuid(),name:c.name,type:facType,position,description:c.desc||'',leaderName:''});touched.add('faction');
-        }else skipped.faction++;
+        }
       }
       else if(c.type==='character'){
         // Deduplicate: skip if a character with the same name (case-insensitive) already exists.
         const dupe=n.characters.find(ch=>(ch.name||'').toLowerCase()===(c.name||'').toLowerCase());
-        if(!dupe){n.characters.push({id:Utils.uuid(),name:c.name,role:c.role||'',description:c.desc||'',status:'active',drive:'',fear:'',factionId:null,chronicleLinks:[],createdAt:Utils.now()});touched.add('character');}
-        else if(c.desc){
+        if(dupe&&c.desc){
           // C1 fix: a Character line about someone who already exists used to be silently DROPPED
           // as a "duplicate" — the GM's session-note update (what changed about them) vanished.
           // Append it to the existing description with a dated separator instead, and count it as
@@ -10854,7 +10978,11 @@ const Parse={
           dupe.description=(dupe.description||'')+` — [Session note ${Utils.now().slice(0,10)}] ${c.desc}`;
           touched.add('character');updated.character++;
         }
-        else skipped.character++;
+        else if(dupe){skipped.character++;}
+        // PIVOT — Build Agent 2: this branch also bypasses State.addCharacter with a direct push —
+        // cap it here for the same reason as the faction branch above.
+        else if(typeof CapGate!=='undefined'&&CapGate._atCap('npc')){capped.character++;}
+        else{n.characters.push({id:Utils.uuid(),name:c.name,role:c.role||'',description:c.desc||'',status:'active',drive:'',fear:'',factionId:null,chronicleLinks:[],createdAt:Utils.now()});touched.add('character');}
       }
       else if(c.type==='artifact'){
         // Deduplicate: skip if an artifact with the same artType + content (exact) already exists.
@@ -10868,8 +10996,13 @@ const Parse={
         // ({id,name,type,parentId,description,controllingFactionName,notes,createdAt}) and the
         // cycle-safe id — the plan's own {...,status:'active'} sketch is NOT the real shape.
         const dupe=n.locations.find(l=>(l.name||'').toLowerCase()===(c.name||'').toLowerCase());
-        if(!dupe){State.addLocation(nid,{name:c.name,type:c.locType||'',description:c.description||''});touched.add('location');}
-        else skipped.location++;
+        if(dupe){skipped.location++;}
+        else{
+          // State.addLocation already enforces the demo cap (CapGate) and returns false when
+          // blocked — PIVOT — Build Agent 2: just read that back instead of re-checking here.
+          const addedId=State.addLocation(nid,{name:c.name,type:c.locType||'',description:c.description||''});
+          if(addedId===false)capped.location++;else touched.add('location');
+        }
       }
       else if(c.type==='hook'){
         // C1: no dedupe (a session can raise several similarly-worded leads) — routed through the
@@ -10896,6 +11029,14 @@ const Parse={
     const skipTotal=skipped.event+skipped.faction+skipped.character+skipped.artifact+skipped.location;
     if(skipTotal){
       setTimeout(()=>showToast(`Skipped ${skipTotal} duplicate${skipTotal>1?'s':''}.`,[],5000),600);
+    }
+    // PIVOT — Build Agent 2: candidates blocked by the demo capacity cap (world/NPC/location/
+    // faction/chronicle). One combined toast, not one per item — the loop above uses the silent
+    // CapGate._atCap() precisely so it can tally an accurate count instead of spamming per-item.
+    const cappedTotal=capped.event+capped.faction+capped.character+capped.location;
+    if(cappedTotal){
+      setTimeout(()=>showToast(`${cappedTotal} item${cappedTotal>1?'s':''} blocked by the demo limit. Unlock the full version with a key to add ${cappedTotal>1?'them':'it'}.`,
+        [{label:'Paste key',handler:()=>{if(typeof LicenseGateUI!=='undefined')LicenseGateUI.openModal();}}],7000),650);
     }
     if(updated.character){
       setTimeout(()=>showToast(`Updated ${updated.character} existing character${updated.character>1?'s':''}.`,[],5000),600);
@@ -13145,12 +13286,17 @@ function handleImport(data){
       data.nation=wrapper.nations[0];
     }
     const nation=buildNationFromSeed(data.nation);
-    State.addNation(nation);Render.all();Modals.closeAll();
+    if(!State.addNation(nation))return; // demo cap reached — CapGate already showed the message
+    Render.all();Modals.closeAll();
     showToast(`Imported: ${nation.name}`);
   }else if(data.nations&&Array.isArray(data.nations)){
     const migrated=migrateIfNeeded({nations:data.nations,schemaVersion:data.schemaVersion||'1.0'});
-    migrated.nations.forEach(ns=>{const nation=buildNationFromSeed(ns);State.addNation(nation);});
-    Render.all();Modals.closeAll();showToast(`Imported ${migrated.nations.length} nations.`);
+    let importedCount=0;
+    migrated.nations.forEach(ns=>{const nation=buildNationFromSeed(ns);if(State.addNation(nation))importedCount++;});
+    Render.all();Modals.closeAll();
+    showToast(importedCount===migrated.nations.length
+      ?`Imported ${importedCount} nation${importedCount===1?'':'s'}.`
+      :`Imported ${importedCount} of ${migrated.nations.length} nation${migrated.nations.length===1?'':'s'} — the rest were blocked by the demo limit.`);
   }else{showToast('Unrecognized JSON format. Expected a RealmWright or Sovereign Codex export file.');}
 }
 // ─── FOUNDRY VTT EXPORT ───
@@ -14052,6 +14198,14 @@ const Copilot={
   // Per-nation conversation history is stored on n.copilotConversation as an array of {role, content, timestamp}.
   // Roles: 'user' | 'assistant' | 'system' (system messages are local meta — not sent to provider in delivery 2).
   isConfigured(){
+    // PIVOT — Build Agent 2: Copilot requires an active license. This closes the old
+    // "just paste your own key, no purchase needed" loophole — the whole point of the
+    // pivot is that the $23 key is what unlocks the AI, not a free BYOK/Ollama/NVIDIA
+    // path. The Settings panel is also visually locked (LicenseGateUI), but THIS is the
+    // functional backstop: even a pre-pivot save that already has a copilotKey/provider
+    // saved (grandfathered data — never deleted, see SURVIVE-UPDATES) will not run AI
+    // while locked, because every AI surface in the app checks isConfigured() first.
+    if(typeof LicenseGate==='undefined'||!LicenseGate.isActive())return false;
     const s=State.data?.meta?.settings;
     if(!s)return false;
     // D5 fix: Ollama provider requires no API key — gate on provider first
@@ -17052,7 +17206,7 @@ const FrontDoor={
       outBox.innerHTML=`
         <div class="fd-demo__result">${safe}</div>
         <div class="fd-demo__footer">
-          ${remaining!==null?`<span class="fd-demo__quota">${remaining} free preview${remaining===1?'':'s'} left today</span>`:''}
+          ${remaining!==null?`<span class="fd-demo__quota">${remaining} free preview${remaining===1?'':'s'} left in your one-time trial</span>`:''}
           <button class="btn btn--primary btn--sm" type="button" data-fd-activate="true">Activate for full Tonight Mode</button>
         </div>`;
       const ab=outBox.querySelector('[data-fd-activate]');
@@ -17520,7 +17674,7 @@ const WorldTurnReport={
       accepted.events.forEach(ev=>{
         const copy=Object.assign({},ev);delete copy.id;
         copy.source=copy.source||'world-turn';
-        State.addEvent(n.id,copy);appliedEvents++;
+        if(State.addEvent(n.id,copy))appliedEvents++; // false = demo cap reached; don't over-count
       });
       // (3) Front ticks — tickFront itself writes the catastrophe event if a tick fills
       //     the clock, so we do NOT separately add front-resolution events (no doubles).
@@ -21510,7 +21664,7 @@ Hook: Who pays the shrine-keeper? | The party found the shrine tended but no one
     const seed=this._pendingSeed;
     if(!seed){showToast('No draft to seed. Answer the opening questions first.');return;}
     const nation=buildNationFromSeed(seed);
-    State.addNation(nation);
+    if(!State.addNation(nation))return; // demo cap reached — CapGate already showed the message
     this._pendingSeed=null;
     Render.all();
     showToast(`"${Utils.escHtml(nation.name)}" seeded. Keep going — the rest lands in review.`);
@@ -22997,6 +23151,7 @@ const SHSPanels={
       showToast(`"${name}" updated.`,[],2000);
     }else{
       const newId=State.addLocation(n.id,cfg);
+      if(newId===false)return; // demo cap reached — CapGate already showed the message
       if(!newId){showToast('Could not save — cycle detected in parent chain.',[],3000);return;}
       this._locSelectedId=newId;
       showToast(`"${name}" added.`,[],2000);
@@ -23314,6 +23469,7 @@ const GMMode={
         description:npc.trait||npc.hook?[npc.trait,npc.hook].filter(Boolean).join(' '):'',
         chronicleLinks:[],
       });
+      if(!id)return; // demo cap reached — CapGate already showed the message; card stays open
       this.closeQuickNPC();
       // Best-effort UI refresh — render module re-renders characters panel via dispatchRender on 'character' field
       showToast(`"${npc.name}" added to characters. Press Ctrl+Z to undo.`,[],3500);
@@ -26298,7 +26454,7 @@ function bindEventListeners(){
       source:'manual',
     };
     if(editId){State.updateEvent(n.id,editId,ev);}
-    else{State.addEvent(n.id,ev);}
+    else{if(!State.addEvent(n.id,ev))return;} // demo cap reached — CapGate already showed the message
     Modals.close('manual-event');
     Render.all();
     showToast(editId?'Event updated.':'Event inscribed to the chronicle.');
@@ -26366,7 +26522,7 @@ function bindEventListeners(){
     // addNation calls pushUndo internally
     const base=JSON.parse(JSON.stringify(SEED_NATIONS[si]));
     const nation=buildNationFromSeed(base);
-    State.addNation(nation);
+    if(!State.addNation(nation))return; // demo cap reached — CapGate already showed the message
     Modals.close('new-nation');
     Render.all();
     _nnResetDescribePane();
@@ -26431,7 +26587,7 @@ function bindEventListeners(){
     if(!seed){showToast('No preview to commit. Generate one first.');return;}
     // addNation calls pushUndo internally — no duplicate call here
     const nation=buildNationFromSeed(seed);
-    State.addNation(nation);
+    if(!State.addNation(nation))return; // demo cap reached — CapGate already showed the message
     Modals.close('new-nation');
     Render.all();
     _nnResetDescribePane();
@@ -26537,7 +26693,7 @@ function bindEventListeners(){
       Render.nationCard();
       showToast(`"${name}" updated.`);
     }else{
-      State.addCharacter(n.id,cfg);
+      if(!State.addCharacter(n.id,cfg))return; // demo cap reached — CapGate already showed the message
       Modals.close('character');
       Render.workbenchCharacters();
       Render.nationCard();
@@ -27678,6 +27834,14 @@ const LicenseGateUI={
       });
       keyInput.addEventListener('keydown',e=>{if(e.key==='Enter'&&!submitBtn?.disabled)this._submit();});
     }
+    // PIVOT — Build Agent 2: the Copilot-panel lock notice's own CTA, and the prominent
+    // product-key field in Settings › Full version.
+    document.getElementById('copilot-lock-activate-btn')?.addEventListener('click',()=>this.openModal());
+    document.getElementById('unlock-key-submit')?.addEventListener('click',()=>this._submitSettingsUnlock());
+    document.getElementById('unlock-key-input')?.addEventListener('keydown',e=>{if(e.key==='Enter')this._submitSettingsUnlock();});
+    document.getElementById('unlock-key-input')?.addEventListener('input',()=>{
+      const err=document.getElementById('unlock-key-err');if(err)err.style.display='none';
+    });
     // Listen for license changes to update status UI
     document.addEventListener('license:changed',()=>this._updateStatusUI());
     document.addEventListener('license:expired',()=>{
@@ -27770,6 +27934,36 @@ const LicenseGateUI={
       if(sub){sub.disabled=false;sub.textContent='Activate';}
     }
   },
+  // PIVOT — Build Agent 2: Settings › Full version — a second entry point to the SAME
+  // LicenseGate.activate() used by the modal (task 5). On success this fires
+  // 'license:changed', which _updateStatusUI() below listens for to hide this field
+  // (consumed), lift the caps, and unlock the Copilot panel — all in one place.
+  async _submitSettingsUnlock(){
+    const inp=document.getElementById('unlock-key-input');
+    const err=document.getElementById('unlock-key-err');
+    const btn=document.getElementById('unlock-key-submit');
+    if(!inp)return;
+    const key=inp.value.trim();
+    if(err)err.style.display='none';
+    if(!key){if(err){err.textContent='Paste a key first.';err.style.display='block';}return;}
+    if(btn){btn.disabled=true;btn.textContent='Unlocking…';}
+    const result=await LicenseGate.activate(key);
+    if(result.success){
+      inp.value='';
+      showToast("RealmWright unlocked. Welcome. Save your license key somewhere safe — you'll need it again on a new device or after clearing browser data.",[{label:'Copy key',handler:()=>Utils.copyToClipboard(key)}],12000);
+      // _updateStatusUI() (fired by the 'license:changed' event LicenseGate.activate
+      // dispatches) hides this field and shows the "unlocked" confirmation instead.
+    }else{
+      if(err){
+        const base=result.error||'Activation failed.';
+        err.textContent=result.reason==='device_limit'
+          ?base+" If you've activated RealmWright on another device before, open Settings on that device and click \"Deactivate this device\" to free a slot for this one."
+          :base;
+        err.style.display='block';
+      }
+    }
+    if(btn){btn.disabled=false;btn.textContent='Unlock';}
+  },
   async _deactivate(){
     if(!confirm('Deactivate this device? You can re-activate later with the same key.'))return;
     await LicenseGate.deactivate();
@@ -27787,6 +27981,23 @@ const LicenseGateUI={
     document.querySelectorAll('.license-gate-banner').forEach(el=>{
       el.style.display=isActive?'none':'';
     });
+    // PIVOT — Build Agent 2 (task 4): lock/unlock the entire Copilot settings panel.
+    // Copilot.isConfigured() is the functional backstop; this is the visible one.
+    const copilotControls=document.getElementById('copilot-settings-controls');
+    const copilotNotice=document.getElementById('copilot-lock-notice');
+    if(copilotControls)copilotControls.classList.toggle('is-locked',!isActive);
+    if(copilotNotice)copilotNotice.style.display=isActive?'none':'block';
+    // PIVOT — Build Agent 2 (task 5): Settings › Full version — the key field disappears
+    // (consumed) once unlocked, replaced by a plain confirmation. Also clears any stale
+    // error/value so a later deactivate→reactivate cycle starts clean.
+    const unlockField=document.getElementById('unlock-field');
+    const unlockLicensed=document.getElementById('unlock-field-licensed');
+    if(unlockField)unlockField.style.display=isActive?'none':'block';
+    if(unlockLicensed)unlockLicensed.style.display=isActive?'flex':'none';
+    if(isActive){
+      const inp=document.getElementById('unlock-key-input');if(inp)inp.value='';
+      const err=document.getElementById('unlock-key-err');if(err)err.style.display='none';
+    }
   }
 };
 
