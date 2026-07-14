@@ -8744,6 +8744,32 @@ const State={
     nation.stats=nation.stats||{};
     nation.glossary=nation.glossary===undefined?null:nation.glossary;
     nation.notes=nation.notes||'';
+    // PIVOT — Build Agent 5 (QA/security pass, cap-bypass hunt): addNation only ever gated the
+    // WORLD count (CapGate.check('world') above) — it never checked whether the incoming
+    // nation's OWN factions/characters/locations/chronicle arrays exceeded their per-kind caps.
+    // Every other creation path (single npc/location/faction/chronicle add) is gated one-at-a-
+    // time via CapGate — but a nation arrives here fully-formed from buildNationFromSeed, so a
+    // locked demo visitor with zero realms could Import (Settings, global menu, or the New-
+    // Realm "Import my notes" file picker — none of which are license-gated) ANY RealmWright
+    // export file — their own hand-edited one, or one shared/found online — containing a
+    // SINGLE nation pre-populated with unlimited factions/NPCs/locations/chronicle entries,
+    // and get it all in one shot: a complete, silent bypass of every per-kind demo cap. Clamp
+    // to the exact same CapGate.LIMITS a locked visitor already can't exceed one-at-a-time, but
+    // ONLY when locked — a licensed user's import/seed is never touched, and this never runs
+    // during ordinary State.load() (which assigns this.data directly and never calls
+    // addNation), so a grandfathered pre-cap save is never truncated on open.
+    if(typeof CapGate!=='undefined'&&typeof LicenseGate!=='undefined'&&!LicenseGate.isActive()&&!(typeof SampleMode!=='undefined'&&SampleMode.isActive())){
+      const L=CapGate.LIMITS;
+      let clamped=false;
+      if(nation.factions.length>L.faction){nation.factions=nation.factions.slice(0,L.faction);clamped=true;}
+      if(nation.characters.length>L.npc){nation.characters=nation.characters.slice(0,L.npc);clamped=true;}
+      if(nation.locations.length>L.location){nation.locations=nation.locations.slice(0,L.location);clamped=true;}
+      if(nation.chronicle.length>L.chronicle){nation.chronicle=nation.chronicle.slice(0,L.chronicle);clamped=true;}
+      if(clamped&&typeof showToast==='function'){
+        showToast(`This world had more content than the demo allows — it was trimmed to the demo limits (${L.faction} factions, ${L.npc} NPCs, ${L.location} locations, ${L.chronicle} chronicle entries). Unlock the full version to keep everything.`,
+          [{label:'Paste key',handler:()=>{if(typeof LicenseGateUI!=='undefined')LicenseGateUI.openModal();}}],9000);
+      }
+    }
     // Disambiguate a colliding name so a freshly-created realm is visibly distinct from
     // an existing one. Without this, a first-run user (whose default world is the first
     // seed, "Meridian") who picks that same first seed got a second "Meridian" — the
