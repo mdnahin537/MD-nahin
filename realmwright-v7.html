@@ -1716,14 +1716,33 @@ body.theme-ember .modal.modal--lg{width:800px}
 .fd-divider{display:flex;align-items:center;gap:var(--space-3);margin:var(--space-1) 0}
 .fd-divider__rule{flex:1;border:none;border-top:0.5px solid var(--color-border-hairline);margin:0}
 .fd-divider__label{font-size:var(--text-label-sm);color:var(--color-text-faint);white-space:nowrap}
-.fd-secondary-actions{display:flex;gap:var(--space-3);justify-content:center}
-.fd-secondary-actions .btn{flex:1;justify-content:center}
-/* Bug 1 fix — front-door close button + worldbuilding doors. */
+/* Bug 1 fix — front-door close button. */
 .fd-close{position:absolute;top:14px;right:16px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid var(--color-border-hairline);border-radius:8px;color:var(--color-text-muted);font-size:22px;line-height:1;cursor:pointer;transition:border-color .15s,color .15s,background .15s;z-index:2}
 .fd-close:hover{border-color:var(--ember-color,var(--color-gold));color:var(--ember-color,var(--color-gold));background:rgba(127,127,127,.06)}
-.fd-build-actions{display:flex;gap:var(--space-3);justify-content:center}
-.fd-build-actions .fd-build-btn{flex:1;justify-content:center}
-@media (max-width:560px){.fd-build-actions{flex-direction:column}}
+/* ── WELCOME (PIVOT — Build Agent 3) ───────────────────────────────────────
+   The one first-open surface. Three choices; the key-unlock card is visually
+   dominant (bigger padding, stronger border/tint). Reuses the same
+   rgba(255,185,100,…) highlight-card recipe as .unlock-field / .copilot-lock-notice
+   / .license-active-card (all defined elsewhere, all theme-agnostic already) so
+   this reads as native to the app, not a bolted-on new design. */
+.fd-welcome{display:flex;flex-direction:column;gap:var(--space-4);margin-bottom:var(--space-2)}
+.fd-welcome__option{border:1px solid rgba(255,185,100,0.20);border-radius:var(--radius-md);padding:var(--space-4);background:rgba(255,185,100,0.03)}
+.fd-welcome__option--primary{background:rgba(255,185,100,0.07);border:1px solid rgba(255,185,100,0.38);padding:var(--space-5)}
+.fd-welcome__eyebrow{font-family:var(--font-mono);font-size:var(--text-label-sm);letter-spacing:.08em;text-transform:uppercase;color:var(--ember-color);margin-bottom:6px}
+.fd-welcome__title{font-family:var(--font-display);font-weight:600;font-size:var(--text-h3);color:var(--color-ink);margin:0 0 6px}
+.fd-welcome__option--primary .fd-welcome__title{font-size:var(--text-h2)}
+.fd-welcome__desc{font-size:var(--text-body-sm);color:var(--color-text-muted);line-height:1.5;margin:0 0 var(--space-3)}
+.fd-welcome__row{display:flex;gap:var(--space-2);flex-wrap:wrap;margin-bottom:var(--space-2)}
+.fd-welcome__row .form-input{flex:1;min-width:180px;font-family:var(--font-mono);font-size:var(--text-mono-sm)}
+.fd-welcome__err{color:var(--color-crisis,#ff6b6b);font-size:var(--text-label-sm);margin:0 0 var(--space-2);display:none}
+.fd-welcome__stores{font-size:var(--text-label-sm);color:var(--color-text-faint);margin:0}
+.fd-welcome__stores a{color:var(--ember-color)}
+.fd-welcome__licensed{display:none}
+.fd-welcome__secondary-row{display:flex;gap:var(--space-4)}
+.fd-welcome__secondary-row .fd-welcome__option{flex:1;display:flex;flex-direction:column}
+.fd-welcome__secondary-row .fd-welcome__desc{flex:1}
+.fd-welcome__secondary-row .btn{width:100%;justify-content:center}
+@media (max-width:560px){.fd-welcome__secondary-row{flex-direction:column}}
 .fd-recent{border-top:0.5px solid var(--color-border-hairline);padding-top:var(--space-4)}
 .fd-recent__heading{font-size:var(--text-label);color:var(--color-text-faint);margin:0 0 var(--space-3);text-transform:uppercase;letter-spacing:0.12em}
 .fd-recent__list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--space-1)}
@@ -3346,21 +3365,6 @@ body.gm-mode .world-mode-shell{top:104px}
   border-bottom:.5px solid var(--color-gold);padding:var(--space-2) var(--space-6);
   font-size:var(--text-label-sm);color:var(--color-amber-deep);text-align:center}
 .storage-banner.is-visible{display:block}
-/* Onboarding */
-.onboarding-overlay{position:fixed;inset:0;z-index:900;pointer-events:none;
-  display:flex;align-items:flex-start;justify-content:center;padding-top:120px}
-.onboarding-overlay.is-hidden{display:none}
-.onboarding-text{text-align:center;pointer-events:none;opacity:0;
-  transition:opacity var(--duration-default) var(--ease-out);max-width:480px}
-.onboarding-text.is-visible{opacity:1}
-.is-onboarding-active .living-nation,
-.is-onboarding-active .arsenal,.is-onboarding-active .chronicle-band,
-.is-onboarding-active .identity-strip{opacity:.4;pointer-events:none;
-  transition:opacity var(--duration-slow) var(--ease-out)}
-.is-onboarding-active .workbench{opacity:.4;transition:opacity var(--duration-slow) var(--ease-out)}
-.is-onboarding-active .workbench__domain:not([data-domain="political"]){pointer-events:none}
-.is-onboarding-active .workbench__domain[data-domain="political"]{opacity:1}
-.is-onboarding-active .workbench__inscribe-btn{pointer-events:none;opacity:.4}
 /* Settings */
 .settings-section{margin-bottom:var(--space-6);border-bottom:.5px solid var(--color-gold-pale);padding-bottom:var(--space-6)}
 .settings-section:last-child{border-bottom:none}
@@ -4595,13 +4599,6 @@ SECTION 8: DOM STRUCTURE
        identically regardless of which layout (legacy main-row or WorldShell) is
        currently shown. Same id, same markup, same click handler — nothing else changed. -->
   <button class="copilot-launch" id="copilot-launch" aria-label="Open the Copilot — ask anything or tell it to change your world" title="Ask anything, or tell the Copilot to change your world (every change is yours to approve)"><span class="copilot-launch__mark">⌘</span> Ask &amp; Command</button>
-</div>
-<!-- Onboarding overlay -->
-<div class="onboarding-overlay is-hidden" id="onboarding-overlay">
-  <div class="onboarding-text" id="onboarding-text">
-    <h2 style="font-size:var(--text-h2);margin-bottom:var(--space-2);">Drag the Legitimacy slider.</h2>
-    <p style="font-size:var(--text-body-sm);color:var(--color-text-muted);">Watch what happens.</p>
-  </div>
 </div>
 <div class="tooltip" id="tooltip"></div>
 <div class="toast" id="toast"><div class="toast__msg" id="toast-msg"></div><div class="toast__links" id="toast-links"></div></div>
@@ -9096,7 +9093,10 @@ const State={
     IDB.remove(STORAGE_KEY).finally(()=>{
       this._updateUndoUI();
       Modals.closeAll();Render.all();
-      if(!this.data.meta.settings.onboardingComplete)startOnboarding();
+      // PIVOT — Build Agent 3: resetAll() puts firstRunComplete back to false (fresh
+      // createDefaultState()); reopen the ONE welcome system instead of the retired
+      // per-slider coach-mark so a reset never shows a second, different onboarding.
+      if(typeof FrontDoor!=='undefined')FrontDoor.open();
     });
   },
   _touch(nid){const n=this.data.nations.find(n=>n.id===nid);if(n){n.metadata=n.metadata||{};n.metadata.lastUpdatedAt=Utils.now();}this._touchMeta();},
@@ -17069,7 +17069,15 @@ const FrontDoor={
     bg.classList.add('is-open');el.classList.add('is-open');
     document.body.style.overflow='hidden';
     requestAnimationFrame(()=>{bg.classList.add('is-visible');setTimeout(()=>el.classList.add('is-visible'),80);});
-    setTimeout(()=>{const ta=document.getElementById('fd-prompt');if(ta)ta.focus();},200);
+    // PIVOT — Build Agent 3: focus the Welcome's primary CTA (the key field) on open —
+    // it's the dominant action now, not the quick-preview prompt further down. If the
+    // visitor is somehow already licensed, that field is hidden, so land on the
+    // next real action instead.
+    setTimeout(()=>{
+      const already=typeof LicenseGate!=='undefined'&&LicenseGate.isActive();
+      const target=document.getElementById(already?'fd-build-scratch':'fd-welcome-key-input');
+      if(target)target.focus();
+    },200);
     this._startPlaceholderRotation();
     this._loadRecent();
     // Phase 5A: render Turnstile only for unlicensed visitors who don't have their own key
@@ -17093,7 +17101,17 @@ const FrontDoor={
   },
 
   close(){
-    if(State?.data?.meta&&!State.data.meta.firstRunComplete){State.data.meta.firstRunComplete=true;State.persistNow();}
+    // PIVOT — Build Agent 3: this is the ONE first-run surface now (the legacy
+    // per-slider coach-mark is retired). Mark both flags additively — firstRunComplete
+    // gates the Welcome itself; onboardingComplete is the pre-existing settings flag
+    // the "welcome back" toast already reads, so it keeps working for new users too,
+    // same storage key, no rename, no migration needed.
+    if(State?.data?.meta){
+      let dirty=false;
+      if(!State.data.meta.firstRunComplete){State.data.meta.firstRunComplete=true;dirty=true;}
+      if(State.data.meta.settings&&!State.data.meta.settings.onboardingComplete){State.data.meta.settings.onboardingComplete=true;dirty=true;}
+      if(dirty)State.persistNow();
+    }
     const el=document.getElementById('modal-front-door');
     const bg=document.getElementById('modal-backdrop');
     if(!el)return;
@@ -17110,16 +17128,14 @@ const FrontDoor={
     if(this._bound)return;
     this._bound=true;
     document.getElementById('fd-generate-btn')?.addEventListener('click',()=>this._handleGenerate());
+    // PIVOT — Build Agent 3: Welcome's two reused doors — same handlers/behavior as
+    // before (close, then hand off), just relabeled and moved into the welcome cards.
+    // fd-activate and fd-load-example are retired: the welcome's inline key field
+    // supersedes fd-activate, and openPicker() (fd-sample) already offers this exact
+    // sample among its three, so the direct-load shortcut was a redundant 4th door.
     document.getElementById('fd-sample')?.addEventListener('click',()=>this._handleSample());
-    document.getElementById('fd-activate')?.addEventListener('click',()=>this._handleActivate());
-    // Bug 1 fix: close + the two worldbuilding doors.
     document.getElementById('fd-close')?.addEventListener('click',()=>this.close());
     document.getElementById('fd-build-scratch')?.addEventListener('click',()=>{this.close();if(typeof Modals!=='undefined')Modals.open('new-nation');});
-    document.getElementById('fd-load-example')?.addEventListener('click',()=>{
-      // One click to a fully-populated world (NPCs, clocks, secrets, chronicle, hooks) — no API key.
-      if(typeof SampleMode!=='undefined'&&typeof SampleMode.loadSample==='function'){this.close();setTimeout(()=>SampleMode.loadSample('heist'),60);}
-      else this._handleSample();
-    });
     document.getElementById('fd-style-group')?.addEventListener('click',e=>{
       const pill=e.target.closest('.char-status-pill');if(!pill)return;
       document.querySelectorAll('#fd-style-group .char-status-pill').forEach(p=>{p.classList.remove('is-selected');p.setAttribute('aria-pressed','false');});
@@ -17132,7 +17148,12 @@ const FrontDoor={
     if(modal){
       modal.addEventListener('keydown',e=>{
         if(e.key!=='Tab'||!modal.classList.contains('is-open'))return;
-        const focusable=modal.querySelectorAll('button:not(:disabled),textarea:not(:disabled),input:not(:disabled),[tabindex]:not([tabindex="-1"])');
+        // PIVOT — Build Agent 3: filter to actually-visible elements. The welcome now
+        // has a conditionally-hidden key field (#fd-welcome-unlock-form, hidden once
+        // licensed) whose descendants would otherwise still match this selector and
+        // silently swallow a Tab/Shift+Tab wrap since .focus() is a no-op on a
+        // display:none element.
+        const focusable=[...modal.querySelectorAll('button:not(:disabled),textarea:not(:disabled),input:not(:disabled),[tabindex]:not([tabindex="-1"])')].filter(elx=>elx.offsetParent!==null);
         const first=focusable[0],last=focusable[focusable.length-1];
         if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
         else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
@@ -17219,10 +17240,6 @@ const FrontDoor={
   _handleSample(){
     if(typeof SampleMode!=='undefined'&&typeof SampleMode.openPicker==='function'){this.close();SampleMode.openPicker();}
     else{showToast('Sample Mode is loading…');}
-  },
-
-  _handleActivate(){
-    LicenseGateUI.openModal();
   },
 
   async _loadRecent(){
@@ -25402,49 +25419,10 @@ const RealmSettings={
   },
 };
 
-// ─── ONBOARDING ───
-let _onboardingComplete=false;
-function startOnboarding(){
-  // B13: declare onChanged + listener-flag at function scope so catch can clean up
-  let _listenerAttached=false;
-  function onChanged(e){
-    const f=e.detail&&e.detail.fields;
-    if(!f||!(f.includes('stat')||f.includes('chronicle')||f.includes('nation')))return;
-    if(_onboardingComplete)return;
-    _onboardingComplete=true;
-    if(typeof idle!=='undefined')clearTimeout(idle);
-    const leg=document.getElementById('sl-legitimacy');if(leg)leg.classList.remove('slider-invite-pulse');
-    const txt=document.getElementById('onboarding-text');if(txt)txt.classList.remove('is-visible');
-    setTimeout(()=>{
-      document.body.classList.remove('is-onboarding-active');
-      const ov=document.getElementById('onboarding-overlay');if(ov)ov.classList.add('is-hidden');
-      State.setOnboardingComplete();
-      setTimeout(()=>showToast('Your nation lives in this browser. Nothing is sent to our servers. Export anytime.',[],6000),400);
-    },440);
-    document.removeEventListener('sc:changed',onChanged);
-    _listenerAttached=false;
-  }
-  let idle=null;
-  try{
-    document.body.classList.add('is-onboarding-active');
-    const ov=document.getElementById('onboarding-overlay');const txt=document.getElementById('onboarding-text');
-    ov.classList.remove('is-hidden');
-    setTimeout(()=>txt.classList.add('is-visible'),200);
-    // Pulse invite on the legitimacy slider
-    const leg=document.getElementById('sl-legitimacy');if(leg)leg.classList.add('slider-invite-pulse');
-    // 30s idle nudge — corrected copy: ANY drag dismisses the overlay
-    idle=setTimeout(()=>{if(!_onboardingComplete){txt.innerHTML='<h2 style="font-size:var(--text-h2)">Drag the Legitimacy slider.</h2><p style="font-size:var(--text-body-sm);color:var(--color-text-muted)">Drag in any direction to continue.</p>';}},30000);
-    document.addEventListener('sc:changed',onChanged);
-    _listenerAttached=true;
-  }catch(err){
-    // Safety net: if onboarding breaks for any reason, always clear the lock and listener
-    if(idle)clearTimeout(idle);
-    if(_listenerAttached){document.removeEventListener('sc:changed',onChanged);_listenerAttached=false;}
-    document.body.classList.remove('is-onboarding-active');
-    const ov=document.getElementById('onboarding-overlay');if(ov)ov.classList.add('is-hidden');
-    State.setOnboardingComplete();
-  }
-}
+// PIVOT — Build Agent 3: the legacy per-slider coach-mark ("Drag the Legitimacy
+// slider…") is retired. The Welcome panel (FrontDoor) is now the single first-run
+// surface; State.setOnboardingComplete() is called from FrontDoor.close() instead,
+// so the "welcome back" toast gate (meta.settings.onboardingComplete) still works.
 // ─── RELATIONSHIP WEB (G.2) ───────────────────────────────────────────
 const RelationshipWeb = {
   _sim: null,
@@ -27842,6 +27820,14 @@ const LicenseGateUI={
     document.getElementById('unlock-key-input')?.addEventListener('input',()=>{
       const err=document.getElementById('unlock-key-err');if(err)err.style.display='none';
     });
+    // PIVOT — Build Agent 3: the Welcome panel's own inline key field (its primary,
+    // dominant CTA) — a third thin entry point to the SAME LicenseGate.activate(),
+    // exactly like the modal (_submit) and Settings (_submitSettingsUnlock) above.
+    document.getElementById('fd-welcome-key-submit')?.addEventListener('click',()=>this._submitWelcomeUnlock());
+    document.getElementById('fd-welcome-key-input')?.addEventListener('keydown',e=>{if(e.key==='Enter')this._submitWelcomeUnlock();});
+    document.getElementById('fd-welcome-key-input')?.addEventListener('input',()=>{
+      const err=document.getElementById('fd-welcome-key-err');if(err)err.style.display='none';
+    });
     // Listen for license changes to update status UI
     document.addEventListener('license:changed',()=>this._updateStatusUI());
     document.addEventListener('license:expired',()=>{
@@ -27964,6 +27950,40 @@ const LicenseGateUI={
     }
     if(btn){btn.disabled=false;btn.textContent='Unlock';}
   },
+  // PIVOT — Build Agent 3: the Welcome panel's primary CTA. Same LicenseGate.activate()
+  // call and the same success semantics as _submit()/_submitSettingsUnlock() above — on
+  // success 'license:changed' fires, _updateStatusUI() hides this field (consumed) and
+  // shows the "unlocked" confirmation, and CapGate's live isActive() checks mean every
+  // cap is already lifted for the very next action. The two extra lines below (Render.all
+  // + FrontDoor.close) exist only because this is the first-run context specifically: the
+  // dashboard was pre-rendered once, capped, behind the Welcome before any key existed, so
+  // this closes the Welcome and repaints it unlocked instead of leaving a stale first paint.
+  async _submitWelcomeUnlock(){
+    const inp=document.getElementById('fd-welcome-key-input');
+    const err=document.getElementById('fd-welcome-key-err');
+    const btn=document.getElementById('fd-welcome-key-submit');
+    if(!inp)return;
+    const key=inp.value.trim();
+    if(err)err.style.display='none';
+    if(!key){if(err){err.textContent='Paste a key first.';err.style.display='block';}return;}
+    if(btn){btn.disabled=true;btn.textContent='Unlocking…';}
+    const result=await LicenseGate.activate(key);
+    if(result.success){
+      inp.value='';
+      showToast("RealmWright unlocked. Welcome. Save your license key somewhere safe — you'll need it again on a new device or after clearing browser data.",[{label:'Copy key',handler:()=>Utils.copyToClipboard(key)}],12000);
+      if(typeof Render!=='undefined')Render.all();
+      if(typeof FrontDoor!=='undefined')FrontDoor.close();
+    }else{
+      if(err){
+        const base=result.error||'Activation failed.';
+        err.textContent=result.reason==='device_limit'
+          ?base+" If you've activated RealmWright on another device before, open Settings on that device and click \"Deactivate this device\" to free a slot for this one."
+          :base;
+        err.style.display='block';
+      }
+    }
+    if(btn){btn.disabled=false;btn.textContent='Unlock';}
+  },
   async _deactivate(){
     if(!confirm('Deactivate this device? You can re-activate later with the same key.'))return;
     await LicenseGate.deactivate();
@@ -27997,6 +28017,15 @@ const LicenseGateUI={
     if(isActive){
       const inp=document.getElementById('unlock-key-input');if(inp)inp.value='';
       const err=document.getElementById('unlock-key-err');if(err)err.style.display='none';
+    }
+    // PIVOT — Build Agent 3: same consumed-field toggle for the Welcome panel's card.
+    const fdUnlockForm=document.getElementById('fd-welcome-unlock-form');
+    const fdLicensed=document.getElementById('fd-welcome-licensed');
+    if(fdUnlockForm)fdUnlockForm.style.display=isActive?'none':'block';
+    if(fdLicensed)fdLicensed.style.display=isActive?'block':'none';
+    if(isActive){
+      const inp=document.getElementById('fd-welcome-key-input');if(inp)inp.value='';
+      const err=document.getElementById('fd-welcome-key-err');if(err)err.style.display='none';
     }
   }
 };
@@ -28242,10 +28271,10 @@ async function bootstrap(){
       });
     })();
     // ── end P2.5 ──────────────────────────────────────────────────────────────
-    // Legacy onboarding for users who predate Mode Picker
-    if(!State.data.meta.settings.onboardingComplete){
-      setTimeout(()=>startOnboarding(),500);
-    }
+    // PIVOT — Build Agent 3: the legacy per-slider coach-mark that used to retry here
+    // for "returning" users (firstRunComplete already true) is retired — showing it on
+    // a later visit was exactly the double-onboarding bug Hunter asked to fix. A user
+    // who is past first-run never sees any onboarding surface again (no re-nagging).
   }
 }
 
@@ -28417,6 +28446,51 @@ window.__rwClearDevTheme=function(){localStorage.removeItem('rw_dev_theme');loca
     <p class="fd-subtitle" id="fd-subtitle">Run a great session on 15 minutes of prep.</p>
   </div>
   <div class="modal__body fd-body">
+    <!-- PIVOT — Build Agent 3: THE WELCOME. Single first-open surface (the legacy
+         per-slider coach-mark is retired — see State.setOnboardingComplete() below
+         and bootstrap()). Three plain choices; the key-unlock card is the dominant,
+         best-explained primary CTA per Hunter's spec. -->
+    <div class="fd-welcome" id="fd-welcome">
+      <div class="fd-welcome__option fd-welcome__option--primary" id="fd-welcome-unlock">
+        <div id="fd-welcome-unlock-form">
+          <div class="fd-welcome__eyebrow">One-time purchase</div>
+          <h2 class="fd-welcome__title">Unlock with your product key</h2>
+          <p class="fd-welcome__desc">Paste the key from your $23 purchase to unlock the complete tool — unlimited worlds, NPCs, locations, and the full AI Copilot.</p>
+          <div class="fd-welcome__row">
+            <input class="form-input" type="text" id="fd-welcome-key-input" placeholder="Lemon Squeezy UUID or itch.io key" autocomplete="off" spellcheck="false" aria-describedby="fd-welcome-key-err">
+            <button class="btn btn--primary" type="button" id="fd-welcome-key-submit">Unlock</button>
+          </div>
+          <p class="fd-welcome__err" id="fd-welcome-key-err" role="alert" aria-live="polite"></p>
+          <!-- PLACEHOLDER STORE LINKS — Hunter to replace both hrefs with the real
+               itch.io and Lemon Squeezy product page URLs before this ships live. -->
+          <p class="fd-welcome__stores">Don't have a key yet? Get one on
+            <a href="https://REPLACE-WITH-ITCHIO-STORE-URL.example" target="_blank" rel="noopener noreferrer" data-store="itchio">itch.io</a> or
+            <a href="https://REPLACE-WITH-LEMONSQUEEZY-STORE-URL.example" target="_blank" rel="noopener noreferrer" data-store="lemonsqueezy">Lemon Squeezy</a>.
+          </p>
+        </div>
+        <div class="fd-welcome__licensed" id="fd-welcome-licensed">
+          <h2 class="fd-welcome__title">✓ Full version unlocked</h2>
+          <p class="fd-welcome__desc" style="margin-bottom:0">Thank you — every feature and the full Copilot are unlocked on this device.</p>
+        </div>
+      </div>
+      <div class="fd-welcome__secondary-row">
+        <div class="fd-welcome__option">
+          <h2 class="fd-welcome__title">Explore a sample world</h2>
+          <p class="fd-welcome__desc">A complete, no-setup tour. Pick one of three fully-built worlds and every feature works right away, on rich content that's already in place.</p>
+          <button type="button" class="btn btn--secondary" id="fd-sample" aria-label="Browse the three sample worlds">Browse sample worlds</button>
+        </div>
+        <div class="fd-welcome__option">
+          <h2 class="fd-welcome__title">Start your own (free)</h2>
+          <p class="fd-welcome__desc">Build a new world from scratch under the free demo — up to 1 world, 8 NPCs, 6 locations, 3 factions, 10 chronicle entries, and 5 AI messages. Your work saves in this browser and exports to a file any time; it's yours either way. Unlock whenever you want to go further.</p>
+          <button type="button" class="btn btn--secondary" id="fd-build-scratch" aria-label="Build a brand-new world from scratch, free">Start building</button>
+        </div>
+      </div>
+    </div>
+    <div class="fd-divider" role="separator" aria-hidden="true">
+      <hr class="fd-divider__rule">
+      <span class="fd-divider__label">or, try a free AI preview first</span>
+      <hr class="fd-divider__rule">
+    </div>
     <div class="form-field">
       <label class="form-label" for="fd-prompt">Tonight's session is about…</label>
       <textarea class="form-textarea fd-textarea" id="fd-prompt" rows="4" placeholder="A heist gone wrong inside the Solis Data Vault…" autocomplete="off" spellcheck="true"></textarea>
@@ -28435,23 +28509,6 @@ window.__rwClearDevTheme=function(){localStorage.removeItem('rw_dev_theme');loca
     <button type="button" class="btn btn--primary fd-generate-btn" id="fd-generate-btn">Prep this session</button>
     <!-- Phase 5A: Inline demo output (single-shot preview for unlicensed visitors). -->
     <div class="fd-demo" id="fd-demo-output" aria-live="polite"></div>
-    <div class="fd-divider" role="separator" aria-hidden="true">
-      <hr class="fd-divider__rule">
-      <span class="fd-divider__label">or</span>
-      <hr class="fd-divider__rule">
-    </div>
-    <!-- Bug 1 fix: explicit, labelled worldbuilding doors. "Prep this session" needs an AI key,
-         so an owner without one (and who wants to BUILD a world, not prep a session) previously
-         had no obvious path — world-creation was "not clear". These two go straight to the work:
-         a fully-populated example world (no key needed) and the from-scratch realm builder. -->
-    <div class="fd-build-actions">
-      <button type="button" class="btn btn--secondary fd-build-btn" id="fd-load-example" aria-label="Load a fully-built example world you can explore right away">🌍 Load an example world</button>
-      <button type="button" class="btn btn--secondary fd-build-btn" id="fd-build-scratch" aria-label="Build a brand-new world from scratch">✦ Build a world from scratch</button>
-    </div>
-    <div class="fd-secondary-actions">
-      <button type="button" class="btn btn--secondary" id="fd-sample" aria-label="Try a pre-built sample session">See a sample session</button>
-      <button type="button" class="btn btn--secondary" id="fd-activate" aria-label="Activate your RealmWright license">Activate license</button>
-    </div>
     <div class="fd-recent" id="fd-recent" aria-label="Recent sessions">
       <p class="fd-recent__heading">Recent</p>
       <ul class="fd-recent__list" id="fd-recent-list" role="list"></ul>
