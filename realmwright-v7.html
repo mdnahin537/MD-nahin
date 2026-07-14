@@ -4342,6 +4342,16 @@ SECTION 8: DOM STRUCTURE
           </button>
         </div>
       </div>
+      <!-- PIVOT — Build Agent 4 (QA/security pass): a PERSISTENT entry point to the 5 free
+           AI previews. Before this, the only door to Demo.proxyRequest was the one-time
+           Welcome/FrontDoor panel (gated on meta.firstRunComplete, which flips true and
+           never resets except via a full "reset all data"), so a demo visitor who closed
+           it once had no way back to "taste the AI" short of wiping their realm. Reuses
+           FrontDoor.open() as-is (it already renders correctly for a returning visitor —
+           see its own `licensed` check) so this is pure UI wiring, no new demo logic.
+           Hidden once licensed by LicenseGateUI._updateStatusUI(), same gate as every
+           other unlock affordance in the app. -->
+      <button class="identity-strip__settings-btn" id="try-ai-btn" title="Try a free AI preview — 5 free messages, no key needed">✨</button>
       <button class="identity-strip__settings-btn" id="settings-btn" title="Settings">⚙</button>
     </div>
   </header>
@@ -6477,7 +6487,7 @@ const Solo={
     }
 
     if(!Copilot.isConfigured()){
-      showToast('Scene Pivot requires an API key. Configure one in Settings.',[],4000);
+      showToast(copilotGateMessage('use Scene Pivot'),[],4000);
       return;
     }
 
@@ -6526,7 +6536,7 @@ const Solo={
     }
 
     if(!Copilot.isConfigured()){
-      showToast('Mood Shift requires an API key. Configure one in Settings.',[],4000);
+      showToast(copilotGateMessage('use Mood Shift'),[],4000);
       return;
     }
 
@@ -7594,6 +7604,28 @@ const LicenseGate={
     return{platform:this._data.platform,keyPreview:this._data.key.slice(0,8)+'…',activatedAt:this._data.activatedAt,valid:this._data.valid};
   }
 };
+
+// PIVOT — Build Agent 4 (QA/security pass): on-brand, ACCURATE gate messaging.
+// Copilot.isConfigured() now requires BOTH an active license AND a usable AI
+// provider (own key, or Ollama) — so "not configured" has two genuinely different
+// causes with two genuinely different fixes: (1) a demo/locked visitor, who needs
+// to UNLOCK first (a key alone would do nothing for them), or (2) an already-
+// licensed customer who simply hasn't pasted a provider key yet, who needs to
+// ADD ONE in Settings. Saying "add a key" to a locked visitor is misleading (the
+// old, pre-pivot copy this replaces), and saying "unlock" to a paying customer
+// who is already unlocked would be equally wrong. Every Copilot gate message in
+// the file now routes through this single, live-state-aware helper instead of a
+// hardcoded string, so the two audiences always see the message that actually
+// applies to them. copilotGateClause() gives the lowercase, no-period fragment
+// for embedding mid-sentence; copilotGateMessage() wraps it as a full sentence.
+function copilotGateClause(){
+  return(typeof LicenseGate!=='undefined'&&LicenseGate.isActive())?'add an API key in Settings':'unlock the full version';
+}
+function copilotGateMessage(action){
+  const suffix=action?` to ${action}`:'';
+  const clause=copilotGateClause();
+  return clause.charAt(0).toUpperCase()+clause.slice(1)+suffix+'.';
+}
 
 // DemoCounter is now a client-side UX hint only. Real enforcement lives in the
 // Worker (a one-time per-visitor cap in Cloudflare KV — NOT daily, see demo.ts's
@@ -9299,16 +9331,29 @@ const State={
     if(before<f.clockSize&&f.clockFilled===f.clockSize){
       f.status='resolved';f.resolvedAt=Utils.now();
       n.chronicle=n.chronicle||[];
-      const ev={
-        id:Utils.uuid(),name:f.name,type:f.catastropheType||'Military',weight:-10, // B3: front resolution is catastrophic — negative weight
-        description:f.catastropheEvent||(f.name+' has come to pass.'),
-        year:n.currentYear,visibility:'public',
-        relatedStats:opts.by==='stat-trigger'&&f.optionalStatTrigger?.statKey?[f.optionalStatTrigger.statKey]:[], // B27
-        sourceType:'front-resolution',sourceId:f.id,source:'front',createdAt:Utils.now(),
-      };
-      n.chronicle.push(ev);
-      document.dispatchEvent(new CustomEvent('sc:eventAdded',{detail:{eid:ev.id,nid}}));
-      showToast('Front resolved: '+f.name+'. Chronicle event added.'); // B2+B4: was Toast.show with escHtml
+      // PIVOT — Build Agent 4 (QA/security pass, cap-bypass hunt): front resolution used to
+      // ALWAYS write a chronicle entry with no CapGate check at all — reachable by any demo
+      // user via the un-capped "+ New Front" button (State.addFront has no cap either, by
+      // design: only the 5 spec'd kinds are capped) followed by manually ticking the clock,
+      // or automatically via a World Turn commit (WorldTurn.commit -> State.tickFront). Either
+      // way this was a silent, no-hacking-required way to add unlimited chronicle entries past
+      // the stated 10-entry demo cap. The front still resolves either way (fronts aren't
+      // capped) — only the resulting CHRONICLE ENTRY is gated, same silent-then-throttled-
+      // toast pattern Parse.applyCandidates already uses for AI canon.
+      if(typeof CapGate!=='undefined'&&CapGate._atCap('chronicle')){
+        if(!opts.silent)CapGate.check('chronicle'); // throttled toast; no-op if already shown recently
+      }else{
+        const ev={
+          id:Utils.uuid(),name:f.name,type:f.catastropheType||'Military',weight:-10, // B3: front resolution is catastrophic — negative weight
+          description:f.catastropheEvent||(f.name+' has come to pass.'),
+          year:n.currentYear,visibility:'public',
+          relatedStats:opts.by==='stat-trigger'&&f.optionalStatTrigger?.statKey?[f.optionalStatTrigger.statKey]:[], // B27
+          sourceType:'front-resolution',sourceId:f.id,source:'front',createdAt:Utils.now(),
+        };
+        n.chronicle.push(ev);
+        document.dispatchEvent(new CustomEvent('sc:eventAdded',{detail:{eid:ev.id,nid}}));
+        showToast('Front resolved: '+f.name+'. Chronicle event added.'); // B2+B4: was Toast.show with escHtml
+      }
     }
     this._touch(nid);
     // silent: caller (checkThresholds) folds 'front' into one union sc:changed.
@@ -9661,6 +9706,17 @@ const Compute={
         if(!crossed)return;
         const dup=n.chronicle.find(e=>e.name===t.eventName&&e.year>=n.currentYear-5);
         if(dup)return;
+        // PIVOT — Build Agent 4 (QA/security pass, cap-bypass hunt): a stat threshold crossing
+        // used to write a chronicle entry unconditionally — reachable by ANY demo user just by
+        // dragging a stat slider (ordinary setStat, not an AI/import path), silently exceeding
+        // the 10-entry demo cap through normal play, no exploit needed. The stat VALUE change
+        // itself is never blocked (only the 5 spec'd kinds are capped, and 'stat' isn't one of
+        // them) — only the resulting narrative chronicle entry is gated once at cap, same
+        // silent-then-throttled-toast pattern Parse.applyCandidates already uses for AI canon.
+        if(typeof CapGate!=='undefined'&&CapGate._atCap('chronicle')){
+          CapGate.check('chronicle'); // throttled toast; no-op if already shown recently
+          return;
+        }
         const desc=t.eventDesc.replace(/{year}/g,n.currentYear).replace(/{nation}/g,n.name);
         const ev={id:Utils.uuid(),name:t.eventName,type:t.eventType,weight:t.eventWeight,description:desc,year:Math.floor(n.currentYear),visibility:'public',relatedStats:[key],source:'threshold',createdAt:Utils.now()};
         n.chronicle.push(ev);
@@ -12087,7 +12143,7 @@ const Audience={
     const q = String(text || '').trim();
     if(!q) return fail('Type a question first.');
     if(!(typeof Copilot !== 'undefined' && Copilot.isConfigured && Copilot.isConfigured())){
-      return fail('AI is off. Add a key in Settings → Copilot, or open the full audience to print this character’s dossier and voice them yourself.');
+      return fail(`AI is off — ${copilotGateClause()} to talk with characters, or open the full audience to print this character’s dossier and voice them yourself.`);
     }
     // Grounding: dossier (no grants) → system prompt, built from it ALONE.
     const d = this.dossier(n, npcId, []);
@@ -12273,7 +12329,7 @@ const Audience={
     let h = `<div class="aud-chat__head"><div><strong>In audience with ${E(npc.name)}</strong></div>`;
     h += `<div class="aud-chat__model">${configured ? E(this._modelLabel() + ' · ' + this._costLabel()) : 'AI off'}</div></div>`;
     if(!configured){
-      h += `<div class="aud-chat__log"><div class="aud-chat__empty">The dossier on the left works with no AI — print it and roleplay from it yourself. To talk to ${E(npc.name)} live, add an API key in Settings → Copilot. A haiku-class model is plenty for conversation and the cheapest option.</div></div>`;
+      h += `<div class="aud-chat__log"><div class="aud-chat__empty">The dossier on the left works with no AI — print it and roleplay from it yourself. To talk to ${E(npc.name)} live, ${copilotGateClause()}. A haiku-class model is plenty for conversation and the cheapest option.</div></div>`;
       return h;
     }
     h += `<div class="aud-chat__log" id="aud-log">${this._renderMessages(npc, d)}</div>`;
@@ -12342,7 +12398,7 @@ const Audience={
     const n = State.get(); if(!n) return;
     const npc = (n.characters || []).find(c => c.id === this._npcId); if(!npc) return;
     if(!(typeof Copilot !== 'undefined' && Copilot.isConfigured && Copilot.isConfigured())){
-      showToast('Add an API key in Settings → Copilot to speak with this character.'); return;
+      showToast(copilotGateMessage('speak with this character')); return;
     }
     const input = document.getElementById('aud-input');
     const text = (input && input.value || '').trim();
@@ -12453,7 +12509,7 @@ const Audience={
   // ── "MAKE IT CANON" — transcript → Decipher → CANON review. Nothing auto-commits (N1 I7-iv).
   async _makeCanon(n, npc){
     if(!(typeof Copilot !== 'undefined' && Copilot.isConfigured && Copilot.isConfigured())){
-      showToast('Add an API key in Settings to extract canon from the conversation.'); return;
+      showToast(copilotGateMessage('extract canon from the conversation')); return;
     }
     const log = this._logFor(npc);
     if(!log.length){ showToast('Have a conversation first, then make it canon.'); return; }
@@ -14302,7 +14358,7 @@ const Copilot={
       ctr.innerHTML=`<div class="copilot-panel__empty">
         <div class="copilot-panel__empty-mark">⌘</div>
         <div class="copilot-panel__empty-title">Configure the Copilot</div>
-        <div>The Copilot needs an OpenRouter API key to read your world and answer questions about it.</div>
+        <div>${copilotGateMessage('read your world and answer questions about it')}</div>
         <div style="margin-top:var(--space-3)"><button class="copilot-panel__no-key-action" id="cp-open-settings">Open Settings →</button></div>
         <div style="margin-top:var(--space-4);font-size:var(--text-label-sm);color:var(--color-text-faint)">Your key stays on your device. It is never sent anywhere except OpenRouter when you ask a question.</div>
       </div>`;
@@ -14440,10 +14496,10 @@ const Copilot={
       // reachable (see send()); a real key is still required for anything else.
       const sampleActive=typeof SampleMode!=='undefined'&&SampleMode.isActive();
       dot?.classList.remove('is-active');
-      if(txt)txt.textContent=sampleActive?'Sample Mode — showing a saved answer':'Not configured — add API key in Settings';
+      if(txt)txt.textContent=sampleActive?'Sample Mode — showing a saved answer':('Not configured — '+copilotGateClause());
       if(modelDisp)modelDisp.style.display='none';
       if(input)input.disabled=!sampleActive;
-      if(input)input.placeholder=sampleActive?'Ask anything — a saved sample answer will be shown':'Configure your API key to begin.';
+      if(input)input.placeholder=sampleActive?'Ask anything — a saved sample answer will be shown':copilotGateMessage('begin');
       if(sendBtn)sendBtn.disabled=!sampleActive;
       if(cost)cost.textContent='— ¢ per message';
     }
@@ -14715,7 +14771,7 @@ const Copilot={
   // returns the RAW parsed proposals array — the gate is a separate, testable step. Eligible:
   // position ∈ {gaining,losing} AND a non-empty primaryInterest. Returns [] when none qualify.
   async generateFactionCouncil(nation){
-    if(!this.isConfigured())throw new Error('Copilot not configured. Add an API key in Settings.');
+    if(!this.isConfigured())throw new Error(copilotGateMessage('use the Copilot'));
     const n=nation||State.get();
     if(!n)return [];
     const eligible=(n.factions||[]).filter(f=>f&&(f.position==='gaining'||f.position==='losing')&&(f.primaryInterest||'').trim());
@@ -14746,7 +14802,7 @@ const Copilot={
   async convFactionCouncil(nation){
     const n=nation||State.get();
     if(!n){showToast('No active realm.');return;}
-    if(!this.isConfigured()){showToast('Add your API key in Settings to convene the Faction Council.');return;}
+    if(!this.isConfigured()){showToast(copilotGateMessage('convene the Faction Council'));return;}
     // Once-per-turn: refuse a second convene against the same turn token. Use the current
     // World-Turn token if a turn was taken, else a stable 'no-turn' sentinel for this realm.
     const turnToken=(n.turnAppliedAt&&n.turnAppliedAt.token)?String(n.turnAppliedAt.token):'no-turn';
@@ -15272,12 +15328,12 @@ Without a CANON block, your response is conversational only — no simulation ef
       if(pre){
         this.appendMessage('user',sUserText);
         if(sInput){sInput.value='';sInput.style.height='auto';}
-        this.appendMessage('assistant','_Saved sample answer — add your API key in Settings to ask your own questions._\n\n'+pre);
+        this.appendMessage('assistant','_Saved sample answer — '+copilotGateClause()+' to ask your own questions._\n\n'+pre);
         return;
       }
       // No saved answer for this sample — fall through to the normal refusal below.
     }
-    if(!this.isConfigured()){showToast('Configure your API key first.');return;}
+    if(!this.isConfigured()){showToast(copilotGateMessage());return;}
     const input=document.getElementById('copilot-input');
     const userText=(input?.value||'').trim();
     if(!userText)return;
@@ -15681,7 +15737,7 @@ Without a CANON block, your response is conversational only — no simulation ef
       model=settings.ollamaModel||'llama3.1';
     }else{
       // B14: refuse cleanly when no key — beats a confusing 401 from "Bearer undefined"
-      if(!settings.copilotKey)throw new Error('Copilot not configured. Add an API key in Settings.');
+      if(!settings.copilotKey)throw new Error(copilotGateMessage('use the Copilot'));
       url='https://openrouter.ai/api/v1/chat/completions';
       headers={
         'Authorization':`Bearer ${settings.copilotKey}`,
@@ -15791,7 +15847,7 @@ Without a CANON block, your response is conversational only — no simulation ef
   // ─── CONTINUITY CHECK (non-streaming, structured verdict) ───
   // Returns {text, costNote} where text is the model's verdict and costNote is a brief usage line.
   async checkContinuity(ev,signal=null){
-    if(!this.isConfigured())throw new Error('Copilot not configured. Add an API key in Settings.');
+    if(!this.isConfigured())throw new Error(copilotGateMessage('use the Copilot'));
     const n=State.get();
     if(!n)throw new Error('No active nation.');
     const w=ev.weight>0?`+${ev.weight}`:String(ev.weight||0);
@@ -15832,7 +15888,7 @@ Keep the response under 200 words.`;
   // Takes free-form description, asks model to return structured JSON describing a nation,
   // returns a parsed seed object suitable for buildNationFromSeed. Throws on irrecoverable failure.
   async importFromText(description){
-    if(!this.isConfigured())throw new Error('Copilot not configured. Add an API key in Settings.');
+    if(!this.isConfigured())throw new Error(copilotGateMessage('use the Copilot'));
     const systemPrompt=`You convert free-form descriptions of fictional nations into structured JSON for the RealmWright worldbuilding tool. The user pastes a description; you return ONLY a JSON object — no preamble, no markdown fences, no commentary.
 
 Return this exact shape:
@@ -15915,7 +15971,7 @@ Include 0-3 founding chronicle events that match the description. Include 1-3 fa
   // ─── STRONG START GENERATOR (r72) ───
   // One evocative paragraph opening the session. max_tokens: 400.
   async generateStrongStart({nation, situation, surface='strongstart', extra=''}){
-    if(!this.isConfigured())throw new Error('Copilot not configured. Add an API key in Settings.');
+    if(!this.isConfigured())throw new Error(copilotGateMessage('use the Copilot'));
     // F1 surface: 'strongstart' — situation text may name an event/character to promote.
     // F6: thread the surface's own tier knob (strongstartTier) instead of always using the global depth.
     // X-1: `surface` defaults to the Tonight/GM-toolbar knob; the Campaign board passes
@@ -15961,7 +16017,7 @@ Return JSON only: {"variants":["<60-100 words>","<60-100 words>","<60-100 words>
   // ─── GENERATE SECRETS (r73) ───
   // Returns array of single-sentence fact strings.
   async generateSecrets(nation,count=10,surface='secrets',extra=''){
-    if(!this.isConfigured())throw new Error('Copilot not configured. Add an API key in Settings.');
+    if(!this.isConfigured())throw new Error(copilotGateMessage('use the Copilot'));
     const n=nation||State.get();
     // F6: thread the surface's own tier knob (secretsTier) instead of always using the global depth.
     // X-1: `surface` defaults to the Tonight/GM-toolbar knob; the Campaign board passes
@@ -16016,7 +16072,7 @@ Return JSON only: {"secrets":["...", ...]} — exactly ${count} entries, each a 
     }
   },
   async generateProclamation(nation,opts={}){
-    if(!this.isConfigured())throw new Error('Copilot not configured. Add an API key in Settings.');
+    if(!this.isConfigured())throw new Error(copilotGateMessage('use the Copilot'));
     const tone=opts.tone||'grand';
     const topic=opts.topic||'a recent decree'; // B10: raw string — AI doesn't render HTML
     // F1 surface: 'handout-proclamation' — topic can name a decree/faction/year to promote.
@@ -16036,7 +16092,7 @@ Return JSON only: {"title":"<short document title>","body":"<full text>"}`;
     return await this._handoutFetch(sys,user);
   },
   async generateNewsBulletin(nation,opts={}){
-    if(!this.isConfigured())throw new Error('Copilot not configured. Add an API key in Settings.');
+    if(!this.isConfigured())throw new Error(copilotGateMessage('use the Copilot'));
     const scope=opts.scope||'common';
     const topic=opts.topic||'recent events'; // B10: raw string
     // F1 surface: 'handout-news' — topic seeds entity-relevance.
@@ -16070,7 +16126,7 @@ Return JSON only: {"title":"<short document title>","body":"<full text>"}`;
     return this._sortedChronicle(mentioned).slice(-2).reverse();
   },
   async generateInCharacterLetter(nation,opts={}){
-    if(!this.isConfigured())throw new Error('Copilot not configured. Add an API key in Settings.');
+    if(!this.isConfigured())throw new Error(copilotGateMessage('use the Copilot'));
     const n=nation||State.get();
     const topic=opts.topic||'recent matters'; // B10: raw string
     const tone=opts.tone||'neutral';
@@ -16124,7 +16180,7 @@ Return JSON only: {"title":"Letter from <writer> to <recipient>","body":"<the le
   // justifies one. Realm B is compacted to tier 'low' (context economy: suggestAll calls this
   // once per other realm, so realm B's full context would otherwise be paid for N times).
   async suggestRelations(fromNation,toNation,existing={}){
-    if(!this.isConfigured())throw new Error('Copilot not configured. Add an API key in Settings.');
+    if(!this.isConfigured())throw new Error(copilotGateMessage('use the Copilot'));
     // F6: thread the surface's own tier knob (relationsTier) instead of always using the global depth.
     const relationsTier=(typeof AccuracyChip!=='undefined')?AccuracyChip._tierFor('relations'):'mid';
     const ctxA=this.buildContext(fromNation,{tier:relationsTier});
@@ -16159,7 +16215,7 @@ Return JSON only: {"posture":"<value>","rationale":"<text>"}.`;
   // be explicitly system-agnostic, canon-respecting, ecologically grounded, and self-aware of
   // the existing bestiary so successive creatures stop colliding.
   async generateCreature(nation,opts={}){
-    if(!this.isConfigured())throw new Error('Copilot not configured. Add an API key in Settings.');
+    if(!this.isConfigured())throw new Error(copilotGateMessage('use the Copilot'));
     const n=nation||State.get();
     const typeHint=opts.type?'Type: '+opts.type+'. ':'';
     const envHint=opts.environment?'Environment: '+opts.environment+'. ':'';
@@ -16199,7 +16255,7 @@ Return JSON only: {"name":"","type":"","description":"","statBlock":"","environm
   // ─── NOTES DECIPHER (r79) ───
   // Accepts raw notes/transcript and returns a CANON block for the standard review pipeline.
   async decipherNotes(nation, text, target='all'){
-    if(!this.isConfigured())throw new Error('Copilot not configured. Add an API key in Settings.');
+    if(!this.isConfigured())throw new Error(copilotGateMessage('use the Copilot'));
     const n=nation||State.get();
     if(!n)throw new Error('No active nation.');
     // F1 surface: 'decipher' — feed the raw notes to entity-relevance.
@@ -16248,7 +16304,7 @@ Hook: Who pays the shrine-keeper? | The party found the shrine tended but no one
   // ─── GM SESSION PREP ───
   // Generates a structured session-prep document. Returns parsed JSON with hooks, NPCs, and tensions.
   async generateSessionPrep(opts){
-    if(!this.isConfigured())throw new Error('Copilot not configured. Add an API key in Settings.');
+    if(!this.isConfigured())throw new Error(copilotGateMessage('use the Copilot'));
     const n=State.get();
     if(!n)throw new Error('No active nation.');
     const focus=opts?.focus||'balanced';
@@ -16338,7 +16394,7 @@ No preamble, no markdown fences, only the JSON.`;
   // DIFFERENT existing entity (faction / named character / location or front), never parrots
   // an existing name, and carries a playable contradiction in its role.
   async generateQuickNPC(opts={}){
-    if(!this.isConfigured())throw new Error('Copilot not configured. Add an API key in Settings.');
+    if(!this.isConfigured())throw new Error(copilotGateMessage('use the Copilot'));
     const n=State.get();
     if(!n)throw new Error('No active realm.');
     // X-1: `surface` defaults to the Tonight/GM-toolbar knob ('tonight' — no dedicated
@@ -16405,7 +16461,7 @@ No preamble, no markdown, only the JSON.`;
   // ─── GM MODE: What's at Stake? ───
   // Returns a single read-aloud paragraph summarizing the dramatic situation.
   async generateStakes(opts={}){
-    if(!this.isConfigured())throw new Error('Copilot not configured. Add an API key in Settings.');
+    if(!this.isConfigured())throw new Error(copilotGateMessage('use the Copilot'));
     const n=State.get();
     if(!n)throw new Error('No active realm.');
     // X-1: `surface` defaults to the Tonight/GM-toolbar knob ('tonight' — no dedicated
@@ -16445,7 +16501,7 @@ Return ONLY the paragraph as plain text. No preamble, no formatting.`;
   // {"text":...} envelope — same retry/fence-strip behaviour every other generator
   // gets, no fork. Prose lands in the GM's Notes via cpSetText (insert-or-copy, UX-7).
   async generateNotesSummary(nation,opts={}){
-    if(!this.isConfigured())throw new Error('Copilot not configured. Add an API key in Settings.');
+    if(!this.isConfigured())throw new Error(copilotGateMessage('use the Copilot'));
     const n=nation||State.get();
     if(!n)throw new Error('No active realm.');
     // X-1: Campaign Notes is board-only (AD-6) — surface defaults straight to its own
@@ -16461,7 +16517,7 @@ Return ONLY the paragraph as plain text. No preamble, no formatting.`;
     return String(parsed&&parsed.text||'').trim();
   },
   async generateNotesGaps(nation,opts={}){
-    if(!this.isConfigured())throw new Error('Copilot not configured. Add an API key in Settings.');
+    if(!this.isConfigured())throw new Error(copilotGateMessage('use the Copilot'));
     const n=nation||State.get();
     if(!n)throw new Error('No active realm.');
     // X-1: Campaign Notes is board-only (AD-6) — surface defaults straight to its own
@@ -16484,7 +16540,7 @@ Return ONLY the paragraph as plain text. No preamble, no formatting.`;
   // are listed so the model doesn't redefine them, and coverage is spread across real entities
   // instead of leaning on invented vernacular. Save-side merge lives in GlossaryUI.save().
   async generateGlossary(nation,opts={}){
-    if(!this.isConfigured())throw new Error('No API key configured');
+    if(!this.isConfigured())throw new Error(copilotGateMessage('use the Copilot'));
     const scope=opts.scope||'all';
     const count=parseInt(opts.count,10)||20;
     // F6: thread the surface's own tier knob (glossaryTier) instead of always using the global depth.
@@ -16523,7 +16579,7 @@ Format as JSON: {"glossary":[{"term":"...","definition":"..."},...]}. Sort entri
   // the extracted sound-pattern alongside the names (additive field — the JSON parse below is
   // unchanged and callers still read only .names, so nothing downstream breaks).
   async generateNames(nation,opts={}){
-    if(!this.isConfigured())throw new Error('No API key configured');
+    if(!this.isConfigured())throw new Error(copilotGateMessage('use the Copilot'));
     const type=opts.type||'people';
     const qty=parseInt(opts.qty,10)||20;
     const theme=opts.theme||'';
@@ -16561,7 +16617,7 @@ Return JSON only: {"names":["..."], "pattern":"<one sentence: the naming rule yo
   // hooks. Surface 'campaign-clocks' carries the halal guard in its focus line.
   // Each variant: {name, size(4/6/8), justification}.
   async generateClockSuggestions(nation,opts={}){
-    if(!this.isConfigured())throw new Error('Copilot not configured. Add an API key in Settings.');
+    if(!this.isConfigured())throw new Error(copilotGateMessage('use the Copilot'));
     const n=nation||State.get();
     if(!n)throw new Error('No active realm.');
     const extra=opts.extra||'';
@@ -16600,7 +16656,7 @@ Return JSON only: {"names":["..."], "pattern":"<one sentence: the naming rule yo
   // and the chronicle's current pressure. position is the index the new beat would
   // occupy (so the prompt knows what comes before/after).
   async generateBeatSuggestions(nation,{existingBeats=[],position=null,extra=''}={}){
-    if(!this.isConfigured())throw new Error('Copilot not configured. Add an API key in Settings.');
+    if(!this.isConfigured())throw new Error(copilotGateMessage('use the Copilot'));
     const n=nation||State.get();
     if(!n)throw new Error('No active realm.');
     const tier=(typeof AccuracyChip!=='undefined')?AccuracyChip._tierFor('campaign-beats'):'mid';
@@ -16840,7 +16896,7 @@ Return JSON only: {"names":["..."], "pattern":"<one sentence: the naming rule yo
   // model is told to cite world-facts using ONLY the [#id] tokens / [NPC: name] names in
   // the facts; renderNarrationCitations then ENFORCES that regardless of what comes back.
   async generateTurnNarration({nation,facts,mode}={}){
-    if(!this.isConfigured())throw new Error('Copilot not configured. Add an API key in Settings.');
+    if(!this.isConfigured())throw new Error(copilotGateMessage('use the Copilot'));
     const f=facts||{lines:[],eventIds:[],npcNames:[]};
     const where=mode==='sandtable'?'a forecast of how a hypothetical choice diverges from the baseline':'the turn the world just took on its own';
     // E8: the old "tone" block was a FULL buildContext dump — stats, chronicle, everything —
@@ -17213,7 +17269,26 @@ const FrontDoor={
     ],'anthropic/claude-haiku-latest');
     if(btn){btn.disabled=false;btn.textContent='Prep this session';}
     if(result.error){
-      if(outBox)outBox.innerHTML=`<div class="fd-demo__error">${Utils.escHtml(result.error)}</div>`;
+      // PIVOT — Build Agent 4 (Part 4, polish item 2): this path renders EVERY demo
+      // failure — captcha reject, per-visitor trial used up, the Worker's global daily
+      // ceiling hit (429), an upstream/model outage (502), or the demo being unconfigured
+      // (503) — and until now showed plain text with no way forward. Its sibling path
+      // (DemoCounter.canUse()===false in _handleGenerate, a few lines up) already offers
+      // "Activate"/"Sample Mode" for the client-side-known-exhausted case; give the exact
+      // same two actionable buttons here so a SERVER-side refusal (which the client can't
+      // always predict, e.g. the global ceiling) is just as recoverable, not a dead end.
+      if(outBox){
+        outBox.innerHTML=`
+          <div class="fd-demo__error">${Utils.escHtml(result.error)}</div>
+          <div class="fd-demo__footer">
+            <button class="btn btn--primary btn--sm" type="button" data-fd-activate="true">Activate</button>
+            <button class="btn btn--secondary btn--sm" type="button" data-fd-sample="true">Try Sample Mode</button>
+          </div>`;
+        const ab=outBox.querySelector('[data-fd-activate]');
+        if(ab)ab.addEventListener('click',()=>LicenseGateUI.openModal());
+        const sb=outBox.querySelector('[data-fd-sample]');
+        if(sb)sb.addEventListener('click',()=>{this.close();if(typeof SampleMode!=='undefined')SampleMode.openPicker();});
+      }
       // Re-render captcha for the next attempt
       Demo.renderTurnstile('fd-turnstile');
       return;
@@ -17626,7 +17701,7 @@ const WorldTurnReport={
     if(!box)return;
     if(!Copilot.isConfigured()){
       box.hidden=false;
-      box.innerHTML='<p class="rw-narration__gate">Add your API key in Settings to use AI here.</p>';
+      box.innerHTML='<p class="rw-narration__gate">'+copilotGateMessage('use AI here')+'</p>';
       return;
     }
     box.hidden=false;
@@ -18068,7 +18143,7 @@ const Sandtable = {
     if(!box)return;
     if(!Copilot.isConfigured()){
       box.hidden=false;
-      box.innerHTML='<p class="rw-narration__gate">Add your API key in Settings to use AI here.</p>';
+      box.innerHTML='<p class="rw-narration__gate">'+copilotGateMessage('use AI here')+'</p>';
       return;
     }
     box.hidden=false;
@@ -18941,7 +19016,7 @@ const Campaign={
     const out=pop.querySelector('[data-ai-out]');
     if(out)out.innerHTML='';
     if(typeof Copilot==='undefined'||!Copilot.isConfigured||!Copilot.isConfigured()){
-      if(out)out.innerHTML=`<p class="cmp-ai-pop__err">Add your API key in Settings to use AI here. Manual entry always works without one.</p>`;
+      if(out)out.innerHTML=`<p class="cmp-ai-pop__err">${copilotGateMessage('use AI here')} Manual entry always works without one.</p>`;
       return;
     }
     btn.disabled=true;const label=btn.textContent;btn.textContent='Working…';
@@ -20843,7 +20918,7 @@ const Brief={
   // the caller keeps the deterministic dashboard either way.
   async dramaticRead(n){
     if(typeof Copilot==='undefined'||!Copilot.isConfigured())
-      throw new Error('Copilot not configured. Add an API key in Settings.');
+      throw new Error(copilotGateMessage('use the Copilot'));
     const nation=n||State.get();
     if(!nation)throw new Error('No active realm.');
     const m=this.metrics(nation);
@@ -21228,7 +21303,7 @@ const Lint={
   async aiPass(){
     if(this._aiRunning)return [];
     if(typeof Copilot==='undefined'||!Copilot.isConfigured()){
-      if(typeof showToast!=='undefined')showToast('Add an API key in Settings to run the semantic continuity pass.');
+      if(typeof showToast!=='undefined')showToast(copilotGateMessage('run the semantic continuity pass'));
       return [];
     }
     const n=(typeof State!=='undefined')?State.get():null;
@@ -21640,7 +21715,7 @@ Hook: Who pays the shrine-keeper? | The party found the shrine tended but no one
     const status=document.getElementById('iv-status');
     if(typeof Copilot==='undefined'||!Copilot.isConfigured()){
       // AI-only-by-design: be honest when no key. Progress is saved; the GM can add a key and resume.
-      if(status){status.textContent='Add an API key in Settings to draft your realm, then re-open — your answers are saved.';status.style.color='var(--color-amber)';}
+      if(status){status.textContent=copilotGateMessage('draft your realm, then re-open')+' Your answers are saved.';status.style.color='var(--color-amber)';}
       return;
     }
     if(status){status.textContent='Drafting your realm…';status.style.color='var(--color-text-muted)';}
@@ -21703,7 +21778,7 @@ Hook: Who pays the shrine-keeper? | The party found the shrine tended but no one
   async _structureAddition(text){
     const status=document.getElementById('iv-status');
     if(typeof Copilot==='undefined'||!Copilot.isConfigured()){
-      if(status){status.textContent='Add an API key to turn this answer into review candidates. Your progress is saved.';status.style.color='var(--color-amber)';}
+      if(status){status.textContent=copilotGateMessage('turn this answer into review candidates')+' Your progress is saved.';status.style.color='var(--color-amber)';}
       return;
     }
     const n=State.get();
@@ -22110,7 +22185,7 @@ const Tonight={
     // current-world path the WORLD is the input, so the line is optional focusing context.
     if(!useCurrentWorld&&!situation){showToast('Type a situation first — one line describing tonight\'s scenario.');return;}
     if(typeof Copilot==='undefined'||!Copilot.isConfigured()){
-      showToast('Configure your OpenRouter API key in Settings first.');return;
+      showToast(copilotGateMessage());return;
     }
     const length=document.querySelector('#tonight-length .is-selected')?.dataset?.len||'short';
     const btn=document.getElementById('tonight-generate');
@@ -22946,7 +23021,7 @@ const SHSPanels={
 
   async generateSecrets(){
     const n=State.get();
-    if(!Copilot.isConfigured()){showToast('Configure your API key in Settings first.',[],4000);return;}
+    if(!Copilot.isConfigured()){showToast(copilotGateMessage(),[],4000);return;}
     const btn=document.getElementById('generate-secrets-btn');
     if(btn){btn.disabled=true;btn.textContent='⌘ Generating…';}
     try{
@@ -23389,7 +23464,7 @@ const GMMode={
     document.getElementById('gm-session-prep-btn')?.addEventListener('click',()=>{
       // Reuse the existing Session Prep modal — same flow as the Export menu
       if(typeof Copilot==='undefined'||!Copilot.isConfigured()){
-        showToast('Configure your API key in Settings → Copilot first.',[],5000);
+        showToast(copilotGateMessage(),[],5000);
         return;
       }
       const status=document.getElementById('sp-status');if(status){status.textContent='';status.style.color='var(--color-text-muted)';}
@@ -23415,7 +23490,7 @@ const GMMode={
   async openQuickNPC(){
     if(this._generatingNPC)return;
     if(typeof Copilot==='undefined'||!Copilot.isConfigured()){
-      showToast('Configure your API key in Settings → Copilot first.',[],5000);
+      showToast(copilotGateMessage(),[],5000);
       return;
     }
     const card=document.getElementById('quick-npc-card');
@@ -23498,7 +23573,7 @@ const GMMode={
   // ─── What's at Stake modal ───
   openStakes(){
     if(typeof Copilot==='undefined'||!Copilot.isConfigured()){
-      showToast('Configure your API key in Settings → Copilot first.',[],5000);
+      showToast(copilotGateMessage(),[],5000);
       return;
     }
     Modals.open('stakes');
@@ -23515,7 +23590,7 @@ const GMMode={
   },
   openStrongStart(){
     if(typeof Copilot==='undefined'||!Copilot.isConfigured()){
-      showToast('Configure your API key in Settings → Copilot first.',[],5000);
+      showToast(copilotGateMessage(),[],5000);
       return;
     }
     Modals.open('strong-start');
@@ -23812,7 +23887,7 @@ const ArsenalRun={
   async run(pid){
     const p=PROMPTS.find(x=>x.id===pid);const n=State.get();
     if(!p||!n)return;
-    if(!(typeof Copilot!=='undefined'&&Copilot.isConfigured&&Copilot.isConfigured())){showToast('Add an API key in Settings to run prompts in-app.');return;}
+    if(!(typeof Copilot!=='undefined'&&Copilot.isConfigured&&Copilot.isConfigured())){showToast(copilotGateMessage('run prompts in-app'));return;}
     const input=(this._draft[pid]||'').trim();
     if(this.needsInput(p)&&!input){showToast('This prompt works on your text — paste or describe it in the box first.');return;}
     if(this._abort)try{this._abort.abort();}catch(_){}
@@ -24222,7 +24297,7 @@ const WorldShell={
     document.getElementById('wms-fac-showall')?.addEventListener('click',()=>Interact?.expandDomain?.('political'));
     document.getElementById('wms-council-btn')?.addEventListener('click',()=>{
       if(typeof Copilot==='undefined')return;
-      if(!Copilot.isConfigured()){showToast('Add your API key in Settings to convene the Faction Council.');return;}
+      if(!Copilot.isConfigured()){showToast(copilotGateMessage('convene the Faction Council'));return;}
       Copilot.convFactionCouncil(State.get());
     });
     // M3: faction delete — mirrors the confirm()+removeX()+Render.all() pattern used for
@@ -24362,7 +24437,7 @@ const WorldShell={
           h+=`<button type="button" class="wms-ae-btn wms-ae-btn--run" data-act="run" data-pid="${E(p.id)}"${isRunning?' disabled':''}>${isRunning?'Running…<span class="wms-ae-run-dot"></span>':'▷ Run'}</button>`;
         }
         h+=`</div>`;
-        if(!hasKey)h+=`<div class="wms-ae-signpost">Copy &amp; paste into ChatGPT, Claude, or Gemini — or add an API key in Settings to run prompts inside RealmWright.</div>`;
+        if(!hasKey)h+=`<div class="wms-ae-signpost">Copy &amp; paste into ChatGPT, Claude, or Gemini — or ${copilotGateClause()} to run prompts inside RealmWright.</div>`;
         h+=`</div>`;
       }
       return h;
@@ -25016,7 +25091,7 @@ const Handouts={
     const type=this._type;
     const statusEl=document.getElementById('handout-status');
     const genBtn=document.getElementById('handout-generate-btn');
-    if(!Copilot.isConfigured()){showToast('Add an OpenRouter API key in Settings → Copilot first.');return;}
+    if(!Copilot.isConfigured()){showToast(copilotGateMessage());return;}
     genBtn.disabled=true;
     statusEl.textContent='Generating…';
     document.getElementById('handout-output').style.display='none';
@@ -26234,7 +26309,7 @@ function bindEventListeners(){
   document.getElementById('export-session-prep-btn')?.addEventListener('click',()=>{
     expDD.classList.remove('is-open');
     if(typeof Copilot==='undefined'||!Copilot.isConfigured()){
-      showToast('Configure your API key in Settings → Copilot first.',[],5000);
+      showToast(copilotGateMessage(),[],5000);
       return;
     }
     // Reset modal state
@@ -26525,7 +26600,7 @@ function bindEventListeners(){
       return;
     }
     if(typeof Copilot==='undefined'||!Copilot.isConfigured()){
-      if(status){status.textContent='Configure your API key in Settings first.';status.style.color='var(--color-amber)';}
+      if(status){status.textContent=copilotGateMessage();status.style.color='var(--color-amber)';}
       return;
     }
     if(btn){btn.disabled=true;btn.textContent='⌘ Generating…';}
@@ -27431,7 +27506,7 @@ const GlossaryUI={
   async generate(){
     const n=State.get();
     if(!n){showToast('No active realm.');return;}
-    if(!Copilot.isConfigured()){showToast('Configure your API key in Settings → Copilot first.');return;}
+    if(!Copilot.isConfigured()){showToast(copilotGateMessage());return;}
     const scope=document.getElementById('gloss-scope')?.value||'all';
     const count=parseInt(document.getElementById('gloss-count')?.value,10)||20;
     const btn=document.getElementById('gloss-generate-btn');
@@ -27506,7 +27581,7 @@ const NamingUI={
   async generate(){
     const n=State.get();
     if(!n){showToast('No active realm.');return;}
-    if(!Copilot.isConfigured()){showToast('Configure your API key in Settings → Copilot first.');return;}
+    if(!Copilot.isConfigured()){showToast(copilotGateMessage());return;}
     const type=document.getElementById('name-type')?.value||'people';
     const qty=Math.max(5,Math.min(50,parseInt(document.getElementById('name-qty')?.value,10)||20));
     const theme=(document.getElementById('name-theme')?.value||'').trim();
@@ -27625,7 +27700,7 @@ const EncounterBuilder={
     }
 
     if(typeof Copilot==='undefined'||!Copilot.isConfigured()){
-      showToast('Configure your API key in Settings → Copilot first.',[],5000);
+      showToast(copilotGateMessage(),[],5000);
       return;
     }
 
@@ -27812,6 +27887,14 @@ const LicenseGateUI={
       });
       keyInput.addEventListener('keydown',e=>{if(e.key==='Enter'&&!submitBtn?.disabled)this._submit();});
     }
+    // PIVOT — Build Agent 4: persistent "taste the AI" entry point (header ✨ button) —
+    // reopens the same Welcome/FrontDoor panel a first-time visitor saw, which already
+    // knows how to render correctly for a returning demo visitor (Turnstile if quota
+    // remains, or the graceful "used up your trial" toast with Activate/Sample Mode
+    // buttons if not — see FrontDoor._handleGenerate).
+    document.getElementById('try-ai-btn')?.addEventListener('click',()=>{
+      if(typeof FrontDoor!=='undefined')FrontDoor.open();
+    });
     // PIVOT — Build Agent 2: the Copilot-panel lock notice's own CTA, and the prominent
     // product-key field in Settings › Full version.
     document.getElementById('copilot-lock-activate-btn')?.addEventListener('click',()=>this.openModal());
@@ -28001,6 +28084,10 @@ const LicenseGateUI={
     document.querySelectorAll('.license-gate-banner').forEach(el=>{
       el.style.display=isActive?'none':'';
     });
+    // PIVOT — Build Agent 4: the persistent "try free AI" header button only makes
+    // sense pre-unlock — once licensed, Copilot/Tonight Mode are the real thing.
+    const tryAiBtn=document.getElementById('try-ai-btn');
+    if(tryAiBtn)tryAiBtn.style.display=isActive?'none':'';
     // PIVOT — Build Agent 2 (task 4): lock/unlock the entire Copilot settings panel.
     // Copilot.isConfigured() is the functional backstop; this is the visible one.
     const copilotControls=document.getElementById('copilot-settings-controls');
@@ -28135,7 +28222,7 @@ async function bootstrap(){
       const status=document.getElementById('decipher-status');
       const btn=document.getElementById('decipher-go');
       if(!text){showToast('Paste some notes first.');return;}
-      if(typeof Copilot==='undefined'||!Copilot.isConfigured()){showToast('Configure your API key in Settings first.');return;}
+      if(typeof Copilot==='undefined'||!Copilot.isConfigured()){showToast(copilotGateMessage());return;}
       const n=State.get();
       if(!n){showToast('No active realm. Create one first.');return;}
       if(btn){btn.disabled=true;btn.textContent='Deciphering...';}
