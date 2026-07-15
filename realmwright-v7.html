@@ -4351,7 +4351,7 @@ SECTION 8: DOM STRUCTURE
            see its own `licensed` check) so this is pure UI wiring, no new demo logic.
            Hidden once licensed by LicenseGateUI._updateStatusUI(), same gate as every
            other unlock affordance in the app. -->
-      <button class="identity-strip__settings-btn" id="try-ai-btn" title="Try a free AI preview — 5 free messages, no key needed">✨</button>
+      <button class="identity-strip__settings-btn" id="try-ai-btn" title="A free taste of the AI — 5 messages on us, no key needed">✨</button>
       <button class="identity-strip__settings-btn" id="settings-btn" title="Settings">⚙</button>
     </div>
   </header>
@@ -5051,7 +5051,7 @@ Description: A tunnel gave way, halting the eastern works.</pre>
          LicenseGateUI._updateStatusUI() — the field disappears (consumed) once licensed. -->
     <div class="settings-section" id="settings-unlock-section"><div class="settings-section__title">Full version</div>
       <div class="unlock-field" id="unlock-field">
-        <div class="unlock-field__desc">You're using the free demo — every feature works, capped on scale (1 realm, 8 NPCs, 6 locations, 3 factions, 10 chronicle entries) plus 5 free AI previews. Paste your Lemon Squeezy or itch.io product key below to unlock unlimited everything and the full Copilot.</div>
+        <div class="unlock-field__desc">You're using the free demo — every feature works, capped on scale (1 realm, 8 NPCs, 6 locations, 3 factions, 10 chronicle entries), plus 5 free AI preview messages to try the Copilot. Paste your Lemon Squeezy or itch.io product key below to remove every cap and unlock the complete Copilot toolkit — powered by a free NVIDIA model or your own AI key, your choice.</div>
         <div class="unlock-field__row">
           <input class="form-input" type="text" id="unlock-key-input" placeholder="Lemon Squeezy UUID or itch.io key" autocomplete="off" spellcheck="false" aria-describedby="unlock-key-err">
           <button class="btn btn--primary" type="button" id="unlock-key-submit">Unlock</button>
@@ -5093,7 +5093,7 @@ Description: A tunnel gave way, halting the eastern works.</pre>
            this is UI-level, not the only enforcement. Toggled by LicenseGateUI._updateStatusUI(). -->
       <div class="copilot-lock-notice" id="copilot-lock-notice" style="display:none">
         <div class="copilot-lock-notice__title">Unlock RealmWright to enable the Copilot</div>
-        <div class="copilot-lock-notice__desc">The full AI Copilot — chat, session prep, NPCs, the Faction Council, and more — turns on with a one-time product key. No key yet? The front door gives you 5 free AI previews and 3 fully-built Sample Realms, no key needed.</div>
+        <div class="copilot-lock-notice__desc">The Copilot — chat, session prep, NPCs, the Faction Council, and more — unlocks with a one-time product key, then runs on a free NVIDIA model or your own AI key, your choice. No key yet? The front door gives new visitors 5 free AI preview messages as an early-access taste, plus 3 fully-built Sample Realms — no key needed.</div>
         <button class="btn btn--primary" type="button" id="copilot-lock-activate-btn">Paste your product key</button>
       </div>
       <div id="copilot-settings-controls">
@@ -5101,7 +5101,7 @@ Description: A tunnel gave way, halting the eastern works.</pre>
       <div class="rw-ai-rec">
         <div class="rw-ai-rec__badge">Recommended</div>
         <div class="rw-ai-rec__title">✨ Free by NVIDIA</div>
-        <div class="rw-ai-rec__sub" id="copilot-free-nvidia-sub">Free AI from NVIDIA · one click, free sign-in (via OpenRouter, no card).</div>
+        <div class="rw-ai-rec__sub" id="copilot-free-nvidia-sub">A genuinely capable free model, built by NVIDIA and delivered through OpenRouter — one click, free sign-in, no card. About 50 free messages a day, and it can be a little slow or busy at peak times — but there's nothing to pay and nothing to manage.</div>
         <button class="btn btn--primary rw-ai-rec__btn" id="copilot-free-nvidia">Use Free by NVIDIA</button>
         <div class="rw-ai-rec__note">Opens a quick OpenRouter sign-in (Google works) and saves a free key for you — nothing to copy or paste.</div>
       </div>
@@ -5111,7 +5111,7 @@ Description: A tunnel gave way, halting the eastern works.</pre>
       <div class="settings-row">
         <div style="flex:1">
           <div class="settings-label">Provider</div>
-          <div class="settings-desc">OpenRouter routes to any cloud model (needs an API key). Ollama runs a model locally on your machine — free, and no data leaves your computer — but needs a one-time setup so the page can reach it (the Ollama fields below explain how).</div>
+          <div class="settings-desc">OpenRouter routes to any cloud model using your own API key — you choose the model, and you pay that provider directly for what you use (free models cost nothing). Ollama runs a model locally on your machine — completely free, and no data leaves your computer — but needs a one-time setup so the page can reach it (the Ollama fields below explain how).</div>
           <div style="display:flex;gap:16px;margin-top:var(--space-2)">
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:var(--text-body-sm)">
               <input type="radio" name="copilot-provider" id="provider-openrouter" value="openrouter" style="accent-color:var(--ember-color)"> OpenRouter
@@ -5137,7 +5137,7 @@ Description: A tunnel gave way, halting the eastern works.</pre>
         <div class="settings-row">
           <div style="flex:1">
             <div class="settings-label">Or paste an API key (fallback)</div>
-            <div class="settings-desc">Stored locally only — never sent anywhere except OpenRouter. Get one free at <a href="https://openrouter.ai/keys" target="_blank" rel="noopener" style="color:var(--color-gold-deep)">openrouter.ai/keys</a></div>
+            <div class="settings-desc">Stored locally only — never sent anywhere except OpenRouter. Create a free account and API key at <a href="https://openrouter.ai/keys" target="_blank" rel="noopener" style="color:var(--color-gold-deep)">openrouter.ai/keys</a> — you'll only ever pay OpenRouter for the models you choose to use.</div>
             <div style="position:relative;margin-top:var(--space-2)">
               <input class="form-input" type="password" id="copilot-key-input" placeholder="sk-or-v1-..." style="width:100%;padding-right:38px;font-family:var(--font-mono);font-size:var(--text-mono-sm)">
               <button type="button" class="copilot-key-eye" id="copilot-key-eye" aria-label="Show or hide API key" title="Show key" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:0;cursor:pointer;padding:4px;color:var(--color-text-muted);display:flex;align-items:center;justify-content:center"><span class="material-symbols-outlined" id="copilot-key-eye-icon" style="font-size:18px">visibility</span></button>
@@ -17011,7 +17011,7 @@ const SampleMode={
     Render.all();
     SampleMode._showBanner(seed.name,sampleId);
     const label={heist:'The Heist',solo:'The Wandering Investigator',political:'The Saltmoot Council'}[sampleId]||sampleId;
-    showToast(`Sample loaded: ${label}. Explore the chronicle, factions, Run the Table, and the Copilot — no API key needed.`,[],4500);
+    showToast(`Sample loaded: ${label}. Explore the chronicle, factions, Run the Table, and a saved example of the Copilot — no API key needed.`,[],4500);
   },
 
   // Build the Campaign-prep board that Run Mode (the at-the-table cockpit) reads. Cast NPCs are
@@ -17267,7 +17267,7 @@ const FrontDoor={
       await this._runDemoGeneration(prefixed,prompt,style);
     }else if(DemoCounter.hasKey()){
       // Demo configured but local quota hit (client-side hint only — Worker is source of truth)
-      showToast('You\'ve used your free previews on this device. Activate for full access or try Sample Mode.',
+      showToast('You\'ve used your free preview messages on this device. Activate to unlock the full app, or try Sample Mode.',
         [{label:'Activate',handler:()=>LicenseGateUI.openModal()},{label:'Sample Mode',handler:()=>{this.close();SampleMode.openPicker();}}],8000);
     }else{
       // Demo not configured at all — route to activation
@@ -17288,7 +17288,7 @@ const FrontDoor={
     }
     if(btn){btn.disabled=true;btn.textContent='Generating…';}
     if(outBox){outBox.style.display='block';outBox.innerHTML='<div class="fd-demo__loading">The realm is taking shape…</div>';}
-    const sys=`You are RealmWright's demo Copilot. The visitor is exploring whether to buy. Give them a vivid 200-word taste of what a real session prep looks like — opening scene + one immediate hook + one twist. Style: ${style}. End with a single line: "(This is a free preview. Activate to unlock Tonight Mode, Solo Mode, and the full Copilot.)"`;
+    const sys=`You are RealmWright's demo Copilot. The visitor is exploring whether to buy. Give them a vivid 200-word taste of what a real session prep looks like — opening scene + one immediate hook + one twist. Style: ${style}. End with a single line: "(This is a free preview. Activate to unlock Tonight Mode, Solo Mode, and the complete Copilot — powered by a free NVIDIA model or your own AI key.)"`;
     const result=await Demo.proxyRequest([
       {role:'system',content:sys},
       {role:'user',content:prompt},
@@ -27181,7 +27181,7 @@ function bindEventListeners(){
     const el=document.getElementById('copilot-free-nvidia-sub');
     if(!el||typeof ModelCatalog==='undefined'||typeof Copilot.freeNvidiaModelId!=='function')return;
     const name=ModelCatalog.displayName(Copilot.freeNvidiaModelId());
-    el.textContent=(name?name+' · ':'')+'Free · one click, free sign-in (via OpenRouter, no card).';
+    el.textContent=(name?name+' · ':'')+'Free — built by NVIDIA, delivered through OpenRouter. About 50 free messages a day, and it can be a little slow or busy at peak times, but there\'s nothing to pay and nothing to manage.';
   };
   // Helper to update the Settings UI (key indicator, button visibility)
   Copilot._refreshKeySettingsUI=function(){
@@ -28568,7 +28568,7 @@ window.__rwClearDevTheme=function(){localStorage.removeItem('rw_dev_theme');loca
         <div id="fd-welcome-unlock-form">
           <div class="fd-welcome__eyebrow">One-time purchase</div>
           <h2 class="fd-welcome__title">Unlock with your product key</h2>
-          <p class="fd-welcome__desc">Paste the key from your $23 purchase to unlock the complete tool — unlimited worlds, NPCs, locations, and the full AI Copilot.</p>
+          <p class="fd-welcome__desc">Paste the key from your $23 purchase to remove every cap — unlimited worlds, NPCs, and locations — plus the complete Copilot toolkit, powered by a free NVIDIA model or your own AI key.</p>
           <div class="fd-welcome__row">
             <input class="form-input" type="text" id="fd-welcome-key-input" placeholder="Lemon Squeezy UUID or itch.io key" autocomplete="off" spellcheck="false" aria-describedby="fd-welcome-key-err">
             <button class="btn btn--primary" type="button" id="fd-welcome-key-submit">Unlock</button>
@@ -28583,7 +28583,7 @@ window.__rwClearDevTheme=function(){localStorage.removeItem('rw_dev_theme');loca
         </div>
         <div class="fd-welcome__licensed" id="fd-welcome-licensed">
           <h2 class="fd-welcome__title">✓ Full version unlocked</h2>
-          <p class="fd-welcome__desc" style="margin-bottom:0">Thank you — every feature and the full Copilot are unlocked on this device.</p>
+          <p class="fd-welcome__desc" style="margin-bottom:0">Thank you — every feature and the complete Copilot toolkit are unlocked on this device. Power it with the free NVIDIA model or your own AI key — your choice.</p>
         </div>
       </div>
       <div class="fd-welcome__secondary-row">
@@ -28594,7 +28594,7 @@ window.__rwClearDevTheme=function(){localStorage.removeItem('rw_dev_theme');loca
         </div>
         <div class="fd-welcome__option">
           <h2 class="fd-welcome__title">Start your own (free)</h2>
-          <p class="fd-welcome__desc">Build a new world from scratch under the free demo — up to 1 world, 8 NPCs, 6 locations, 3 factions, 10 chronicle entries, and 5 AI messages. Your work saves in this browser and exports to a file any time; it's yours either way. Unlock whenever you want to go further.</p>
+          <p class="fd-welcome__desc">Build a new world from scratch under the free demo — up to 1 world, 8 NPCs, 6 locations, 3 factions, 10 chronicle entries, and 5 free AI preview messages. Your work saves in this browser and exports to a file any time; it's yours either way. Unlock whenever you want to go further.</p>
           <button type="button" class="btn btn--secondary" id="fd-build-scratch" aria-label="Build a brand-new world from scratch, free">Start building</button>
         </div>
       </div>
