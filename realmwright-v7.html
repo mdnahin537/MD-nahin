@@ -5062,6 +5062,17 @@ Description: A tunnel gave way, halting the eastern works.</pre>
         <span>✓ Full version unlocked — thank you.</span>
       </div>
     </div>
+    <!-- Care-board connect (T1): links to the separately-hosted, live RealmWright
+         Community site. Zero network calls from this app — both buttons window.open()
+         the Care site with a non-secret #ctx context fragment. See the Community
+         module (near LicenseGateUI) for the payload contract. -->
+    <div class="settings-section" id="settings-community-section"><div class="settings-section__title">Community</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button class="btn btn--secondary" type="button" id="community-report-btn" style="width:100%;justify-content:center">Find a problem or new idea</button>
+        <button class="btn btn--secondary" type="button" id="community-board-btn" style="width:100%;justify-content:center">See what people are saying</button>
+      </div>
+      <p style="font-size:var(--text-body-sm);color:var(--color-text-muted);margin-top:var(--space-2)">Opens the RealmWright community site in your browser.</p>
+    </div>
     <div class="settings-section"><div class="settings-section__title">Display</div>
       <div class="settings-row">
         <div>
@@ -28143,6 +28154,61 @@ const LicenseGateUI={
   }
 };
 
+// ─── COMMUNITY (Settings → Community; care-board connect, T1) ──────────────
+// RealmWright stays a local, offline, zero-network file. The separately-hosted
+// Care board is a different web app; these two Settings buttons just window.open()
+// it. Context travels ONLY in the URL fragment (#ctx=<base64url JSON>) — fragments
+// are never sent in the HTTP request line and never reach a server log. Payload is
+// exactly the saved contract: v/schema/build/theme/mode/ai — no keys, no world data,
+// ever (see customer-care-design.md §2.1).
+const Community={
+  CARE_URL:'https://realmwright-care.mdnahin537.workers.dev',
+  // The About section's version line is the only place the product version lives —
+  // read it live instead of hardcoding a second copy here that could drift.
+  _appVersion(){
+    try{
+      const m=document.querySelector('#modal-settings p')?.textContent.match(/Version\s+([\d.]+)/i);
+      return m?m[1]:'';
+    }catch(e){return '';}
+  },
+  _ctx(){
+    const settings=State.data?.meta?.settings||{};
+    const licensed=(typeof LicenseGate!=='undefined'&&LicenseGate.isActive());
+    const aiConfigured=(typeof Copilot!=='undefined'&&Copilot.isConfigured&&Copilot.isConfigured());
+    return{
+      v:this._appVersion(),
+      schema:(typeof SCHEMA_VERSION!=='undefined'?SCHEMA_VERSION:''),
+      build:licensed?'full':'demo',
+      theme:settings.theme||'ember',
+      mode:State.data?.meta?.preferredMode||'world',
+      // Provider TYPE only — never a key or model id. 'none' unless Copilot is
+      // actually usable (license-gated — see Copilot.isConfigured()).
+      ai:aiConfigured?(settings.copilotProvider==='ollama'?'ollama':'openrouter'):'none',
+    };
+  },
+  // Same base64url shape as Copilot._orB64url (PKCE), extended with TextEncoder so a
+  // JSON string (not just raw bytes) encodes safely.
+  _b64url(str){
+    const bytes=new TextEncoder().encode(str);
+    let bin='';
+    for(let i=0;i<bytes.length;i++)bin+=String.fromCharCode(bytes[i]);
+    return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  },
+  open(path){
+    // Offline guard (design §2.1 UX rule): don't send the user into a dead tab.
+    if(typeof navigator!=='undefined'&&navigator.onLine===false){
+      showToast("This opens the community site — you're offline right now.");
+      return;
+    }
+    const enc=this._b64url(JSON.stringify(this._ctx()));
+    window.open(this.CARE_URL+path+'#ctx='+enc,'_blank','noopener');
+  },
+  bind(){
+    document.getElementById('community-report-btn')?.addEventListener('click',()=>this.open('/report/'));
+    document.getElementById('community-board-btn')?.addEventListener('click',()=>this.open('/'));
+  }
+};
+
 async function bootstrap(){
   // Kick off the live OpenRouter catalog fetch as early as possible. init() seeds
   // synchronously (fallback, then cache) and never awaits the network, so this
@@ -28163,6 +28229,7 @@ async function bootstrap(){
   // P2.7/P2.8: init vault chip display and wire the restore-drill file input
   if(typeof VaultChip!=='undefined')VaultChip.init();
   LicenseGateUI.bind();
+  Community.bind();
   if(typeof SampleMode!=='undefined')SampleMode.bind();
   if(typeof Solo!=='undefined')Solo.bind();
   if(typeof FrontDoor!=='undefined')FrontDoor.bind();
