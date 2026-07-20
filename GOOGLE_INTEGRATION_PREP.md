@@ -1,146 +1,178 @@
-# RealmWright Google Integration — Implementation Preparation
+# RealmWright Google Integration — Revised Implementation Preparation
 
-**Status:** architecture locked; no Google credentials or user data are stored in this repository.
+**Status:** revised after product-identity requirement and a strict **zero-paid-domain** constraint. No Google credentials or user data are stored in this repository.
 
-## Decision
+## Executive decision
 
-Build two separate Google integrations with two separate Web OAuth client IDs in one Google Cloud project:
+RealmWright needs Google in two separate roles:
 
-| Surface | Purpose | Scopes | Flow | Data location |
+1. **Identity and entitlement**: a GM signs in before redeeming a product key. The first valid redemption is permanently bound to that Google identity. The same identity unlocks the purchase on the GM's other devices.
+2. **Optional private backup**: only after the GM explicitly chooses **Connect Google Drive**, the product requests access to a hidden, app-specific Drive folder.
+
+This separation prevents an unjustified Drive permission prompt at sign-in. A customer can own and use RealmWright without enabling Drive backup.
+
+## OAuth client layout
+
+Use two separate Web OAuth client IDs in one Google Cloud project, plus a separate project for development/testing.
+
+| Surface | Purpose | Permissions | Flow | Secret? |
 |---|---|---|---|---|
-| RealmWright Community Care | Sign in, voting, moderation, owner desk | `openid email profile` | Server-side authorization-code flow | Care's Cloudflare D1 database |
-| RealmWright GM | Optional cross-device world backup | `https://www.googleapis.com/auth/drive.appdata` only | Google Identity Services browser token model | The customer's own hidden Google Drive app-data folder |
+| RealmWright Community Care | Community account, voting, moderation, owner desk | `openid email profile` only | Server-side authorization-code flow | Yes: Care Worker only |
+| RealmWright GM | Product sign-in, account-bound entitlement, then optional private backup | Identity first: `openid email profile`. Drive later: `https://www.googleapis.com/auth/drive.appdata` only | Google Identity Services in the browser; the product sends an ID token to the entitlement Worker | No: browser client ID is public |
 
-**Never request:** `drive`, `drive.readonly`, `drive.metadata*`, Gmail, Calendar, Contacts, or any scope unrelated to the feature.
+**Never request:** `drive`, `drive.readonly`, `drive.metadata*`, Gmail, Calendar, Contacts, or any permission unrelated to the feature.
 
-This is intentionally not a general Drive integration. `drive.appdata` is non-sensitive and restricts the product to its own hidden per-user data folder. RealmWright cannot see, search, read, modify, or share a user's normal Drive files.
+The RealmWright GM client is **not** Drive-only. Its identity function is required for cross-device entitlement. Its Drive function is optional and requested incrementally.
 
-## Non-negotiable platform constraint
+## The product-key design
 
-A public production OAuth application must use a domain the owner controls. Do not build this around `*.pages.dev` or `*.workers.dev` as the permanent public OAuth identity.
+A purchase key must be treated as a **one-time claim code**, not as the long-term login credential.
 
-Before launch, buy or use one inexpensive top-private domain and verify it in Google Search Console with the same Google account that owns the Google Cloud project. Then map Cloudflare custom subdomains:
+1. The GM signs in with Google.
+2. The product sends the Google ID token and the entered purchase key to the RealmWright entitlement Worker over HTTPS.
+3. The Worker verifies the Google token signature, issuer, audience, expiry, and immutable Google subject (`sub`). It verifies the purchase with the payment/licensing provider.
+4. In one atomic database transaction, the Worker binds the license ID to that `sub` and marks the claim code redeemed.
+5. Every other device signs in with the same Google account. The Worker validates its ID token and returns a short-lived signed entitlement because the stored `sub` matches.
+6. A second Google account cannot redeem that already-claimed key.
 
-- `https://app.<YOUR_DOMAIN>` — RealmWright GM
-- `https://care.<YOUR_DOMAIN>` — Community Care
-- `https://www.<YOUR_DOMAIN>` or `https://<YOUR_DOMAIN>` — public homepage and privacy policy
+Use the immutable Google `sub` as the account anchor, **never email address**. An email address can change; the `sub` is the stable identity value.
 
-A custom domain is the only unavoidable owner-side cost/step. Storage is paid from each customer's own Google Drive allowance; RealmWright does not pay per-user storage.
+The Worker must store only the minimum needed: provider license ID, Google `sub`, redemption time, revocation/refund state, and an HMAC/hash representation of any claim code. The raw key must not be stored in browser code, logs, analytics, screenshots, or support tickets.
 
-## Google Cloud setup
+### Hard limits that must be stated honestly
 
-Create one Google Cloud project, for example **RealmWright Production**. Keep a separate test project for localhost/staging.
+- A browser-only product cannot make license enforcement unbreakable. A determined owner can modify local code. A Worker can make ordinary copying and key-sharing difficult, but not mathematically impossible.
+- Offline use needs a signed entitlement with a defined grace period (for example 30 days), then an online check. Do not pretend that an offline HTML file can securely enforce a permanent paid license.
+- Use the same Google account on all devices. If the GM loses that Google account, recovery is a support-policy problem. Build a manual, auditable ownership-transfer process; never auto-transfer based only on an email message.
+- A normal web page is not a supported PlayStation product. Desktop, laptop, tablet, and mobile browser/PWA are the v1 target. A TV/console implementation would be a separate client with a limited-input-device authorization flow and backend secret; do not promise it now.
 
-1. Enable the Google Drive API.
-2. Configure the external OAuth consent screen:
-   - App name: **RealmWright**
-   - Support email and developer contact: an address Hunter monitors
-   - Homepage and privacy-policy URLs on the verified custom domain
-   - Request only the three identity scopes and `drive.appdata`.
-3. Create two **Web application** OAuth clients:
-   - **RealmWright Care**: redirect URI exactly `https://care.<YOUR_DOMAIN>/auth/callback`.
-   - **RealmWright GM**: JavaScript origin exactly `https://app.<YOUR_DOMAIN>`. It needs no client secret and no redirect URI when using the browser token model.
-4. Store the Care client secret only as a Cloudflare Worker secret. Never put it in `wrangler.toml`, HTML, Git, browser storage, screenshots, or chat.
-5. Put the GM client ID in product configuration. OAuth client IDs are public identifiers, not secrets.
+## Private Google Drive backup
 
-The selected scopes are non-sensitive, so restricted-scope verification and a security assessment are avoided. This does **not** remove the need for an honest homepage, privacy policy, accurate branding, and Google API-policy compliance.
+`drive.appdata` is non-sensitive and uses a special hidden per-user folder. RealmWright cannot browse, search, read, change, or share the customer's normal Drive files. The user's backup consumes the user's own Google storage allowance.
 
-## Customer Care: current state and work
-
-The Care branch already implements the correct server-side identity design:
-
-- `care/src/lib/auth.js` uses only `openid email profile`.
-- It protects OAuth state, exchanges the code server-side, verifies Google's signed ID token against JWKS, checks issuer and audience, then creates a signed 90-day session.
-- It stores the Google subject, name, avatar URL, and email in D1 because the board needs a stable identity for voting and moderation.
-
-Implementation work remaining:
-
-1. Deploy Care on the custom `care.<YOUR_DOMAIN>` hostname.
-2. Add the Care OAuth client ID to `GOOGLE_CLIENT_ID`.
-3. Set `GOOGLE_CLIENT_SECRET`, `SESSION_SECRET`, and `OWNER_SUB` as Cloudflare secrets.
-4. Update the Care privacy page to disclose Google identity data processing and the public contact email.
-5. Test sign-in, sign-out, report submission, voting, owner-only desk access, and a non-owner 404.
-
-Care must never request the Drive scope.
-
-## RealmWright GM: cloud-backup design
-
-### Why this model
-
-The product is a self-contained browser app. The Google Identity Services token model lets a customer authorize Drive directly in their own browser. No RealmWright server receives their Drive access token, refresh token, world data, or Google password.
-
-A token is short-lived. During a session, auto-sync can run while the token is valid. When it expires, the product must show **Sync to Google Drive** and obtain a new token from that user click. It must never pretend that permanent silent background sync is possible without storing a user refresh token on an owner-controlled backend.
+The product must request this permission only from a clear user action such as **Connect Google Drive** or **Sync now**. Sign-in by itself must not ask for Drive access.
 
 ### Storage shape
 
 Use the user's hidden `appDataFolder`:
 
 - One current snapshot: `realmwright-state-v1.json`
-- One small metadata file: `realmwright-meta-v1.json`
-- Metadata contains schema version, saved time, file ID, Drive file version, and a content digest. It contains no API key and no customer content.
+- One metadata file: `realmwright-meta-v1.json`
+- Metadata: schema version, save time, file ID, Drive file version, and content digest. No API key, OAuth token, cookie, or customer content.
 
-Before every upload, fetch metadata for the current remote file. If its Drive version differs from the last version seen on this device, do **not** overwrite it. Download it and show a human choice:
+Before every upload, fetch the current remote metadata. If its version differs from the last remote version seen by that device, do not overwrite it. Download it and show a human choice:
 
 - **Use newer cloud world**
 - **Keep this device and create a conflict copy**
 - **Cancel**
 
-Do not implement last-write-wins without an explicit conflict choice.
+Do not implement silent last-write-wins.
 
 ### Data safety rules
 
-1. Serialize only `_stateForPersist()`; that is the product's existing secret-scrub path. Never upload `State.data` raw.
-2. Keep the existing local IndexedDB, local snapshots, JSON export/import, and on-disk backup. Google Drive is an optional additional safety layer, not the sole copy.
+1. Serialize only `_stateForPersist()`; it is the existing secret-scrub path. Never upload raw `State.data`.
+2. Keep local IndexedDB, local snapshots, JSON export/import, and on-disk backup. Drive is an optional extra copy, never the sole copy.
 3. Do not sync sample/demo worlds.
-4. Give the user visible actions: **Connect Google Drive**, **Sync now**, **Restore from Google Drive**, and **Disconnect Google Drive**.
-5. On Disconnect, revoke Google consent when possible and delete only local Drive-sync metadata; never delete the customer's Drive backup without a separate, explicit confirmation.
-6. State the truth in product copy: the file is hidden from normal Drive UI and inaccessible to other Drive apps, but v1 is **not end-to-end encrypted**. Do not claim “zero cloud” or “end-to-end encrypted.”
-7. A later optional end-to-end encrypted backup may be added with a user-held passphrase, but it is not part of v1 because forgotten passwords would make worlds unrecoverable.
+4. Give visible actions: **Sign in**, **Redeem key**, **Connect Google Drive**, **Sync now**, **Restore from Google Drive**, and **Disconnect Google Drive**.
+5. Disconnect removes local sync metadata and revokes Google consent when possible. It must never delete the customer's Drive backup without a separate, explicit confirmation.
+6. V1 is not end-to-end encrypted. State that truth clearly. A future passphrase-encrypted backup is possible, but forgotten passphrases make worlds unrecoverable.
+7. Browser Drive access tokens are short-lived. Sync may continue while the product is open and the token is valid; when expired, require a user click to obtain another token. No silent, always-on background sync promise.
 
-### Product implementation tasks
+## The no-paid-domain reality
 
-1. Add `GoogleDriveSync` as a self-contained module in `realmwright-v7.html`.
-2. Load Google Identity Services only when a user opens the Drive-backup control:
-   `https://accounts.google.com/gsi/client`.
-3. Extend the product CSP for Google Identity Services and the Drive API:
+Cloudflare's free `<project>.pages.dev` and `<worker>.workers.dev` addresses are useful free hosting addresses. They are **not domains that RealmWright owns**. Cloudflare controls the parent domain, and RealmWright cannot create the root DNS record needed to verify `pages.dev` or `workers.dev` in Google Search Console.
+
+Google's production OAuth policy requires an app homepage on a verified domain under the developer's ownership, and Google restricts OAuth redirect/origin URLs to domains the developer owns or is licensed to use. Therefore there is no honest, durable, public-production route that is simultaneously:
+
+- Google login,
+- public sales to arbitrary customers,
+- optional Google Drive access,
+- no owned domain,
+- no payment or borrowing.
+
+Do not depend on free-subdomain providers as a loophole. They can remove the subdomain, they do not give DNS-root control, and they do not turn into a domain property RealmWright can verify.
+
+### What is possible at zero money
+
+**Closed beta only:** keep the external Google project in **Testing**, explicitly add each tester, keep the audience under Google's test-user limit, and accept that non-basic authorizations can expire after seven days. This is suitable for development and a small invited test group; it is not a dependable public paid-product launch.
+
+Firebase Authentication can provide a free `<project>.firebaseapp.com` redirect for basic Google sign-in, and its social sign-in has a no-cost tier. It may be useful for a prototype. It does not give RealmWright a verified domain it owns, and it must not be sold as a guaranteed way around the public Drive/OAuth production requirement.
+
+**If the permanent rule is “zero cost forever,” the honest v1 is local product keys plus local storage and manual JSON export/import, with no public Google identity or Drive-sync promise.**
+
+## What Google Search Console verification means
+
+This is a one-time developer ownership check, not a request made to customers.
+
+With an owned domain, the project owner would:
+
+1. Sign in to [Google Search Console](https://search.google.com/search-console/) using the same Google account that is Owner or Editor of the Google Cloud project.
+2. Select **Add property** → **Domain** and enter the root domain, for example `example.com`.
+3. Google supplies a TXT verification record, similar to `google-site-verification=...`.
+4. Add that exact TXT record to the domain's DNS records at the registrar or DNS provider.
+5. Return to Search Console and select **Verify**.
+
+Google looks up the public DNS record. Seeing it proves the developer controls the domain. It does not cost a Google fee. It is impossible for RealmWright to complete this for `pages.dev` or `workers.dev`, because RealmWright does not control their DNS zone.
+
+## Customer Care: current state and remaining work
+
+The Care branch already uses the correct server-side identity approach:
+
+- `care/src/lib/auth.js` requests only `openid email profile`.
+- It protects OAuth state, exchanges the code server-side, verifies Google's signed ID token against JWKS, checks issuer and audience, then creates a signed 90-day session.
+- It stores Google subject, name, avatar URL, and email in D1 for voting and moderation.
+
+For a verified-domain production path, remaining work is:
+
+1. Deploy Care at the approved hostname.
+2. Add the Care OAuth client ID to `GOOGLE_CLIENT_ID`.
+3. Set `GOOGLE_CLIENT_SECRET`, `SESSION_SECRET`, and `OWNER_SUB` as Cloudflare secrets.
+4. Publish a matching Care privacy page and contact email.
+5. Test sign-in, sign-out, report submission, voting, owner-only access, and non-owner denial.
+
+Care must never request Drive access.
+
+## RealmWright GM implementation tasks
+
+1. Add a Google Identity module for product sign-in and ID-token handling.
+2. Add an entitlement Worker endpoint that verifies ID tokens, atomically redeems a key, and returns signed short-lived entitlement proofs.
+3. Bind the one-time claim to Google `sub`, with refund/revocation and ownership-transfer support rules.
+4. Add `GoogleDriveSync` as a self-contained module in `realmwright-v7.html`.
+5. Load Google Identity Services from `https://accounts.google.com/gsi/client`.
+6. Extend the CSP for GIS and the Drive API:
    - `script-src https://accounts.google.com/gsi/client`
    - `connect-src https://accounts.google.com/gsi/ https://www.googleapis.com`
    - `frame-src https://accounts.google.com/gsi/`
    - `style-src https://accounts.google.com/gsi/style`
-4. Request only `drive.appdata` through `google.accounts.oauth2.initTokenClient()`, only after the user clicks Connect/Sync.
-5. Call Drive REST APIs from the browser using the short-lived access token. No product client secret exists.
-6. Store only Drive file metadata and the last-seen remote version in IndexedDB.
-7. Extend the existing Settings > Backups status chip rather than creating a second competing backup surface.
-8. Add deterministic tests for serialization, first upload, restore, token expiry, revoked access, offline use, upload failure, and two-device conflict detection.
-9. Run a real-browser acceptance test on Chrome, Edge, Firefox, and Safari. Google Drive sync must degrade cleanly; local export/import must always remain available.
+7. Request `drive.appdata` only through a user-initiated Google Identity Services token flow.
+8. Store only Drive file metadata and last-seen remote version in IndexedDB.
+9. Extend the existing Settings > Backups status chip; do not create a competing backup interface.
+10. Test: first redemption, second-device unlock, wrong Google account, refund/revocation, offline grace, first upload, restore, token expiry, revoked access, offline use, upload failure, and two-device conflict detection.
+11. Run real browser acceptance tests on Chrome, Edge, Firefox, and Safari. Local export/import must always remain available.
 
 ## Launch gates
 
-Do not enable the customer-facing Drive button until all gates pass:
+Do not enable customer-facing Drive or entitlement claims until all relevant gates pass:
 
-- OAuth consent screen requests exactly the planned scopes.
-- A Drive permission review confirms RealmWright cannot see normal Drive files.
-- A backup contains no OpenRouter key, license secret, cookie, token, or OAuth data.
-- A second device restores the same world without manual file transfer.
-- A newer remote version cannot be overwritten silently.
-- Revoking Google access leaves the local world usable and produces a clear reconnect action.
-- Care sign-in works independently when Drive is disabled.
-- The public privacy policy exactly matches the product behavior.
-
-## Owner actions that cannot be automated
-
-- Purchase/control a production domain and add the required DNS records.
-- Verify that domain in Google Search Console using the Google Cloud project-owner account.
-- Create the Google Cloud project, OAuth clients, consent-screen branding, and policy URLs.
-- Place the Care secret values in Cloudflare.
-- Personally approve the final OAuth consent and production deployment.
-
-Everything else can be implemented, tested, and reviewed in the codebase once the custom domain and the two client IDs are available.
+- The OAuth screen requests exactly the planned scopes.
+- Product sign-in works without a Drive request.
+- The same Google account unlocks the license on a second device.
+- A different Google account cannot use a redeemed key.
+- No entitlement, token, API key, cookie, or license secret enters a backup.
+- A Drive review proves normal Drive files are inaccessible.
+- A newer remote world cannot be overwritten silently.
+- Revoking Google access leaves the local world usable and shows a clear reconnect action.
+- Care login works independently when Drive is disabled.
+- Public privacy policy exactly matches actual data behavior.
+- Production launch has a verified developer-owned domain; otherwise the release is accurately labelled closed beta.
 
 ## Sources
 
-- Google Drive app-data folder and `drive.appdata` scope: https://developers.google.com/workspace/drive/api/guides/appdata
-- Drive scope classification: https://developers.google.com/workspace/drive/api/guides/api-specific-auth
-- Browser token model: https://developers.google.com/identity/oauth2/web/guides/use-token-model
-- Google Identity Services CSP: https://developers.google.com/identity/gsi/web/guides/get-google-api-clientid
 - Google OAuth production-domain policy: https://developers.google.com/identity/protocols/oauth2/policies
+- Domain and brand verification: https://developers.google.com/identity/protocols/oauth2/production-readiness/brand-verification
+- Google Search Console verification steps: https://support.google.com/cloud/answer/13804266
+- Google Drive app-data folder and `drive.appdata` scope: https://developers.google.com/workspace/drive/api/guides/appdata
+- Browser token model and short-lived access tokens: https://developers.google.com/identity/oauth2/web/guides/use-token-model
+- Google sign-in versus authorization: https://developers.google.com/identity/gsi/web/guides/overview
+- Firebase Authentication Google sign-in: https://firebase.google.com/docs/auth/web/google-signin
+- Firebase pricing: https://firebase.google.com/pricing
