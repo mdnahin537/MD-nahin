@@ -91,7 +91,7 @@ Existing Google-era rows are not deleted. Migration 0004 adds auth_provider and 
 
 New users are created with auth_provider=local and a local_... subject. No automatic mapping is attempted between a historical Google subject and a new local identity; doing that without proof could give one person another person’s reports or owner access.
 
-Migration 0004 also creates:
+Migration 0004_local_identity_auth.sql also creates:
 
 - care_sessions — opaque session-token HMAC verifiers, expiry, and revocation;
 - care_auth_attempts — HMAC’d, bucketed anti-abuse counters with no raw IP storage;
