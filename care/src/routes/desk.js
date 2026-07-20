@@ -10,7 +10,7 @@ const VEL_WINDOW_DAYS = 7;
 // (design §7). Returns the session on success, or a Response to return.
 async function requireOwner(request, env) {
   const session = await getSession(request, env);
-  if (!session || session.sub !== env.OWNER_SUB) {
+  if (!session || !session.isOwner) {
     return { ok: false, response: await notFound(env) };
   }
   return { ok: true, session };
