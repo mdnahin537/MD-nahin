@@ -103,35 +103,54 @@ Then create the tables in the real database:
 npm run migrate:remote
 ```
 
-### Step 4 — Create the Google sign-in
+### Step 4 — Create the free Google sign-in (no paid domain)
+
+Customer Care uses Google only for identity: the OAuth request is exactly
+`openid email profile`. It does **not** request Drive, Gmail, Calendar, Contacts,
+or any other data permission. Keep this Care project separate from the future
+RealmWright product login/Drive project.
 
 1. Go to **console.cloud.google.com** (free, no card).
-2. Create a new project (top bar → "New Project"), name it anything.
+2. Create a new project (top bar → **New Project**), name it anything.
 3. Left menu → **APIs & Services → OAuth consent screen**:
    - User type: **External**, then **Create**.
-   - Fill the app name (e.g. "RealmWright Community"), your email, save.
-   - On the "Publishing status" screen, click **Publish app** (so anyone can
-     sign in, not just test users).
+   - Fill the app name (for example, “RealmWright Community”), your support
+     email, and developer contact email.
+   - Add only the basic identity scopes: `openid`, `email`, and `profile`.
+   - Leave **Publishing status = Testing**. **Do not click “Publish app”.**
 4. Left menu → **APIs & Services → Credentials → Create Credentials → OAuth
    client ID**:
    - Application type: **Web application**.
    - Under **Authorized redirect URIs**, add exactly:
      `https://<your-host>/auth/callback`
-     (You'll know `<your-host>` after Step 5's first deploy — it's your
-     `*.workers.dev` address. It's fine to deploy once first, copy the address,
-     then come back and add it here.)
-   - Click **Create**. Google shows a **Client ID** and a **Client secret** —
-     keep this tab open for the next two steps.
-5. Open **`care/wrangler.toml`** and set `GOOGLE_CLIENT_ID` to the Client ID
-   (the Client ID is not secret — it's visible in the browser during login
-   either way, so it lives in the config file, not the secret store).
-6. While you have `care/wrangler.toml` open, set **`CONTACT_EMAIL`** to the
-   address you want the **Privacy & terms** page to link to for questions and
-   data-deletion requests (e.g. `CONTACT_EMAIL = "you@yourdomain.com"`). It is
-   not a secret — it's meant to be public — so it lives here, not in the secret
-   store. If you leave it empty, the privacy page still works; it just shows a
-   plain "the address on our store page" placeholder instead of a live mailto
-   link. (Use an address you're comfortable publishing.)
+     You will know `<your-host>` after the first Cloudflare deploy in Step 5;
+     it will be your free `*.workers.dev` address. Deploy once, copy that
+     address, then return here and add this exact HTTPS URI.
+   - Click **Create**. Google shows a **Client ID** and a **Client secret**;
+     keep the client secret private.
+5. Open **`care/wrangler.toml`** and set `GOOGLE_CLIENT_ID` to the Client ID.
+   The Client ID is public by design; never put the Client secret in this file.
+6. Set **`CONTACT_EMAIL`** in `care/wrangler.toml` to the address you want
+   published for questions and deletion requests. If it is empty, the privacy
+   page remains safe but shows a placeholder instead of a mail link.
+
+### Why Testing is the correct free/no-domain choice
+
+Google's current rules allow a project that requests only `openid`, `email`,
+and `profile` to use the basic-identity exception: users do not need to be
+listed as trusted test users and their authorization does not expire after
+seven days. If the Cloud Console still shows a test-user allow-list, add early
+testers there; do not add broader scopes to get around it.
+
+This is a **Care beta**, not an unlimited public production approval. Do not
+request Google Drive or any other user-data scope here. When the product is
+ready for broad public launch, we can move to a separate production project
+and complete Google's branding/domain requirements after you choose to buy a
+domain. Until then, the free `workers.dev` HTTPS address is the honest scope.
+
+Official references:
+- [Google OAuth app-state overview](https://developers.google.com/identity/protocols/oauth2/production-readiness/overview)
+- [Google OAuth policies](https://developers.google.com/identity/protocols/oauth2/policies)
 
 ### Step 5 — Deploy, then set your secrets
 
