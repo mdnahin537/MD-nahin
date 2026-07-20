@@ -1,4 +1,4 @@
-// Local Care identity auth — no OAuth, no external identity provider.
+// Local Care identity auth â€” no OAuth, no external identity provider.
 //
 // A browser gets an opaque, random HttpOnly session cookie. The server stores
 // only an HMAC verifier for that cookie. A user can explicitly create a
@@ -31,13 +31,16 @@ function sessionCookieName(env) {
 }
 
 function jsonBody(data, status = 200, extraHeaders = {}) {
+  const headers = new Headers({
+    'Content-Type': 'application/json; charset=utf-8',
+    'Cache-Control': 'no-store',
+  });
+  for (const [name, value] of new Headers(extraHeaders).entries()) {
+    headers.set(name, value);
+  }
   return new Response(JSON.stringify(data), {
     status,
-    headers: {
-      'Content-Type': 'application/json; charset=utf-8',
-      'Cache-Control': 'no-store',
-      ...extraHeaders,
-    },
+    headers,
   });
 }
 
@@ -173,7 +176,7 @@ async function createSession(env, sub) {
   return token;
 }
 
-/** POST /auth/bootstrap — create one local identity for this browser. */
+/** POST /auth/bootstrap â€” create one local identity for this browser. */
 export async function handleBootstrap(request, env) {
   if (!isAction(request, 'bootstrap')) return jsonError(403, 'Unsupported sign-in request.');
   if (await getSession(request, env)) return jsonBody({ ok: true, existing: true });
@@ -192,7 +195,7 @@ export async function handleBootstrap(request, env) {
   }
 }
 
-/** POST /auth/recovery — issue a new one-time recovery code for this identity. */
+/** POST /auth/recovery â€” issue a new one-time recovery code for this identity. */
 export async function handleIssueRecovery(request, env) {
   if (!isAction(request, 'issue-recovery')) return jsonError(403, 'Unsupported recovery request.');
   const session = await getSession(request, env);
@@ -207,7 +210,7 @@ export async function handleIssueRecovery(request, env) {
   return jsonBody({ ok: true, recoveryCode: formatRecoveryCode(code) });
 }
 
-/** POST /auth/recover — consume a one-time recovery code on another device. */
+/** POST /auth/recover â€” consume a one-time recovery code on another device. */
 export async function handleRecover(request, env) {
   if (!isAction(request, 'recover')) return jsonError(403, 'Unsupported recovery request.');
   if (!(await checkAuthRateLimit(request, env, 'recovery'))) {
@@ -247,7 +250,7 @@ export async function handleRecover(request, env) {
   }
 }
 
-/** POST /auth/owner/claim — one-time owner bootstrap using a Cloudflare secret. */
+/** POST /auth/owner/claim â€” one-time owner bootstrap using a Cloudflare secret. */
 export async function handleOwnerClaim(request, env) {
   if (!isAction(request, 'owner-claim')) return jsonError(403, 'Unsupported owner setup request.');
   if (!(await checkAuthRateLimit(request, env, 'owner'))) {
@@ -278,7 +281,7 @@ export async function handleOwnerClaim(request, env) {
   }
 }
 
-/** GET /auth/owner — small setup page; the secret never appears in the URL. */
+/** GET /auth/owner â€” small setup page; the secret never appears in the URL. */
 export function ownerSetupPage() {
   const html = `<!doctype html><html lang="en"><head><meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -307,7 +310,7 @@ export function ownerSetupPage() {
   return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
 }
 
-/** GET /auth/logout — clear the browser session. */
+/** GET /auth/logout â€” clear the browser session. */
 export function handleLogout(request, env, url) {
   const returnPath = sanitizeReturnPath(url.searchParams.get('return') || '/');
   const headers = new Headers({ Location: returnPath });
@@ -344,3 +347,4 @@ export async function getSession(request, env) {
 export function isSecureCookieEnv(env) {
   return isSecureEnv(env);
 }
+
