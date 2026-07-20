@@ -11,7 +11,12 @@ export function parseCookies(request) {
     if (eq === -1) continue;
     const name = trimmed.slice(0, eq);
     const value = trimmed.slice(eq + 1);
-    out[name] = decodeURIComponent(value);
+    try {
+      out[name] = decodeURIComponent(value);
+    } catch {
+      // Ignore a malformed cookie instead of turning a hostile header into
+      // a Worker 500; the caller will treat it as signed out.
+    }
   }
   return out;
 }
