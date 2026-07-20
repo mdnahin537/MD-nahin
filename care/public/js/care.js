@@ -14,7 +14,10 @@ window.Care = (function () {
 
   async function getMe() {
     try {
-      const res = await fetch('/api/me', { headers: { Accept: 'application/json' } });
+      const res = await fetch('/api/me', {
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json' },
+      });
       if (!res.ok) return { loggedIn: false };
       return await res.json();
     } catch {
@@ -26,6 +29,7 @@ window.Care = (function () {
     try {
       const res = await fetch(path, {
         method: 'POST',
+        credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json', 'X-Care-Action': action },
         body: body ? JSON.stringify(body) : '{}',
       });
@@ -47,8 +51,9 @@ window.Care = (function () {
       showError(panel, 'Care could not save this device identity. Please try again.');
       return;
     }
-    closeOverlay();
-    location.assign(target);
+    panel.innerHTML =
+      '<p role="status" style="margin:0;color:#28613b;font-weight:600">âœ“ This device is ready. Continuing to Careâ€¦</p>';
+    window.setTimeout(() => location.assign(target), 650);
   }
 
   function overlay(title, inner) {
@@ -124,9 +129,11 @@ window.Care = (function () {
     el.querySelector('#care-use-device').addEventListener('click', async () => {
       const btn = el.querySelector('#care-use-device');
       btn.disabled = true;
+      btn.textContent = 'Setting up this deviceâ€¦';
       const result = await postAuth('/auth/bootstrap', 'bootstrap');
       if (!result.ok) {
         btn.disabled = false;
+        btn.textContent = 'Use this device';
         showError(panel, result.body.error || 'This device could not be registered.');
         return;
       }
