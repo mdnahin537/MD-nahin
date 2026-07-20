@@ -1,269 +1,265 @@
-# RealmWright — Community Care
+# RealmWright Community Care
 
-The engine of customer-driven development for RealmWright: game masters report
-bugs and request features, the ranking turns that into a public roadmap, and the
-private **Owner Desk** turns it into your build list. It runs on **one free
-Cloudflare account** and costs **$0/month** with no server to maintain.
+Customer Care is a separate Cloudflare Worker that provides:
 
-- **Board** (public): `https://<your-host>/` — read with no login.
-- **Report a problem or idea** (the wizard): `https://<your-host>/report/`
-- **Owner Desk** (only you): `https://<your-host>/desk` — invisible to everyone else.
+- a public board that anyone can read without an account;
+- a report wizard for bugs and ideas;
+- voting and comments;
+- a private Owner Desk for moderation and build planning.
 
-Everything is plain HTML/CSS/JS and a single Cloudflare Worker. No build step, no
-framework. The whole thing is `wrangler deploy`.
+This version deliberately uses **no Google login, no OAuth, no passwords, and no paid authentication service**. It runs on a free Cloudflare Workers address such as:
 
----
+    https://realmwright-care.<your-subdomain>.workers.dev
 
-## What you're looking at
-
-```
-care/
-  wrangler.toml         Cloudflare config (you edit two lines: host name + Google client id)
-  migrations/           the database tables (applied once with one command)
-  public/               every page the browser loads (board, wizard, item, desk, privacy)
-  src/                  the Worker (API, login, ranking, desk) — you don't edit this
-  scripts/
-    seed.mjs            fills a LOCAL test database with fake data (never touches production)
-    mock-google.mjs     a fake Google, for local testing only (never deployed)
-```
+The Worker uses Cloudflare D1 for the board and a browser-local Care identity for actions that need attribution.
 
 ---
 
-## Part A — Try it on your own computer first (no accounts needed)
+## Product-to-Care URL contract
 
-You can run the whole thing locally with fake data before you ever touch
-Cloudflare or Google. This is the safest way to see it work.
+The RealmWright product must not implement Google login or product authentication for Customer Care. Its three community entry points open the Care Worker directly:
 
-1. Install Node.js (nodejs.org, the "LTS" button) if you don't have it.
-2. In a terminal, from the `care/` folder:
-   ```
-   npm install
-   npm run migrate:local        # creates the local test database
-   npm run seed:local           # OR: node scripts/seed.mjs 200   (fills it with fake data)
-   ```
-3. In one terminal window, start the fake Google (for testing login locally):
-   ```
-   npm run mock-google
-   ```
-4. In another terminal window, start the site:
-   ```
-   npm run dev
-   ```
-5. Open `http://localhost:8787/` — that's your board. `/report/` is the wizard.
-   To see the Owner Desk locally, the fake login needs to sign you in as the
-   owner; the local `.dev.vars` file already sets `OWNER_SUB=mock-owner-sub-001`
-   for exactly this.
+    CARE_BASE_URL = https://<your-care-worker>.workers.dev
 
-`node scripts/seed.mjs 10` (tiny), `200` (a realistic desk), or `5000` (stress
-test) all work. Local data is completely separate from anything you deploy.
+| Product entry point | Destination |
+|---|---|
+| Report a problem | CARE_BASE_URL + /report/ |
+| Suggest an idea | CARE_BASE_URL + /report/ |
+| Community | CARE_BASE_URL + / |
+
+The report wizard asks the user to continue with a local Care identity. The product source is intentionally not changed in this branch; after the Care Worker is deployed, replace the placeholder base URL in the product integration wherever those links are wired.
 
 ---
 
-## Part B — Go live (about 30 minutes, one time)
+## Authentication model
 
-You'll create **two free accounts** and paste a handful of values. You never
-share a password with this project — only scoped, revocable tokens.
+### Public reading
 
-### Step 1 — Create a fresh Cloudflare account
+These routes are public and do not create an identity:
 
-1. Go to **dash.cloudflare.com** and sign up with an email **separate from your
-   money/licensing account** (keeping the two apart is deliberate).
-2. That's all you need here for now. You do **not** need to buy anything.
+- /
+- /item/?id=<number>
+- /api/feed
+- /api/item/<number>
+- /privacy
 
-### Step 2 — Install the deploy tool and log in
+### Local Care identity
 
-From the `care/` folder on your computer:
-```
+When a user wants to report, vote, or comment:
+
+1. Care shows a choice: use this device, or use a recovery code.
+2. “Use this device” creates a random local user and an opaque random session token.
+3. The token is stored in an HttpOnly, SameSite=Lax cookie.
+4. D1 stores only an HMAC verifier for the token, never the token itself.
+5. The user is shown publicly as a generic local name such as “A GM”.
+6. No Google profile, email address, password, or OAuth grant is collected.
+
+This is browser-profile identity, not hardware attestation. Clearing cookies or changing browser profiles requires recovery.
+
+### Recovery
+
+A signed-in user can click **Recovery code** in the Care header.
+
+- Care creates one 24-character Crockford-style code and shows it once.
+- The database stores only an HMAC verifier.
+- The code is single-use.
+- The user should copy or print it and keep it offline.
+- On another device, choose **Use a recovery code** and enter it.
+- Recovery creates a new local session for the same Care identity, then consumes the code.
+- Generate a new code on the recovered device if another transfer is needed.
+
+A recovery code is a bearer secret. Anyone who obtains it can recover that Care identity once. It is not a password and cannot provide hardware-level protection.
+
+### Owner Desk
+
+The Owner Desk does not use Google.
+
+1. Configure the Cloudflare secret named OWNER_SETUP_TOKEN.
+2. Open /auth/owner on the deployed Care Worker.
+3. Enter that setup token once.
+4. Care creates the one local owner user and marks it is_owner=1.
+5. Save the recovery code from the Care header immediately.
+6. Open /desk/ for the owner-only cockpit.
+
+A unique database index permits only one owner. After the first claim, the setup endpoint returns “already completed” even if the secret remains configured. The Owner Desk gate checks the local is_owner flag, not an email address or a user-controlled value.
+
+---
+
+## Data preservation and migration
+
+Existing Google-era rows are not deleted. Migration 0004 adds auth_provider and marks existing rows as legacy-google. Their reports, votes, comments, and board history remain visible according to the normal moderation rules.
+
+New users are created with auth_provider=local and a local_... subject. No automatic mapping is attempted between a historical Google subject and a new local identity; doing that without proof could give one person another person’s reports or owner access.
+
+Migration 0004 also creates:
+
+- care_sessions — opaque session-token HMAC verifiers, expiry, and revocation;
+- care_auth_attempts — HMAC’d, bucketed anti-abuse counters with no raw IP storage;
+- recovery fields on users;
+- the single-owner index.
+
+Migration 0003 repairs denormalized public comment counts so held/deleted comments do not inflate them.
+
+---
+
+## Free Cloudflare setup
+
+Care uses a free Cloudflare account and the free workers.dev hostname. No purchased domain is required for this Care beta.
+
+### 1. Install and authenticate Wrangler
+
+From the care directory:
+
+~~~text
 npm install
-npx wrangler login          # opens your browser, click "Allow"
-```
-This authorizes the tool for this one account. (If you'd rather not use the
-browser login, you can instead create a **scoped API token** at
-Cloudflare → My Profile → API Tokens → "Edit Cloudflare Workers" template, and
-run `npx wrangler` with that token in the `CLOUDFLARE_API_TOKEN` environment
-variable. Either way, never paste your Cloudflare **password** anywhere.)
+npx wrangler login
+~~~
 
-### Step 3 — Create the database
+The browser login authorizes Wrangler to your Cloudflare account. Do not put a Cloudflare password in the repository.
 
-```
+### 2. Create or select the D1 database
+
+The checked-in wrangler.toml already names the binding realmwright-care. If the database has not been created in this Cloudflare account:
+
+~~~text
 npx wrangler d1 create realmwright-care
-```
-It prints a block like:
-```
-[[d1_databases]]
-binding = "DB"
-database_name = "realmwright-care"
-database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-```
-Open **`care/wrangler.toml`** and replace the placeholder `database_id`
-(`00000000-0000-0000-0000-000000000000`) with the real `database_id` it printed.
+~~~
 
-Then create the tables in the real database:
-```
+Put the returned database ID into wrangler.toml only if this is a new account/database. The existing checked-in ID belongs to the previously prepared Care deployment; verify it before applying migrations.
+
+### 3. Configure secrets
+
+Set these with Wrangler or the Cloudflare dashboard. The values must never be committed:
+
+~~~text
+npx wrangler secret put SESSION_SECRET
+npx wrangler secret put OWNER_SETUP_TOKEN
+~~~
+
+SESSION_SECRET signs all session, recovery, and rate-limit verifiers. Use a long random value.
+
+OWNER_SETUP_TOKEN is the one-time owner-claim secret. Use a separate long random value. Do not reuse SESSION_SECRET.
+
+Optional fallback AI secret:
+
+~~~text
+npx wrangler secret put OPENROUTER_KEY
+~~~
+
+The Owner Desk remains usable without OPENROUTER_KEY because deterministic summaries are the fallback.
+
+Secret names only:
+
+| Secret | Required | Purpose |
+|---|---|---|
+| SESSION_SECRET | Yes | HMACs session tokens, recovery codes, and anti-abuse fingerprints |
+| OWNER_SETUP_TOKEN | Yes for first owner claim | One-time Owner Desk bootstrap |
+| OPENROUTER_KEY | No | Optional AI fallback |
+
+### 4. Apply every migration
+
+~~~text
 npm run migrate:remote
-```
+~~~
 
-### Step 4 — Create the free Google sign-in (no paid domain)
+This applies migrations 0001 through 0004 in order. Do not skip 0004: the local identity session tables and owner flag are required.
 
-Customer Care uses Google only for identity: the OAuth request is exactly
-`openid email profile`. It does **not** request Drive, Gmail, Calendar, Contacts,
-or any other data permission. Keep this Care project separate from the future
-RealmWright product login/Drive project.
+### 5. Deploy
 
-1. Go to **console.cloud.google.com** (free, no card).
-2. Create a new project (top bar → **New Project**), name it anything.
-3. Left menu → **APIs & Services → OAuth consent screen**:
-   - User type: **External**, then **Create**.
-   - Fill the app name (for example, “RealmWright Community”), your support
-     email, and developer contact email.
-   - Add only the basic identity scopes: `openid`, `email`, and `profile`.
-   - Leave **Publishing status = Testing**. **Do not click “Publish app”.**
-4. Left menu → **APIs & Services → Credentials → Create Credentials → OAuth
-   client ID**:
-   - Application type: **Web application**.
-   - Under **Authorized redirect URIs**, add exactly:
-     `https://<your-host>/auth/callback`
-     You will know `<your-host>` after the first Cloudflare deploy in Step 5;
-     it will be your free `*.workers.dev` address. Deploy once, copy that
-     address, then return here and add this exact HTTPS URI.
-   - Click **Create**. Google shows a **Client ID** and a **Client secret**;
-     keep the client secret private.
-5. Open **`care/wrangler.toml`** and set `GOOGLE_CLIENT_ID` to the Client ID.
-   The Client ID is public by design; never put the Client secret in this file.
-6. Set **`CONTACT_EMAIL`** in `care/wrangler.toml` to the address you want
-   published for questions and deletion requests. If it is empty, the privacy
-   page remains safe but shows a placeholder instead of a mail link.
-
-### Why Testing is the correct free/no-domain choice
-
-Google's current rules allow a project that requests only `openid`, `email`,
-and `profile` to use the basic-identity exception: users do not need to be
-listed as trusted test users and their authorization does not expire after
-seven days. If the Cloud Console still shows a test-user allow-list, add early
-testers there; do not add broader scopes to get around it.
-
-This is a **Care beta**, not an unlimited public production approval. Do not
-request Google Drive or any other user-data scope here. When the product is
-ready for broad public launch, we can move to a separate production project
-and complete Google's branding/domain requirements after you choose to buy a
-domain. Until then, the free `workers.dev` HTTPS address is the honest scope.
-
-Official references:
-- [Google OAuth app-state overview](https://developers.google.com/identity/protocols/oauth2/production-readiness/overview)
-- [Google OAuth policies](https://developers.google.com/identity/protocols/oauth2/policies)
-
-### Step 5 — Deploy, then set your secrets
-
-Deploy once to get your address:
-```
+~~~text
 npm run deploy
-```
-It prints your live URL, e.g. `https://realmwright-care.<you>.workers.dev`.
-That address is your `<your-host>`. Go back to **Step 4.4** and make sure the
-redirect URI uses this exact address, and re-check `SITE` values if you set any.
+~~~
 
-Now set the four secrets (these are stored encrypted by Cloudflare, never in the
-repo). Run each line and paste the value when asked:
-```
-npx wrangler secret put GOOGLE_CLIENT_SECRET   # the Client secret from Google (Step 4.4)
-npx wrangler secret put SESSION_SECRET         # a long random string — see below
-npx wrangler secret put OWNER_SUB              # YOUR Google account id — see below
-```
-- **`SESSION_SECRET`** — any long random string; it signs login cookies. Generate
-  one with: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
-  and paste the output.
-- **`OWNER_SUB`** — this is the Google user id that makes the Owner Desk yours.
-  The easiest way to get it: after deploying, visit `https://<your-host>/report/`,
-  sign in with **your** Google account, then visit `https://<your-host>/api/me`.
-  It won't show your id directly, so instead run this once against your database
-  to see the `sub` of the account that just logged in:
-  ```
-  npx wrangler d1 execute realmwright-care --remote --command "SELECT sub, name, email FROM users ORDER BY created_at DESC LIMIT 5;"
-  ```
-  Find your name in the list, copy its `sub` value, and use it for `OWNER_SUB`.
-  Then deploy again so it takes effect: `npm run deploy`.
+Cloudflare prints the free workers.dev URL. Use that URL as CARE_BASE_URL in the product-to-Care contract above.
 
-Optional secret (only if you want AI digests when Cloudflare's built-in AI is
-unavailable):
-```
-npx wrangler secret put OPENROUTER_KEY          # optional — a fallback AI provider key
-```
-The desk works fully without it — the digest and Build Brief are computed from
-your data with no AI at all; AI only adds one summary sentence per hot thread.
+### 6. Claim the Owner Desk
 
-### Step 6 — Final deploy and check
+Open:
 
-```
+    https://<your-care-worker>.workers.dev/auth/owner
+
+Enter OWNER_SETUP_TOKEN once. After success:
+
+- save the recovery code from the Care header;
+- visit /desk/;
+- verify that a signed-out browser receives the normal 404;
+- verify that a normal local user cannot see /desk/.
+
+Do not share the owner setup token or recovery code.
+
+---
+
+## Local development
+
+Copy care/.dev.vars.example to care/.dev.vars and keep the copy uncommitted. It contains only local dummy values.
+
+Apply the local database and start Wrangler:
+
+~~~text
+npm install
+npm run migrate:local
+npm run dev
+~~~
+
+Open http://localhost:8787/.
+
+For local owner setup, use the dummy OWNER_SETUP_TOKEN in your local .dev.vars file and open:
+
+    http://localhost:8787/auth/owner
+
+The local flow does not require a Google mock server. The old mock-google script was removed because Google is no longer part of the Care runtime.
+
+---
+
+## Abuse and request protection
+
+- Public reads remain cacheable and unauthenticated.
+- Report, vote, comment, and follow-up writes require a valid local session.
+- Existing per-identity daily limits remain active.
+- Bootstrap, recovery, and owner-claim attempts are bucket-rate-limited per HMAC’d Cloudflare client fingerprint.
+- Raw IP addresses are not written to D1.
+- Same-origin checks compare the complete origin when browsers provide an Origin header.
+- SameSite=Lax and HttpOnly cookies protect ordinary browser sessions from cross-site form abuse.
+- Recovery and owner setup requests also require a specific X-Care-Action header.
+- No secret is sent to the product app or exposed in public HTML.
+
+These controls reduce casual abuse and automated flooding; they are not a replacement for a paid CAPTCHA, WAF, or hardware-backed identity system.
+
+---
+
+## Privacy behavior
+
+New Care identities have no email and no Google profile. Public reports, votes, comments, and the generic Care name are visible on the board.
+
+The owner can request deletion through the configured contact address. Historical legacy rows remain preserved unless the owner removes them through the existing moderation/data process.
+
+The public privacy page is /privacy. CONTACT_EMAIL remains a non-secret [vars] value in wrangler.toml and can be left empty during testing.
+
+---
+
+## Everyday commands
+
+~~~text
+npm run dev
+npm run migrate:local
+npm run migrate:remote
 npm run deploy
-```
-- Visit `/` — the board (empty at first; that's expected).
-- Visit `/report/` — file a couple of your own known bugs to seed it warm.
-- Visit `/desk` — your cockpit. Anyone else who visits `/desk` sees a plain
-  "not found" page; it's invisible, not just locked.
+~~~
+
+Back up D1 before material schema or moderation changes:
+
+~~~text
+npx wrangler d1 export realmwright-care --remote --output backup-YYYY-MM-DD.sql
+~~~
+
+Never commit .dev.vars, secret values, recovery codes, Cloudflare tokens, or database credentials.
 
 ---
 
-## What each secret is for (quick reference)
+## Explicit boundaries
 
-| Name | Where it's set | What it does | Secret? |
-|---|---|---|---|
-| `GOOGLE_CLIENT_ID` | `wrangler.toml` | identifies your app to Google | no (public by design) |
-| `GOOGLE_CLIENT_SECRET` | `wrangler secret put` | proves your app to Google during login | **yes** |
-| `SESSION_SECRET` | `wrangler secret put` | signs the login cookie so it can't be forged | **yes** |
-| `OWNER_SUB` | `wrangler secret put` | your Google id — unlocks the Owner Desk for you only | **yes** |
-| `OPENROUTER_KEY` | `wrangler secret put` | optional fallback AI for desk digests | **yes**, optional |
-| `database_id` | `wrangler.toml` | points the Worker at your D1 database | no |
-
-Never commit real secrets. `care/.dev.vars` (local dummies) is gitignored;
-`care/.dev.vars.example` shows the shape with fake values.
-
----
-
-## Everyday operations
-
-- **Deploy an update:** `npm run deploy`
-- **Back up the database (monthly is plenty):**
-  `npx wrangler d1 export realmwright-care --remote --output backup-YYYY-MM-DD.sql`
-  (Cloudflare also keeps automatic point-in-time restore for D1.)
-- **Add real blocklist words before launch:** edit
-  `src/data/blocklist.json` (plain lowercase phrases), then `npm run deploy`.
-  A match hides the post from public view and queues it in the desk — it never
-  auto-rejects. (It lives under `src/`, not `public/`, on purpose — anything
-  under `public/` is servable directly by URL, and the list itself shouldn't
-  be readable by whoever it's meant to catch.)
-- **Free-tier headroom:** the Owner Desk header shows today's usage. The board
-  feed is edge-cached, and every page is a static asset, so even a big traffic
-  spike costs almost nothing.
-
----
-
-## Still to wire up (needs the live board URL — do after Part B)
-
-These were intentionally left for after you have a live address:
-
-1. **The two buttons inside RealmWright itself.** In `realmwright-v7.html`, a new
-   "Community" section in Settings gets two rows — "Find a problem or new idea"
-   (opens `/report/`) and "See what people are saying" (opens `/`) — plus the
-   quiet disclosure line and the offline toast. That change lives on the product
-   branch and needs your live `<your-host>` URL, so it's deliberately not in this
-   folder yet.
-2. **Seed it warm.** File your first few known bugs/ideas and mark genuinely
-   shipped work "shipped" so the board looks alive on day one.
-3. **Put the board URL on your itch.io and Lemon Squeezy pages** as living
-   "we listen" proof.
-
----
-
-## For the curious: how it stays free and fast
-
-- Every **page** is a static asset (unlimited, free); only `/api/*`, `/auth/*`,
-  and `/desk` run the Worker.
-- The **board feed** is edge-cached for 60 seconds, so 50,000 readers cost about
-  one computation per minute.
-- The **ranking** uses score *bands* (an item must double its net to change
-  band), so a single vote almost never reshuffles the list — and net-negative
-  items can never sit above accepted ones.
-- The **wizard** turns navigation into data: a complete bug report is six taps
-  and zero typing.
-- The **desk** is deterministic first — it works with zero AI; AI only makes it
-  sing.
+- Product Google login and Google Drive are intentionally frozen until a paid owned domain exists.
+- Customer Care is independent and uses its own local identity; it does not unlock the RealmWright product.
+- A Care identity cannot be silently converted into a product identity.
+- Existing Google-era Care accounts cannot be safely recovered without their old provider; their public data remains preserved.
+- Recovery codes are bearer secrets, not hardware-bound credentials.
