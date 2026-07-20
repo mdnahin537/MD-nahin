@@ -222,7 +222,7 @@
     const val = Number(btn.dataset.val);
 
     if (!me.loggedIn) {
-      // Save intent, then send to Google returning to this exact spot.
+      // Save intent, then create or recover the local Care identity and return to this exact spot.
       C.stashPending({ kind: 'vote', itemId, value: val, scrollTo: 'item-' + itemId });
       C.login(location.pathname + location.search + '#item-' + itemId);
       return;
