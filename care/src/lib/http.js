@@ -28,9 +28,13 @@ export async function notFound(env) {
 /** Same-origin check for state-changing requests (light CSRF floor for cookie auth). */
 export function isSameOrigin(request, url) {
   const origin = request.headers.get('Origin');
-  if (!origin) return true; // curl / same-tab navigations often omit Origin — cookie+SameSite=Lax is the real floor
+  if (!origin) {
+    // SameSite=Lax cookies are the browser-side CSRF floor for legacy clients
+    // and curl. Browser fetches that provide Origin are checked exactly below.
+    return true;
+  }
   try {
-    return new URL(origin).host === url.host;
+    return new URL(origin).origin === url.origin;
   } catch {
     return false;
   }
