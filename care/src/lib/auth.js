@@ -1,196 +1,313 @@
-// Google OAuth 2.0 server-side authorization-code flow (design §3.1).
-// Deliberately NOT the "Sign in with Google" JS SDK — the redirect code
-// flow has one moving part (a registered redirect URI) instead of GIS's
-// FedCM migration churn and "authorized JavaScript origins" fussiness.
+// Local Care identity auth — no OAuth, no external identity provider.
 //
-// Every Google endpoint URL is read from env (wrangler.toml [vars] defaults
-// them to the real Google endpoints) so the exact same code path can be
-// pointed at scripts/mock-google.mjs for local verification — no branching
-// "if test mode" logic anywhere in here.
+// A browser gets an opaque, random HttpOnly session cookie. The server stores
+// only an HMAC verifier for that cookie. A user can explicitly create a
+// one-time recovery code; the server stores only its HMAC verifier. The code
+// is a bearer recovery secret, not a password and not hardware attestation.
+//
+// Existing Google-era users remain in the users table as legacy rows so their
+// reports, votes, and comments are preserved. New sessions can only create or
+// recover local identities.
 
-import { signHS256, verifyHS256, verifyRS256WithJwks, decodeJwtUnsafe } from './jwt.js';
 import { parseCookies, serializeCookie, clearCookie } from './cookies.js';
 
-const OAUTH_STATE_COOKIE = 'rw_oauth_state';
-const OAUTH_STATE_TTL_SECONDS = 600; // 10 minutes — just long enough for a real login
-const SESSION_TTL_SECONDS = 90 * 24 * 60 * 60; // 90 days (locked shape #7 / §3.1)
+const SESSION_TTL_SECONDS = 90 * 24 * 60 * 60;
+const SESSION_COOKIE = 'rw_care_session';
+const RECOVERY_CODE_LENGTH = 24;
+const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 
-// Per-isolate JWKS cache. Isolates are short-lived but often handle many
-// requests — this just avoids re-fetching Google's public keys on every
-// single callback within that window. Correctness never depends on this
-// cache hitting; a miss just re-fetches.
-let jwksCache = { url: null, body: null, fetchedAt: 0 };
-const JWKS_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
-
-async function fetchJwks(jwksUrl, { force = false } = {}) {
-  const now = Date.now();
-  if (!force && jwksCache.url === jwksUrl && now - jwksCache.fetchedAt < JWKS_CACHE_TTL_MS) {
-    return jwksCache.body;
-  }
-  const res = await fetch(jwksUrl);
-  if (!res.ok) throw new Error(`JWKS fetch failed: ${res.status}`);
-  const body = await res.json();
-  jwksCache = { url: jwksUrl, body, fetchedAt: now };
-  return body;
-}
-
-// Google rotates its signing keys periodically; a token can legitimately be
-// signed with a key that isn't in our cached JWKS yet. If the token's kid
-// isn't present, force ONE refetch before giving up — otherwise valid logins
-// would fail for up to the cache TTL after every Google key rotation.
-async function jwksHasKid(jwks, kid) {
-  return !!(jwks && jwks.keys && jwks.keys.some((k) => k.kid === kid));
-}
+const AUTH_LIMITS = {
+  bootstrap: { windowSeconds: 60 * 60, max: 20 },
+  recovery: { windowSeconds: 60 * 60, max: 10 },
+  owner: { windowSeconds: 60 * 60, max: 5 },
+};
 
 function isSecureEnv(env) {
   return env.ENVIRONMENT !== 'development';
 }
 
 function sessionCookieName(env) {
-  return env.SESSION_COOKIE_NAME || 'rw_care_session';
+  return env.SESSION_COOKIE_NAME || SESSION_COOKIE;
 }
 
-/** Only allow same-origin relative paths as an OAuth `return` target — kills open-redirect. */
+function jsonBody(data, status = 200, extraHeaders = {}) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': 'no-store',
+      ...extraHeaders,
+    },
+  });
+}
+
+function jsonError(status, message) {
+  return jsonBody({ error: message }, status);
+}
+
+function randomBytes(length) {
+  const bytes = new Uint8Array(length);
+  crypto.getRandomValues(bytes);
+  return bytes;
+}
+
+function bytesToHex(bytes) {
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+function randomLocalSub() {
+  return 'local_' + bytesToHex(randomBytes(16));
+}
+
+function randomToken() {
+  const bytes = randomBytes(32);
+  let binary = '';
+  for (const b of bytes) binary += String.fromCharCode(b);
+  return btoa(binary).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/, '');
+}
+
+async function hmacHex(secret, value) {
+  if (typeof secret !== 'string' || !secret) throw new Error('SESSION_SECRET is not configured');
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(value));
+  return bytesToHex(new Uint8Array(sig));
+}
+
+function normalizeRecoveryCode(raw) {
+  return typeof raw === 'string'
+    ? raw.toUpperCase().replace(/[\\s-]/g, '')
+    : '';
+}
+
+function formatRecoveryCode(raw) {
+  return raw.match(/.{1,4}/g).join('-');
+}
+
+function randomRecoveryCode() {
+  const bytes = randomBytes(RECOVERY_CODE_LENGTH);
+  let code = '';
+  for (const b of bytes) code += CROCKFORD[b % CROCKFORD.length];
+  return code;
+}
+
 function sanitizeReturnPath(raw) {
-  // Backslashes are rejected as well as absolute/scheme URLs. Browsers can
-  // normalize a value such as "/\\evil.example" into a network-path URL,
-  // turning an apparently relative return into an open redirect.
   if (
     typeof raw !== 'string' ||
     !raw.startsWith('/') ||
     raw.startsWith('//') ||
     raw.includes('://') ||
-    raw.includes('\\')
+    raw.includes('\\\\')
   ) {
     return '/';
   }
   return raw;
 }
 
-function randomNonce() {
-  const bytes = new Uint8Array(16);
-  crypto.getRandomValues(bytes);
-  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+function isAction(request, expected) {
+  return request.headers.get('X-Care-Action') === expected;
 }
 
-/** GET /auth/login?return=/report — kicks off the redirect to Google (or its mock). */
-export async function handleLogin(request, env, url) {
-  const returnPath = sanitizeReturnPath(url.searchParams.get('return') || '/');
-  const nonce = randomNonce();
-
-  const stateJwt = await signHS256(
-    { typ: 'oauth_state', nonce, return: returnPath },
-    env.SESSION_SECRET,
-    { expiresInSeconds: OAUTH_STATE_TTL_SECONDS }
-  );
-
-  const redirectUri = `${url.origin}/auth/callback`;
-  const authUrl = new URL(env.GOOGLE_AUTH_ENDPOINT);
-  authUrl.searchParams.set('client_id', env.GOOGLE_CLIENT_ID);
-  authUrl.searchParams.set('redirect_uri', redirectUri);
-  authUrl.searchParams.set('response_type', 'code');
-  authUrl.searchParams.set('scope', 'openid email profile');
-  authUrl.searchParams.set('state', nonce);
-  authUrl.searchParams.set('prompt', 'select_account');
-
-  const headers = new Headers({ Location: authUrl.toString() });
-  headers.append(
-    'Set-Cookie',
-    serializeCookie(OAUTH_STATE_COOKIE, stateJwt, {
-      maxAgeSeconds: OAUTH_STATE_TTL_SECONDS,
-      path: '/auth',
-      secure: isSecureEnv(env),
-      sameSite: 'Lax',
-    })
-  );
-  return new Response(null, { status: 302, headers });
+function clientFingerprint(request) {
+  // Cloudflare supplies CF-Connecting-IP at the edge. We hash it before
+  // persistence; raw IP addresses never enter D1. Local dev uses a stable
+  // placeholder so the smoke path remains deterministic.
+  return request.headers.get('CF-Connecting-IP') || 'local-dev';
 }
 
-/** GET /auth/callback?code=&state= — exchanges the code, verifies the ID token, opens a session. */
-export async function handleCallback(request, env, url) {
-  const code = url.searchParams.get('code');
-  const state = url.searchParams.get('state');
-  const cookies = parseCookies(request);
-  const stateCookieRaw = cookies[OAUTH_STATE_COOKIE];
-
-  if (!code || !state || !stateCookieRaw) {
-    return authErrorResponse('Missing code or state — please try signing in again.');
-  }
-
-  const statePayload = await verifyHS256(stateCookieRaw, env.SESSION_SECRET);
-  if (!statePayload || statePayload.typ !== 'oauth_state' || statePayload.nonce !== state) {
-    return authErrorResponse('Your sign-in link expired or was tampered with — please try again.');
-  }
-
-  const redirectUri = `${url.origin}/auth/callback`;
-  const tokenRes = await fetch(env.GOOGLE_TOKEN_ENDPOINT, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      code,
-      client_id: env.GOOGLE_CLIENT_ID,
-      client_secret: env.GOOGLE_CLIENT_SECRET,
-      redirect_uri: redirectUri,
-      grant_type: 'authorization_code',
-    }),
-  });
-
-  if (!tokenRes.ok) {
-    return authErrorResponse('Google sign-in did not complete — please try again.');
-  }
-  const tokenBody = await tokenRes.json();
-  const idToken = tokenBody.id_token;
-  if (!idToken) return authErrorResponse('Google did not return an identity token.');
-
-  // Verify the ID token's signature against Google's JWKS. If the token's kid
-  // isn't in our cached key set (Google rotated keys since we last fetched),
-  // force one refresh before trusting or rejecting it.
-  const decoded = decodeJwtUnsafe(idToken);
-  let jwks = await fetchJwks(env.GOOGLE_JWKS_ENDPOINT);
-  if (decoded && !(await jwksHasKid(jwks, decoded.header.kid))) {
-    jwks = await fetchJwks(env.GOOGLE_JWKS_ENDPOINT, { force: true });
-  }
-  const claims = await verifyRS256WithJwks(idToken, jwks);
-  if (!claims) return authErrorResponse('Could not verify your Google identity.');
-  if (claims.iss !== env.GOOGLE_ISSUER) return authErrorResponse('Unexpected identity issuer.');
-  if (claims.aud !== env.GOOGLE_CLIENT_ID) return authErrorResponse('Unexpected identity audience.');
-
-  const sub = claims.sub;
-  const name = claims.name || 'A GM';
-  const avatarUrl = claims.picture || null;
-  const email = claims.email || null;
+async function checkAuthRateLimit(request, env, kind) {
+  const cfg = AUTH_LIMITS[kind];
+  if (!cfg) return true;
   const now = Math.floor(Date.now() / 1000);
-
+  const bucket = Math.floor(now / cfg.windowSeconds);
+  const fingerprint = await hmacHex(env.SESSION_SECRET, clientFingerprint(request));
+  const row = await env.DB.prepare(
+    'SELECT count FROM care_auth_attempts WHERE kind = ?1 AND fingerprint = ?2 AND bucket = ?3'
+  ).bind(kind, fingerprint, bucket).first();
+  if ((row?.count || 0) >= cfg.max) return false;
   await env.DB.prepare(
-    `INSERT INTO users (sub, name, avatar_url, email, created_at, last_seen)
-     VALUES (?1, ?2, ?3, ?4, ?5, ?5)
-     ON CONFLICT(sub) DO UPDATE SET name=excluded.name, avatar_url=excluded.avatar_url,
-       email=excluded.email, last_seen=excluded.last_seen`
-  )
-    .bind(sub, name, avatarUrl, email, now)
-    .run();
+    `INSERT INTO care_auth_attempts (kind, fingerprint, bucket, count)
+     VALUES (?1, ?2, ?3, 1)
+     ON CONFLICT(kind, fingerprint, bucket) DO UPDATE SET count = count + 1`
+  ).bind(kind, fingerprint, bucket).run();
+  return true;
+}
 
-  const sessionJwt = await signHS256(
-    { typ: 'session', sub, name, avatar: avatarUrl },
-    env.SESSION_SECRET,
-    { expiresInSeconds: SESSION_TTL_SECONDS }
-  );
-
-  const headers = new Headers({ Location: statePayload.return || '/' });
+function setSessionCookie(headers, token, env) {
   headers.append(
     'Set-Cookie',
-    serializeCookie(sessionCookieName(env), sessionJwt, {
+    serializeCookie(sessionCookieName(env), token, {
       maxAgeSeconds: SESSION_TTL_SECONDS,
       path: '/',
       secure: isSecureEnv(env),
       sameSite: 'Lax',
     })
   );
-  headers.append('Set-Cookie', clearCookie(OAUTH_STATE_COOKIE, { path: '/auth', secure: isSecureEnv(env) }));
-  return new Response(null, { status: 302, headers });
 }
 
-/** GET /auth/logout — clears the session cookie and returns home. */
+async function createLocalUser(env, { name = 'A GM', isOwner = false } = {}) {
+  const sub = randomLocalSub();
+  const now = Math.floor(Date.now() / 1000);
+  await env.DB.prepare(
+    `INSERT INTO users
+      (sub, name, avatar_url, email, created_at, last_seen, auth_provider, is_owner)
+     VALUES (?1, ?2, NULL, NULL, ?3, ?3, 'local', ?4)`
+  ).bind(sub, name, now, isOwner ? 1 : 0).run();
+  return { sub, name, avatar: null, isOwner };
+}
+
+async function createSession(env, sub) {
+  const token = randomToken();
+  const tokenHash = await hmacHex(env.SESSION_SECRET, token);
+  const now = Math.floor(Date.now() / 1000);
+  await env.DB.prepare(
+    `INSERT INTO care_sessions
+      (token_hash, user_sub, created_at, last_seen, expires_at, revoked_at)
+     VALUES (?1, ?2, ?3, ?3, ?4, NULL)`
+  ).bind(tokenHash, sub, now, now + SESSION_TTL_SECONDS).run();
+  return token;
+}
+
+/** POST /auth/bootstrap — create one local identity for this browser. */
+export async function handleBootstrap(request, env) {
+  if (!isAction(request, 'bootstrap')) return jsonError(403, 'Unsupported sign-in request.');
+  if (await getSession(request, env)) return jsonBody({ ok: true, existing: true });
+  if (!(await checkAuthRateLimit(request, env, 'bootstrap'))) {
+    return jsonError(429, 'Too many new-device attempts. Try again later.');
+  }
+
+  try {
+    const user = await createLocalUser(env);
+    const token = await createSession(env, user.sub);
+    const headers = new Headers();
+    setSessionCookie(headers, token, env);
+    return jsonBody({ ok: true, created: true }, 200, headers);
+  } catch {
+    return jsonError(500, 'Could not create a Care identity. Try again shortly.');
+  }
+}
+
+/** POST /auth/recovery — issue a new one-time recovery code for this identity. */
+export async function handleIssueRecovery(request, env) {
+  if (!isAction(request, 'issue-recovery')) return jsonError(403, 'Unsupported recovery request.');
+  const session = await getSession(request, env);
+  if (!session) return jsonError(401, 'Start Care on this device before creating recovery details.');
+
+  const code = randomRecoveryCode();
+  const hash = await hmacHex(env.SESSION_SECRET, normalizeRecoveryCode(code));
+  const now = Math.floor(Date.now() / 1000);
+  await env.DB.prepare(
+    'UPDATE users SET recovery_hash = ?1, recovery_issued_at = ?2 WHERE sub = ?3 AND auth_provider = \'local\''
+  ).bind(hash, now, session.sub).run();
+  return jsonBody({ ok: true, recoveryCode: formatRecoveryCode(code) });
+}
+
+/** POST /auth/recover — consume a one-time recovery code on another device. */
+export async function handleRecover(request, env) {
+  if (!isAction(request, 'recover')) return jsonError(403, 'Unsupported recovery request.');
+  if (!(await checkAuthRateLimit(request, env, 'recovery'))) {
+    return jsonError(429, 'Too many recovery attempts. Try again later.');
+  }
+
+  let body;
+  try { body = await request.json(); } catch { return jsonError(400, 'Malformed recovery request.'); }
+  const code = normalizeRecoveryCode(body?.code);
+  if (code.length !== RECOVERY_CODE_LENGTH || !/^[0-9A-HJKMNP-TV-Z]+$/.test(code)) {
+    return jsonError(400, 'Enter the recovery code exactly as shown.');
+  }
+
+  const hash = await hmacHex(env.SESSION_SECRET, code);
+  const user = await env.DB.prepare(
+    `SELECT sub, name, avatar_url, is_owner
+     FROM users WHERE recovery_hash = ?1 AND auth_provider = 'local' LIMIT 1`
+  ).bind(hash).first();
+  if (!user) return jsonError(401, 'That recovery code is invalid or already used.');
+
+  // Compare-and-clear makes the code one-use even if two requests race.
+  const cleared = await env.DB.prepare(
+    `UPDATE users SET recovery_hash = NULL, recovery_issued_at = NULL
+     WHERE sub = ?1 AND recovery_hash = ?2`
+  ).bind(user.sub, hash).run();
+  if (!cleared.meta || cleared.meta.changes !== 1) {
+    return jsonError(401, 'That recovery code is invalid or already used.');
+  }
+
+  try {
+    const token = await createSession(env, user.sub);
+    const headers = new Headers();
+    setSessionCookie(headers, token, env);
+    return jsonBody({ ok: true, name: user.name, isOwner: user.is_owner === 1 }, 200, headers);
+  } catch {
+    return jsonError(500, 'Could not complete recovery. Try again shortly.');
+  }
+}
+
+/** POST /auth/owner/claim — one-time owner bootstrap using a Cloudflare secret. */
+export async function handleOwnerClaim(request, env) {
+  if (!isAction(request, 'owner-claim')) return jsonError(403, 'Unsupported owner setup request.');
+  if (!(await checkAuthRateLimit(request, env, 'owner'))) {
+    return jsonError(429, 'Too many owner setup attempts. Try again later.');
+  }
+  const setupToken = typeof env.OWNER_SETUP_TOKEN === 'string' ? env.OWNER_SETUP_TOKEN : '';
+  if (!setupToken) return jsonError(503, 'Owner setup is not configured.');
+
+  let body;
+  try { body = await request.json(); } catch { return jsonError(400, 'Malformed owner setup request.'); }
+  const provided = typeof body?.token === 'string' ? body.token : '';
+  if (!provided || provided !== setupToken) return jsonError(401, 'Owner setup token was not accepted.');
+
+  if (await env.DB.prepare('SELECT sub FROM users WHERE is_owner = 1 LIMIT 1').first()) {
+    return jsonError(409, 'Owner setup has already been completed.');
+  }
+
+  try {
+    const user = await createLocalUser(env, { name: 'Owner', isOwner: true });
+    const token = await createSession(env, user.sub);
+    const headers = new Headers();
+    setSessionCookie(headers, token, env);
+    return jsonBody({ ok: true, owner: true }, 200, headers);
+  } catch {
+    // The partial unique owner index turns simultaneous claims into a safe
+    // failure; never issue a session unless the owner row was committed.
+    return jsonError(409, 'Owner setup has already been completed.');
+  }
+}
+
+/** GET /auth/owner — small setup page; the secret never appears in the URL. */
+export function ownerSetupPage() {
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>RealmWright Care owner setup</title>
+  <style>body{font:16px system-ui;max-width:32rem;margin:4rem auto;padding:1rem}
+  input,button{font:inherit;padding:.7rem;width:100%;box-sizing:border-box}
+  button{margin-top:.75rem;cursor:pointer}.error{color:#a20;margin-top:1rem}</style></head>
+  <body><h1>Owner setup</h1>
+  <p>This is a one-time setup page. Paste the Cloudflare owner setup token,
+  then store your recovery code when Care provides it.</p>
+  <form id="owner-form"><label>Setup token
+  <input id="owner-token" type="password" autocomplete="off" required></label>
+  <button>Claim Owner Desk</button><p id="owner-status" class="error" role="status"></p></form>
+  <script>
+  document.getElementById('owner-form').addEventListener('submit', async (e) => {
+    e.preventDefault(); const out = document.getElementById('owner-status');
+    const token = document.getElementById('owner-token').value;
+    const res = await fetch('/auth/owner/claim', { method: 'POST',
+      headers: {'Content-Type':'application/json','X-Care-Action':'owner-claim'},
+      body: JSON.stringify({token}) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) { out.textContent = data.error || 'Setup failed.'; return; }
+    location.href = '/desk/';
+  });
+  </script></body></html>`;
+  return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' } });
+}
+
+/** GET /auth/logout — clear the browser session. */
 export function handleLogout(request, env, url) {
   const returnPath = sanitizeReturnPath(url.searchParams.get('return') || '/');
   const headers = new Headers({ Location: returnPath });
@@ -198,37 +315,30 @@ export function handleLogout(request, env, url) {
   return new Response(null, { status: 302, headers });
 }
 
-function authErrorResponse(message) {
-  // A plain, human page — this is a rare path (network hiccup, expired
-  // link, tampering) and it's still a normal person clicking "Sign in".
-  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Sign-in problem</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1"></head>
-  <body style="font-family:system-ui,sans-serif;max-width:32rem;margin:4rem auto;padding:0 1.5rem;color:#1a1a1a">
-  <h1 style="font-size:1.25rem">Sign-in didn't go through</h1>
-  <p>${escapeHtml(message)}</p>
-  <p><a href="/">Back to the board</a></p>
-  </body></html>`;
-  return new Response(html, { status: 400, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
-}
-
-function escapeHtml(str) {
-  return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-}
-
-/**
- * Read + verify the session cookie. Returns `{ sub, name, avatar }` or
- * `null`. This is the ONE function every authenticated route calls —
- * there is no separate "middleware" object, just this plus a per-route
- * `if (!session) return 401` check (kept explicit and readable rather
- * than hidden in a framework layer, matching §8's no-framework stance).
- */
+/** Read and verify the opaque session cookie. */
 export async function getSession(request, env) {
-  const cookies = parseCookies(request);
-  const raw = cookies[sessionCookieName(env)];
-  if (!raw) return null;
-  const payload = await verifyHS256(raw, env.SESSION_SECRET);
-  if (!payload || payload.typ !== 'session' || !payload.sub) return null;
-  return { sub: payload.sub, name: payload.name, avatar: payload.avatar };
+  try {
+    const cookies = parseCookies(request);
+    const token = cookies[sessionCookieName(env)];
+    if (!token) return null;
+    const tokenHash = await hmacHex(env.SESSION_SECRET, token);
+    const now = Math.floor(Date.now() / 1000);
+    const row = await env.DB.prepare(
+      `SELECT s.user_sub AS sub, u.name, u.avatar_url, u.is_owner, u.auth_provider
+       FROM care_sessions s JOIN users u ON u.sub = s.user_sub
+       WHERE s.token_hash = ?1 AND s.revoked_at IS NULL AND s.expires_at > ?2`
+    ).bind(tokenHash, now).first();
+    if (!row) return null;
+    return {
+      sub: row.sub,
+      name: row.name || 'A GM',
+      avatar: row.avatar_url || null,
+      isOwner: row.is_owner === 1,
+      authProvider: row.auth_provider || 'legacy-google',
+    };
+  } catch {
+    return null;
+  }
 }
 
 export function isSecureCookieEnv(env) {
