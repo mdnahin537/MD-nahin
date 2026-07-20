@@ -1,4 +1,4 @@
-// Shared client helpers for every Care page — no framework, no build step.
+// Shared client helpers for every Care page â€” no framework, no build step.
 // Care identity is local to this browser profile. No OAuth or external login.
 // Recovery is an explicit one-time code the user can copy/print for another
 // device or for cookie loss; it is never stored in localStorage.
@@ -23,13 +23,32 @@ window.Care = (function () {
   }
 
   async function postAuth(path, action, body) {
-    const res = await fetch(path, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Care-Action': action },
-      body: body ? JSON.stringify(body) : '{}',
-    });
-    const data = await res.json().catch(() => ({}));
-    return { ok: res.ok, status: res.status, body: data };
+    try {
+      const res = await fetch(path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Care-Action': action },
+        body: body ? JSON.stringify(body) : '{}',
+      });
+      const data = await res.json().catch(() => ({}));
+      return { ok: res.ok, status: res.status, body: data };
+    } catch {
+      return {
+        ok: false,
+        status: 0,
+        body: { error: 'Care could not reach the server. Check your connection and try again.' },
+      };
+    }
+  }
+
+  async function continueWithVerifiedSession(target, panel, btn) {
+    const me = await getMe();
+    if (!me.loggedIn) {
+      btn.disabled = false;
+      showError(panel, 'Care could not save this device identity. Please try again.');
+      return;
+    }
+    closeOverlay();
+    location.assign(target);
   }
 
   function overlay(title, inner) {
@@ -86,8 +105,7 @@ window.Care = (function () {
         showError(panel, result.body.error || 'Recovery did not complete.');
         return;
       }
-      closeOverlay();
-      location.href = target;
+      await continueWithVerifiedSession(target, panel, btn);
     });
     input.focus();
   }
@@ -112,8 +130,7 @@ window.Care = (function () {
         showError(panel, result.body.error || 'This device could not be registered.');
         return;
       }
-      closeOverlay();
-      location.href = target;
+      await continueWithVerifiedSession(target, panel, btn);
     });
   }
 
@@ -217,3 +234,4 @@ window.Care = (function () {
     relativeTime, renderAuthSlot, STATUS_LABEL, TAG_LABEL,
   };
 })();
+
