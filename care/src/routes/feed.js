@@ -9,9 +9,9 @@ const VALID_STATUS_FILTER = new Set(['open', 'planned', 'in_progress', 'shipped'
 const VALID_TYPE_FILTER = new Set(['bug', 'idea']);
 
 /**
- * GET /api/feed — the public board feed (design §6.3). Edge-cached 60s with
+ * GET /api/feed â€” the public board feed (design Â§6.3). Edge-cached 60s with
  * stale-while-revalidate so a burst of curious readers costs ~1 feed compute
- * per minute, not one per reader (design §2.2 lever #2). The cache key
+ * per minute, not one per reader (design Â§2.2 lever #2). The cache key
  * includes every query param so filtered/searched/paged variants cache
  * independently.
  *
@@ -44,9 +44,9 @@ async function computeFeed(env, url) {
   const page = Math.max(0, parseInt(params.get('page') || '0', 10) || 0);
   const sort = params.get('sort') === 'newest' ? 'newest' : 'woven';
 
-  // Base visibility (design §6.3): held=0, not merged, status != declined.
-  // A status filter of 'declined' is the ONE way declined items surface —
-  // public but never promoted (design §6.3 top note).
+  // Base visibility (design Â§6.3): held=0, not merged, status != declined.
+  // A status filter of 'declined' is the ONE way declined items surface â€”
+  // public but never promoted (design Â§6.3 top note).
   const where = ['held = 0', 'merged_into IS NULL'];
   const binds = [];
   if (statusFilter && VALID_STATUS_FILTER.has(statusFilter)) {
@@ -65,7 +65,7 @@ async function computeFeed(env, url) {
   }
   if (q) {
     // ESCAPE '\' is required for the backslash-prefixing below to actually
-    // neutralize literal % / _ in the search text — SQLite's LIKE has no
+    // neutralize literal % / _ in the search text â€” SQLite's LIKE has no
     // default escape character, so without this clause a title containing a
     // literal "%" (e.g. "50% of my map is blank") would never be found by
     // searching its own exact text (confirmed via a live repro: search for
@@ -75,21 +75,21 @@ async function computeFeed(env, url) {
     binds.push(`%${q.replace(/[%_]/g, (m) => '\\' + m)}%`);
   }
 
-  // Two-phase fetch so the feed stays fast at 10,000 items (design §6.4
+  // Two-phase fetch so the feed stays fast at 10,000 items (design Â§6.4
   // "stays fast at 10,000"). Phase A pulls only the LIGHTWEIGHT ranking
-  // columns (all numeric/short) for every visible item — the ranking needs
+  // columns (all numeric/short) for every visible item â€” the ranking needs
   // nothing else, and marshalling 8 small columns across the D1 boundary is
   // far cheaper than 16 columns including every title. Phase B pulls the
-  // heavy DISPLAY columns only for the ~39 items actually shown (module +
-  // shipped strip + current page). This keeps both the D1 transfer and the
+  // heavy DISPLAY columns only for the items actually shown (shipped strip +
+  // current page). This keeps both the D1 transfer and the
   // response-build proportional to what's on screen, not to the whole board.
   const rankQuery = `SELECT id, status, created_at, pinned, net, total, reports_count, owner_note_at
     FROM items WHERE ${where.join(' AND ')}`;
   const windowStart = now - VEL_WINDOW_DAYS * 86400;
 
   // The ranking query and the velocity aggregate are independent, so fire
-  // them together — the feed then waits for max(rankSQL, velSQL), not their
-  // sum. Velocity = agrees-disagrees in the last 7 days (design §6.1); items
+  // them together â€” the feed then waits for max(rankSQL, velSQL), not their
+  // sum. Velocity = agrees-disagrees in the last 7 days (design Â§6.1); items
   // with no recent votes default to vel 0.
   const [rankResult, velResult] = await Promise.all([
     env.DB.prepare(rankQuery).bind(...binds).all(),
@@ -102,10 +102,10 @@ async function computeFeed(env, url) {
   const velByItem = new Map();
   for (const row of velResult.results) velByItem.set(row.item_id, row.vel);
 
-  const { module, moduleShown, shipped, feed } = assembleFeed(rankRows, velByItem, now);
+  const { shipped, feed } = assembleFeed(rankRows, velByItem, now);
 
-  // "Newest" power-user toggle (design §6.4): flat newest-first list, but the
-  // net<0 guardrail STILL applies — even a newest sort never puts a rejected
+  // "Newest" power-user toggle (design Â§6.4): flat newest-first list, but the
+  // net<0 guardrail STILL applies â€” even a newest sort never puts a rejected
   // item above accepted ones.
   let mainList = feed;
   if (sort === 'newest') {
@@ -115,30 +115,25 @@ async function computeFeed(env, url) {
   const totalCount = mainList.length;
   const pageStart = page * PAGE_SIZE;
   // Pass #2 of the guardrail (assert-only): the page is sliced from an
-  // already-guarded list, so this must find zero violations — if it ever
+  // already-guarded list, so this must find zero violations â€” if it ever
   // doesn't, it warns rather than silently masking the upstream bug.
   const { items: pageItems } = guardrail(mainList.slice(pageStart, pageStart + PAGE_SIZE), { assertOnly: true });
 
-  const moduleIdSet = new Set(module.map((it) => it.id));
-  const shownModule = moduleShown ? module : [];
-
   // Phase B: fetch display columns only for the items we will actually render.
-  const shownIds = [...new Set([...shownModule.map((it) => it.id), ...shipped.map((it) => it.id), ...pageItems.map((it) => it.id)])];
+  const shownIds = [...new Set([...shipped.map((it) => it.id), ...pageItems.map((it) => it.id)])];
   const displayById = await fetchDisplayRows(env, shownIds);
 
-  const card = (rankItem, inModule) => publicCard(rankItem, displayById.get(rankItem.id), inModule);
+  const card = (rankItem) => publicCard(rankItem, displayById.get(rankItem.id));
 
   const body = {
-    module: shownModule.map((it) => card(it, true)),
-    moduleShown,
-    shipped: shipped.map((it) => card(it, moduleIdSet.has(it.id))),
-    items: pageItems.map((it) => card(it, moduleIdSet.has(it.id))),
+    shipped: shipped.map(card),
+    items: pageItems.map(card),
     page,
     pageSize: PAGE_SIZE,
     totalCount,
     hasMore: pageStart + PAGE_SIZE < totalCount,
     sort,
-    // When this snapshot was computed — identical for every viewer of this
+    // When this snapshot was computed â€” identical for every viewer of this
     // cache entry (NOT per-user), so it's safe inside the shared cache. Lets
     // a logged-in client tell whether a since-cast vote of theirs predates
     // or postdates the net numbers on screen (see /api/me/votes + board.js).
@@ -164,11 +159,11 @@ async function fetchDisplayRows(env, ids) {
 }
 
 /**
- * Public projection — merges the lightweight ranking row (net/tag inputs)
+ * Public projection â€” merges the lightweight ranking row (net/tag inputs)
  * with the heavy display row. Coarse context only; never the raw report
  * payload, never email.
  */
-function publicCard(rankItem, display, inModule) {
+function publicCard(rankItem, display) {
   const d = display || {};
   return {
     id: rankItem.id,
@@ -184,6 +179,7 @@ function publicCard(rankItem, display, inModule) {
     commentsCount: d.comments_count ?? null,
     createdAt: rankItem.created_at,
     ownerNote: d.owner_note || null,
-    tag: tagFor(rankItem, inModule),
+    tag: tagFor(rankItem),
   };
 }
+
