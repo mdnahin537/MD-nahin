@@ -174,12 +174,12 @@
       '<div class="wiz__screen wiz__center">' +
       '<div class="wiz__mark mono">RW</div>' +
       heading('Tell Hunter what you found', 'Sign in so your report has a name we can follow up with. Reports are public; your email never is.') +
-      '<button class="btn btn-primary btn--big" id="wiz-google">Continue with Google</button>' +
+      '<button class="btn btn-primary btn--big" id="wiz-continue">Continue to Care</button>' +
       '<p class="wiz__fine">One quick step, then it’s all taps.</p>' +
       '</div>'
     );
-    document.getElementById('wiz-google').addEventListener('click', () => {
-      // preserve the #ctx fragment across the round trip
+    document.getElementById('wiz-continue').addEventListener('click', () => {
+      // preserve the #ctx fragment while the local Care identity is created
       C.login(location.pathname + location.search + location.hash);
     });
   };
