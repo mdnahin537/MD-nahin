@@ -52,7 +52,16 @@ function sessionCookieName(env) {
 
 /** Only allow same-origin relative paths as an OAuth `return` target — kills open-redirect. */
 function sanitizeReturnPath(raw) {
-  if (typeof raw !== 'string' || !raw.startsWith('/') || raw.startsWith('//') || raw.includes('://')) {
+  // Backslashes are rejected as well as absolute/scheme URLs. Browsers can
+  // normalize a value such as "/\\evil.example" into a network-path URL,
+  // turning an apparently relative return into an open redirect.
+  if (
+    typeof raw !== 'string' ||
+    !raw.startsWith('/') ||
+    raw.startsWith('//') ||
+    raw.includes('://') ||
+    raw.includes('\\')
+  ) {
     return '/';
   }
   return raw;
