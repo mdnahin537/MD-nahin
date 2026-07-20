@@ -207,7 +207,7 @@ For local owner setup, use the dummy OWNER_SETUP_TOKEN in your local .dev.vars f
 
     http://localhost:8787/auth/owner
 
-The local flow does not require a Google mock server. The old mock-google script was removed because Google is no longer part of the Care runtime.
+The local flow is self-contained and does not require an external identity server.
 
 ---
 
