@@ -53,7 +53,18 @@ window.Care = (function () {
     }
     panel.innerHTML =
       '<p role="status" style="margin:0;color:#28613b;font-weight:600">âœ“ This device is ready. Continuing to Careâ€¦</p>';
-    window.setTimeout(() => location.assign(target), 650);
+    window.setTimeout(() => {
+      // When Care opened this choice from the current page, use a true reload
+      // after the session cookie has been verified. This makes the new
+      // identity visible to every page script and avoids a stale anonymous
+      // board or report view.
+      const current = location.pathname + location.search + location.hash;
+      if (target === current) {
+        location.reload();
+      } else {
+        location.replace(target);
+      }
+    }, 650);
   }
 
   function overlay(title, inner) {
