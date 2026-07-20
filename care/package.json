@@ -9,7 +9,6 @@
     "migrate:local": "wrangler d1 migrations apply realmwright-care --local",
     "migrate:remote": "wrangler d1 migrations apply realmwright-care --remote",
     "seed:local": "node scripts/seed.mjs",
-    "mock-google": "node scripts/mock-google.mjs",
     "deploy": "wrangler deploy"
   },
   "devDependencies": {
