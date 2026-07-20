@@ -49,9 +49,17 @@ export async function handlePostComment(request, env, url) {
   const insert = env.DB.prepare(
     'INSERT INTO comments (item_id, user_sub, parent_id, body, created_at, held) VALUES (?1, ?2, ?3, ?4, ?5, ?6) RETURNING id'
   ).bind(itemId, session.sub, parentId, bodyText, now, held ? 1 : 0);
-  const countsUpdate = env.DB.prepare('UPDATE items SET comments_count = comments_count + 1 WHERE id = ?1').bind(itemId);
 
-  const [insertResult] = await env.DB.batch([insert, countsUpdate]);
+  // Held comments stay in D1 for the Owner Desk, but they are not public.
+  // Keep the public counter truthful: only visible comments increment it.
+  const statements = [insert];
+  if (!held) {
+    statements.push(
+      env.DB.prepare('UPDATE items SET comments_count = comments_count + 1 WHERE id = ?1').bind(itemId)
+    );
+  }
+
+  const [insertResult] = await env.DB.batch(statements);
   const newId = insertResult.results?.[0]?.id ?? null;
 
   return json({ ok: true, id: newId, held });
