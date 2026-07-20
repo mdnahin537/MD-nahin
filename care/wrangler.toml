@@ -33,18 +33,11 @@ migrations_dir = "migrations"
 [ai]
 binding = "AI"
 
-# ── Non-secret config. Secrets (GOOGLE_CLIENT_SECRET, SESSION_SECRET,
-# OWNER_SUB, optional OPENROUTER_KEY) are set with `wrangler secret put`
-# at deploy time — see care/README.md. GOOGLE_CLIENT_ID is not secret
-# (it is visible in the browser's OAuth redirect URL either way) so it
-# lives here as a plain var Hunter edits directly.
+# ── Non-secret config. SESSION_SECRET and OWNER_SETUP_TOKEN are secrets
+# configured with wrangler secret put; see care/README.md. No Google client,
+# OAuth endpoint, or third-party identity setting is needed.
 [vars]
 ENVIRONMENT = "production"
-GOOGLE_CLIENT_ID = "REPLACE-WITH-YOUR-GOOGLE-OAUTH-CLIENT-ID.apps.googleusercontent.com"
-GOOGLE_AUTH_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth"
-GOOGLE_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"
-GOOGLE_JWKS_ENDPOINT = "https://www.googleapis.com/oauth2/v3/certs"
-GOOGLE_ISSUER = "https://accounts.google.com"
 SITE_NAME = "RealmWright — Community Board"
 FEATURE_MICRO_INTERVIEW = "true"
 SESSION_COOKIE_NAME = "rw_care_session"
