@@ -63,7 +63,7 @@ function randomToken() {
   const bytes = randomBytes(32);
   let binary = '';
   for (const b of bytes) binary += String.fromCharCode(b);
-  return btoa(binary).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/, '');
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 async function hmacHex(secret, value) {
@@ -81,7 +81,7 @@ async function hmacHex(secret, value) {
 
 function normalizeRecoveryCode(raw) {
   return typeof raw === 'string'
-    ? raw.toUpperCase().replace(/[\\s-]/g, '')
+    ? raw.toUpperCase().replace(/[\s-]/g, '')
     : '';
 }
 
@@ -102,7 +102,7 @@ function sanitizeReturnPath(raw) {
     !raw.startsWith('/') ||
     raw.startsWith('//') ||
     raw.includes('://') ||
-    raw.includes('\\\\')
+    raw.includes('\\')
   ) {
     return '/';
   }
