@@ -9,7 +9,7 @@ on:
       - claude/realmwright-pivot
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   worker-validation:
@@ -53,88 +53,3 @@ jobs:
             worker/package-lock.json
             worker/tsconfig.json
             worker/wrangler.toml
-
-  apply-itch-ttl-hardening:
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - name: Check out exact recovery head
-        uses: actions/checkout@v4
-        with:
-          ref: agent/realmwright-recovery-2026-07-24
-          fetch-depth: 0
-
-      - name: Detect staged itch patch
-        id: staged
-        shell: bash
-        run: |
-          if test -f recovery/patches/itch-device-ttl-hardening.patch; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "present=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Verify exact pre-change files and patch
-        if: steps.staged.outputs.present == 'true'
-        shell: bash
-        run: |
-          test "$(sha256sum worker/src/itch.ts | awk '{print $1}')" = "711a447a14f48fcffb6dc7b9df301d2685dbe88ab20f0f19ce7d6e9ecc9f7e12"
-          test "$(sha256sum worker/test/config-hardening.test.mjs | awk '{print $1}')" = "e22495d0874a03387695ddfaa120bf4c006754acc1908393fa533ed2241ceb48"
-          test "$(sha256sum recovery/patches/itch-device-ttl-hardening.patch | awk '{print $1}')" = "96e0db05090987161c170f987e28e24e8086c0490755bbb10241968ce61dea17"
-
-      - name: Verify and apply audited itch patch
-        if: steps.staged.outputs.present == 'true'
-        shell: bash
-        run: |
-          git apply --check recovery/patches/itch-device-ttl-hardening.patch
-          git apply recovery/patches/itch-device-ttl-hardening.patch
-
-      - name: Verify exact post-change files
-        if: steps.staged.outputs.present == 'true'
-        shell: bash
-        run: |
-          test "$(sha256sum worker/src/itch.ts | awk '{print $1}')" = "353419e672f5732c56858d0168497ee6c5433ae50b82be0430db7ee3018bad28"
-          test "$(sha256sum worker/test/config-hardening.test.mjs | awk '{print $1}')" = "d4740f8784d3fc7c43f6d4c4711f87006a591bfb536862645657b122ef150312"
-          ! grep -RInE 'parseInt\((env|\(await)' worker/src --include='*.ts'
-
-      - name: Use Node.js 22 for guarded validation
-        if: steps.staged.outputs.present == 'true'
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: worker/package-lock.json
-
-      - name: Install Worker dependencies
-        if: steps.staged.outputs.present == 'true'
-        working-directory: worker
-        run: npm ci
-
-      - name: Run complete 38-test Worker suite
-        if: steps.staged.outputs.present == 'true'
-        working-directory: worker
-        run: npm test
-
-      - name: Run Worker typecheck
-        if: steps.staged.outputs.present == 'true'
-        working-directory: worker
-        run: npm run typecheck
-
-      - name: Verify exact two-file scope
-        if: steps.staged.outputs.present == 'true'
-        shell: bash
-        run: |
-          expected=$'worker/src/itch.ts\nworker/test/config-hardening.test.mjs'
-          actual="$(git diff --name-only | sort)"
-          test "$actual" = "$expected" || { printf 'Unexpected files:\n%s\n' "$actual" >&2; exit 1; }
-
-      - name: Commit verified itch TTL hardening
-        if: steps.staged.outputs.present == 'true'
-        shell: bash
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add worker/src/itch.ts worker/test/config-hardening.test.mjs
-          git commit -m "Use bounded device TTL for itch licenses"
-          git push origin HEAD:agent/realmwright-recovery-2026-07-24
