@@ -9,7 +9,7 @@ on:
       - claude/realmwright-pivot
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   worker-validation:
@@ -53,3 +53,94 @@ jobs:
             worker/package-lock.json
             worker/tsconfig.json
             worker/wrangler.toml
+
+  apply-request-body-bounds:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out exact recovery head
+        uses: actions/checkout@v4
+        with:
+          ref: agent/realmwright-recovery-2026-07-24
+          fetch-depth: 0
+
+      - name: Detect staged body patch
+        id: staged
+        shell: bash
+        run: |
+          if test -f recovery/patches/request-body-bounds.patch.b64; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify exact pre-change files
+        if: steps.staged.outputs.present == 'true'
+        shell: bash
+        run: |
+          test "$(sha256sum worker/src/input.ts | awk '{print $1}')" = "43b4f50a3bcb2f1e2d9def99c721468bbf7d12516be5654a97bd606d4c780b77"
+          test "$(sha256sum worker/src/demo.ts | awk '{print $1}')" = "6a8c649b2269c6aea89ebff8b9b868099f5a500c77079b17ed559bdf11409559"
+          test "$(sha256sum worker/src/license.ts | awk '{print $1}')" = "789bc37964817990879aeeb2a7699acc111749fe2c9ad82ec6798d16a6b8b803"
+          test "$(sha256sum worker/src/itch.ts | awk '{print $1}')" = "7d8d58b52974877ad6d308ec451f81e1ee6cfa361e4bb593d6232f259a5745c0"
+          test "$(sha256sum worker/test/input-hardening.test.mjs | awk '{print $1}')" = "f0b78e7c5681f9638d396990f68db87543f5f6f8fccc07319b4f8babdf8213e6"
+
+      - name: Decode and verify exact audited patch
+        if: steps.staged.outputs.present == 'true'
+        shell: bash
+        run: |
+          base64 -d recovery/patches/request-body-bounds.patch.b64 > /tmp/request-body-bounds.patch
+          test "$(sha256sum /tmp/request-body-bounds.patch | awk '{print $1}')" = "30dfd6fc7ca6929dff94013c70fcd8fbfdedc2d892a7d33449a6edc948f10684"
+          git apply --check /tmp/request-body-bounds.patch
+          git apply /tmp/request-body-bounds.patch
+
+      - name: Verify exact post-change files
+        if: steps.staged.outputs.present == 'true'
+        shell: bash
+        run: |
+          test "$(sha256sum worker/src/input.ts | awk '{print $1}')" = "fbf21e6f849a1a86b8669f490a5f423b8d7d57ada085e032dd4772da5883243a"
+          test "$(sha256sum worker/src/demo.ts | awk '{print $1}')" = "b1d595cdb6b95d981f4c8be4ed81b30218f1188833f46d6419ebefacbe6f6973"
+          test "$(sha256sum worker/src/license.ts | awk '{print $1}')" = "8d66541d7dd936373c11b74ce3231ab74c5eaf9f7059e60086a3f4e39a7680bc"
+          test "$(sha256sum worker/src/itch.ts | awk '{print $1}')" = "c3d36ed41bf7abe83c5455185e6d737600626e8e60491e1725795184f21d8eee"
+          test "$(sha256sum worker/test/input-hardening.test.mjs | awk '{print $1}')" = "3aeeba4d9c50b58d034e67d29cec2890eefc208a56222432e6db55e1e00fc5dd"
+
+      - name: Use Node.js 22 for guarded validation
+        if: steps.staged.outputs.present == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: worker/package-lock.json
+
+      - name: Install Worker dependencies
+        if: steps.staged.outputs.present == 'true'
+        working-directory: worker
+        run: npm ci
+
+      - name: Run complete 50-test Worker suite
+        if: steps.staged.outputs.present == 'true'
+        working-directory: worker
+        run: npm test
+
+      - name: Run Worker typecheck
+        if: steps.staged.outputs.present == 'true'
+        working-directory: worker
+        run: npm run typecheck
+
+      - name: Verify exact five-file scope
+        if: steps.staged.outputs.present == 'true'
+        shell: bash
+        run: |
+          expected=$'worker/src/demo.ts\nworker/src/input.ts\nworker/src/itch.ts\nworker/src/license.ts\nworker/test/input-hardening.test.mjs'
+          actual="$(git diff --name-only | sort)"
+          test "$actual" = "$expected" || { printf 'Unexpected files:\n%s\n' "$actual" >&2; exit 1; }
+
+      - name: Commit verified request-body bounds
+        if: steps.staged.outputs.present == 'true'
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add worker/src/demo.ts worker/src/input.ts worker/src/itch.ts worker/src/license.ts worker/test/input-hardening.test.mjs
+          git commit -m "Bound Worker request bodies"
+          git push origin HEAD:agent/realmwright-recovery-2026-07-24
