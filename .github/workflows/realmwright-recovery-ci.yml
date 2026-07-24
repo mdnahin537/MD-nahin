@@ -173,41 +173,23 @@ jobs:
         working-directory: worker
         run: npm run typecheck
 
-      - name: Restore read-only CI and remove transient files
+      - name: Verify only the audited HTML changed
         if: steps.staged.outputs.present == 'true'
         shell: bash
         run: |
-          git checkout 3940583e580d131a829c84b6120038131f6b0287 -- .github/workflows/realmwright-recovery-ci.yml
-          rm recovery/patches/license-gate-provider-setup.patch
-          rm .github/workflows/apply-license-gate-recovery.yml
-          rmdir recovery/patches 2>/dev/null || true
-          rmdir recovery 2>/dev/null || true
-
-      - name: Verify final scope allowlist
-        if: steps.staged.outputs.present == 'true'
-        shell: bash
-        run: |
-          test ! -e recovery/patches/license-gate-provider-setup.patch
-          test ! -e .github/workflows/apply-license-gate-recovery.yml
-          git diff --quiet -- realmwright-v7.html && {
-            echo "Expected realmwright-v7.html to be changed" >&2
+          actual="$(git diff --name-only)"
+          test "$actual" = "realmwright-v7.html" || {
+            echo "Unexpected product changes:" >&2
+            printf '%s\n' "$actual" >&2
             exit 1
           }
-          unexpected="$(git diff --name-only | grep -Ev '^(realmwright-v7\.html|\.github/workflows/realmwright-recovery-ci\.yml|\.github/workflows/apply-license-gate-recovery\.yml|recovery/patches/license-gate-provider-setup\.patch)$' || true)"
-          test -z "$unexpected" || {
-            echo "Unexpected changed paths:" >&2
-            printf '%s\n' "$unexpected" >&2
-            exit 1
-          }
-          printf 'Approved changed paths:\n'
-          git diff --name-only
 
-      - name: Commit verified license gate
+      - name: Commit verified license gate HTML only
         if: steps.staged.outputs.present == 'true'
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
+          git add realmwright-v7.html
           git commit -m "Enforce license gate on Copilot provider setup"
           git push origin HEAD:agent/realmwright-recovery-2026-07-24
