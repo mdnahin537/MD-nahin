@@ -20,7 +20,7 @@
 import { jsonResponse } from './cors';
 import { checkRateLimit } from './ratelimit';
 import type { RateLimitEnv } from './ratelimit';
-import { deviceCookie, deviceTtlSeconds, findExistingDevice, issueOrRefresh, readToken, revoke, touch } from './fingerprint';
+import { deviceCookie, deviceTtlSeconds, findExistingDevice, isDeviceBucket, issueOrRefresh, readToken, revoke, touch } from './fingerprint';
 import type { DeviceEnv } from './fingerprint';
 
 const LS_BASE = 'https://api.lemonsqueezy.com/v1/licenses';
@@ -472,10 +472,16 @@ export async function reapOrphans(env: LicenseEnv): Promise<{ scanned: number; r
     const page = await env.DEVICES.list({ cursor, limit: 1000 });
     for (const k of page.keys) {
       scanned++;
-      const bucket = (await env.DEVICES.get(k.name, 'json')) as any;
-      if (!bucket || !Array.isArray(bucket.tokens)) {
-        await env.DEVICES.delete(k.name);
-        reaped++;
+      // Never delete malformed bucket state: deletion would reset the device cap.
+      // Preserve it for support/manual repair and fail closed on activation.
+      const stored = await env.DEVICES.get(k.name);
+      if (stored === null) continue;
+      let bucket: any;
+      try {
+        const parsed = JSON.parse(stored);
+        if (!isDeviceBucket(parsed)) continue;
+        bucket = parsed;
+      } catch {
         continue;
       }
       // Touch nothing if all tokens still fresh — fast path.

@@ -46,12 +46,31 @@ function newToken(): string {
   return crypto.randomUUID();
 }
 
+export function isDeviceBucket(raw: unknown): raw is DeviceBucket {
+  if (!raw || typeof raw !== 'object' || !Array.isArray((raw as DeviceBucket).tokens)) return false;
+  return (raw as DeviceBucket).tokens.every((record: any) =>
+    record &&
+    typeof record === 'object' &&
+    typeof record.token === 'string' &&
+    record.token.length > 0 &&
+    (record.instance_id === null || typeof record.instance_id === 'string') &&
+    Number.isFinite(record.last_seen_at) &&
+    record.last_seen_at >= 0 &&
+    (record.created_at === undefined || (Number.isFinite(record.created_at) && record.created_at >= 0)),
+  );
+}
+
 async function readBucket(env: DeviceEnv, key: string): Promise<DeviceBucket> {
-  const raw = await env.DEVICES.get(key, 'json');
-  if (!raw || typeof raw !== 'object' || !Array.isArray((raw as DeviceBucket).tokens)) {
-    return { tokens: [] };
+  const stored = await env.DEVICES.get(key);
+  if (stored === null) return { tokens: [] };
+  let raw: unknown;
+  try {
+    raw = JSON.parse(stored);
+  } catch {
+    throw new Error('invalid-device-bucket');
   }
-  return raw as DeviceBucket;
+  if (!isDeviceBucket(raw)) throw new Error('invalid-device-bucket');
+  return raw;
 }
 
 async function writeBucket(env: DeviceEnv, key: string, bucket: DeviceBucket): Promise<void> {
@@ -88,10 +107,12 @@ export async function findExistingDevice(
   licenseKey: string,
   presentedToken: string | null,
 ): Promise<ExistingDeviceResult | null> {
-  if (!presentedToken) return null;
   const ttl = deviceTtlSeconds(env);
   const cap = deviceCap(env);
+  // Validate an existing bucket before any upstream activation, even when this
+  // request has no device token. Corrupt state must not look like zero devices.
   const bucket = prune(await readBucket(env, licenseKey), ttl);
+  if (!presentedToken) return null;
   const record = bucket.tokens.find((t) => t.token === presentedToken);
   return record ? { record, active_devices: bucket.tokens.length, cap } : null;
 }
