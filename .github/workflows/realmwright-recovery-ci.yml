@@ -9,7 +9,7 @@ on:
       - claude/realmwright-pivot
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   worker-validation:
@@ -53,93 +53,3 @@ jobs:
             worker/package-lock.json
             worker/tsconfig.json
             worker/wrangler.toml
-
-  apply-input-field-bounds:
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - name: Check out exact recovery head
-        uses: actions/checkout@v4
-        with:
-          ref: agent/realmwright-recovery-2026-07-24
-          fetch-depth: 0
-
-      - name: Detect staged input patch
-        id: staged
-        shell: bash
-        run: |
-          if test -f recovery/patches/input-field-bounds.patch; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "present=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Verify exact pre-change files and patch
-        if: steps.staged.outputs.present == 'true'
-        shell: bash
-        run: |
-          test ! -e worker/src/input.ts
-          test ! -e worker/test/input-hardening.test.mjs
-          test "$(sha256sum worker/src/demo.ts | awk '{print $1}')" = "b14666cff8df099ef456e07fd16217c27931f3075b2722618a735b57c7c156ee"
-          test "$(sha256sum worker/src/license.ts | awk '{print $1}')" = "bf100e36e2b268da535420479d1e0a26600bb3d9eb24b9870b42d882373e7e59"
-          test "$(sha256sum worker/src/itch.ts | awk '{print $1}')" = "353419e672f5732c56858d0168497ee6c5433ae50b82be0430db7ee3018bad28"
-          test "$(sha256sum recovery/patches/input-field-bounds.patch | awk '{print $1}')" = "8eaef34f8ca240bc9e76d56e6b534a3854952c5620fd64cb247a2ff59e0ca323"
-
-      - name: Verify and apply audited input patch
-        if: steps.staged.outputs.present == 'true'
-        shell: bash
-        run: |
-          git apply --check recovery/patches/input-field-bounds.patch
-          git apply recovery/patches/input-field-bounds.patch
-
-      - name: Verify exact post-change files
-        if: steps.staged.outputs.present == 'true'
-        shell: bash
-        run: |
-          test "$(sha256sum worker/src/input.ts | awk '{print $1}')" = "43b4f50a3bcb2f1e2d9def99c721468bbf7d12516be5654a97bd606d4c780b77"
-          test "$(sha256sum worker/src/demo.ts | awk '{print $1}')" = "6a8c649b2269c6aea89ebff8b9b868099f5a500c77079b17ed559bdf11409559"
-          test "$(sha256sum worker/src/license.ts | awk '{print $1}')" = "789bc37964817990879aeeb2a7699acc111749fe2c9ad82ec6798d16a6b8b803"
-          test "$(sha256sum worker/src/itch.ts | awk '{print $1}')" = "7d8d58b52974877ad6d308ec451f81e1ee6cfa361e4bb593d6232f259a5745c0"
-          test "$(sha256sum worker/test/input-hardening.test.mjs | awk '{print $1}')" = "f0b78e7c5681f9638d396990f68db87543f5f6f8fccc07319b4f8babdf8213e6"
-
-      - name: Use Node.js 22 for guarded validation
-        if: steps.staged.outputs.present == 'true'
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: worker/package-lock.json
-
-      - name: Install Worker dependencies
-        if: steps.staged.outputs.present == 'true'
-        working-directory: worker
-        run: npm ci
-
-      - name: Run complete 46-test Worker suite
-        if: steps.staged.outputs.present == 'true'
-        working-directory: worker
-        run: npm test
-
-      - name: Run Worker typecheck
-        if: steps.staged.outputs.present == 'true'
-        working-directory: worker
-        run: npm run typecheck
-
-      - name: Verify exact five-file scope
-        if: steps.staged.outputs.present == 'true'
-        shell: bash
-        run: |
-          expected=$'worker/src/demo.ts\nworker/src/input.ts\nworker/src/itch.ts\nworker/src/license.ts\nworker/test/input-hardening.test.mjs'
-          actual="$(git status --short | cut -c4- | sort)"
-          test "$actual" = "$expected" || { printf 'Unexpected files:\n%s\n' "$actual" >&2; exit 1; }
-
-      - name: Commit verified UTF-8 input bounds
-        if: steps.staged.outputs.present == 'true'
-        shell: bash
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add worker/src/demo.ts worker/src/input.ts worker/src/itch.ts worker/src/license.ts worker/test/input-hardening.test.mjs
-          git commit -m "Bound license inputs and demo prompt bytes"
-          git push origin HEAD:agent/realmwright-recovery-2026-07-24
