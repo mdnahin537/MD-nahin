@@ -1,0 +1,92 @@
+diff --git a/worker/src/demo.ts b/worker/src/demo.ts
+index c9ff832..72c1b10 100644
+--- a/worker/src/demo.ts
++++ b/worker/src/demo.ts
+@@ -261,7 +261,22 @@ export async function handleDemoGenerate(request: Request, env: DemoEnv): Promis
+       return jsonResponse({ error: 'The model declined this request. Try Sample Mode.', fallback: true }, 502, request, allowed);
+     }
+ 
+-    const content = data?.choices?.[0]?.message?.content ?? '';
++    const choice = data?.choices?.[0];
++    const content = choice?.message?.content;
++    const finishReason = choice?.finish_reason;
++    // RECOVERY FIX (2026-07-24): a successful HTTP status is not enough to
++    // charge one of the five demo uses. Empty output, or output explicitly cut
++    // off by the model token limit, is not a complete usable Copilot response.
++    // Refund both reservations so the visitor can retry without losing a use.
++    if (typeof content !== 'string' || !content.trim() || finishReason === 'length') {
++      await unbump(env, ipKey, trialTtl);
++      await unbump(env, globalKey, globalTtl);
++      const error = finishReason === 'length'
++        ? 'The free Copilot response was cut off. Please try again.'
++        : 'The free Copilot returned no usable response. Please try again.';
++      return jsonResponse({ error, fallback: true }, 502, request, allowed);
++    }
++
+     return jsonResponse(
+       {
+         ok: true,
+diff --git a/worker/test/recovery-demo.test.mjs b/worker/test/recovery-demo.test.mjs
+index 6ddc0f8..49c160a 100644
+--- a/worker/test/recovery-demo.test.mjs
++++ b/worker/test/recovery-demo.test.mjs
+@@ -66,3 +66,59 @@ test('demo: partial quota reservation failure rolls back the completed visitor s
+     restore();
+   }
+ });
++
++
++test('demo: an empty successful upstream response is refunded', async () => {
++  const fetchMock = makeFetch([
++    { match: (url) => url.includes(URLS.TURNSTILE), respond: () => ({ status: 200, body: { success: true } }) },
++    {
++      match: (url) => url.includes(URLS.OPENROUTER),
++      respond: () => ({ status: 200, body: { choices: [{ finish_reason: 'stop', message: { content: '' } }] } }),
++    },
++  ]);
++  const restore = withFetch(fetchMock);
++  try {
++    const env = demoEnv();
++    const day = new Date().toISOString().slice(0, 10);
++    const response = await handleDemoGenerate(
++      jsonRequest({ turnstileToken: 'good', messages: [{ role: 'user', content: 'hi' }] }),
++      env,
++    );
++    assert.equal(response.status, 502);
++    assert.equal(await env.RATELIMIT.get('demo:ip:203.0.113.7'), '0');
++    assert.equal(await env.RATELIMIT.get(`demo:global:${day}`), '0');
++    assert.equal((await response.json()).fallback, true);
++  } finally {
++    restore();
++  }
++});
++
++test('demo: a token-limit-truncated upstream response is refunded', async () => {
++  const fetchMock = makeFetch([
++    { match: (url) => url.includes(URLS.TURNSTILE), respond: () => ({ status: 200, body: { success: true } }) },
++    {
++      match: (url) => url.includes(URLS.OPENROUTER),
++      respond: () => ({
++        status: 200,
++        body: { choices: [{ finish_reason: 'length', message: { content: 'partial answer' } }] },
++      }),
++    },
++  ]);
++  const restore = withFetch(fetchMock);
++  try {
++    const env = demoEnv();
++    const day = new Date().toISOString().slice(0, 10);
++    const response = await handleDemoGenerate(
++      jsonRequest({ turnstileToken: 'good', messages: [{ role: 'user', content: 'hi' }] }),
++      env,
++    );
++    assert.equal(response.status, 502);
++    assert.equal(await env.RATELIMIT.get('demo:ip:203.0.113.7'), '0');
++    assert.equal(await env.RATELIMIT.get(`demo:global:${day}`), '0');
++    const body = await response.json();
++    assert.equal(body.fallback, true);
++    assert.match(body.error, /cut off/i);
++  } finally {
++    restore();
++  }
++});
