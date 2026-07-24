@@ -62,6 +62,7 @@ This is the durable handoff for every future session. Read it before changing Re
 - `47738c3822f937cb10f99f360f42ceccd5ee0fa3` — removes full product keys from queue warning/error logs; logs non-secret metadata only.
 - `a38774a4407c25a21aeeaaed63c635a237fe4c18` — preserves the server-issued device token until deactivation or queued cleanup completes, ensuring the Worker can revoke the exact device binding.
 - `0cff32b92ab93d5f404bf69117f42ba7d6cd62ad` — treats deactivation as successful only when the Worker explicitly returns `deactivated:true`; distinguishes `success`, retryable failure, and terminal rejection.
+- `054dca70f70eb062f41a129eabb4e164260bdaa6` — moves the queued cleanup payload from `localStorage` to IndexedDB, migrates the legacy queue only after the IDB write commits, reports queue-write failure, preserves queued work after drain-write failure, and restores the local license when neither remote cleanup nor durable retry can be secured.
 
 ## Validation evidence
 
@@ -74,6 +75,8 @@ This is the durable handoff for every future session. Read it before changing Re
 - License-log privacy run: `30118948226` — success.
 - Device-token continuity run: `30119242029` — success.
 - Deactivation-response semantics run: `30119469596` — success.
+- IndexedDB license-queue run: `30120322319` — success.
+- Read-only cleanup verification run: `30120399223` — success.
 - Recovery CI is restored to read-only after every guarded commit.
 
 ### Deterministic browser validation
@@ -94,10 +97,16 @@ Passed:
 - HTTP 200 with `deactivated:false` is terminal, not success.
 - Malformed 2xx deactivation output remains retryable.
 - Transient failure followed by `deactivated:true` succeeds.
+- Legacy localStorage cleanup entries migrate to IndexedDB and are removed only after the IDB commit.
+- New cleanup entries are stored in IndexedDB, not localStorage.
+- Queue-write failure is returned instead of swallowed.
+- If remote deactivation is retryable but the retry cannot be stored, the active local license and token are restored.
+- A failed drain-result write preserves the previous queue and token.
+- A successful drain clears the queue and token.
 
 ### Current exact frontend state
 
-- Current committed `realmwright-v7.html` SHA-256: `efb12c7c3df61abb652d1c5ff9858b5ecfe2c12b467dab677355c1721ee29f0f`.
+- Current committed `realmwright-v7.html` SHA-256: `6f52063e8dd4ea1db1cbbbd88ec7292751094428f2017f8f2e443359c18110ef`.
 - All three real inline JavaScript blocks pass syntax validation.
 - No production deployment has been performed from PR #13.
 
@@ -131,18 +140,16 @@ Still unproven:
 
 ## Remaining license audit items
 
-- The queued deactivation payload is still persisted in `localStorage`, including the product key and instance ID. It is no longer logged, but moving the queue to IndexedDB would reduce exposure and provide explicit write-failure handling.
-- `LicenseQueue._write()` currently swallows storage failures; a failed queue write can silently lose the remote cleanup operation.
 - Full end-to-end validation against a real Lemon Squeezy test product remains outstanding: activate, reload/background validate, same-device reactivation, second/third device, fourth-device rejection, deactivate, and recovered slot.
+- A true browser-storage exhaustion scenario should still be manually exercised on the final deployed origin; deterministic failure injection is passing.
 
 ## Immediate next actions
 
-1. Harden queue persistence: remove the cleanup payload from `localStorage`, use durable IndexedDB storage, and surface queue-write failure honestly.
-2. Expand the demo-specific surface into five full, reviewable world-changing AI uses while keeping paid Copilot hidden.
-3. Obtain/confirm the actual Pages origin and public Turnstile site key without exposing secrets, then run a real hosted demo-model request.
-4. Perform one real licensed OpenRouter authorization and free-NVIDIA generation on the final callback origin.
-5. Run the complete license device-cap matrix against Lemon Squeezy test mode.
-6. Update this file and PR #13 after every verified change.
+1. Expand the demo-specific surface into five full, reviewable world-changing AI uses while keeping paid Copilot hidden.
+2. Obtain or confirm the actual Pages origin and public Turnstile site key without exposing secrets, then run a real hosted demo-model request.
+3. Perform one real licensed OpenRouter authorization and free-NVIDIA generation on the final callback origin.
+4. Run the complete license device-cap matrix against Lemon Squeezy test mode.
+5. Update this file and PR #13 after every verified change.
 
 ## Safety rules
 
