@@ -261,7 +261,22 @@ export async function handleDemoGenerate(request: Request, env: DemoEnv): Promis
       return jsonResponse({ error: 'The model declined this request. Try Sample Mode.', fallback: true }, 502, request, allowed);
     }
 
-    const content = data?.choices?.[0]?.message?.content ?? '';
+    const choice = data?.choices?.[0];
+    const content = choice?.message?.content;
+    const finishReason = choice?.finish_reason;
+    // RECOVERY FIX (2026-07-24): a successful HTTP status is not enough to
+    // charge one of the five demo uses. Empty output, or output explicitly cut
+    // off by the model token limit, is not a complete usable Copilot response.
+    // Refund both reservations so the visitor can retry without losing a use.
+    if (typeof content !== 'string' || !content.trim() || finishReason === 'length') {
+      await unbump(env, ipKey, trialTtl);
+      await unbump(env, globalKey, globalTtl);
+      const error = finishReason === 'length'
+        ? 'The free Copilot response was cut off. Please try again.'
+        : 'The free Copilot returned no usable response. Please try again.';
+      return jsonResponse({ error, fallback: true }, 502, request, allowed);
+    }
+
     return jsonResponse(
       {
         ok: true,

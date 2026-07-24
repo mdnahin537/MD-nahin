@@ -66,3 +66,59 @@ test('demo: partial quota reservation failure rolls back the completed visitor s
     restore();
   }
 });
+
+
+test('demo: an empty successful upstream response is refunded', async () => {
+  const fetchMock = makeFetch([
+    { match: (url) => url.includes(URLS.TURNSTILE), respond: () => ({ status: 200, body: { success: true } }) },
+    {
+      match: (url) => url.includes(URLS.OPENROUTER),
+      respond: () => ({ status: 200, body: { choices: [{ finish_reason: 'stop', message: { content: '' } }] } }),
+    },
+  ]);
+  const restore = withFetch(fetchMock);
+  try {
+    const env = demoEnv();
+    const day = new Date().toISOString().slice(0, 10);
+    const response = await handleDemoGenerate(
+      jsonRequest({ turnstileToken: 'good', messages: [{ role: 'user', content: 'hi' }] }),
+      env,
+    );
+    assert.equal(response.status, 502);
+    assert.equal(await env.RATELIMIT.get('demo:ip:203.0.113.7'), '0');
+    assert.equal(await env.RATELIMIT.get(`demo:global:${day}`), '0');
+    assert.equal((await response.json()).fallback, true);
+  } finally {
+    restore();
+  }
+});
+
+test('demo: a token-limit-truncated upstream response is refunded', async () => {
+  const fetchMock = makeFetch([
+    { match: (url) => url.includes(URLS.TURNSTILE), respond: () => ({ status: 200, body: { success: true } }) },
+    {
+      match: (url) => url.includes(URLS.OPENROUTER),
+      respond: () => ({
+        status: 200,
+        body: { choices: [{ finish_reason: 'length', message: { content: 'partial answer' } }] },
+      }),
+    },
+  ]);
+  const restore = withFetch(fetchMock);
+  try {
+    const env = demoEnv();
+    const day = new Date().toISOString().slice(0, 10);
+    const response = await handleDemoGenerate(
+      jsonRequest({ turnstileToken: 'good', messages: [{ role: 'user', content: 'hi' }] }),
+      env,
+    );
+    assert.equal(response.status, 502);
+    assert.equal(await env.RATELIMIT.get('demo:ip:203.0.113.7'), '0');
+    assert.equal(await env.RATELIMIT.get(`demo:global:${day}`), '0');
+    const body = await response.json();
+    assert.equal(body.fallback, true);
+    assert.match(body.error, /cut off/i);
+  } finally {
+    restore();
+  }
+});
