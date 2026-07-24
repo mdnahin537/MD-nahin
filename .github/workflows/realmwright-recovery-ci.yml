@@ -9,7 +9,7 @@ on:
       - claude/realmwright-pivot
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   worker-validation:
@@ -53,100 +53,3 @@ jobs:
             worker/package-lock.json
             worker/tsconfig.json
             worker/wrangler.toml
-
-  apply-audited-license-atomicity:
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - name: Check out exact recovery head
-        uses: actions/checkout@v4
-        with:
-          ref: agent/realmwright-recovery-2026-07-24
-          fetch-depth: 0
-
-      - name: Detect staged atomicity patch
-        id: staged
-        shell: bash
-        run: |
-          if test -f recovery/patches/license-atomic-state.patch; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "present=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Verify exact pre-change HTML
-        if: steps.staged.outputs.present == 'true'
-        run: test "$(sha256sum realmwright-v7.html | awk '{print $1}')" = "bdddd0b74683e8ca6e2fde4bf2386a953d076b0cac73ab038a9bb9757b969771"
-
-      - name: Verify and apply audited patch
-        if: steps.staged.outputs.present == 'true'
-        run: |
-          git apply --check recovery/patches/license-atomic-state.patch
-          git apply recovery/patches/license-atomic-state.patch
-
-      - name: Verify exact post-change HTML
-        if: steps.staged.outputs.present == 'true'
-        run: test "$(sha256sum realmwright-v7.html | awk '{print $1}')" = "5916f029cfb5460dfb924545031c547e4da462a913ae6a837c8f336d758eb937"
-
-      - name: Syntax-check every real inline script
-        if: steps.staged.outputs.present == 'true'
-        shell: bash
-        run: |
-          python - <<'PY'
-          from html.parser import HTMLParser
-          from pathlib import Path
-          class ScriptParser(HTMLParser):
-              def __init__(self):
-                  super().__init__(convert_charrefs=False); self.in_script=False; self.current=[]; self.blocks=[]
-              def handle_starttag(self, tag, attrs):
-                  if tag.lower()=='script':
-                      self.in_script='src' not in {str(k).lower():v for k,v in attrs}; self.current=[]
-              def handle_data(self, data):
-                  if self.in_script:self.current.append(data)
-              def handle_endtag(self, tag):
-                  if tag.lower()=='script' and self.in_script:
-                      self.blocks.append(''.join(self.current)); self.in_script=False; self.current=[]
-          parser=ScriptParser(); parser.feed(Path('realmwright-v7.html').read_text(encoding='utf-8'))
-          if len(parser.blocks)!=3: raise SystemExit(f'Expected 3 inline scripts; found {len(parser.blocks)}')
-          out=Path('/tmp/rw-scripts'); out.mkdir(exist_ok=True)
-          for i,body in enumerate(parser.blocks,1):(out/f'{i}.js').write_text(body,encoding='utf-8')
-          PY
-          for script in /tmp/rw-scripts/*.js; do node --check "$script"; done
-
-      - name: Use Node.js 22 for guarded validation
-        if: steps.staged.outputs.present == 'true'
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: worker/package-lock.json
-
-      - name: Install Worker dependencies for guarded validation
-        if: steps.staged.outputs.present == 'true'
-        working-directory: worker
-        run: npm ci
-
-      - name: Run complete Worker tests for guarded validation
-        if: steps.staged.outputs.present == 'true'
-        working-directory: worker
-        run: npm test
-
-      - name: Run Worker typecheck for guarded validation
-        if: steps.staged.outputs.present == 'true'
-        working-directory: worker
-        run: npm run typecheck
-
-      - name: Verify only the audited HTML changed
-        if: steps.staged.outputs.present == 'true'
-        run: test "$(git diff --name-only)" = "realmwright-v7.html"
-
-      - name: Commit verified atomic license state HTML only
-        if: steps.staged.outputs.present == 'true'
-        shell: bash
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add realmwright-v7.html
-          git commit -m "Make license state transitions atomic"
-          git push origin HEAD:agent/realmwright-recovery-2026-07-24
