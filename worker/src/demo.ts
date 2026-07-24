@@ -45,6 +45,7 @@
 
 import { jsonResponse } from './cors';
 import { readBoundedInt, readCounter } from './config';
+import { utf8ByteLength } from './input';
 
 export interface DemoEnv {
   ALLOWED_ORIGINS: string;
@@ -166,7 +167,7 @@ export async function handleDemoGenerate(request: Request, env: DemoEnv): Promis
 
     // AUDIT FIX (MED #6): bound the prompt size BEFORE spending anything.
     const messagesJson = JSON.stringify(messages);
-    if (messagesJson.length > MAX_MESSAGES_BYTES) {
+    if (utf8ByteLength(messagesJson) > MAX_MESSAGES_BYTES) {
       return jsonResponse({ error: 'Prompt is too large for the free demo.' }, 413, request, allowed);
     }
 

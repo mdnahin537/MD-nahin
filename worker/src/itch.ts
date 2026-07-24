@@ -24,6 +24,7 @@ import { checkRateLimit } from './ratelimit';
 import type { RateLimitEnv } from './ratelimit';
 import { deviceCookie, deviceTtlSeconds, issueOrRefresh, readToken } from './fingerprint';
 import type { DeviceEnv } from './fingerprint';
+import { MAX_PRODUCT_KEY_BYTES, isWithinUtf8Limit, readTrimmedString } from './input';
 
 export interface ItchEnv extends RateLimitEnv, DeviceEnv {
   ALLOWED_ORIGINS: string;
@@ -56,13 +57,16 @@ export async function handleItchVerify(request: Request, env: ItchEnv): Promise<
 
     let key = '';
     try {
-      const body = (await request.json()) as { key?: string };
-      key = (body?.key || '').trim();
+      const body = (await request.json()) as { key?: unknown };
+      key = readTrimmedString(body?.key) || '';
     } catch {
       /* handled below */
     }
     if (!key) {
       return jsonResponse({ valid: false, error: 'Missing key.' }, 400, request, env.ALLOWED_ORIGINS);
+    }
+    if (!isWithinUtf8Limit(key, MAX_PRODUCT_KEY_BYTES)) {
+      return jsonResponse({ valid: false, error: 'Key is too long.' }, 400, request, env.ALLOWED_ORIGINS);
     }
 
     const url =

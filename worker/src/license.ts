@@ -22,6 +22,7 @@ import { checkRateLimit } from './ratelimit';
 import type { RateLimitEnv } from './ratelimit';
 import { deviceCookie, deviceTtlSeconds, findExistingDevice, isDeviceBucket, issueOrRefresh, readToken, revoke, touch } from './fingerprint';
 import type { DeviceEnv } from './fingerprint';
+import { MAX_INSTANCE_ID_BYTES, MAX_PRODUCT_KEY_BYTES, isWithinUtf8Limit, readTrimmedString } from './input';
 
 const LS_BASE = 'https://api.lemonsqueezy.com/v1/licenses';
 
@@ -156,12 +157,20 @@ export async function handleActivate(
     }
 
     const body = (await readBody(request)) as ActivateBody;
-    const licenseKey = (body.license_key || '').trim();
-    const instanceName = (body.instance_name || `RealmWright-${Date.now()}`).slice(0, 64);
+    const licenseKey = readTrimmedString(body.license_key) || '';
+    const instanceName = (readTrimmedString(body.instance_name) || `RealmWright-${Date.now()}`).slice(0, 64);
 
     if (!licenseKey) {
       return jsonResponse(
         { activated: false, error: 'Missing license_key.' },
+        400,
+        request,
+        env.ALLOWED_ORIGINS,
+      );
+    }
+    if (!isWithinUtf8Limit(licenseKey, MAX_PRODUCT_KEY_BYTES)) {
+      return jsonResponse(
+        { activated: false, error: 'License key is too long.' },
         400,
         request,
         env.ALLOWED_ORIGINS,
@@ -347,7 +356,8 @@ export async function handleValidate(
     }
 
     const body = (await readBody(request)) as ValidateBody;
-    const licenseKey = (body.license_key || '').trim();
+    const licenseKey = readTrimmedString(body.license_key) || '';
+    const instanceId = readTrimmedString(body.instance_id);
     if (!licenseKey) {
       return jsonResponse(
         { valid: false, error: 'Missing license_key.' },
@@ -356,9 +366,20 @@ export async function handleValidate(
         env.ALLOWED_ORIGINS,
       );
     }
+    // Validation errors must not include valid:false: the client deliberately
+    // keeps an already-paying customer active on Worker/input failures.
+    if (!isWithinUtf8Limit(licenseKey, MAX_PRODUCT_KEY_BYTES) ||
+        (instanceId && !isWithinUtf8Limit(instanceId, MAX_INSTANCE_ID_BYTES))) {
+      return jsonResponse(
+        { error: 'License request is too long.' },
+        400,
+        request,
+        env.ALLOWED_ORIGINS,
+      );
+    }
 
     const params = new URLSearchParams({ license_key: licenseKey });
-    if (body.instance_id) params.set('instance_id', body.instance_id);
+    if (instanceId) params.set('instance_id', instanceId);
 
     const upstream = await forwardToLS('validate', params);
 
@@ -413,11 +434,20 @@ export async function handleDeactivate(
     }
 
     const body = (await readBody(request)) as DeactivateBody;
-    const licenseKey = (body.license_key || '').trim();
-    const instanceId = (body.instance_id || '').trim();
+    const licenseKey = readTrimmedString(body.license_key) || '';
+    const instanceId = readTrimmedString(body.instance_id) || '';
     if (!licenseKey || !instanceId) {
       return jsonResponse(
         { deactivated: false, error: 'Missing license_key or instance_id.' },
+        400,
+        request,
+        env.ALLOWED_ORIGINS,
+      );
+    }
+    if (!isWithinUtf8Limit(licenseKey, MAX_PRODUCT_KEY_BYTES) ||
+        !isWithinUtf8Limit(instanceId, MAX_INSTANCE_ID_BYTES)) {
+      return jsonResponse(
+        { deactivated: false, error: 'License request is too long.' },
         400,
         request,
         env.ALLOWED_ORIGINS,
