@@ -31,7 +31,7 @@ jobs:
         run: npm ci
 
       - name: Run Worker tests
-        working_directory: worker
+        working-directory: worker
         run: npm test
 
       - name: Run Worker typecheck
