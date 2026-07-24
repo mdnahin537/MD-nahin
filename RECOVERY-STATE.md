@@ -24,7 +24,7 @@ This file is the durable handoff for every future session. Read it before changi
 - Demo AI allowance: exactly 5 one-time full Copilot uses per visitor, enforced server-side.
 - Each of the five free uses may perform the same world-changing actions as paid Copilot.
 - After the fifth successful AI use, Copilot is gated and the product-key unlock path is shown.
-- A failed request, provider outage, validation failure, or incomplete response must not consume a free use.
+- A failed request, provider outage, validation failure, empty response, or token-limit-truncated response must not consume a free use.
 - Paid users unlock unlimited product capacity and the complete ongoing Copilot experience, subject to their selected provider's limits.
 - User world data remains local/owned by the user. Google Drive sync was planned but is not yet proven complete.
 
@@ -60,18 +60,27 @@ Added this durable recovery handoff so a compacted/lost session cannot erase pro
 
 Added branch-only GitHub Actions validation and an exact-source artifact. The workflow does not deploy anything and does not modify production branches.
 
-### Validation status
+### Commit `d02a9dbcb10b8bacf36b0b11f94929d69c3ffb20`
+
+Locked the user-approved product decision: five full Copilot uses, world-changing actions included, sixth use gated, failed requests refunded.
+
+### Commit `1a96d8260867e67efc0a7b9b72785a92ba955575`
+
+Hardened the Worker so HTTP-200 responses that are empty or explicitly cut off by the model token limit are refunded instead of consuming a free use. Added two regression tests. The guarded patch workflow ran the complete Worker tests and typecheck before pushing the commit, and removed its transient patch machinery afterward.
+
+## Validation status
 
 - GitHub Actions run `30112092101` completed successfully on the recovery branch.
 - `npm ci` completed successfully in `worker/`.
-- The complete Worker test suite completed successfully, including the recovery regression test.
+- The complete Worker test suite completed successfully, including the recovery tests.
 - `npm run typecheck` completed successfully.
 - The exact recovery source was uploaded as artifact `realmwright-recovery-source` with SHA-256 digest `2412d71a34b061848c4081ed085752d1023b4c864828fa085f5fc48a73b80aed`.
-- Browser-level RealmWright validation has not yet passed; do not merge or deploy based only on Worker CI.
+- Current PR #13 is still draft, open, unmerged, and based on `claude/realmwright-pivot`.
+- Browser-level RealmWright validation has not yet passed; do not merge or deploy based only on Worker validation.
 
 ## Current investigation: demo AI says “unlock”
 
-### Confirmed code-level cause from PR #12 diff
+### Confirmed code-level cause
 
 The July pivot changed `Copilot.isConfigured()` to return false whenever `LicenseGate.isActive()` is false. Therefore ordinary Copilot and AI-feature entry points intentionally show an unlock message to demo visitors.
 
@@ -87,6 +96,36 @@ The client constant `TURNSTILE_SITEKEY` is still an empty deployment placeholder
 4. **Counting:** decrement only after a complete, valid AI response is received and accepted into the Copilot flow. Provider or network failures must be refunded.
 5. **Gate:** after the fifth successful use, block subsequent Copilot generation and present the product-key unlock route.
 6. **Visibility:** show the remaining count clearly in Copilot and distinguish demo capacity from provider status.
+
+## Current local HTML candidate — NOT COMMITTED
+
+An exact copy of `realmwright-v7.html` was obtained from the successful source artifact before editing.
+
+- Original exact HTML SHA-256: `5362c5c1fe1a48eb8c799b1b9bd27fd01c9b84e193168b116cb01d19c71afcee`
+- Current local candidate SHA-256: `c50667d49d75b8dbf15f92c3e06d00fcbabc368c304217f799cad592241a3c86`
+- Current candidate diff: 267 insertions and 78 deletions in `realmwright-v7.html`.
+- All three inline JavaScript blocks pass `node --check` syntax validation.
+- No HTML change has been committed or pushed to PR #13.
+
+### Browser test results so far
+
+The deterministic browser harness verifies the intended flow without real secrets or paid API calls.
+
+Verified before the failure:
+
+- unlicensed visitor begins with 5 uses;
+- ordinary Copilot opens and is not immediately hard-locked;
+- the first AI use reaches the hosted-demo request path;
+- the first response can propose a world-changing canon candidate;
+- the existing canon-review confirmation remains active;
+- accepting the candidate creates the expected world entity;
+- the counter decrements from 5 to 4 only after success.
+
+Current blocker:
+
+- during a later repeated scripted use, the send button remains disabled in `Generating…` and the browser test times out;
+- therefore the five-use sequence, fifth-use exhaustion, sixth-use client gate, and failure-refund UI path are not yet accepted as passing;
+- the HTML candidate must not be committed until this stuck-sending state is diagnosed, fixed, and the complete browser harness passes.
 
 ## Free by NVIDIA investigation status
 
@@ -105,12 +144,13 @@ Do not claim it works perfectly until all of these are proven:
 
 ## Immediate next actions
 
-1. Use the exact GitHub Actions source artifact to inspect the complete `Demo`, `DemoCounter`, `FrontDoor._handleGenerate`, `Copilot.isConfigured`, `Copilot.send`/provider fetch, world-action application, OpenRouter PKCE callback, and `freeNvidiaModelId` implementations.
-2. Verify current OpenRouter OAuth/PKCE behavior and NVIDIA free-model availability against official OpenRouter sources.
-3. Implement five full Copilot uses in one isolated HTML commit, preserving the original blob and producing a minimal audited diff.
-4. Add deterministic tests/harnesses for counts 5 → 0, refund-on-failure, sixth-use gate, and world-action availability.
-5. Implement any required Free-by-NVIDIA hardening separately.
-6. Update this file and PR #13 after each commit.
+1. Diagnose why a later demo-Copilot request leaves `_sending`/the send button stuck after the first successful world-changing use.
+2. Fix that state-machine problem locally and rerun the entire deterministic browser harness.
+3. Require all of these to pass before committing HTML: 5 → 4 → 3 → 2 → 1 → 0, world-action acceptance, sixth-use gate, and no decrement on failure.
+4. Audit the final HTML diff and preserve the original SHA/checksum.
+5. Only then commit the exact HTML through a guarded branch workflow and let PR #13 CI validate it.
+6. Separately verify and harden Free by NVIDIA against current official OpenRouter behavior and a genuinely free NVIDIA model.
+7. Update this file and PR #13 after each verified change.
 
 ## Safety rules
 
@@ -120,4 +160,5 @@ Do not claim it works perfectly until all of these are proven:
 - Before changing `realmwright-v7.html`, obtain the complete exact blob and retain its SHA.
 - After any HTML change, compare the new branch to its previous commit and verify only intended regions changed.
 - Preserve existing confirmation/review steps for AI-proposed world mutations.
+- Do not commit a candidate that fails its deterministic browser harness.
 - Do not merge or deploy while placeholders remain or browser validation is incomplete.
