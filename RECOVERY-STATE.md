@@ -10,146 +10,146 @@ This is the durable handoff for every future session. Read it before changing Re
 - Recovery branch: `agent/realmwright-recovery-2026-07-24`
 - Draft recovery PR: `#13`
 - PR base: `claude/realmwright-pivot`
-- Recovery branch origin commit: `90c9a2f4235e38c4c50229ab160579a72ff65931`
+- Recovery branch origin: `90c9a2f4235e38c4c50229ab160579a72ff65931`
 - Never modify `main` or `claude/realmwright-pivot` directly.
 - Never force-push.
-- Keep PR #13 draft until Worker CI, browser validation, deployment configuration, and live auth/model checks pass.
+- Keep PR #13 draft and unmerged until browser, deployment, live-auth, and live-demo gates pass.
 
-## Latest locked product behavior
+## Locked product behavior
 
 - Product: RealmWright GM, hosted on Cloudflare Pages.
-- Paid unlock: one-time $23 key from itch.io or Lemon Squeezy.
+- Paid unlock: one-time $23 product key from itch.io or Lemon Squeezy.
 - Unlicensed capacity: 1 world, 8 NPCs, 6 locations, 3 factions, 10 chronicle entries.
 - Unlicensed visitors receive exactly 5 one-time hosted AI uses, enforced server-side.
-- Those 5 demo uses may propose world-changing actions, but every existing review/approval safeguard remains mandatory.
-- The **full Copilot interface is paid-only** and must remain hidden/locked until `LicenseGate.isActive()` is true.
-- `Free by NVIDIA`, OpenRouter connect, manual OpenRouter key/model controls, Ollama controls, and all paid Copilot settings are also hidden/blocked until the license is active.
-- After a valid product key activates, the complete Copilot and `Free by NVIDIA` path must unlock immediately and accurately.
-- After the fifth successful demo AI use, the demo AI surface is gated and shows the product-key unlock route.
-- Network/provider errors, invalid responses, empty responses, token-limit truncation, or failed quota reservations must not consume a demo use.
-- User world data remains local/owned by the user. Google Drive sync is planned but not proven complete.
+- Those five demo uses may propose world-changing actions, but every existing review/approval safeguard remains mandatory.
+- The full Copilot interface is paid-only and must remain hidden and functionally blocked until `LicenseGate.isActive()` is true.
+- `Free by NVIDIA`, OpenRouter connection/manual key/model controls, Ollama, write scope, auto-apply, and advanced Copilot settings are paid-only.
+- After a valid product key activates, all paid Copilot/provider controls must unlock immediately.
+- After the fifth successful demo use, the demo AI surface must gate and show the product-key path.
+- Network/provider failures, invalid or empty output, token-limit truncation, and failed quota reservations must not consume a demo use.
+- User world data remains locally owned. Google Drive sync is planned but not proven complete.
 
 ## Owner instructions and authorization
 
-1. The 5 demo AI uses must actually work and must support reviewable world changes.
-2. Do not expose the paid Copilot panel to unlicensed users.
-3. `Free by NVIDIA` must be inaccessible before license activation and available after activation.
-4. Confirm by code and, where possible, live browser testing that OpenRouter PKCE automatically receives and stores the user-controlled API key without manual copy/paste.
-5. The owner authorizes live testing through the already-deployed demo API and chosen free NVIDIA model.
-6. Never print, log, expose, download into chat, or commit any real API key or secret.
-7. Keep all changes reversible and inspectable through PR #13 commits, diffs, CI, and this file.
+1. Make the five demo AI uses actually work, including reviewable world changes.
+2. Keep the paid Copilot and `Free by NVIDIA` inaccessible before activation.
+3. Confirm that OpenRouter PKCE automatically receives and stores the user-controlled API key without manual copy/paste.
+4. The owner authorizes live testing through the already-deployed demo API and chosen free NVIDIA model.
+5. Never print, log, expose, or commit real product keys, API keys, device tokens, or deployment secrets.
+6. Keep all work reversible and inspectable through PR #13 commits, CI, browser tests, and this file.
 
-## Completed recovery work
+## Completed recovery commits
 
-### `b957691b40f253ec498109ebfaffe983bbf1a706`
+### Demo quota integrity
 
-Fixed partial Cloudflare KV quota reservation rollback. If one counter writes and the next write fails, completed reservations are compensated.
+- `b957691b40f253ec498109ebfaffe983bbf1a706` — compensates completed Cloudflare KV reservations when a later reservation fails.
+- `eed7492558d2f1884b71fabb657e71ae809d529a` — regression test for partial reservation failure.
+- `1a96d8260867e67f0a7b9b72785a92ba955575` — refunds empty and token-limit-truncated HTTP-200 model responses.
 
-### `eed7492558d2f1884b71fabb657e71ae809d529a`
+### Recovery infrastructure
 
-Added regression coverage for partial quota reservation failure.
+- `d2d33d8a98d3b6920d81e635b97bb596d762cb29` — added this durable handoff.
+- `3940583e580d131a829c84b6120038131f6b0287` — added branch-only CI and exact-source artifacts.
 
-### `d2d33d8a98d3b6920d81e635b97bb596d762cb29`
+### Paid Copilot/provider gate
 
-Added the durable recovery handoff.
+- `d41d004160a0ca41d2bfb2c947ee96133f1f0e8a` — hides and functionally blocks all paid provider setup while unlicensed; loads license state before PKCE callback exchange; refreshes paid UI immediately after activation.
 
-### `3940583e580d131a829c84b6120038131f6b0287`
+### License state and device lifecycle
 
-Added branch-only GitHub Actions validation and exact-source artifact creation. It does not deploy or modify production branches.
+- `572bf251bfff6c8758271ccc70506c5f3666b8c1` — makes activation, validation, and deactivation durable-state transitions atomic. Live unlock/lock state publishes only after IndexedDB commits.
+- `4d69e229f2d757dc86f20f3e9808a1e6dabb6ae1` — reuses a valid Lemon Squeezy instance on an already-known device instead of consuming another activation slot; fails safely during validation outage; replaces only an explicitly dead instance.
+- `47738c3822f937cb10f99f360f42ceccd5ee0fa3` — removes full product keys from queue warning/error logs; logs non-secret metadata only.
+- `a38774a4407c25a21aeeaaed63c635a237fe4c18` — preserves the server-issued device token until deactivation or queued cleanup completes, ensuring the Worker can revoke the exact device binding.
+- `0cff32b92ab93d5f404bf69117f42ba7d6cd62ad` — treats deactivation as successful only when the Worker explicitly returns `deactivated:true`; distinguishes `success`, retryable failure, and terminal rejection.
 
-### `d02a9dbcb10b8bacf36b0b11f94929d69c3ffb20`
+## Validation evidence
 
-Recorded the earlier five-use design decision. This decision is now superseded only in where the five uses appear: they remain world-changing, but the paid Copilot UI stays license-gated.
+### Authoritative GitHub Actions
 
-### `1a96d8260867e67efc0a7b9b72785a92ba955575`
+- Complete Worker suite currently passes with 29 tests.
+- Worker TypeScript typecheck passes after `npm ci`.
+- Atomic state run: `30118313695` — success.
+- Same-device idempotency run: `30118644200` — success.
+- License-log privacy run: `30118948226` — success.
+- Device-token continuity run: `30119242029` — success.
+- Deactivation-response semantics run: `30119469596` — success.
+- Recovery CI is restored to read-only after every guarded commit.
 
-Refunds empty or token-limit-truncated HTTP-200 model responses. Added regression tests. The guarded workflow ran the complete Worker tests and typecheck before committing.
+### Deterministic browser validation
 
-### `d41d004160a0ca41d2bfb2c947ee96133f1f0e8a`
+Passed:
 
-Enforced the paid license gate on every Copilot provider-setup path. `Free by NVIDIA`, OpenRouter PKCE/manual-key/model controls, Ollama, write-scope, and auto-apply are visually hidden and functionally rejected while unlicensed. License initialization now precedes PKCE callback exchange, and successful activation refreshes the Settings/Copilot UI immediately.
+- Unlicensed provider controls are hidden and scripted access is rejected.
+- Crafted unlicensed PKCE callback performs no key exchange.
+- Successful product-key activation immediately reveals paid controls.
+- Licensed mocked PKCE callback automatically stores the returned OpenRouter key in the dedicated secret IndexedDB record and excludes it from the normal state blob.
+- Failed activation persistence never produces a false live unlock.
+- Failed validation persistence never changes live validity.
+- Failed local deactivation persistence keeps the license active and makes no server request.
+- Successful deactivation keeps `X-Device-Token` available for the Worker, then clears it.
+- Failed remote deactivation queues cleanup and retains the token.
+- Startup drain sends the retained token and clears it after success.
+- Full product keys never appear in retry-queue console logs.
+- HTTP 200 with `deactivated:false` is terminal, not success.
+- Malformed 2xx deactivation output remains retryable.
+- Transient failure followed by `deactivated:true` succeeds.
 
-## Validation status
+### Current exact frontend state
 
-- Worker `npm ci`: passed in GitHub Actions.
-- Complete Worker test suite: passed.
-- Worker TypeScript typecheck: passed.
-- Exact source artifact was produced and downloaded for local audited work.
-- PR #13 remains open, draft, and unmerged.
-- Deterministic browser validation passed for: unlicensed provider controls hidden/blocked; crafted unlicensed PKCE callback rejected; successful product-key activation immediately revealing the paid controls; licensed PKCE callback automatically storing the returned OpenRouter key in the dedicated secret IDB key and excluding it from the normal state blob.
-- Browser-level validation of the complete five-use demo and one real external OpenRouter authorization remains incomplete.
+- Current committed `realmwright-v7.html` SHA-256: `efb12c7c3df61abb652d1c5ff9858b5ecfe2c12b467dab677355c1721ee29f0f`.
+- All three real inline JavaScript blocks pass syntax validation.
 - No production deployment has been performed from PR #13.
 
-## Confirmed cause of the current demo failure
+## Demo AI status
 
-- The five hosted uses exist in `FrontDoor._handleGenerate()` through `Demo.proxyRequest`.
-- Normal Copilot is intentionally license-gated by `Copilot.isConfigured()`.
-- Repository deployment placeholders remain unresolved:
-  - `TURNSTILE_SITEKEY` is empty in the committed HTML;
-  - Worker `ALLOWED_ORIGINS`, KV IDs, store/product IDs, itch game ID, and `DEMO_MODEL` are placeholders in `wrangler.toml`.
-- Therefore the repository snapshot alone cannot run a real demo request. A live test is possible only if the already-deployed Worker and hosted page have real values outside this branch.
+Confirmed architecture:
 
-## Superseded local HTML candidate — DO NOT COMMIT
+- Five hosted uses currently live in the front-door demo path through `Demo.proxyRequest`.
+- Normal Copilot remains intentionally paid-only.
+- The existing demo path is not yet the required complete world-changing five-use experience.
 
-A local candidate placed the five hosted uses directly inside normal Copilot. It is now rejected because the latest owner instruction requires the entire Copilot interface to remain paid-only.
+Deployment blockers in the repository snapshot:
 
-- Original exact HTML SHA-256: `5362c5c1fe1a48eb8c799b1b9bd27fd01c9b84e193168b116cb01d19c71afcee`
-- The candidate is preserved only as investigation evidence.
-- No candidate HTML change has been pushed to PR #13.
+- `TURNSTILE_SITEKEY` is empty in the committed HTML.
+- Worker `ALLOWED_ORIGINS`, KV namespace IDs, store/product IDs, itch game ID, and `DEMO_MODEL` still contain placeholders.
+- Therefore the repository snapshot cannot execute a real hosted demo call without external deployment configuration.
 
-## Free by NVIDIA findings
+## Free by NVIDIA / OpenRouter status
 
-### Confirmed from current official OpenRouter documentation
+Confirmed:
 
-- OpenRouter supports one-click PKCE via `/auth` with `callback_url`, `code_challenge`, and `code_challenge_method=S256`.
-- The callback receives `?code=...`.
-- The browser exchanges the code at `POST https://openrouter.ai/api/v1/auth/keys` using the matching verifier and receives a user-controlled API key.
-- OpenRouter currently offers free models and a free router; free-model availability can change and has rate/availability limits.
-- A current free NVIDIA option exists in OpenRouter's free collection, but the app must verify live catalog pricing before selecting it.
+- The Settings entry and all provider controls are paid-gated visually and functionally.
+- The code implements OpenRouter PKCE `/auth` → callback `?code=` → `/api/v1/auth/keys` exchange.
+- Deterministic browser tests confirm automatic key capture into the secret store and exclusion from ordinary backups.
 
-### Still unproven
+Still unproven:
 
-- RealmWright's exact callback implementation successfully completes a real user authorization.
-- The returned key is stored only in the intended local secret store and excluded from export/backup paths.
-- License activation correctly hides/reveals every Copilot and provider-control entry point.
-- A real free NVIDIA request completes from the licensed RealmWright flow.
+- One real user authorization against the final deployed callback origin.
+- One real request through the selected currently-free NVIDIA model.
+- Live fallback when that model is removed, renamed, rate-limited, or ceases to be free.
 
-## Current license-core audit
+## Remaining license audit items
 
-### Confirmed client atomicity defect
-
-- `_activateLS()` and `_activateItchio()` assign `LicenseGate._data` before `IDB.set(IDB_KEY_LICENSE, ...)` succeeds. If IndexedDB rejects, activation returns an error but `LicenseGate.isActive()` remains true for the current session.
-- `_backgroundValidate()` mutates the existing in-memory object before durable persistence. A failed IDB write can make runtime and stored validity disagree.
-- `deactivate()` clears the live license before the durable delete succeeds. A storage failure can lock the current session while the old license silently returns after reload.
-- Required correction: persist a cloned next state first, publish it to `_data` only after success, and emit UI events only after the durable transition commits.
-
-### Confirmed repeated-activation risk
-
-- The client still sends a new `instance_name` on every Lemon Squeezy activation.
-- The Worker calls Lemon Squeezy `/activate` before checking whether the presented device token already maps to an existing instance. A repeated activation on the same device can therefore create a fresh LS instance and replace the stored instance ID without deactivating the old one.
-- This needs a separate Worker idempotency fix and regression test after the client atomicity fix.
-
-### Logging/privacy finding
-
-- `LicenseQueue.push()` and the final give-up log currently print the queued object, including the full product license key, to DevTools. Logs must be changed to non-secret metadata only.
+- The queued deactivation payload is still persisted in `localStorage`, including the product key and instance ID. It is no longer logged, but moving the queue to IndexedDB would reduce exposure and provide explicit write-failure handling.
+- `LicenseQueue._write()` currently swallows storage failures; a failed queue write can silently lose the remote cleanup operation.
+- Full end-to-end validation against a real Lemon Squeezy test product remains outstanding: activate, reload/background validate, same-device reactivation, second/third device, fourth-device rejection, deactivate, and recovered slot.
 
 ## Immediate next actions
 
-1. Make activate, background validate, and deactivate atomic with respect to IndexedDB; add deterministic failure-path browser tests.
-2. Stop logging full product license keys from the retry queue.
-3. Make repeated Lemon Squeezy activation idempotent for an already-known device and instance; add Worker regression tests.
-4. Audit queue draining, explicit revocation/recovery events, device-token persistence, and same-device reactivation end to end.
-5. Expand the demo-specific surface to support reviewable world-change proposals for all five uses.
-6. Find the actual deployed Pages URL and Turnstile site key, if they exist, without exposing secrets; then run a real demo-model response test through the Worker.
-7. Perform one real licensed OpenRouter authorization only when the callback origin is real and testable.
-8. Browser-test the complete license and demo matrices, then audit and commit each exact diff only through PR #13.
+1. Harden queue persistence: remove the cleanup payload from `localStorage`, use durable IndexedDB storage, and surface queue-write failure honestly.
+2. Expand the demo-specific surface into five full, reviewable world-changing AI uses while keeping paid Copilot hidden.
+3. Obtain/confirm the actual Pages origin and public Turnstile site key without exposing secrets, then run a real hosted demo-model request.
+4. Perform one real licensed OpenRouter authorization and free-NVIDIA generation on the final callback origin.
+5. Run the complete license device-cap matrix against Lemon Squeezy test mode.
+6. Update this file and PR #13 after every verified change.
 
 ## Safety rules
 
-- Never delete user-world data or alter storage keys without a migration and restore test.
-- Never commit API keys, Turnstile secrets, store secrets, or real product keys.
-- Never replace the 29k-line HTML from an incomplete or truncated copy.
+- Never delete or migrate user-world data without a restore test.
+- Never commit real keys, tokens, store secrets, or private deployment values.
+- Never replace the large HTML from an incomplete or truncated copy.
 - Preserve exact pre-change checksums and inspect final diffs.
-- Preserve every existing confirmation/review step for AI-proposed world mutations.
+- Preserve all confirmation/review steps for AI-proposed world mutations.
 - Do not commit a browser-failing candidate.
 - Do not merge or deploy while placeholders or live-validation blockers remain.
