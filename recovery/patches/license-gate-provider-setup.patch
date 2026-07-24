@@ -1,0 +1,184 @@
+--- a/realmwright-v7.html
++++ b/realmwright-v7.html
+@@ -5102,12 +5102,12 @@
+            disabled — no provider choice, no NVIDIA free key, no BYOK, no Ollama, no model
+            picker. Copilot.isConfigured() is also hardened to require an active license, so
+            this is UI-level, not the only enforcement. Toggled by LicenseGateUI._updateStatusUI(). -->
+-      <div class="copilot-lock-notice" id="copilot-lock-notice" style="display:none">
++      <div class="copilot-lock-notice" id="copilot-lock-notice" hidden>
+         <div class="copilot-lock-notice__title">Unlock RealmWright to enable the Copilot</div>
+         <div class="copilot-lock-notice__desc">The Copilot — chat, session prep, NPCs, the Faction Council, and more — unlocks with a one-time product key, then runs on a free NVIDIA model or your own AI key, your choice. No key yet? The front door gives new visitors 5 free AI preview messages as an early-access taste, plus 3 fully-built Sample Realms — no key needed.</div>
+         <button class="btn btn--primary" type="button" id="copilot-lock-activate-btn">Paste your product key</button>
+       </div>
+-      <div id="copilot-settings-controls">
++      <div id="copilot-settings-controls" hidden>
+       <!-- RECOMMENDED: one-click free AI for non-technical GMs. Wraps OpenRouter PKCE + free Nemotron. -->
+       <div class="rw-ai-rec">
+         <div class="rw-ai-rec__badge">Recommended</div>
+@@ -14160,6 +14160,19 @@
+     if(typeof requestedMaxTokens!=='number')return requestedMaxTokens;
+     return Copilot._supportsReasoning(model)?requestedMaxTokens+Copilot._REASONING_HEADROOM:requestedMaxTokens;
+   },
++  // Central functional paywall for every provider-configuration path. The Settings
++  // panel is hidden while locked, but UI hiding alone is not enforcement: callback
++  // URLs, scripted clicks, and pre-pivot saved settings can bypass a visual gate.
++  _requireLicensedSetup(action='configure the Copilot',silent=false){
++    const active=typeof LicenseGate!=='undefined'&&LicenseGate.isActive();
++    if(active)return true;
++    if(!silent&&typeof showToast==='function'){
++      showToast(`Unlock the full version to ${action}.`,[
++        {label:'Unlock',handler:()=>{if(typeof LicenseGateUI!=='undefined')LicenseGateUI.openModal();}}
++      ],7000);
++    }
++    return false;
++  },
+   // ─── OPENROUTER ONE-CLICK OAUTH (PKCE) ───────────────────────────────────────
+   // Authorize once in the browser; OpenRouter sends back a free key via PKCE. The
+   // key is routed into settings.copilotKey (the single source of truth) — NOT a
+@@ -14186,6 +14199,7 @@
+     return true;
+   },
+   async orConnect(){
++    if(!this._requireLicensedSetup('connect OpenRouter'))return;
+     if(!this._orCanOneClick()){
+       showToast('One-click connect needs the app served over http(s). You opened it as a downloaded file (null origin), so paste a key below instead — or serve this file from a local web server and reload.',[],9000);
+       return;
+@@ -14220,6 +14234,10 @@
+     try{history.replaceState({},document.title,location.origin+location.pathname);}catch(e){}
+     try{sessionStorage.removeItem(this._OR_VERIFIER_KEY);}catch(e){}
+     try{sessionStorage.removeItem(this._OR_REOPEN_KEY);}catch(e){}
++    // LicenseGate.init() runs before this callback. Never exchange or store a key
++    // for a locked visitor, even if they craft a callback URL or began auth before
++    // their license expired. The one-time code is scrubbed above either way.
++    if(!this._requireLicensedSetup('finish OpenRouter sign-in'))return;
+     if(!verifier){showToast('OpenRouter sign-in didn\'t complete (the verifier was lost). Try Connect again.',[],7000);return;}
+     try{
+       const resp=await fetch('https://openrouter.ai/api/v1/auth/keys',{
+@@ -14259,6 +14277,7 @@
+   // just switch the model; otherwise we pin provider+model and hand off to orConnect,
+   // which owns the honesty gate (file:// / insecure context) and the PKCE redirect.
+   async useFreeNvidia(){
++    if(!this._requireLicensedSetup('use Free by NVIDIA'))return;
+     try{
+       // Decide on an OpenRouter KEY, not isConfigured() — that returns true for
+       // Ollama too, which would leave provider='ollama' and the free model never runs.
+@@ -26977,6 +26996,7 @@
+     if(e.target.value.startsWith('••')){e.target.value='';}
+   });
+   document.getElementById('copilot-key-save')?.addEventListener('click',()=>{
++    if(!Copilot._requireLicensedSetup('save an OpenRouter key'))return;
+     const input=document.getElementById('copilot-key-input');
+     const key=input?.value?.trim()||'';
+     if(!key){showToast('Paste a key first.');return;}
+@@ -27017,6 +27037,7 @@
+   });
+   // Phase 5F: eye-icon toggle (mask/unmask the key field)
+   document.getElementById('copilot-key-eye')?.addEventListener('click',()=>{
++    if(!Copilot._requireLicensedSetup('view OpenRouter settings'))return;
+     const input=document.getElementById('copilot-key-input');
+     const icon=document.getElementById('copilot-key-eye-icon');
+     const btn=document.getElementById('copilot-key-eye');
+@@ -27039,6 +27060,7 @@
+   });
+   // Model select
+   document.getElementById('copilot-model-select')?.addEventListener('change',(e)=>{
++    if(!Copilot._requireLicensedSetup('change Copilot models'))return;
+     if(!e.target.value)return; // the "No models match" placeholder has no value
+     State.setSetting('copilotModel',e.target.value);
+     Copilot.updateStatus();
+@@ -27065,11 +27087,13 @@
+   // P6.11 — Copilot write scope: gates which write tools the model may call
+   // (see COPILOT_TOOLS_STANDARD_ALLOWED / _executeTool's scope check).
+   document.getElementById('copilot-scope-select')?.addEventListener('change',(e)=>{
++    if(!Copilot._requireLicensedSetup('change Copilot write scope'))return;
+     State.setSetting('copilotScope',e.target.value);
+   });
+   // P6.11 — Copilot auto-apply toggle. OFF by default; ON lets queued tool
+   // proposals apply immediately instead of waiting for GM review.
+   document.getElementById('toggle-copilot-autoapply')?.addEventListener('click',()=>{
++    if(!Copilot._requireLicensedSetup('change Copilot auto-apply'))return;
+     const v=!State.data.meta.settings.copilotAutoApply;
+     State.setSetting('copilotAutoApply',v);
+     document.getElementById('toggle-copilot-autoapply')?.classList.toggle('is-on',v);
+@@ -27088,6 +27112,7 @@
+   }
+   document.querySelectorAll('input[name="copilot-provider"]').forEach(radio=>{
+     radio.addEventListener('change',()=>{
++      if(!Copilot._requireLicensedSetup('change Copilot providers'))return;
+       const provider=document.querySelector('input[name="copilot-provider"]:checked')?.value||'openrouter';
+       State.setSetting('copilotProvider',provider);
+       _applyProviderUI(provider);
+@@ -27096,6 +27121,7 @@
+   });
+   // Ollama save button
+   document.getElementById('ollama-settings-save')?.addEventListener('click',()=>{
++    if(!Copilot._requireLicensedSetup('save local Copilot settings'))return;
+     const url=(document.getElementById('ollama-url-input')?.value||'').trim()||'http://localhost:11434';
+     const model=(document.getElementById('ollama-model-input')?.value||'').trim()||'llama3.1';
+     State.setSetting('ollamaUrl',url);
+@@ -27120,6 +27146,7 @@
+   // open CORS / start a local server and re-open Settings to re-check live), and on
+   // any failure shows the protocol-aware guidance instead of failing silently.
+   Copilot._probeOllama=async function(){
++    if(!this._requireLicensedSetup('configure local Copilot',true))return;
+     if(this._ollamaProbed)return;   // only blocks AFTER a successful detect
+     const msgEl=document.getElementById('ollama-probe-msg');
+     const badge=document.getElementById('ollama-detected-badge');
+@@ -27949,7 +27976,7 @@
+       const err=document.getElementById('fd-welcome-key-err');if(err)err.style.display='none';
+     });
+     // Listen for license changes to update status UI
+-    document.addEventListener('license:changed',()=>this._updateStatusUI());
++    document.addEventListener('license:changed',()=>this._onLicenseChanged());
+     document.addEventListener('license:expired',()=>{
+       showToast('Your RealmWright license could not be verified. Please re-activate.',[{label:'Re-activate',handler:()=>this.openModal()}],0);
+       this._updateStatusUI();
+@@ -28110,6 +28137,14 @@
+     showToast('License deactivated on this device.');
+     this._updateModalStatus();
+   },
++  _onLicenseChanged(){
++    this._updateStatusUI();
++    if(typeof Copilot!=='undefined'){
++      if(typeof Copilot._refreshKeySettingsUI==='function')Copilot._refreshKeySettingsUI();
++      if(typeof Copilot.updateStatus==='function')Copilot.updateStatus();
++      if(typeof Copilot.renderMessages==='function')Copilot.renderMessages();
++    }
++  },
+   _updateStatusUI(){
+     const isActive=LicenseGate.isActive();
+     // Update any license status indicators
+@@ -28129,8 +28164,16 @@
+     // Copilot.isConfigured() is the functional backstop; this is the visible one.
+     const copilotControls=document.getElementById('copilot-settings-controls');
+     const copilotNotice=document.getElementById('copilot-lock-notice');
+-    if(copilotControls)copilotControls.classList.toggle('is-locked',!isActive);
+-    if(copilotNotice)copilotNotice.style.display=isActive?'none':'block';
++    if(copilotControls){
++      copilotControls.classList.toggle('is-locked',!isActive);
++      copilotControls.hidden=!isActive;
++      copilotControls.setAttribute('aria-hidden',String(!isActive));
++      try{copilotControls.inert=!isActive;}catch(e){}
++    }
++    if(copilotNotice){
++      copilotNotice.hidden=isActive;
++      copilotNotice.style.display=isActive?'none':'block';
++    }
+     // PIVOT — Build Agent 2 (task 5): Settings › Full version — the key field disappears
+     // (consumed) once unlocked, replaced by a plain confirmation. Also clears any stale
+     // error/value so a later deactivate→reactivate cycle starts clean.
+@@ -28217,10 +28260,12 @@
+   await State.load();
+   applyDriftOverrides(State.data); // P5.1: re-apply persisted House-Rules drift edits onto the live engine array.
+   bindEventListeners();
++  // Load the license before processing any paid-provider callback. This makes the
++  // PKCE exchange subject to the same functional paywall as every Copilot action.
++  await LicenseGate.init();
+   // OpenRouter one-click OAuth callback — no-op unless we returned with ?code=.
+-  if(typeof Copilot!=='undefined')Copilot.orInit().catch(e=>console.error('[copilot:orInit]',e));
++  if(typeof Copilot!=='undefined')await Copilot.orInit().catch(e=>console.error('[copilot:orInit]',e));
+   // Bind front door, sample mode, and tonight module (DOM already exists)
+-  await LicenseGate.init();
+   // Fire-and-forget: drain any license operations that failed network calls
+   // on a previous session. Best-effort; failures are logged, not surfaced.
+   LicenseQueue.drain().catch(e=>console.error('[license:queue] drain failed',e));
