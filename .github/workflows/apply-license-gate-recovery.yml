@@ -1,0 +1,119 @@
+name: Apply RealmWright License Gate Recovery
+
+on:
+  push:
+    branches:
+      - agent/realmwright-recovery-2026-07-24
+    paths:
+      - recovery/patches/license-gate-provider-setup.patch
+      - .github/workflows/apply-license-gate-recovery.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply-verify-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out exact recovery head
+        uses: actions/checkout@v4
+        with:
+          ref: agent/realmwright-recovery-2026-07-24
+          fetch-depth: 0
+
+      - name: Verify exact pre-change HTML
+        shell: bash
+        run: |
+          actual="$(sha256sum realmwright-v7.html | awk '{print $1}')"
+          expected="5362c5c1fe1a48eb8c799b1b9bd27fd01c9b84e193168b116cb01d19c71afcee"
+          test "$actual" = "$expected" || {
+            echo "Unexpected pre-change HTML checksum: $actual" >&2
+            exit 1
+          }
+
+      - name: Verify and apply audited patch
+        shell: bash
+        run: |
+          git apply --check recovery/patches/license-gate-provider-setup.patch
+          git apply recovery/patches/license-gate-provider-setup.patch
+
+      - name: Verify exact post-change HTML
+        shell: bash
+        run: |
+          actual="$(sha256sum realmwright-v7.html | awk '{print $1}')"
+          expected="bdddd0b74683e8ca6e2fde4bf2386a953d076b0cac73ab038a9bb9757b969771"
+          test "$actual" = "$expected" || {
+            echo "Unexpected post-change HTML checksum: $actual" >&2
+            exit 1
+          }
+
+      - name: Syntax-check every inline script
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          html = Path('realmwright-v7.html').read_text(encoding='utf-8')
+          blocks = []
+          for attrs, body in re.findall(r'<script([^>]*)>(.*?)</script>', html, flags=re.I | re.S):
+              if re.search(r'\bsrc\s*=', attrs, flags=re.I):
+                  continue
+              blocks.append(body)
+          if not blocks:
+              raise SystemExit('No inline scripts found')
+          out = Path('/tmp/realmwright-inline-scripts')
+          out.mkdir(exist_ok=True)
+          for index, body in enumerate(blocks, 1):
+              (out / f'inline-{index}.js').write_text(body, encoding='utf-8')
+          print(f'Extracted {len(blocks)} inline scripts')
+          PY
+          for script in /tmp/realmwright-inline-scripts/*.js; do
+            node --check "$script"
+          done
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: worker/package-lock.json
+
+      - name: Install Worker dependencies
+        working-directory: worker
+        run: npm ci
+
+      - name: Run complete Worker tests
+        working-directory: worker
+        run: npm test
+
+      - name: Run Worker typecheck
+        working-directory: worker
+        run: npm run typecheck
+
+      - name: Verify intended file scope
+        shell: bash
+        run: |
+          changed="$(git diff --name-only)"
+          test "$changed" = "realmwright-v7.html" || {
+            echo "Unexpected target changes:" >&2
+            printf '%s\n' "$changed" >&2
+            exit 1
+          }
+
+      - name: Remove transient patch machinery
+        shell: bash
+        run: |
+          rm recovery/patches/license-gate-provider-setup.patch
+          rm .github/workflows/apply-license-gate-recovery.yml
+          rmdir recovery/patches 2>/dev/null || true
+          rmdir recovery 2>/dev/null || true
+
+      - name: Commit verified license gate
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Enforce license gate on Copilot provider setup"
+          git push origin HEAD:agent/realmwright-recovery-2026-07-24
