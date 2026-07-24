@@ -44,7 +44,7 @@ This is the durable handoff for every future session. Read it before changing Re
 
 - `b957691b40f253ec498109ebfaffe983bbf1a706` — compensates completed Cloudflare KV reservations when a later reservation fails.
 - `eed7492558d2f1884b71fabb657e71ae809d529a` — regression test for partial reservation failure.
-- `1a96d8260867e67f0a7b9b72785a92ba955575` — refunds empty and token-limit-truncated HTTP-200 model responses.
+- `1a96d8260867e67efc0a7b9b72785a92ba955575` — refunds empty and token-limit-truncated HTTP-200 model responses.
 
 ### Recovery infrastructure
 
