@@ -61,6 +61,28 @@ export interface IssueResult {
   cap?: number;
 }
 
+export interface ExistingDeviceResult {
+  record: DeviceRecord;
+  active_devices: number;
+  cap: number;
+}
+
+// Read-only lookup used before Lemon Squeezy activation. A known token with an
+// existing instance lets the Worker validate/reuse that instance instead of
+// consuming a fresh LS activation slot on every re-entry of the same key.
+export async function findExistingDevice(
+  env: DeviceEnv,
+  licenseKey: string,
+  presentedToken: string | null,
+): Promise<ExistingDeviceResult | null> {
+  if (!presentedToken) return null;
+  const ttl = parseInt(env.DEVICE_TTL_SECONDS || '7776000', 10);
+  const cap = parseInt(env.DEVICE_CAP || '3', 10);
+  const bucket = prune(await readBucket(env, licenseKey), ttl);
+  const record = bucket.tokens.find((t) => t.token === presentedToken);
+  return record ? { record, active_devices: bucket.tokens.length, cap } : null;
+}
+
 // Called on activate. If the request carries an existing valid token, refresh
 // last_seen_at and return the same token. Otherwise check cap, issue a new one.
 //

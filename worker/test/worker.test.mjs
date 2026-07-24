@@ -18,6 +18,7 @@ import { handleActivate, handleValidate } from '../src/license.ts';
 
 import {
   makeFetch,
+  makeKV,
   withFetch,
   URLS,
   jsonRequest,
@@ -386,6 +387,109 @@ test('license activate: a valid, OWN-product key activates and returns a device_
     assert.equal(body.activated, true);
     assert.ok(body.device_token, 'client depends on json.device_token');
     assert.equal(body.device_cap, 3);
+  } finally {
+    restore();
+  }
+});
+
+test('license activate: a known device reuses its valid LS instance without activating again', async () => {
+  const token = '11111111-1111-4111-8111-111111111111';
+  const now = Date.now();
+  const env = licenseEnv({
+    DEVICES: makeKV({
+      'KEY-OK': JSON.stringify({
+        tokens: [{ token, instance_id: 'inst-existing', created_at: now, last_seen_at: now }],
+      }),
+    }),
+  });
+  const fetchMock = makeFetch([
+    {
+      match: (u) => u.includes(URLS.LS_VALIDATE),
+      respond: () => ({ status: 200, body: { valid: true, meta: { product_id: 222, store_id: 111 } } }),
+    },
+  ]);
+  const restore = withFetch(fetchMock);
+  try {
+    const res = await handleActivate(
+      formRequest({ license_key: 'KEY-OK', instance_name: 'RW' }, { headers: { 'X-Device-Token': token } }),
+      env,
+    );
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.equal(body.activated, true);
+    assert.equal(body.reused, true);
+    assert.equal(body.instance.id, 'inst-existing');
+    assert.equal(body.device_token, token);
+    assert.equal(fetchMock.calls.filter((c) => c.url.includes(URLS.LS_ACTIVATE)).length, 0);
+    assert.equal(fetchMock.calls.filter((c) => c.url.includes(URLS.LS_VALIDATE)).length, 1);
+  } finally {
+    restore();
+  }
+});
+
+test('license activate: existing-instance validation outage does not create a duplicate instance', async () => {
+  const token = '22222222-2222-4222-8222-222222222222';
+  const now = Date.now();
+  const env = licenseEnv({
+    DEVICES: makeKV({
+      'KEY-OK': JSON.stringify({
+        tokens: [{ token, instance_id: 'inst-existing', created_at: now, last_seen_at: now }],
+      }),
+    }),
+  });
+  const fetchMock = makeFetch([
+    { match: (u) => u.includes(URLS.LS_VALIDATE), respond: () => ({ throws: 'ECONNRESET' }) },
+  ]);
+  const restore = withFetch(fetchMock);
+  try {
+    const res = await handleActivate(
+      formRequest({ license_key: 'KEY-OK' }, { headers: { 'X-Device-Token': token } }),
+      env,
+    );
+    assert.equal(res.status, 503);
+    const body = await res.json();
+    assert.equal(body.activated, false);
+    assert.equal(fetchMock.calls.filter((c) => c.url.includes(URLS.LS_ACTIVATE)).length, 0);
+  } finally {
+    restore();
+  }
+});
+
+test('license activate: explicitly dead existing instance is replaced on the same device token', async () => {
+  const token = '33333333-3333-4333-8333-333333333333';
+  const now = Date.now();
+  const env = licenseEnv({
+    DEVICES: makeKV({
+      'KEY-OK': JSON.stringify({
+        tokens: [{ token, instance_id: 'inst-dead', created_at: now, last_seen_at: now }],
+      }),
+    }),
+  });
+  const fetchMock = makeFetch([
+    { match: (u) => u.includes(URLS.LS_VALIDATE), respond: () => ({ status: 200, body: { valid: false } }) },
+    {
+      match: (u) => u.includes(URLS.LS_ACTIVATE),
+      respond: () => ({
+        status: 200,
+        body: { activated: true, instance: { id: 'inst-new' }, meta: { product_id: 222, store_id: 111 } },
+      }),
+    },
+  ]);
+  const restore = withFetch(fetchMock);
+  try {
+    const res = await handleActivate(
+      formRequest({ license_key: 'KEY-OK' }, { headers: { 'X-Device-Token': token } }),
+      env,
+    );
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.equal(body.activated, true);
+    assert.equal(body.device_token, token);
+    assert.equal(fetchMock.calls.filter((c) => c.url.includes(URLS.LS_ACTIVATE)).length, 1);
+    const bucket = await env.DEVICES.get('KEY-OK', 'json');
+    assert.equal(bucket.tokens.length, 1);
+    assert.equal(bucket.tokens[0].token, token);
+    assert.equal(bucket.tokens[0].instance_id, 'inst-new');
   } finally {
     restore();
   }

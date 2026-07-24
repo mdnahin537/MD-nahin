@@ -20,7 +20,7 @@
 import { jsonResponse } from './cors';
 import { checkRateLimit } from './ratelimit';
 import type { RateLimitEnv } from './ratelimit';
-import { deviceCookie, issueOrRefresh, readToken, revoke, touch } from './fingerprint';
+import { deviceCookie, findExistingDevice, issueOrRefresh, readToken, revoke, touch } from './fingerprint';
 import type { DeviceEnv } from './fingerprint';
 
 const LS_BASE = 'https://api.lemonsqueezy.com/v1/licenses';
@@ -177,6 +177,66 @@ export async function handleActivate(
       );
     }
 
+    // Idempotent same-device path. Re-entering the same key must not mint a new
+    // Lemon Squeezy instance when this device already owns a live one.
+    const presented = readToken(request);
+    const existing = await findExistingDevice(env, licenseKey, presented);
+    if (existing?.record.instance_id) {
+      const existingInstanceId = existing.record.instance_id;
+      const check = await forwardToLS(
+        'validate',
+        new URLSearchParams({ license_key: licenseKey, instance_id: existingInstanceId }),
+      );
+      if (check.json?.valid === true) {
+        const mismatch = productMismatch(env, check.json?.meta, false);
+        if (mismatch) {
+          return jsonResponse(
+            { activated: false, error: mismatch },
+            403,
+            request,
+            env.ALLOWED_ORIGINS,
+          );
+        }
+        const refreshed = await issueOrRefresh(env, licenseKey, presented, existingInstanceId);
+        if (!refreshed.ok) {
+          return jsonResponse(
+            { activated: false, error: refreshed.error, active_devices: refreshed.active_devices, cap: refreshed.cap },
+            403,
+            request,
+            env.ALLOWED_ORIGINS,
+          );
+        }
+        const ttl = parseInt(env.DEVICE_TTL_SECONDS || '7776000', 10);
+        return jsonResponse(
+          {
+            activated: true,
+            valid: true,
+            instance: { id: existingInstanceId },
+            meta: check.json?.meta,
+            device_token: refreshed.token,
+            active_devices: refreshed.active_devices,
+            device_cap: refreshed.cap,
+            reused: true,
+          },
+          200,
+          request,
+          env.ALLOWED_ORIGINS,
+          { 'Set-Cookie': deviceCookie(refreshed.token!, ttl) },
+        );
+      }
+      // Unknown/outage response: do not risk creating a duplicate upstream slot.
+      // Only an explicit valid:false proves the old instance is dead and allows a
+      // fresh activation attempt.
+      if (check.json?.valid !== false) {
+        return jsonResponse(
+          { activated: false, error: 'License server is busy. Please try again in a moment.' },
+          503,
+          request,
+          env.ALLOWED_ORIGINS,
+        );
+      }
+    }
+
     // 1) LS is source of truth on whether the key is real.
     const params = new URLSearchParams({
       license_key: licenseKey,
@@ -229,7 +289,6 @@ export async function handleActivate(
 
     // 2) Bind a server-issued device_token. If the client already has one,
     //    refresh it; otherwise mint a new one (enforcing the 3-device cap).
-    const presented = readToken(request);
     const issued = await issueOrRefresh(env, licenseKey, presented, instanceId);
 
     if (!issued.ok) {
