@@ -183,21 +183,24 @@ jobs:
           rmdir recovery/patches 2>/dev/null || true
           rmdir recovery 2>/dev/null || true
 
-      - name: Verify exact final file scope
+      - name: Verify final scope allowlist
         if: steps.staged.outputs.present == 'true'
         shell: bash
         run: |
-          actual="$(git diff --name-only | sort)"
-          expected="$(printf '%s\n' \
-            '.github/workflows/apply-license-gate-recovery.yml' \
-            '.github/workflows/realmwright-recovery-ci.yml' \
-            'realmwright-v7.html' \
-            'recovery/patches/license-gate-provider-setup.patch' | sort)"
-          test "$actual" = "$expected" || {
-            echo "Unexpected final file scope:" >&2
-            printf '%s\n' "$actual" >&2
+          test ! -e recovery/patches/license-gate-provider-setup.patch
+          test ! -e .github/workflows/apply-license-gate-recovery.yml
+          git diff --quiet -- realmwright-v7.html && {
+            echo "Expected realmwright-v7.html to be changed" >&2
             exit 1
           }
+          unexpected="$(git diff --name-only | grep -Ev '^(realmwright-v7\.html|\.github/workflows/realmwright-recovery-ci\.yml|\.github/workflows/apply-license-gate-recovery\.yml|recovery/patches/license-gate-provider-setup\.patch)$' || true)"
+          test -z "$unexpected" || {
+            echo "Unexpected changed paths:" >&2
+            printf '%s\n' "$unexpected" >&2
+            exit 1
+          }
+          printf 'Approved changed paths:\n'
+          git diff --name-only
 
       - name: Commit verified license gate
         if: steps.staged.outputs.present == 'true'
