@@ -1,3 +1,5 @@
+import { readBoundedInt } from './config';
+
 // Server-issued opaque device tokens. The frontend NEVER computes the token
 // itself, so a malicious client cannot forge a "new device" by tweaking
 // UA/screen/timezone strings. The Worker is the authority on device identity.
@@ -15,6 +17,17 @@ export interface DeviceEnv {
   DEVICES: KVNamespace;
   DEVICE_CAP: string;
   DEVICE_TTL_SECONDS: string;
+}
+
+
+export function deviceTtlSeconds(env: DeviceEnv): number {
+  return readBoundedInt(env.DEVICE_TTL_SECONDS, 7_776_000, 3_600, 31_536_000);
+}
+
+export function deviceCap(env: DeviceEnv): number {
+  // The paid product promises a three-device ceiling. Operators may lower it,
+  // but an invalid or oversized variable must not silently create extra slots.
+  return readBoundedInt(env.DEVICE_CAP, 3, 1, 3);
 }
 
 export interface DeviceRecord {
@@ -42,7 +55,7 @@ async function readBucket(env: DeviceEnv, key: string): Promise<DeviceBucket> {
 }
 
 async function writeBucket(env: DeviceEnv, key: string, bucket: DeviceBucket): Promise<void> {
-  const ttl = parseInt(env.DEVICE_TTL_SECONDS || '7776000', 10);
+  const ttl = deviceTtlSeconds(env);
   await env.DEVICES.put(key, JSON.stringify(bucket), { expirationTtl: ttl });
 }
 
@@ -76,8 +89,8 @@ export async function findExistingDevice(
   presentedToken: string | null,
 ): Promise<ExistingDeviceResult | null> {
   if (!presentedToken) return null;
-  const ttl = parseInt(env.DEVICE_TTL_SECONDS || '7776000', 10);
-  const cap = parseInt(env.DEVICE_CAP || '3', 10);
+  const ttl = deviceTtlSeconds(env);
+  const cap = deviceCap(env);
   const bucket = prune(await readBucket(env, licenseKey), ttl);
   const record = bucket.tokens.find((t) => t.token === presentedToken);
   return record ? { record, active_devices: bucket.tokens.length, cap } : null;
@@ -102,8 +115,8 @@ export async function issueOrRefresh(
   presentedToken: string | null,
   instanceId: string | null,
 ): Promise<IssueResult> {
-  const ttl = parseInt(env.DEVICE_TTL_SECONDS || '7776000', 10);
-  const cap = parseInt(env.DEVICE_CAP || '3', 10);
+  const ttl = deviceTtlSeconds(env);
+  const cap = deviceCap(env);
   const now = Date.now();
 
   let bucket = prune(await readBucket(env, licenseKey), ttl);
@@ -142,7 +155,7 @@ export async function touch(
   token: string | null,
 ): Promise<void> {
   if (!token) return;
-  const ttl = parseInt(env.DEVICE_TTL_SECONDS || '7776000', 10);
+  const ttl = deviceTtlSeconds(env);
   const bucket = prune(await readBucket(env, licenseKey), ttl);
   const existing = bucket.tokens.find((t) => t.token === token);
   if (!existing) return;

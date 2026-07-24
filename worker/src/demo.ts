@@ -44,6 +44,7 @@
 //  one-time free trial", not a daily allowance.)
 
 import { jsonResponse } from './cors';
+import { readBoundedInt, readCounter } from './config';
 
 export interface DemoEnv {
   ALLOWED_ORIGINS: string;
@@ -74,7 +75,7 @@ function today(): string {
 }
 
 async function bump(env: DemoEnv, key: string, ttl: number): Promise<number> {
-  const n = parseInt((await env.RATELIMIT.get(key)) || '0', 10) + 1;
+  const n = readCounter(await env.RATELIMIT.get(key)) + 1;
   await env.RATELIMIT.put(key, String(n), { expirationTtl: ttl });
   return n;
 }
@@ -84,7 +85,7 @@ async function bump(env: DemoEnv, key: string, ttl: number): Promise<number> {
 // not burn the day's pool with zero successful generations. Never drops below 0.
 async function unbump(env: DemoEnv, key: string, ttl: number): Promise<void> {
   try {
-    const cur = parseInt((await env.RATELIMIT.get(key)) || '0', 10);
+    const cur = readCounter(await env.RATELIMIT.get(key));
     const next = cur > 0 ? cur - 1 : 0;
     await env.RATELIMIT.put(key, String(next), { expirationTtl: ttl });
   } catch {
@@ -177,14 +178,16 @@ export async function handleDemoGenerate(request: Request, env: DemoEnv): Promis
     }
 
     const day = today();
-    const perVisitorLimit = parseInt(env.DEMO_PER_VISITOR_LIMIT || '5', 10);
-    const globalLimit = parseInt(env.DEMO_GLOBAL_DAILY || '300', 10);
+    // Product cap is exactly five. Operators may lower it, but a typo or an
+    // oversized value must never grant extra free generations.
+    const perVisitorLimit = readBoundedInt(env.DEMO_PER_VISITOR_LIMIT, 5, 1, 5);
+    const globalLimit = readBoundedInt(env.DEMO_GLOBAL_DAILY, 300, 1, 10_000);
 
     // 2) Global ceiling — read before spending. When hit, push to Sample Mode.
     //    This one DOES reset daily — per spec, it is a spend ceiling, not the
     //    per-visitor trial.
     const globalKey = `demo:global:${day}`;
-    const globalUsed = parseInt((await env.RATELIMIT.get(globalKey)) || '0', 10);
+    const globalUsed = readCounter(await env.RATELIMIT.get(globalKey));
     if (globalUsed >= globalLimit) {
       return jsonResponse(
         { error: 'The free demo is at capacity for today. Try Sample Mode — no key needed.', fallback: true },
@@ -198,7 +201,7 @@ export async function handleDemoGenerate(request: Request, env: DemoEnv): Promis
     //    file-header comment. "Exactly 5 messages per visitor" must not reset
     //    every UTC midnight or the free tier never converts to a sale.
     const ipKey = `demo:ip:${ip}`;
-    const ipUsed = parseInt((await env.RATELIMIT.get(ipKey)) || '0', 10);
+    const ipUsed = readCounter(await env.RATELIMIT.get(ipKey));
     if (ipUsed >= perVisitorLimit) {
       return jsonResponse(
         { error: "You've used all your free demo generations. Activate a key to keep going.", fallback: true },
@@ -213,7 +216,7 @@ export async function handleDemoGenerate(request: Request, env: DemoEnv): Promis
     // read-modify-write — see the residual-race note in ratelimit.ts. The
     // effective ceiling is cap + peak_concurrency; set DEMO_GLOBAL_DAILY low
     // enough that even an Nx overrun is affordable.)
-    const trialTtl = parseInt(env.DEMO_TRIAL_TTL_SECONDS || '7776000', 10); // ~90d per-visitor memory
+    const trialTtl = readBoundedInt(env.DEMO_TRIAL_TTL_SECONDS, 7_776_000, 3_600, 31_536_000); // 1h-1y
     const globalTtl = 90_000; // ~25h, covers the UTC day rollover
     const reserved = await reserveAll(env, [
       { key: ipKey, ttl: trialTtl },
@@ -228,7 +231,8 @@ export async function handleDemoGenerate(request: Request, env: DemoEnv): Promis
       );
     }
 
-    const maxTokens = parseInt(env.DEMO_MAX_TOKENS || '1200', 10);
+    // Bound output spend even if the deployment variable is mistyped or huge.
+    const maxTokens = readBoundedInt(env.DEMO_MAX_TOKENS, 1_200, 128, 2_000);
     let upstream: Response;
     try {
       upstream = await fetch(OPENROUTER_URL, {

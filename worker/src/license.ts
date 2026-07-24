@@ -20,7 +20,7 @@
 import { jsonResponse } from './cors';
 import { checkRateLimit } from './ratelimit';
 import type { RateLimitEnv } from './ratelimit';
-import { deviceCookie, findExistingDevice, issueOrRefresh, readToken, revoke, touch } from './fingerprint';
+import { deviceCookie, deviceTtlSeconds, findExistingDevice, issueOrRefresh, readToken, revoke, touch } from './fingerprint';
 import type { DeviceEnv } from './fingerprint';
 
 const LS_BASE = 'https://api.lemonsqueezy.com/v1/licenses';
@@ -206,7 +206,7 @@ export async function handleActivate(
             env.ALLOWED_ORIGINS,
           );
         }
-        const ttl = parseInt(env.DEVICE_TTL_SECONDS || '7776000', 10);
+        const ttl = deviceTtlSeconds(env);
         return jsonResponse(
           {
             activated: true,
@@ -307,7 +307,7 @@ export async function handleActivate(
       );
     }
 
-    const ttl = parseInt(env.DEVICE_TTL_SECONDS || '7776000', 10);
+    const ttl = deviceTtlSeconds(env);
     const body_out = {
       ...upstream.json,
       device_token: issued.token,
@@ -500,7 +500,7 @@ export async function reapOrphans(env: LicenseEnv): Promise<{ scanned: number; r
         if (survivors.length === 0) {
           await env.DEVICES.delete(k.name);
         } else {
-          const ttl = parseInt(env.DEVICE_TTL_SECONDS || '7776000', 10);
+          const ttl = deviceTtlSeconds(env);
           await env.DEVICES.put(k.name, JSON.stringify({ tokens: survivors }), {
             expirationTtl: ttl,
           });
