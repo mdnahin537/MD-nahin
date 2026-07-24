@@ -1,6 +1,6 @@
 # RealmWright Recovery State
 
-**Last updated:** 2026-07-24
+**Last updated:** 2026-07-25
 
 This is the durable handoff for every future session. Read it before changing RealmWright and update it after every verified decision, fix, test, or blocker.
 
@@ -11,9 +11,20 @@ This is the durable handoff for every future session. Read it before changing Re
 - Draft recovery PR: `#13`
 - PR base: `claude/realmwright-pivot`
 - Recovery branch origin: `90c9a2f4235e38c4c50229ab160579a72ff65931`
+- Pre-demo backup branch: `backup/realmwright-pr13-2026-07-24-1930`
+- Post-demo verified backup branch: `backup/realmwright-pr13-demo-verified-2026-07-24`
 - Never modify `main` or `claude/realmwright-pivot` directly.
 - Never force-push.
 - Keep PR #13 draft and unmerged until browser, deployment, live-auth, and live-demo gates pass.
+
+## Backup and recovery points
+
+- The recovery branch itself retains every isolated commit and is never force-pushed.
+- `backup/realmwright-pr13-2026-07-24-1930` preserves the complete verified license-core state immediately before the reviewable demo-world-change commit.
+- `backup/realmwright-pr13-demo-verified-2026-07-24` preserves the complete branch after the five-use reviewable demo passed browser and CI validation.
+- Current committed frontend SHA-256: `50cafda48d3265577a8ec685e5f5e5b96635b27abbb2a81c60fbd20772fc2ca6`; Git blob SHA: `ad08b1ff9148dea35119c6ff86baa7304230fbb4`.
+- Recovery CI artifacts retain the exact HTML, recovery state, Worker source/tests, package lock, TypeScript config, and Wrangler manifest for seven days per run.
+- Restoring does not require reconstructing edits: either backup branch can be compared, checked out, or used to create a new recovery branch without altering PR #13 or `main`.
 
 ## Locked product behavior
 
@@ -59,7 +70,7 @@ This is the durable handoff for every future session. Read it before changing Re
 ### License state and device lifecycle
 
 - `572bf251bfff6c8758271ccc70506c5f3666b8c1` — makes activation, validation, and deactivation durable-state transitions atomic. Live unlock/lock state publishes only after IndexedDB commits.
-- `4d69e229f2d757dc86f20f3e9808a1e6dabb6ae1` — reuses a valid Lemon Squeezy instance on an already-known device instead of consuming another slot; fails safely during validation outage; replaces only an explicitly dead instance.
+- `4d69e229f2d757dc86f20f3e9808a1e6dabb6ae1` — reuses a valid Lemon Squeezy instance on an already-known device instead of consuming another activation slot; fails safely during validation outage; replaces only an explicitly dead instance.
 - `47738c3822f937cb10f99f360f42ceccd5ee0fa3` — removes full product keys from queue warning/error logs; logs non-secret metadata only.
 - `a38774a4407c25a21aeeaaed63c635a237fe4c18` — preserves the server-issued device token until deactivation or queued cleanup completes, ensuring the Worker can revoke the exact device binding.
 - `0cff32b92ab93d5f404bf69117f42ba7d6cd62ad` — treats deactivation as successful only when the Worker explicitly returns `deactivated:true`; distinguishes `success`, retryable failure, and terminal rejection.
@@ -132,6 +143,8 @@ Deployment blockers in the repository snapshot:
 - `TURNSTILE_SITEKEY` is empty in the committed HTML.
 - Worker `ALLOWED_ORIGINS`, KV namespace IDs, store/product IDs, itch game ID, and `DEMO_MODEL` still contain placeholders.
 - Therefore the repository snapshot cannot execute a real hosted demo call without external deployment configuration.
+- A direct probe of the advertised Worker hostname was attempted from the current execution environment, but external DNS resolution is unavailable here. This is an environment limitation, not evidence that the Worker is offline.
+- Public search did not reveal a deployed RealmWright Pages origin or committed public Turnstile site key. The actual Cloudflare dashboard/non-secret deployment values are still required for live testing.
 
 ## Free by NVIDIA / OpenRouter status
 
@@ -140,6 +153,8 @@ Confirmed:
 - The Settings entry and all provider controls are paid-gated visually and functionally.
 - The code implements OpenRouter PKCE `/auth` → callback `?code=` → `/api/v1/auth/keys` exchange.
 - Deterministic browser tests confirm automatic key capture into the secret store and exclusion from ordinary backups.
+- On 2026-07-25, OpenRouter's official model page and free-model catalog listed `nvidia/nemotron-3-ultra-550b-a55b:free` as a text model with tool support at $0/M input and $0/M output. The app's fallback and live-catalog selector currently resolve to this exact slug.
+- The app still resolves the newest free NVIDIA chat model from OpenRouter's live catalog first; the static slug is only the offline/empty-catalog fallback.
 
 Still unproven:
 
@@ -154,11 +169,11 @@ Still unproven:
 
 ## Immediate next actions
 
-1. Obtain or confirm the actual Pages origin, Worker endpoint, public Turnstile site key, and non-secret deployment identifiers without exposing secrets.
-2. Run a real hosted five-use demo request through the deployed Worker.
+1. Obtain the actual Cloudflare Pages origin and public Turnstile site key, and confirm the deployed Worker/non-secret configuration from the Cloudflare dashboard. Do not request or expose Worker secrets.
+2. Run a real hosted demo request through the deployed Worker, verify a reviewable `[CANON]` proposal, and confirm the server-reported remaining count.
 3. Perform one real licensed OpenRouter authorization and free-NVIDIA generation on the final callback origin.
 4. Run the complete license device-cap matrix against Lemon Squeezy test mode.
-5. Update this file and PR #13 after every verified change.
+5. Keep both backup branches intact and update this file and PR #13 after every verified change.
 
 ## Safety rules
 
