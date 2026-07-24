@@ -22,7 +22,7 @@
 import { jsonResponse } from './cors';
 import { checkRateLimit } from './ratelimit';
 import type { RateLimitEnv } from './ratelimit';
-import { deviceCookie, issueOrRefresh, readToken } from './fingerprint';
+import { deviceCookie, deviceTtlSeconds, issueOrRefresh, readToken } from './fingerprint';
 import type { DeviceEnv } from './fingerprint';
 
 export interface ItchEnv extends RateLimitEnv, DeviceEnv {
@@ -114,7 +114,7 @@ export async function handleItchVerify(request: Request, env: ItchEnv): Promise<
       );
     }
 
-    const ttl = parseInt(env.DEVICE_TTL_SECONDS || '7776000', 10);
+    const ttl = deviceTtlSeconds(env);
     return jsonResponse(
       {
         valid: true,

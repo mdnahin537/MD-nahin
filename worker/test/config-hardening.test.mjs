@@ -3,10 +3,12 @@ import assert from 'node:assert/strict';
 
 import { handleDemoGenerate } from '../src/demo.ts';
 import { issueOrRefresh } from '../src/fingerprint.ts';
+import { handleItchVerify } from '../src/itch.ts';
 import { checkRateLimit } from '../src/ratelimit.ts';
 import {
   demoEnv,
   licenseEnv,
+  itchEnv,
   makeFetch,
   makeKV,
   URLS,
@@ -169,4 +171,20 @@ test('config: corrupt rate-limit counter fails closed', async () => {
   const result = await checkRateLimit(request, env, 'license');
   assert.deepEqual(result, { ok: false, remaining: 0 });
   assert.equal(await kv.get(key), 'broken-counter');
+});
+
+
+test('config: invalid itch device TTL uses the safe cookie lifetime', async () => {
+  const fetchMock = makeFetch([
+    { match: (url) => url.includes(URLS.ITCH), respond: () => ({ status: 200, body: { download_key: { id: 12345 } } }) },
+  ]);
+  const restore = withFetch(fetchMock);
+  try {
+    const res = await handleItchVerify(jsonRequest({ key: 'real-key' }), itchEnv({ DEVICE_TTL_SECONDS: 'broken' }));
+    assert.equal(res.status, 200);
+    assert.match(res.headers.get('set-cookie') || '', /Max-Age=7776000(?:;|$)/);
+    assert.equal((await res.json()).valid, true);
+  } finally {
+    restore();
+  }
 });
