@@ -92,6 +92,29 @@ async function unbump(env: DemoEnv, key: string, ttl: number): Promise<void> {
   }
 }
 
+type Reservation = { key: string; ttl: number };
+
+// RECOVERY FIX (2026-07-24): KV is not transactional. If the visitor counter
+// increments successfully but the global-counter write then fails, the old code
+// returned 503 while silently consuming one of the visitor's five trial messages.
+// Reserve the counters as one logical operation and compensate every reservation
+// that definitely completed before a later write failed.
+async function reserveAll(env: DemoEnv, reservations: Reservation[]): Promise<boolean> {
+  const completed: Reservation[] = [];
+  try {
+    for (const reservation of reservations) {
+      await bump(env, reservation.key, reservation.ttl);
+      completed.push(reservation);
+    }
+    return true;
+  } catch {
+    for (const reservation of completed.reverse()) {
+      await unbump(env, reservation.key, reservation.ttl);
+    }
+    return false;
+  }
+}
+
 async function verifyTurnstile(env: DemoEnv, token: string, ip: string): Promise<boolean> {
   if (!env.TURNSTILE_SECRET) return false;
   const params = new URLSearchParams({ secret: env.TURNSTILE_SECRET, response: token });
@@ -192,8 +215,18 @@ export async function handleDemoGenerate(request: Request, env: DemoEnv): Promis
     // enough that even an Nx overrun is affordable.)
     const trialTtl = parseInt(env.DEMO_TRIAL_TTL_SECONDS || '7776000', 10); // ~90d per-visitor memory
     const globalTtl = 90_000; // ~25h, covers the UTC day rollover
-    await bump(env, ipKey, trialTtl);
-    await bump(env, globalKey, globalTtl);
+    const reserved = await reserveAll(env, [
+      { key: ipKey, ttl: trialTtl },
+      { key: globalKey, ttl: globalTtl },
+    ]);
+    if (!reserved) {
+      return jsonResponse(
+        { error: 'Demo server is busy. Try Sample Mode.', fallback: true },
+        503,
+        request,
+        allowed,
+      );
+    }
 
     const maxTokens = parseInt(env.DEMO_MAX_TOKENS || '1200', 10);
     let upstream: Response;
