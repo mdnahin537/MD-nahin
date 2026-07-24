@@ -1,0 +1,131 @@
+--- a/realmwright-v7.html
++++ b/realmwright-v7.html
+@@ -7441,16 +7441,33 @@
+ // Network blips on rollback or background validate previously fell into an
+ // empty catch and silently leaked active LS instances. Now we retry with
+ // exponential backoff (1s, 2s, 4s) and persist any final failure to
+-// localStorage so it's drained on the next app startup. The Worker's
++// IndexedDB so it's drained on the next app startup. The Worker's
+ // fortnightly cleanup-orphans cron is the safety net for queue entries that
+ // outlive the user's interest in retrying.
+-const LICENSE_QUEUE_KEY='rw_license_queue';
++const LICENSE_QUEUE_KEY='rw_license_queue_v2';
++const LICENSE_QUEUE_LEGACY_KEY='rw_license_queue';
+ const LicenseQueue={
+-  _read(){
+-    try{const raw=localStorage.getItem(LICENSE_QUEUE_KEY);if(!raw)return[];const arr=JSON.parse(raw);return Array.isArray(arr)?arr:[];}catch(e){return[];}
+-  },
+-  _write(arr){
+-    try{localStorage.setItem(LICENSE_QUEUE_KEY,JSON.stringify(arr.slice(0,50)));}catch(e){}
++  async _read(){
++    try{
++      const stored=await IDB.get(LICENSE_QUEUE_KEY);
++      if(Array.isArray(stored))return stored;
++    }catch(e){/* fall through to one-time legacy migration */}
++    // Migrate the older localStorage queue only after the IDB write commits.
++    try{
++      const raw=localStorage.getItem(LICENSE_QUEUE_LEGACY_KEY);
++      if(!raw)return[];
++      const arr=JSON.parse(raw);
++      if(!Array.isArray(arr))return[];
++      await IDB.set(LICENSE_QUEUE_KEY,arr.slice(0,50));
++      localStorage.removeItem(LICENSE_QUEUE_LEGACY_KEY);
++      return arr.slice(0,50);
++    }catch(e){return[];}
++  },
++  async _write(arr){
++    const bounded=arr.slice(0,50);
++    await IDB.set(LICENSE_QUEUE_KEY,bounded);
++    try{localStorage.removeItem(LICENSE_QUEUE_LEGACY_KEY);}catch(e){}
++    return true;
+   },
+   _logMeta(entry){
+     // Never pass the queued object itself to console: it contains the complete
+@@ -7458,14 +7475,18 @@
+     // to include in a screenshot or support report.
+     return{action:entry?.action||'unknown',attempts:Number(entry?.attempts||0),has_instance:Boolean(entry?.instance_id)};
+   },
+-  push(entry){
+-    const arr=this._read();
+-    arr.push({...entry,queued_at:Date.now(),attempts:0});
+-    this._write(arr);
+-    if(typeof showToast==='function'){
+-      showToast('License sync queued — will retry on next launch.',[],4000);
++  async push(entry){
++    try{
++      const arr=await this._read();
++      arr.push({...entry,queued_at:Date.now(),attempts:0});
++      await this._write(arr);
++      if(typeof showToast==='function')showToast('License sync queued — will retry on next launch.',[],4000);
++      console.warn('[license:queue] queued',this._logMeta(entry));
++      return true;
++    }catch(e){
++      console.error('[license:queue] could not save retry task');
++      return false;
+     }
+-    console.warn('[license:queue] queued',this._logMeta(entry));
+   },
+   // Retry one deactivation POST with exponential backoff. A 2xx status alone
+   // is not success: the Worker must explicitly confirm {deactivated:true}.
+@@ -7492,7 +7513,7 @@
+   // Best-effort drain on startup. Logs failures with explicit tag so they
+   // surface in DevTools without nagging the user.
+   async drain(){
+-    const arr=this._read();
++    const arr=await this._read();
+     if(arr.length===0)return;
+     console.info('[license:queue] draining',arr.length,'entries');
+     const survivors=[];
+@@ -7506,14 +7527,18 @@
+       }catch(e){console.error('[license:queue] drain error',e);result='retry';}
+       if(result==='retry'){
+         entry.attempts=(entry.attempts||0)+1;
+-        // Drop after 10 attempts — Worker's cleanup-orphans cron will catch it.
+         if(entry.attempts<10)survivors.push(entry);
+         else console.error('[license:queue] giving up',this._logMeta(entry));
+       }
+     }
+-    this._write(survivors);
+-    // A pending deactivation keeps the device token so retries can revoke the
+-    // exact Worker binding. Clear it only after every queued operation succeeds.
++    try{
++      await this._write(survivors);
++    }catch(e){
++      // Keep the previous IDB queue and device token untouched so startup can
++      // attempt the cleanup again instead of silently losing the operation.
++      console.error('[license:queue] could not save drain result');
++      return;
++    }
+     if(survivors.length===0){
+       try{await IDB.set(IDB_KEY_DEVICE_TOKEN,null);}catch(e){/* stale local token is non-authoritative */}
+     }
+@@ -7661,7 +7686,19 @@
+       if(result==='retry'){
+         // Persist for next-startup drain so the LS instance doesn't leak active.
+         // The device token intentionally remains in IDB for that retry.
+-        LicenseQueue.push({action:'deactivate',license_key:ls.license_key,instance_id:ls.instance_id});
++        const queued=await LicenseQueue.push({action:'deactivate',license_key:ls.license_key,instance_id:ls.instance_id});
++        if(!queued){
++          // No confirmed remote success and no durable retry: restore the local
++          // license so the user can try deactivation again instead of losing control.
++          try{
++            await IDB.set(IDB_KEY_LICENSE,current);
++            this._data=current;
++            document.dispatchEvent(new CustomEvent('license:changed'));
++            return{success:false,error:'Could not save the deactivation retry. Your license remains active; free browser storage and try again.'};
++          }catch(e){
++            return{success:true,warning:'Deactivated locally, but automatic server cleanup could not be saved. Contact support if the device slot does not return.'};
++          }
++        }
+       }else{
+         // Success or a terminal rejection: no future retry can improve it, and the
+         // Worker has already attempted to remove its server-side device binding.
+@@ -28213,7 +28250,7 @@
+       showToast(result?.error||'Could not deactivate this device.',[],7000);
+       return;
+     }
+-    showToast('License deactivated on this device.');
++    showToast(result?.warning||'License deactivated on this device.',[],result?.warning?9000:4000);
+     this._updateModalStatus();
+   },
+   _onLicenseChanged(){
