@@ -40,11 +40,12 @@ This is the durable handoff for every future session. Read it before changing Re
 
 ## Completed recovery commits
 
-### Demo quota integrity
+### Demo quota integrity and review flow
 
 - `b957691b40f253ec498109ebfaffe983bbf1a706` — compensates completed Cloudflare KV reservations when a later reservation fails.
 - `eed7492558d2f1884b71fabb657e71ae809d529a` — regression test for partial reservation failure.
 - `1a96d8260867e67efc0a7b9b72785a92ba955575` — refunds empty and token-limit-truncated HTTP-200 model responses.
+- `5bd7b6b18d200b05941634578b57fa23941dedb1` — gives the five-use front-door demo bounded active-realm context, parses optional `[CANON]` proposals, strips raw control syntax from the visible answer, limits each response to three review candidates, and opens the existing accept/reject canon-review modal. Nothing auto-applies; no active realm means no proposals are offered.
 
 ### Recovery infrastructure
 
@@ -58,7 +59,7 @@ This is the durable handoff for every future session. Read it before changing Re
 ### License state and device lifecycle
 
 - `572bf251bfff6c8758271ccc70506c5f3666b8c1` — makes activation, validation, and deactivation durable-state transitions atomic. Live unlock/lock state publishes only after IndexedDB commits.
-- `4d69e229f2d757dc86f20f3e9808a1e6dabb6ae1` — reuses a valid Lemon Squeezy instance on an already-known device instead of consuming another activation slot; fails safely during validation outage; replaces only an explicitly dead instance.
+- `4d69e229f2d757dc86f20f3e9808a1e6dabb6ae1` — reuses a valid Lemon Squeezy instance on an already-known device instead of consuming another slot; fails safely during validation outage; replaces only an explicitly dead instance.
 - `47738c3822f937cb10f99f360f42ceccd5ee0fa3` — removes full product keys from queue warning/error logs; logs non-secret metadata only.
 - `a38774a4407c25a21aeeaaed63c635a237fe4c18` — preserves the server-issued device token until deactivation or queued cleanup completes, ensuring the Worker can revoke the exact device binding.
 - `0cff32b92ab93d5f404bf69117f42ba7d6cd62ad` — treats deactivation as successful only when the Worker explicitly returns `deactivated:true`; distinguishes `success`, retryable failure, and terminal rejection.
@@ -77,6 +78,7 @@ This is the durable handoff for every future session. Read it before changing Re
 - Deactivation-response semantics run: `30119469596` — success.
 - IndexedDB license-queue run: `30120322319` — success.
 - Read-only cleanup verification run: `30120399223` — success.
+- Reviewable five-use demo run: `30120868386` — success. An earlier run failed only because a shell `grep` used double quotes around JavaScript `${...}`; no product commit was produced from that failed run.
 - Recovery CI is restored to read-only after every guarded commit.
 
 ### Deterministic browser validation
@@ -103,20 +105,27 @@ Passed:
 - If remote deactivation is retryable but the retry cannot be stored, the active local license and token are restored.
 - A failed drain-result write preserves the previous queue and token.
 - A successful drain clears the queue and token.
+- A successful hosted demo answer hides the raw `[CANON]` block and presents the bounded proposals through the existing review modal.
+- Accepting selected demo proposals applied a test NPC and hook only after explicit review.
+- Five successful demo requests consumed exactly five uses; the sixth was blocked without contacting the model.
+- Demo errors consumed zero uses.
+- With no active realm, the demo offered realm creation and could not apply hidden changes.
+- Model output is clamped to at most three review candidates and eight parse warnings per use.
 
 ### Current exact frontend state
 
-- Current committed `realmwright-v7.html` SHA-256: `6f52063e8dd4ea1db1cbbbd88ec7292751094428f2017f8f2e443359c18110ef`.
+- Current committed `realmwright-v7.html` SHA-256: `50cafda48d3265577a8ec685e5f5e5b96635b27abbb2a81c60fbd20772fc2ca6`.
 - All three real inline JavaScript blocks pass syntax validation.
 - No production deployment has been performed from PR #13.
 
 ## Demo AI status
 
-Confirmed architecture:
+Code-level behavior is now complete:
 
-- Five hosted uses currently live in the front-door demo path through `Demo.proxyRequest`.
-- Normal Copilot remains intentionally paid-only.
-- The existing demo path is not yet the required complete world-changing five-use experience.
+- Five hosted uses live in the front-door demo path through `Demo.proxyRequest`.
+- The paid Copilot interface remains hidden and functionally blocked.
+- Each successful answer may propose bounded, reviewable world changes through the existing canon approval modal.
+- Nothing auto-applies, the sixth use is blocked, and failed generations do not consume quota.
 
 Deployment blockers in the repository snapshot:
 
@@ -145,8 +154,8 @@ Still unproven:
 
 ## Immediate next actions
 
-1. Expand the demo-specific surface into five full, reviewable world-changing AI uses while keeping paid Copilot hidden.
-2. Obtain or confirm the actual Pages origin and public Turnstile site key without exposing secrets, then run a real hosted demo-model request.
+1. Obtain or confirm the actual Pages origin, Worker endpoint, public Turnstile site key, and non-secret deployment identifiers without exposing secrets.
+2. Run a real hosted five-use demo request through the deployed Worker.
 3. Perform one real licensed OpenRouter authorization and free-NVIDIA generation on the final callback origin.
 4. Run the complete license device-cap matrix against Lemon Squeezy test mode.
 5. Update this file and PR #13 after every verified change.
