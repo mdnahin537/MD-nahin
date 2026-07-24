@@ -1,0 +1,143 @@
+diff --git a/realmwright-v7.html b/realmwright-v7.html
+index b92cd4a..431676d 100644
+--- a/realmwright-v7.html
++++ b/realmwright-v7.html
+@@ -7546,9 +7546,26 @@ const LicenseGate={
+       if(!json.activated){
+         return{success:false,error:json.error||'Activation failed.'};
+       }
+-      if(json.device_token)await _persistDeviceToken(json.device_token);
+-      this._data={key,instanceId:json.instance?.id||null,platform:'lemonsqueezy',activatedAt:Date.now(),valid:true};
+-      await IDB.set(IDB_KEY_LICENSE,this._data);
++      const nextData={key,instanceId:json.instance?.id||null,platform:'lemonsqueezy',activatedAt:Date.now(),valid:true};
++      const writes=[[IDB_KEY_LICENSE,nextData]];
++      if(json.device_token)writes.push([IDB_KEY_DEVICE_TOKEN,json.device_token]);
++      try{
++        await IDB.setMany(writes);
++      }catch(e){
++        // Never publish a live unlock that the browser failed to save. Best-effort
++        // rollback prevents the successful upstream activation from consuming an
++        // LS instance when local durable storage is unavailable.
++        const instanceId=nextData.instanceId;
++        if(instanceId){
++          try{
++            const headers={Accept:'application/json','Content-Type':'application/x-www-form-urlencoded'};
++            if(json.device_token)headers['X-Device-Token']=json.device_token;
++            await fetch(WORKER_URL+'/api/license/deactivate',{method:'POST',headers,credentials:'include',body:new URLSearchParams({license_key:key,instance_id:instanceId})});
++          }catch(rollbackError){console.warn('[license:activate] storage rollback failed');}
++        }
++        return{success:false,error:'Activation succeeded, but this browser could not save it. Allow site storage or free browser space, then try again.'};
++      }
++      this._data=nextData;
+       document.dispatchEvent(new CustomEvent('license:changed'));
+       return{success:true};
+     }catch(e){return{success:false,error:'Network error — check your connection.'};}
+@@ -7560,9 +7577,15 @@ const LicenseGate={
+       if(!json.valid){
+         return{success:false,error:json.error||'Key not recognised on itch.io.'};
+       }
+-      if(json.device_token)await _persistDeviceToken(json.device_token);
+-      this._data={key,instanceId:null,platform:'itchio',activatedAt:Date.now(),valid:true};
+-      await IDB.set(IDB_KEY_LICENSE,this._data);
++      const nextData={key,instanceId:null,platform:'itchio',activatedAt:Date.now(),valid:true};
++      const writes=[[IDB_KEY_LICENSE,nextData]];
++      if(json.device_token)writes.push([IDB_KEY_DEVICE_TOKEN,json.device_token]);
++      try{
++        await IDB.setMany(writes);
++      }catch(e){
++        return{success:false,error:'This key is valid, but this browser could not save the activation. Allow site storage or free browser space, then try again.'};
++      }
++      this._data=nextData;
+       document.dispatchEvent(new CustomEvent('license:changed'));
+       return{success:true};
+     }catch(e){return{success:false,error:'Could not reach validation server.'};}
+@@ -7583,20 +7606,36 @@ const LicenseGate={
+         {method:'POST',headers:await this._hdr('application/x-www-form-urlencoded'),credentials:'include',body});
+       let json;
+       try{json=await res.json();}catch(e){json=null;}
+-      const {valid,fireExpired}=this._decideValidity(res.ok,json,this._data.valid);
+-      this._data.valid=valid;
+-      await IDB.set(IDB_KEY_LICENSE,this._data);
++      const current=this._data;
++      const {valid,fireExpired}=this._decideValidity(res.ok,json,current.valid);
++      if(valid===current.valid)return;
++      const nextData={...current,valid};
++      // Persist the new truth before publishing it to live gates. If storage fails,
++      // retain the prior live state and retry on a later launch (customer-safe).
++      await IDB.set(IDB_KEY_LICENSE,nextData);
++      this._data=nextData;
+       if(fireExpired)document.dispatchEvent(new CustomEvent('license:expired'));
++      else document.dispatchEvent(new CustomEvent('license:changed'));
+     }catch(e){
+       // Network blip — log and move on. The next bootstrap will retry.
+       console.warn('[license:validate] background validate failed',e&&e.message);
+     }
+   },
+   async deactivate(){
+-    if(!this._data)return;
+-    const ls=this._data.platform==='lemonsqueezy'&&this._data.instanceId
+-      ?{license_key:this._data.key,instance_id:this._data.instanceId}
++    if(!this._data)return{success:true};
++    const current=this._data;
++    const ls=current.platform==='lemonsqueezy'&&current.instanceId
++      ?{license_key:current.key,instance_id:current.instanceId}
+       :null;
++    // Commit the local lock first and atomically. If storage rejects, keep the
++    // current license live and do not deactivate the server behind the user's back.
++    try{
++      await IDB.setMany([[IDB_KEY_LICENSE,null],[IDB_KEY_DEVICE_TOKEN,null]]);
++    }catch(e){
++      return{success:false,error:'This browser could not save the deactivation. Allow site storage or free browser space, then try again.'};
++    }
++    this._data=null;
++    document.dispatchEvent(new CustomEvent('license:changed'));
+     if(ls){
+       const body=new URLSearchParams(ls);
+       const ok=await LicenseQueue.retryPost(WORKER_URL+'/api/license/deactivate',body);
+@@ -7605,10 +7644,7 @@ const LicenseGate={
+         LicenseQueue.push({action:'deactivate',license_key:ls.license_key,instance_id:ls.instance_id});
+       }
+     }
+-    this._data=null;
+-    await IDB.set(IDB_KEY_LICENSE,null);
+-    try{await IDB.set(IDB_KEY_DEVICE_TOKEN,null);}catch(e){}
+-    document.dispatchEvent(new CustomEvent('license:changed'));
++    return{success:true};
+   },
+   info(){
+     if(!this._data)return null;
+@@ -8445,6 +8481,21 @@ const IDB={
+     const db=await this.open();if(!db)throw new Error('idb-unavailable');
+     return new Promise((res,rej)=>{const tx=db.transaction('kv','readwrite');const st=tx.objectStore('kv');const rq=st.put(val,key);rq.onsuccess=()=>res();rq.onerror=()=>rej(rq.error);});
+   },
++  // Recovery: commit related license records in one IndexedDB transaction so
++  // the saved license and its server-issued device token can never split.
++  async setMany(entries){
++    const db=await this.open();if(!db)throw new Error('idb-unavailable');
++    return new Promise((res,rej)=>{
++      try{
++        const tx=db.transaction('kv','readwrite');
++        const st=tx.objectStore('kv');
++        tx.oncomplete=()=>res();
++        tx.onerror=()=>rej(tx.error||new Error('idb-transaction-failed'));
++        tx.onabort=()=>rej(tx.error||new Error('idb-transaction-aborted'));
++        for(const [key,val] of entries)st.put(val,key);
++      }catch(e){rej(e);}
++    });
++  },
+   async remove(key){
+     const db=await this.open();if(!db)return;
+     return new Promise(r=>{const tx=db.transaction('kv','readwrite');const st=tx.objectStore('kv');const rq=st.delete(key);rq.onsuccess=()=>r();rq.onerror=()=>r();});
+@@ -28133,7 +28184,11 @@ const LicenseGateUI={
+   },
+   async _deactivate(){
+     if(!confirm('Deactivate this device? You can re-activate later with the same key.'))return;
+-    await LicenseGate.deactivate();
++    const result=await LicenseGate.deactivate();
++    if(!result?.success){
++      showToast(result?.error||'Could not deactivate this device.',[],7000);
++      return;
++    }
+     showToast('License deactivated on this device.');
+     this._updateModalStatus();
+   },
