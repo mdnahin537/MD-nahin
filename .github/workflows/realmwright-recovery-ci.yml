@@ -9,7 +9,7 @@ on:
       - claude/realmwright-pivot
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   worker-validation:
@@ -53,3 +53,89 @@ jobs:
             worker/package-lock.json
             worker/tsconfig.json
             worker/wrangler.toml
+
+  apply-device-bucket-hardening:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out exact recovery head
+        uses: actions/checkout@v4
+        with:
+          ref: agent/realmwright-recovery-2026-07-24
+          fetch-depth: 0
+
+      - name: Detect staged bucket patch
+        id: staged
+        shell: bash
+        run: |
+          if test -f recovery/patches/device-bucket-fail-closed.patch; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify exact pre-change files and patch
+        if: steps.staged.outputs.present == 'true'
+        shell: bash
+        run: |
+          test ! -e worker/test/device-bucket-hardening.test.mjs
+          test "$(sha256sum worker/src/fingerprint.ts | awk '{print $1}')" = "2a3e361518d936d3442cedd832b6b04e382fd3e0eff7ba8ecafb2f194c473740"
+          test "$(sha256sum worker/src/license.ts | awk '{print $1}')" = "8308a258e469e5a6a1cdda55b06b61b54b6518ffab8c2b2e2ce682c5d67118c2"
+          test "$(sha256sum recovery/patches/device-bucket-fail-closed.patch | awk '{print $1}')" = "ecfaf62a34e3bde18e94eb49234396843e808f313a342d21f172ec90a9a82845"
+
+      - name: Verify and apply audited bucket patch
+        if: steps.staged.outputs.present == 'true'
+        shell: bash
+        run: |
+          git apply --check recovery/patches/device-bucket-fail-closed.patch
+          git apply recovery/patches/device-bucket-fail-closed.patch
+
+      - name: Verify exact post-change files
+        if: steps.staged.outputs.present == 'true'
+        shell: bash
+        run: |
+          test "$(sha256sum worker/src/fingerprint.ts | awk '{print $1}')" = "e7b18c6a393dcd56cf28295ae5991c132e241505193c9a4f20c28f3b85d2d958"
+          test "$(sha256sum worker/src/license.ts | awk '{print $1}')" = "bf100e36e2b268da535420479d1e0a26600bb3d9eb24b9870b42d882373e7e59"
+          test "$(sha256sum worker/test/device-bucket-hardening.test.mjs | awk '{print $1}')" = "e33eff809e6c417294b20afc928e7753df2e8d43c591a20f9be77c2caebe7f4b"
+
+      - name: Use Node.js 22 for guarded validation
+        if: steps.staged.outputs.present == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: worker/package-lock.json
+
+      - name: Install Worker dependencies
+        if: steps.staged.outputs.present == 'true'
+        working-directory: worker
+        run: npm ci
+
+      - name: Run complete 41-test Worker suite
+        if: steps.staged.outputs.present == 'true'
+        working-directory: worker
+        run: npm test
+
+      - name: Run Worker typecheck
+        if: steps.staged.outputs.present == 'true'
+        working-directory: worker
+        run: npm run typecheck
+
+      - name: Verify exact three-file scope
+        if: steps.staged.outputs.present == 'true'
+        shell: bash
+        run: |
+          expected=$'worker/src/fingerprint.ts\nworker/src/license.ts\nworker/test/device-bucket-hardening.test.mjs'
+          actual="$(git status --short | cut -c4- | sort)"
+          test "$actual" = "$expected" || { printf 'Unexpected files:\n%s\n' "$actual" >&2; exit 1; }
+
+      - name: Commit verified device-bucket hardening
+        if: steps.staged.outputs.present == 'true'
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add worker/src/fingerprint.ts worker/src/license.ts worker/test/device-bucket-hardening.test.mjs
+          git commit -m "Fail closed on malformed device buckets"
+          git push origin HEAD:agent/realmwright-recovery-2026-07-24
