@@ -92,11 +92,11 @@ jobs:
         if: steps.staged.outputs.present == 'true'
         shell: bash
         run: |
-          grep -F "const candidates=demoCtx.nation&&parsed&&Array.isArray(parsed.candidates)?parsed.candidates.slice(0,3):[]" realmwright-v7.html
-          grep -F "Review ${candidates.length} proposed world change" realmwright-v7.html
-          grep -F "Modals.openCanonReview(pending.candidates,pending.nationId" realmwright-v7.html
-          grep -F "copilotControls.hidden=!isActive" realmwright-v7.html
-          ! grep -F "Parse.applyCandidates(pending.nationId" realmwright-v7.html
+          grep -F 'const candidates=demoCtx.nation&&parsed&&Array.isArray(parsed.candidates)?parsed.candidates.slice(0,3):[]' realmwright-v7.html
+          grep -F 'Review ${candidates.length} proposed world change' realmwright-v7.html
+          grep -F 'Modals.openCanonReview(pending.candidates,pending.nationId' realmwright-v7.html
+          grep -F 'copilotControls.hidden=!isActive' realmwright-v7.html
+          ! grep -F 'Parse.applyCandidates(pending.nationId' realmwright-v7.html
 
       - name: Syntax-check every real inline script
         if: steps.staged.outputs.present == 'true'
