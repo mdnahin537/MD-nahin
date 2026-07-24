@@ -7452,6 +7452,12 @@ const LicenseQueue={
   _write(arr){
     try{localStorage.setItem(LICENSE_QUEUE_KEY,JSON.stringify(arr.slice(0,50)));}catch(e){}
   },
+  _logMeta(entry){
+    // Never pass the queued object itself to console: it contains the complete
+    // product license key. Log only operational metadata that is safe for a GM
+    // to include in a screenshot or support report.
+    return{action:entry?.action||'unknown',attempts:Number(entry?.attempts||0),has_instance:Boolean(entry?.instance_id)};
+  },
   push(entry){
     const arr=this._read();
     arr.push({...entry,queued_at:Date.now(),attempts:0});
@@ -7459,7 +7465,7 @@ const LicenseQueue={
     if(typeof showToast==='function'){
       showToast('License sync queued — will retry on next launch.',[],4000);
     }
-    console.warn('[license:queue] queued',entry);
+    console.warn('[license:queue] queued',this._logMeta(entry));
   },
   // Retry one network POST with exponential backoff. Returns true on success.
   async retryPost(url,bodyParams){
@@ -7497,7 +7503,7 @@ const LicenseQueue={
         entry.attempts=(entry.attempts||0)+1;
         // Drop after 10 attempts — Worker's cleanup-orphans cron will catch it.
         if(entry.attempts<10)survivors.push(entry);
-        else console.error('[license:queue] giving up on',entry);
+        else console.error('[license:queue] giving up',this._logMeta(entry));
       }
     }
     this._write(survivors);
