@@ -9,7 +9,7 @@ on:
       - claude/realmwright-pivot
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   worker-validation:
@@ -53,3 +53,83 @@ jobs:
             worker/package-lock.json
             worker/tsconfig.json
             worker/wrangler.toml
+
+  apply-same-device-idempotency:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out exact recovery head
+        uses: actions/checkout@v4
+        with:
+          ref: agent/realmwright-recovery-2026-07-24
+          fetch-depth: 0
+
+      - name: Detect staged Worker patch
+        id: staged
+        run: |
+          if test -f recovery/patches/license-same-device-idempotency.patch; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify exact pre-change Worker files
+        if: steps.staged.outputs.present == 'true'
+        run: |
+          test "$(sha256sum worker/src/license.ts | awk '{print $1}')" = "31b7a54fa53f07b02f5ce7b2224e5cfeb9355e813b7985dc38a4d7ac454d44da"
+          test "$(sha256sum worker/src/fingerprint.ts | awk '{print $1}')" = "e727132b08a0cbcbc8ca9606770e94e73a51038abd1f9b1ce26b38a195e09df4"
+          test "$(sha256sum worker/test/worker.test.mjs | awk '{print $1}')" = "cbd537a563e41d681985c97194817aab7e8396cdbfad531adf8244ccc31ef02e"
+
+      - name: Verify and apply audited Worker patch
+        if: steps.staged.outputs.present == 'true'
+        run: |
+          git apply --check recovery/patches/license-same-device-idempotency.patch
+          git apply recovery/patches/license-same-device-idempotency.patch
+
+      - name: Verify exact post-change Worker files
+        if: steps.staged.outputs.present == 'true'
+        run: |
+          test "$(sha256sum worker/src/license.ts | awk '{print $1}')" = "e647289a28cdd8827e715fd2aa3bedc478f5476feca2e152b557df6852f42bd3"
+          test "$(sha256sum worker/src/fingerprint.ts | awk '{print $1}')" = "f367ae66c5834e34d6b484094168417810e21e046508a914b56bf49bfd64fa72"
+          test "$(sha256sum worker/test/worker.test.mjs | awk '{print $1}')" = "72ab87fe59b8ce54ba45ba6ce0d01ab458713d11dc3215748c91abe6ac209074"
+
+      - name: Use Node.js 22 for guarded validation
+        if: steps.staged.outputs.present == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: worker/package-lock.json
+
+      - name: Install Worker dependencies
+        if: steps.staged.outputs.present == 'true'
+        working-directory: worker
+        run: npm ci
+
+      - name: Run complete Worker tests
+        if: steps.staged.outputs.present == 'true'
+        working-directory: worker
+        run: npm test
+
+      - name: Run Worker typecheck
+        if: steps.staged.outputs.present == 'true'
+        working-directory: worker
+        run: npm run typecheck
+
+      - name: Verify only the audited Worker files changed
+        if: steps.staged.outputs.present == 'true'
+        shell: bash
+        run: |
+          expected=$'worker/src/fingerprint.ts\nworker/src/license.ts\nworker/test/worker.test.mjs'
+          actual="$(git diff --name-only | sort)"
+          test "$actual" = "$expected" || { printf 'Unexpected files:\n%s\n' "$actual" >&2; exit 1; }
+
+      - name: Commit verified same-device idempotency
+        if: steps.staged.outputs.present == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add worker/src/fingerprint.ts worker/src/license.ts worker/test/worker.test.mjs
+          git commit -m "Reuse existing license instance on the same device"
+          git push origin HEAD:agent/realmwright-recovery-2026-07-24
