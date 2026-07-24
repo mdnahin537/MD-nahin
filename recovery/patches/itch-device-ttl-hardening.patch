@@ -1,0 +1,59 @@
+diff --git a/worker/src/itch.ts b/worker/src/itch.ts
+index 5162e9b..5c7bff1 100644
+--- a/worker/src/itch.ts
++++ b/worker/src/itch.ts
+@@ -22,7 +22,7 @@
+ import { jsonResponse } from './cors';
+ import { checkRateLimit } from './ratelimit';
+ import type { RateLimitEnv } from './ratelimit';
+-import { deviceCookie, issueOrRefresh, readToken } from './fingerprint';
++import { deviceCookie, deviceTtlSeconds, issueOrRefresh, readToken } from './fingerprint';
+ import type { DeviceEnv } from './fingerprint';
+ 
+ export interface ItchEnv extends RateLimitEnv, DeviceEnv {
+@@ -114,7 +114,7 @@ export async function handleItchVerify(request: Request, env: ItchEnv): Promise<
+       );
+     }
+ 
+-    const ttl = parseInt(env.DEVICE_TTL_SECONDS || '7776000', 10);
++    const ttl = deviceTtlSeconds(env);
+     return jsonResponse(
+       {
+         valid: true,
+diff --git a/worker/test/config-hardening.test.mjs b/worker/test/config-hardening.test.mjs
+index f76a21c..e1e089f 100644
+--- a/worker/test/config-hardening.test.mjs
++++ b/worker/test/config-hardening.test.mjs
+@@ -3,10 +3,12 @@ import assert from 'node:assert/strict';
+ 
+ import { handleDemoGenerate } from '../src/demo.ts';
+ import { issueOrRefresh } from '../src/fingerprint.ts';
++import { handleItchVerify } from '../src/itch.ts';
+ import { checkRateLimit } from '../src/ratelimit.ts';
+ import {
+   demoEnv,
+   licenseEnv,
++  itchEnv,
+   makeFetch,
+   makeKV,
+   URLS,
+@@ -170,3 +172,19 @@ test('config: corrupt rate-limit counter fails closed', async () => {
+   assert.deepEqual(result, { ok: false, remaining: 0 });
+   assert.equal(await kv.get(key), 'broken-counter');
+ });
++
++
++test('config: invalid itch device TTL uses the safe cookie lifetime', async () => {
++  const fetchMock = makeFetch([
++    { match: (url) => url.includes(URLS.ITCH), respond: () => ({ status: 200, body: { download_key: { id: 12345 } } }) },
++  ]);
++  const restore = withFetch(fetchMock);
++  try {
++    const res = await handleItchVerify(jsonRequest({ key: 'real-key' }), itchEnv({ DEVICE_TTL_SECONDS: 'broken' }));
++    assert.equal(res.status, 200);
++    assert.match(res.headers.get('set-cookie') || '', /Max-Age=7776000(?:;|$)/);
++    assert.equal((await res.json()).valid, true);
++  } finally {
++    restore();
++  }
++});
