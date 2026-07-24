@@ -1,0 +1,55 @@
+name: RealmWright Recovery CI
+
+on:
+  push:
+    branches:
+      - agent/realmwright-recovery-2026-07-24
+  pull_request:
+    branches:
+      - claude/realmwright-pivot
+
+permissions:
+  contents: read
+
+jobs:
+  worker-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out recovery branch
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: worker/package-lock.json
+
+      - name: Install Worker dependencies
+        working-directory: worker
+        run: npm ci
+
+      - name: Run Worker tests
+        working-directory: worker
+        run: npm test
+
+      - name: Run Worker typecheck
+        working-directory: worker
+        run: npm run typecheck
+
+      - name: Upload exact recovery source
+        uses: actions/upload-artifact@v4
+        with:
+          name: realmwright-recovery-source
+          if-no-files-found: error
+          retention-days: 7
+          path: |
+            realmwright-v7.html
+            RECOVERY-STATE.md
+            worker/src
+            worker/test
+            worker/package.json
+            worker/package-lock.json
+            worker/tsconfig.json
+            worker/wrangler.toml
