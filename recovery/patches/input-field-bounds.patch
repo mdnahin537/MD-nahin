@@ -19,7 +19,7 @@ index 4ea823b..bb0649c 100644
        return jsonResponse({ error: 'Prompt is too large for the free demo.' }, 413, request, allowed);
      }
  
- diff --git a/worker/src/input.ts b/worker/src/input.ts
+diff --git a/worker/src/input.ts b/worker/src/input.ts
 new file mode 100644
 index 0000000..8f6d930
 --- /dev/null
@@ -45,7 +45,7 @@ index 0000000..8f6d930
 +export function isWithinUtf8Limit(value: string, maxBytes: number): boolean {
 +  return utf8ByteLength(value) <= maxBytes;
 +}
- diff --git a/worker/src/itch.ts b/worker/src/itch.ts
+diff --git a/worker/src/itch.ts b/worker/src/itch.ts
 index 5c7bff1..74154f0 100644
 --- a/worker/src/itch.ts
 +++ b/worker/src/itch.ts
@@ -77,7 +77,7 @@ index 5c7bff1..74154f0 100644
  
      const url =
        `${ITCH_BASE}/${encodeURIComponent(env.ITCHIO_API_KEY)}/game/${encodeURIComponent(env.ITCHIO_GAME_ID)}` +
- diff --git a/worker/src/license.ts b/worker/src/license.ts
+diff --git a/worker/src/license.ts b/worker/src/license.ts
 index 6d45ff7..9cde4b6 100644
 --- a/worker/src/license.ts
 +++ b/worker/src/license.ts
@@ -174,7 +174,7 @@ index 6d45ff7..9cde4b6 100644
  
      const params = new URLSearchParams({ license_key: licenseKey, instance_id: instanceId });
      const upstream = await forwardToLS('deactivate', params);
- diff --git a/worker/test/input-hardening.test.mjs b/worker/test/input-hardening.test.mjs
+diff --git a/worker/test/input-hardening.test.mjs b/worker/test/input-hardening.test.mjs
 new file mode 100644
 index 0000000..1cd96fb
 --- /dev/null
