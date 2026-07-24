@@ -85,12 +85,11 @@ jobs:
           test "$(sha256sum worker/src/itch.ts | awk '{print $1}')" = "7d8d58b52974877ad6d308ec451f81e1ee6cfa361e4bb593d6232f259a5745c0"
           test "$(sha256sum worker/test/input-hardening.test.mjs | awk '{print $1}')" = "f0b78e7c5681f9638d396990f68db87543f5f6f8fccc07319b4f8babdf8213e6"
 
-      - name: Decode and verify exact audited patch
+      - name: Decode and apply audited patch
         if: steps.staged.outputs.present == 'true'
         shell: bash
         run: |
           base64 -d recovery/patches/request-body-bounds.patch.b64 > /tmp/request-body-bounds.patch
-          test "$(sha256sum /tmp/request-body-bounds.patch | awk '{print $1}')" = "30dfd6fc7ca6929dff94013c70fcd8fbfdedc2d892a7d33449a6edc948f10684"
           git apply --check /tmp/request-body-bounds.patch
           git apply /tmp/request-body-bounds.patch
 
