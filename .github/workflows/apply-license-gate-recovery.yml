@@ -1,4 +1,5 @@
 name: Apply RealmWright License Gate Recovery
+# Registered before this no-op update so the push trigger is active.
 
 on:
   push:
