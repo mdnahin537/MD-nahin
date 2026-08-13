@@ -5165,10 +5165,10 @@ Description: A tunnel gave way, halting the eastern works.</pre>
             </div>
             <div style="display:flex;gap:var(--space-2);margin-top:var(--space-2);align-items:center;flex-wrap:wrap">
               <button class="btn btn--secondary" id="copilot-key-save" style="font-size:var(--text-label-sm)">Save key</button>
-              <button class="btn btn--secondary" id="copilot-key-clear" style="font-size:var(--text-label-sm);display:none">Clear key</button>
-              <button class="btn btn--secondary" id="copilot-key-delete" style="font-size:var(--text-label-sm);color:var(--color-crisis,#ff6b6b);border-color:rgba(255,107,107,0.4);display:none">Delete my key</button>
+              <button class="btn btn--secondary" id="copilot-key-clear" style="font-size:var(--text-label-sm);display:none">Remove from this browser</button>
               <span id="copilot-key-status" style="font-size:var(--text-label-sm);color:var(--color-text-muted)"></span>
             </div>
+            <div class="settings-desc" style="margin-top:var(--space-2)">Removing a saved key only clears this browser. To stop that key from working anywhere, revoke it from <a href="https://openrouter.ai/settings/keys" target="_blank" rel="noopener" style="color:var(--color-gold-deep)">OpenRouter Keys</a>.</div>
           </div>
         </div>
         <div class="settings-row">
@@ -27287,27 +27287,14 @@ function bindEventListeners(){
     showToast('API key saved.',[],3000);
   });
   document.getElementById('copilot-key-clear')?.addEventListener('click',()=>{
-    if(!confirm('Remove the saved API key from this device?'))return;
+    if(!confirm('Remove the saved OpenRouter key from this browser? The key will keep working elsewhere until you revoke it in OpenRouter.'))return;
     State.setSetting('copilotKey',null);
     const input=document.getElementById('copilot-key-input');
     if(input)input.value='';
     Copilot._refreshKeySettingsUI();
     Copilot.updateStatus();
     Copilot.renderMessages();
-    showToast('API key cleared.',[],2500);
-  });
-  // Phase 5F: prominent one-click "Delete my key"
-  document.getElementById('copilot-key-delete')?.addEventListener('click',()=>{
-    if(!confirm("Delete your API key? You'll need to paste it again to use the Copilot."))return;
-    State.setSetting('copilotKey',null);
-    const input=document.getElementById('copilot-key-input');
-    if(input){input.value='';input.type='password';}
-    const eyeIcon=document.getElementById('copilot-key-eye-icon');
-    if(eyeIcon)eyeIcon.textContent='visibility';
-    Copilot._refreshKeySettingsUI();
-    Copilot.updateStatus();
-    Copilot.renderMessages();
-    showToast('API key deleted.',[],3000);
+    showToast('OpenRouter key removed from this browser. Revoke it in OpenRouter if you no longer want the key to work.',[],6000);
   });
   // Phase 5F: eye-icon toggle (mask/unmask the key field)
   document.getElementById('copilot-key-eye')?.addEventListener('click',()=>{

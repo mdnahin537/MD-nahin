@@ -227,7 +227,7 @@ This section supersedes stale counts and placeholder claims above where they con
 - Branch: `agent/realmwright-recovery-2026-07-24`.
 - Remote HEAD before this candidate: `9e419f87539fdebae7930cdbfb80739c28bdcdbf`.
 - PR #13 remains Draft until its replacement CI and private live tests pass.
-- Release-candidate frontend SHA-256: `AE4622691AC7A3FB9F21AC01054F5CBC8C3790C65C13A50DD5D61F97F4CCCAF9`.
+- Release-candidate frontend SHA-256 after the verified OpenRouter wording correction: `1B797C8B2B46E0870A95B9DA8A3ED46FBF2FCBBDD772FB2BF5FC43F3D5C00A4E`.
 - Generated Wrangler, Graphify, and local audit output is ignored. Only the explicitly reviewed source, tests, workflow, lockfile, and documentation may be staged.
 - The obsolete hidden patch payload is removed; Git history and backup branches remain the recovery path.
 
@@ -260,6 +260,15 @@ This section supersedes stale counts and placeholder claims above where they con
 - The itch.io tax interview is at the final W-8BEN certification step. Rahima must personally review and submit it; tax identity details do not belong in this repository.
 - Payoneer is intentionally left unconfigured until a payout is requested.
 - The itch.io product page must remain Draft until Rahima finishes the tax certification and provides the final storefront screenshots.
+
+### 2026-08-14 private live-test checkpoint
+
+- GitHub CI passed against remote release commit `f5da7954604d2271b5ae0b87db731689d186fea0`; its source tree exactly matched the locally verified candidate tree.
+- Private Worker version `b6c5ef61-6d61-4e7a-81b8-244cbdc69ee3` and Pages alias `https://pr13-release-qa.realmwright-gm.pages.dev` were created without changing production traffic.
+- A real private itch.io purchase link unlocked the preview, survived a reload, and restored licensed Copilot access. The private purchase URL was not printed or committed.
+- Real OpenRouter PKCE authorization returned to the preview origin, removed the callback code from the address, stored the temporary key, and completed one minimal generation with the exact answer `READY`. The temporary test key was limited to one hour.
+- The test revealed one misleading UI claim: "Delete my key" only cleared browser storage and could not revoke the user-controlled OpenRouter key. The duplicate action is removed, the remaining action is named "Remove from this browser," permanent revocation is directed to OpenRouter Keys, and the release contract now prevents the false claim from returning.
+- The deactivation confirmation was accepted to release the QA device slot. The final preview reload must confirm the browser remains unlicensed before merge.
 
 ### Authorized continuation order
 

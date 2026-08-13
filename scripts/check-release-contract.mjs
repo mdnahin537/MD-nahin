@@ -68,6 +68,16 @@ assert.match(html, /await Secrets\.saveKey\(key\)/);
 assert.match(html, /await State\.persistNow\(\)/);
 assert.match(html, /if\(storedKey!==key\)throw new Error\('this browser did not confirm secure key storage'\)/);
 
+// Browser-local removal must not pretend that RealmWright can revoke a
+// user-controlled OpenRouter key. Keep one clear action and direct permanent
+// revocation to the provider account that owns the key.
+assert.equal((html.match(/id="copilot-key-clear"/g) || []).length, 1, 'Expected one browser-local key removal action.');
+assert.equal((html.match(/id="copilot-key-delete"/g) || []).length, 0, 'Misleading duplicate key-deletion action returned.');
+assert.doesNotMatch(html, /Delete my key|API key deleted\./);
+assert.match(html, />Remove from this browser<\/button>/);
+assert.match(html, /The key will keep working elsewhere until you revoke it in OpenRouter\./);
+assert.match(html, /href="https:\/\/openrouter\.ai\/settings\/keys"/);
+
 // Evaluate only the LicenseGate object. Function bodies may reference the rest
 // of the app, but the itch.io deactivation tests below call only stubbed paths.
 const gateMarker = 'const LicenseGate=';
@@ -174,4 +184,4 @@ function harness({ response, throwFetch = false, failSetMany = [], failSet = fal
   assert.deepEqual(h.events, ['license:changed']);
 }
 
-console.log('Validated dynamic NVIDIA recommendation, model-choice preservation, PKCE, and itch.io deactivation contracts.');
+console.log('Validated dynamic NVIDIA recommendation, model-choice preservation, PKCE, honest key removal, and itch.io deactivation contracts.');
