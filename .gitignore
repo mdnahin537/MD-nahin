@@ -18,6 +18,11 @@ build/
 .next/
 out/
 
+# Local deployment and code-graph artifacts
+.wrangler/
+graphify-out/
+worker/.audit/
+
 # Logs
 *.log
 npm-debug.log*

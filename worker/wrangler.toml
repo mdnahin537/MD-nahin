@@ -6,10 +6,10 @@ compatibility_flags = ["nodejs_compat"]
 # ─────────────────────────────────────────────────────────────────────────────
 # KV namespaces
 #   DEVICES   — { license_key -> JSON{ tokens:[{token, created_at, last_seen_at, instance_id}] } }
-#               (itch buyers are stored under an "itch:<key>" namespace inside
-#                the same binding). TTL 90d.
-#   RATELIMIT — per-IP license-endpoint counters AND the demo per-IP/global
-#               daily counters (demo:ip:* / demo:global:*).
+#               (itch buyers are stored under an "itch:<sha256(key)>" namespace
+#                inside the same binding, so raw buyer keys are not listed). TTL 90d.
+#   RATELIMIT — per-IP license-endpoint counters, the one-time demo visitor
+#               counter (demo:ip:*), and the optional UTC-day global counter.
 #
 # Create them with:
 #   wrangler kv:namespace create DEVICES
@@ -18,11 +18,11 @@ compatibility_flags = ["nodejs_compat"]
 # ─────────────────────────────────────────────────────────────────────────────
 [[kv_namespaces]]
 binding = "DEVICES"
-id = "REPLACE_WITH_DEVICES_KV_ID"
+id = "9e863212e5724c8785d1e46ebe5453ba"
 
 [[kv_namespaces]]
 binding = "RATELIMIT"
-id = "REPLACE_WITH_RATELIMIT_KV_ID"
+id = "5bcb00a2cebb4fda8ce5fc0a4d0ceb93"
 
 # Cron — fortnightly orphan reaper. 5-field syntax; fires 03:00 UTC on the
 # 1st and 15th of each month.
@@ -36,10 +36,17 @@ crons = ["0 3 1,15 * *"]
 # Comma-separated production origin allowlist. file:// loads (itch.io desktop
 # bundles, local opens) send Origin: null, which the Worker allows WITHOUT
 # credentials. An unknown/disallowed origin is refused before any side effect.
-# Hunter: tighten this before public ship.
-ALLOWED_ORIGINS = "https://realmwright.app,https://www.realmwright.app,https://html-classic.itch.zone,https://v6p9d9t4.ssl.hwcdn.net"
+# This is NOT a wildcard — an unlisted origin cannot borrow this Worker/AI key.
+#
+# RealmWright is a hosted page on Cloudflare Pages. Add a custom domain later
+# by appending it here, comma-separated — don't replace the production Pages
+# origin. The itch.io entries are itch's public CDN/embed domains (needed if
+# the page is also embedded in an itch.io project page); keep them if you
+# distribute through itch, drop them if you don't.
+ALLOWED_ORIGINS = "https://realmwright-gm.pages.dev,https://51face9d.realmwright-gm.pages.dev,https://85dd1d2d.realmwright-gm.pages.dev,https://html-classic.itch.zone,https://v6p9d9t4.ssl.hwcdn.net"
 
-# Device cap (shared by Lemon Squeezy activations and itch buyers).
+# Device cap (shared by Lemon Squeezy activations and itch buyers). Caps how
+# many concurrent devices/browsers one $23 key can be active on at once.
 DEVICE_CAP = "3"
 DEVICE_TTL_SECONDS = "7776000"   # 90 days
 
@@ -49,27 +56,42 @@ RATE_LIMIT_PER_MIN = "30"
 # Lemon Squeezy paywall identity. BOTH must be set or activate/validate fail
 # closed (an unconfigured paywall is worse than a down one). These are the
 # numeric store_id and product_id from the LS dashboard — NOT secrets, but they
-# are required. The LS license API itself needs no API key.
-LS_STORE_ID = "REPLACE_WITH_LS_STORE_ID"
-LS_PRODUCT_ID = "REPLACE_WITH_LS_PRODUCT_ID"
+# are required. NOTE: the Lemon Squeezy License API needs NO API key/secret at
+# all (it's license-holder-facing by design) — there is deliberately no
+# LEMONSQUEEZY_API_KEY var or secret anywhere in this Worker.
+LS_STORE_ID = ""
+LS_PRODUCT_ID = ""
 
 # itch.io game id this Worker guards (numeric). NOT a secret. The matching API
-# key IS a secret — see the secrets list in README / set via `wrangler secret put`.
-ITCHIO_GAME_ID = "REPLACE_WITH_ITCHIO_GAME_ID"
+# key IS a secret — see the secrets list below / set via `wrangler secret put`.
+ITCHIO_GAME_ID = "4805505"
 
 # Free-demo (OpenRouter) controls. DEMO_MODEL is REQUIRED — the demo route
 # returns 503 without it. The Worker forces this model and ignores the client's.
-DEMO_MODEL = "REPLACE_WITH_OPENROUTER_MODEL_SLUG"   # e.g. an exact OpenRouter slug
-DEMO_PER_IP_DAILY = "5"
-DEMO_GLOBAL_DAILY = "300"
-DEMO_MAX_TOKENS = "1200"
+DEMO_MODEL = "nvidia/nemotron-3-ultra-550b-a55b:free"   # Free NVIDIA 550B-total / 55B-active MoE; forced server-side.
+# Exactly N free AI messages per visitor (per-IP), enforced server-side. This
+# does NOT reset daily — see the PIVOT FIX note in src/demo.ts. It is a
+# one-time trial, remembered for DEMO_TRIAL_TTL_SECONDS.
+DEMO_PER_VISITOR_LIMIT = "5"
+DEMO_TRIAL_TTL_SECONDS = "7776000"   # 90 days — how long a used-up trial is remembered
+# Optional ceiling across ALL visitors combined; when non-zero, it resets daily
+# at UTC midnight. Production leaves it disabled and relies on OpenRouter's
+# free-model account quota.
+DEMO_GLOBAL_DAILY = "0"   # 0 disables RealmWright's local daily ceiling; OpenRouter's free-account quota remains.
+DEMO_MAX_TOKENS = "800"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # SECRETS — set via `wrangler secret put <NAME>` (NEVER write values here).
 # Listed by name only; values live only in the Cloudflare secret store / .dev.vars.
 #
-#   OPENROUTER_KEY    (required) — Bearer key for the free-demo OpenRouter proxy.
-#   TURNSTILE_SECRET  (required) — Cloudflare Turnstile secret for the demo human check.
+#   OPENROUTER_KEY    (required) — the owner's AI provider key (OpenRouter), used
+#                      ONLY server-side for the free-demo proxy. Never sent to
+#                      the browser, never logged.
+#   TURNSTILE_SECRET  (required) — Cloudflare Turnstile SECRET key for the demo
+#                      human check (server-side verify call). The matching
+#                      PUBLIC sitekey is NOT a Worker var — it lives client-side
+#                      in realmwright-v7.html's TURNSTILE_SITEKEY constant and
+#                      is safe to commit there; only the secret belongs here.
 #   ITCHIO_API_KEY    (required for itch) — seller's itch.io API key (used server-side only).
 #   CLEANUP_TOKEN     (required to enable the manual cleanup-orphans HTTP route;
 #                      if unset, that route is disabled — the cron still runs).

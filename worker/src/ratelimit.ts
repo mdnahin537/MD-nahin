@@ -1,3 +1,5 @@
+import { readBoundedInt, readCounter } from './config';
+
 // Per-IP rolling-minute limiter backed by Cloudflare KV.
 // Cheap, eventually-consistent. Good enough to absorb obvious abuse;
 // LS API itself remains the source of truth on key validity.
@@ -15,9 +17,15 @@ export async function checkRateLimit(
   const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
   const window = Math.floor(Date.now() / 60_000); // minute bucket
   const key = `rl:${bucket}:${ip}:${window}`;
-  const limit = parseInt(env.RATE_LIMIT_PER_MIN || '30', 10);
+  const limit = readBoundedInt(env.RATE_LIMIT_PER_MIN, 30, 1, 300);
 
-  const current = parseInt((await env.RATELIMIT.get(key)) || '0', 10);
+  let current: number;
+  try {
+    current = readCounter(await env.RATELIMIT.get(key));
+  } catch {
+    // Corrupt persisted state must fail closed rather than reset the limiter.
+    return { ok: false, remaining: 0 };
+  }
   if (current >= limit) return { ok: false, remaining: 0 };
 
   // RESIDUAL RACE (documented, accepted): this is a read-modify-write on KV,

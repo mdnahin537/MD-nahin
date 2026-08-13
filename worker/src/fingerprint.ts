@@ -1,3 +1,5 @@
+import { readBoundedInt } from './config';
+
 // Server-issued opaque device tokens. The frontend NEVER computes the token
 // itself, so a malicious client cannot forge a "new device" by tweaking
 // UA/screen/timezone strings. The Worker is the authority on device identity.
@@ -9,12 +11,22 @@
 //         "created_at": 1716200000000, "last_seen_at": 1716200000000 }
 //     ]
 //   }
-// TTL: 90 days (refreshed on every touch). Tokens beyond DEVICE_CAP are rejected.
+// Device-lease TTL: 90 days (refreshed on every validation). This is cleanup
+// for inactive browser slots, not a purchase-key expiry. A still-valid itch.io
+// buyer receives a renewed lease automatically after a long absence.
 
 export interface DeviceEnv {
   DEVICES: KVNamespace;
   DEVICE_CAP: string;
   DEVICE_TTL_SECONDS: string;
+}
+
+export function deviceTtlSeconds(env: DeviceEnv): number {
+  return readBoundedInt(env.DEVICE_TTL_SECONDS, 7_776_000, 3_600, 31_536_000);
+}
+
+export function deviceCap(env: DeviceEnv): number {
+  return readBoundedInt(env.DEVICE_CAP, 3, 1, 3);
 }
 
 export interface DeviceRecord {
@@ -33,16 +45,32 @@ function newToken(): string {
   return crypto.randomUUID();
 }
 
+export function isDeviceBucket(raw: unknown): raw is DeviceBucket {
+  if (!raw || typeof raw !== 'object' || !Array.isArray((raw as DeviceBucket).tokens)) return false;
+  return (raw as DeviceBucket).tokens.every((record: any) =>
+    record &&
+    typeof record === 'object' &&
+    typeof record.token === 'string' &&
+    record.token.length > 0 &&
+    (record.instance_id === null || typeof record.instance_id === 'string') &&
+    Number.isFinite(record.last_seen_at) &&
+    record.last_seen_at >= 0 &&
+    (record.created_at === undefined || (Number.isFinite(record.created_at) && record.created_at >= 0)),
+  );
+}
+
 async function readBucket(env: DeviceEnv, key: string): Promise<DeviceBucket> {
-  const raw = await env.DEVICES.get(key, 'json');
-  if (!raw || typeof raw !== 'object' || !Array.isArray((raw as DeviceBucket).tokens)) {
-    return { tokens: [] };
-  }
-  return raw as DeviceBucket;
+  const stored = await env.DEVICES.get(key);
+  if (stored === null) return { tokens: [] };
+  let raw: unknown;
+  try { raw = JSON.parse(stored); }
+  catch { throw new Error('invalid-device-bucket'); }
+  if (!isDeviceBucket(raw)) throw new Error('invalid-device-bucket');
+  return raw;
 }
 
 async function writeBucket(env: DeviceEnv, key: string, bucket: DeviceBucket): Promise<void> {
-  const ttl = parseInt(env.DEVICE_TTL_SECONDS || '7776000', 10);
+  const ttl = deviceTtlSeconds(env);
   await env.DEVICES.put(key, JSON.stringify(bucket), { expirationTtl: ttl });
 }
 
@@ -59,6 +87,27 @@ export interface IssueResult {
   error?: string;
   active_devices?: number;
   cap?: number;
+}
+
+export interface ExistingDeviceResult {
+  record: DeviceRecord;
+  active_devices: number;
+  cap: number;
+}
+
+// Validate the bucket before any upstream activation. A known token with an
+// existing instance can be reused instead of consuming another LS slot.
+export async function findExistingDevice(
+  env: DeviceEnv,
+  licenseKey: string,
+  presentedToken: string | null,
+): Promise<ExistingDeviceResult | null> {
+  const ttl = deviceTtlSeconds(env);
+  const cap = deviceCap(env);
+  const bucket = prune(await readBucket(env, licenseKey), ttl);
+  if (!presentedToken) return null;
+  const record = bucket.tokens.find((t) => t.token === presentedToken);
+  return record ? { record, active_devices: bucket.tokens.length, cap } : null;
 }
 
 // Called on activate. If the request carries an existing valid token, refresh
@@ -80,8 +129,8 @@ export async function issueOrRefresh(
   presentedToken: string | null,
   instanceId: string | null,
 ): Promise<IssueResult> {
-  const ttl = parseInt(env.DEVICE_TTL_SECONDS || '7776000', 10);
-  const cap = parseInt(env.DEVICE_CAP || '3', 10);
+  const ttl = deviceTtlSeconds(env);
+  const cap = deviceCap(env);
   const now = Date.now();
 
   let bucket = prune(await readBucket(env, licenseKey), ttl);
@@ -118,14 +167,15 @@ export async function touch(
   env: DeviceEnv,
   licenseKey: string,
   token: string | null,
-): Promise<void> {
-  if (!token) return;
-  const ttl = parseInt(env.DEVICE_TTL_SECONDS || '7776000', 10);
+): Promise<boolean> {
+  if (!token) return false;
+  const ttl = deviceTtlSeconds(env);
   const bucket = prune(await readBucket(env, licenseKey), ttl);
   const existing = bucket.tokens.find((t) => t.token === token);
-  if (!existing) return;
+  if (!existing) return false;
   existing.last_seen_at = Date.now();
   await writeBucket(env, licenseKey, bucket);
+  return true;
 }
 
 // On deactivate — remove the token for this device only.
@@ -133,15 +183,17 @@ export async function revoke(
   env: DeviceEnv,
   licenseKey: string,
   token: string | null,
-): Promise<void> {
-  if (!token) return;
+): Promise<boolean> {
+  if (!token) return false;
   const bucket = await readBucket(env, licenseKey);
   const filtered = bucket.tokens.filter((t) => t.token !== token);
+  if (filtered.length === bucket.tokens.length) return false;
   if (filtered.length === 0) {
     await env.DEVICES.delete(licenseKey);
-    return;
+    return true;
   }
   await writeBucket(env, licenseKey, { tokens: filtered });
+  return true;
 }
 
 // Read token from cookie (preferred) or X-Device-Token header (itch.io iframe /

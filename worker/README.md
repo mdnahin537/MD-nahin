@@ -10,9 +10,11 @@ Cloudflare Worker that fronts three things for RealmWright:
    tweaking a client-side fingerprint.
 2. **itch.io** download-key verification (`/verify`) — also mints a
    `device_token`, so itch buyers share the same 3-device cap.
-3. **Free-demo OpenRouter proxy** (`/api/demo/generate`) — the **only** path
-   that spends money, fenced by Cloudflare Turnstile (verified *before* any
-   spend), a server-forced model, a per-IP daily cap, and a global daily ceiling.
+3. **Hosted free-AI OpenRouter proxy** (`/api/demo/generate`) — fenced by
+   Cloudflare Turnstile (verified *before* any provider call), a server-forced
+   model, and a per-visitor cap (5 messages, one-time — does **not** reset
+   daily). The optional RealmWright-wide daily ceiling is disabled in the
+   production config; OpenRouter's own free-model quota remains authoritative.
 
 > **Scope:** Gumroad is intentionally **out of scope** for this Worker — the
 > client (`realmwright-v7.html`) ships with Lemon Squeezy + itch.io only. The
@@ -31,6 +33,8 @@ Cloudflare Worker that fronts three things for RealmWright:
 | `POST /api/license/deactivate` | LS deactivate, revokes the local device token, clears the cookie. |
 | `POST /api/license/cleanup-orphans` | Manual orphan reaper. **Disabled unless `CLEANUP_TOKEN` is set** (the fortnightly cron runs regardless). |
 | `POST /verify` | itch.io key verify, mints a `device_token` for the buyer. |
+| `POST /api/itch/validate` | Revalidates itch.io ownership and refreshes the active browser's `device_token`. |
+| `POST /api/itch/deactivate` | Releases the active itch.io browser/device token. |
 | `POST /api/demo/generate` | Free-demo OpenRouter proxy (Turnstile + caps + server-forced model). |
 
 ## Fail-safe contract (why a third-party outage can't hurt a paying customer)
@@ -41,8 +45,9 @@ Cloudflare Worker that fronts three things for RealmWright:
   client's `_decideValidity` keeps the user in their current state. The product
   re-check on validate only rejects a key LS *affirmatively* says is
   valid-but-wrong-product; an outage is never treated as a mismatch.
-- **No endpoint ever returns a "disable features" / kill signal** — only status
-  text. The client is the only place that flips license state.
+- Temporary itch.io or Lemon Squeezy failures never revoke a paying customer.
+  A reachable itch.io response that explicitly identifies an invalid or
+  revoked download key may return `valid:false`; only then may the client lock.
 - The **demo** path fails the other way on purpose: Turnstile/OpenRouter
   outages **fail closed** (no spend) and push the client to Sample Mode.
 
@@ -63,8 +68,9 @@ npx wrangler secret put TURNSTILE_SECRET   # Cloudflare Turnstile secret
 npx wrangler secret put ITCHIO_API_KEY     # seller's itch.io API key (server-side only)
 npx wrangler secret put CLEANUP_TOKEN      # optional: enables the manual cleanup route
 
-# 3) Fill the REPLACE_WITH_* placeholders in wrangler.toml [vars]:
-#    LS_STORE_ID, LS_PRODUCT_ID, ITCHIO_GAME_ID, DEMO_MODEL
+# 3) Review the committed [vars] for the target account and environment.
+#    RealmWright currently ships through itch.io; the Lemon Squeezy ids are
+#    intentionally blank unless that storefront is enabled later.
 
 # 4) Deploy
 npx wrangler deploy
@@ -74,17 +80,29 @@ npx wrangler deploy
 
 | Var | Default / placeholder | Purpose |
 |---|---|---|
-| `ALLOWED_ORIGINS` | `https://realmwright.app,...` | Comma-separated CORS allowlist. `Origin: null` (file://, itch bundle) is allowed **without credentials**; unknown origins are refused before any side effect. |
+| `ALLOWED_ORIGINS` | RealmWright Pages + verified itch.io embed/CDN origins | Comma-separated CORS allowlist. `Origin: null` (file://, itch bundle) is allowed **without credentials**; unknown origins are refused before any side effect. **Not** a wildcard. |
 | `DEVICE_CAP` | `3` | Max concurrent device tokens per license (LS **and** itch). |
 | `DEVICE_TTL_SECONDS` | `7776000` (90 days) | Device-token lifetime, refreshed on every touch. |
 | `RATE_LIMIT_PER_MIN` | `30` | Per-IP per-minute cap on the license endpoints. |
-| `LS_STORE_ID` | `REPLACE_WITH_LS_STORE_ID` | **Required.** Numeric LS store id. Paywall fails closed if unset. |
-| `LS_PRODUCT_ID` | `REPLACE_WITH_LS_PRODUCT_ID` | **Required.** Numeric LS product id. Paywall fails closed if unset. |
-| `ITCHIO_GAME_ID` | `REPLACE_WITH_ITCHIO_GAME_ID` | **Required for itch.** Numeric itch.io game id this Worker guards. |
-| `DEMO_MODEL` | `REPLACE_WITH_OPENROUTER_MODEL_SLUG` | **Required.** Exact OpenRouter model slug. The Worker forces this and ignores the client's `model`. Demo returns 503 if unset. |
-| `DEMO_PER_IP_DAILY` | `5` | Per-IP free-demo generations per UTC day. |
-| `DEMO_GLOBAL_DAILY` | `300` | Global free-demo ceiling per UTC day. Set low enough that a small concurrency overrun is affordable (counters are KV, see note below). |
-| `DEMO_MAX_TOKENS` | `1200` | `max_tokens` cap per demo call. |
+| `LS_STORE_ID` | blank (storefront disabled) | Required only if Lemon Squeezy is enabled. Its paywall fails closed while unset. |
+| `LS_PRODUCT_ID` | blank (storefront disabled) | Required only if Lemon Squeezy is enabled. Its paywall fails closed while unset. |
+| `ITCHIO_GAME_ID` | `4805505` | Numeric RealmWright itch.io game id this Worker guards. |
+| `DEMO_MODEL` | `nvidia/nemotron-3-ultra-550b-a55b:free` | Exact OpenRouter model slug. The Worker forces this and ignores the client's `model`; the route returns 503 if unset. |
+| `DEMO_PER_VISITOR_LIMIT` | `5` | Free-demo generations per visitor (per-IP), **one-time** — see the pivot note below, this does not reset nightly. |
+| `DEMO_TRIAL_TTL_SECONDS` | `7776000` (90 days) | How long a used-up per-visitor trial is remembered before it naturally resets (handles IP churn/CGNAT reassignment). |
+| `DEMO_GLOBAL_DAILY` | `0` | Optional RealmWright-wide UTC-day ceiling. `0` disables this local ceiling; the provider's free-model quota still applies. |
+| `DEMO_MAX_TOKENS` | `800` | `max_tokens` cap per hosted free-AI call. |
+
+### Pivot note: the demo cap is a one-time trial, not a daily allowance
+
+An earlier build capped each IP at 5 messages **per UTC day** (`demo:ip:{ip}:{day}`),
+which reset every midnight — meaning any visitor could get 5 fresh free AI
+messages forever, with zero incentive to ever buy the $23 key. The product
+spec says "exactly 5 messages per visitor" (no "per day") while separately
+calling for "a **global** daily ceiling" — a deliberate contrast. The per-IP
+key is now `demo:ip:{ip}` (no day component), remembered for
+`DEMO_TRIAL_TTL_SECONDS` (default 90 days). The optional global counter retains
+UTC-day semantics, but `DEMO_GLOBAL_DAILY = 0` disables it in production.
 
 ### Env-var naming note (itch)
 
@@ -105,8 +123,9 @@ draft used `ITCH_*`; that prefix is **not** read by this build.)
 > The Lemon Squeezy **license** API needs **no** API key — its activate/validate/
 > deactivate endpoints are license-holder-facing. No `LEMONSQUEEZY_API_KEY`.
 
-> **Operational note:** `wrangler tail` logs outbound URLs, and the itch API key
-> appears in the itch request path. Treat `wrangler tail` output as sensitive.
+> **Operational note:** the itch API key is sent in an `Authorization` header,
+> never in the request URL or application logs. Still treat diagnostic output
+> as sensitive and never paste secret-bearing headers into reports.
 
 ## KV counters are approximate (documented residual race)
 
@@ -115,8 +134,9 @@ read-modify-write with no compare-and-set. Under concurrent load the effective
 ceiling is `cap + peak_concurrency`, not exactly the cap. This is acceptable:
 the license limiter is abuse-prevention (not auth), and the demo path caps
 `max_tokens` per call and refunds a reserved slot when OpenRouter fails — so the
-worst case is a small, bounded overspend. Making it exact would require a
-Durable Object per key (a paid binding). See the comments in `ratelimit.ts` and
+worst case is a small, bounded overrun. Making it exact would require a
+strongly coordinated store such as a Durable Object, adding configuration and
+operational complexity. See the comments in `ratelimit.ts` and
 `fingerprint.ts`.
 
 ## Cron
@@ -144,9 +164,12 @@ npm test
 ```
 
 Covered: each adapter's verify decision (valid / invalid / store-500 → "try
-again", **never** revoke); per-IP demo cap decrements and refuses at the limit;
+again", **never** revoke); per-visitor demo cap decrements and refuses at the
+limit, and **persists across a day boundary** (not a nightly reset);
 `productMismatch` rejects a wrong-product key; Turnstile is verified **before**
-any OpenRouter spend; demo quota is **not** consumed on an OpenRouter failure.
+any OpenRouter spend; demo quota is **not** consumed on an OpenRouter failure;
+an unexpected KV throw in the demo path degrades gracefully instead of
+crashing uncaught.
 
 ## Local dev
 

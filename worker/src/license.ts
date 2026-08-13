@@ -20,8 +20,25 @@
 import { jsonResponse } from './cors';
 import { checkRateLimit } from './ratelimit';
 import type { RateLimitEnv } from './ratelimit';
-import { deviceCookie, issueOrRefresh, readToken, revoke, touch } from './fingerprint';
+import {
+  deviceCookie,
+  deviceTtlSeconds,
+  findExistingDevice,
+  isDeviceBucket,
+  issueOrRefresh,
+  readToken,
+  revoke,
+  touch,
+} from './fingerprint';
 import type { DeviceEnv } from './fingerprint';
+import {
+  BodyTooLargeError,
+  MAX_INSTANCE_ID_BYTES,
+  MAX_PRODUCT_KEY_BYTES,
+  isWithinUtf8Limit,
+  readBoundedRequestText,
+  readTrimmedString,
+} from './input';
 
 const LS_BASE = 'https://api.lemonsqueezy.com/v1/licenses';
 
@@ -89,10 +106,11 @@ async function forwardToLS(path: string, params: URLSearchParams): Promise<{
 }
 
 async function readBody(request: Request): Promise<Record<string, string>> {
-  const ctype = request.headers.get('Content-Type') || '';
+  const text = await readBoundedRequestText(request);
+  const ctype = (request.headers.get('Content-Type') || '').toLowerCase();
   if (ctype.includes('application/json')) {
     try {
-      const obj = await request.json();
+      const obj = JSON.parse(text);
       if (obj && typeof obj === 'object') return obj as Record<string, string>;
     } catch {
       /* fall through */
@@ -100,7 +118,6 @@ async function readBody(request: Request): Promise<Record<string, string>> {
     return {};
   }
   // urlencoded fallback
-  const text = await request.text();
   const params = new URLSearchParams(text);
   const out: Record<string, string> = {};
   params.forEach((v, k) => {
@@ -156,12 +173,20 @@ export async function handleActivate(
     }
 
     const body = (await readBody(request)) as ActivateBody;
-    const licenseKey = (body.license_key || '').trim();
-    const instanceName = (body.instance_name || `RealmWright-${Date.now()}`).slice(0, 64);
+    const licenseKey = readTrimmedString(body.license_key) || '';
+    const instanceName = (readTrimmedString(body.instance_name) || `RealmWright-${Date.now()}`).slice(0, 64);
 
     if (!licenseKey) {
       return jsonResponse(
         { activated: false, error: 'Missing license_key.' },
+        400,
+        request,
+        env.ALLOWED_ORIGINS,
+      );
+    }
+    if (!isWithinUtf8Limit(licenseKey, MAX_PRODUCT_KEY_BYTES)) {
+      return jsonResponse(
+        { activated: false, error: 'License key is too long.' },
         400,
         request,
         env.ALLOWED_ORIGINS,
@@ -175,6 +200,67 @@ export async function handleActivate(
         request,
         env.ALLOWED_ORIGINS,
       );
+    }
+
+    // Re-entering the same key on the same browser must not consume a new
+    // Lemon Squeezy activation slot. Validate and reuse the existing instance.
+    // Merely reading this state also fails closed on a malformed device bucket,
+    // before any upstream side effect can occur.
+    const presented = readToken(request);
+    const existing = await findExistingDevice(env, licenseKey, presented);
+    if (existing?.record.instance_id) {
+      const existingInstanceId = existing.record.instance_id;
+      const check = await forwardToLS(
+        'validate',
+        new URLSearchParams({ license_key: licenseKey, instance_id: existingInstanceId }),
+      );
+      if (check.status >= 200 && check.status < 300 && check.json?.valid === true) {
+        const mismatch = productMismatch(env, check.json?.meta, false);
+        if (mismatch) {
+          return jsonResponse(
+            { activated: false, error: mismatch },
+            403,
+            request,
+            env.ALLOWED_ORIGINS,
+          );
+        }
+        const refreshed = await issueOrRefresh(env, licenseKey, presented, existingInstanceId);
+        if (!refreshed.ok) {
+          return jsonResponse(
+            { activated: false, error: refreshed.error, active_devices: refreshed.active_devices, cap: refreshed.cap },
+            403,
+            request,
+            env.ALLOWED_ORIGINS,
+          );
+        }
+        const ttl = deviceTtlSeconds(env);
+        return jsonResponse(
+          {
+            activated: true,
+            valid: true,
+            instance: { id: existingInstanceId },
+            meta: check.json?.meta,
+            device_token: refreshed.token,
+            active_devices: refreshed.active_devices,
+            device_cap: refreshed.cap,
+            reused: true,
+          },
+          200,
+          request,
+          env.ALLOWED_ORIGINS,
+          { 'Set-Cookie': deviceCookie(refreshed.token!, ttl) },
+        );
+      }
+      // Only a successful, explicit valid:false proves the old instance is
+      // dead. An outage or malformed response must not create a duplicate slot.
+      if (!(check.status >= 200 && check.status < 300 && check.json?.valid === false)) {
+        return jsonResponse(
+          { activated: false, error: 'License server is busy. Please try again in a moment.' },
+          503,
+          request,
+          env.ALLOWED_ORIGINS,
+        );
+      }
     }
 
     // 1) LS is source of truth on whether the key is real.
@@ -229,7 +315,6 @@ export async function handleActivate(
 
     // 2) Bind a server-issued device_token. If the client already has one,
     //    refresh it; otherwise mint a new one (enforcing the 3-device cap).
-    const presented = readToken(request);
     const issued = await issueOrRefresh(env, licenseKey, presented, instanceId);
 
     if (!issued.ok) {
@@ -248,7 +333,7 @@ export async function handleActivate(
       );
     }
 
-    const ttl = parseInt(env.DEVICE_TTL_SECONDS || '7776000', 10);
+    const ttl = deviceTtlSeconds(env);
     const body_out = {
       ...upstream.json,
       device_token: issued.token,
@@ -258,7 +343,15 @@ export async function handleActivate(
     return jsonResponse(body_out, 200, request, env.ALLOWED_ORIGINS, {
       'Set-Cookie': deviceCookie(issued.token!, ttl),
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof BodyTooLargeError) {
+      return jsonResponse(
+        { activated: false, error: 'Request body is too large.' },
+        413,
+        request,
+        env.ALLOWED_ORIGINS,
+      );
+    }
     return jsonResponse(
       { activated: false, error: 'License server is busy. Please try again in a moment.' },
       503,
@@ -280,7 +373,7 @@ export async function handleValidate(
     const rl = await checkRateLimit(request, env, 'validate');
     if (!rl.ok) {
       return jsonResponse(
-        { valid: false, error: 'Too many requests.' },
+        { error: 'Too many requests.' },
         429,
         request,
         env.ALLOWED_ORIGINS,
@@ -288,10 +381,20 @@ export async function handleValidate(
     }
 
     const body = (await readBody(request)) as ValidateBody;
-    const licenseKey = (body.license_key || '').trim();
+    const licenseKey = readTrimmedString(body.license_key) || '';
+    const instanceId = readTrimmedString(body.instance_id);
     if (!licenseKey) {
       return jsonResponse(
-        { valid: false, error: 'Missing license_key.' },
+        { error: 'Missing license_key.' },
+        400,
+        request,
+        env.ALLOWED_ORIGINS,
+      );
+    }
+    if (!isWithinUtf8Limit(licenseKey, MAX_PRODUCT_KEY_BYTES) ||
+        (instanceId && !isWithinUtf8Limit(instanceId, MAX_INSTANCE_ID_BYTES))) {
+      return jsonResponse(
+        { error: 'License request is too long.' },
         400,
         request,
         env.ALLOWED_ORIGINS,
@@ -299,7 +402,7 @@ export async function handleValidate(
     }
 
     const params = new URLSearchParams({ license_key: licenseKey });
-    if (body.instance_id) params.set('instance_id', body.instance_id);
+    if (instanceId) params.set('instance_id', instanceId);
 
     const upstream = await forwardToLS('validate', params);
 
@@ -326,7 +429,15 @@ export async function handleValidate(
     // network error forwardToLS returned { status:0, json:{} } → no `valid`
     // field → client keeps current state. Correct fail-open.
     return jsonResponse(upstream.json, upstream.status || 200, request, env.ALLOWED_ORIGINS);
-  } catch {
+  } catch (error) {
+    if (error instanceof BodyTooLargeError) {
+      return jsonResponse(
+        { error: 'Request body is too large.' },
+        413,
+        request,
+        env.ALLOWED_ORIGINS,
+      );
+    }
     // Status text only, NO `valid` field → client keeps the user active.
     return jsonResponse(
       { error: 'License server is busy. Please try again in a moment.' },
@@ -354,11 +465,20 @@ export async function handleDeactivate(
     }
 
     const body = (await readBody(request)) as DeactivateBody;
-    const licenseKey = (body.license_key || '').trim();
-    const instanceId = (body.instance_id || '').trim();
+    const licenseKey = readTrimmedString(body.license_key) || '';
+    const instanceId = readTrimmedString(body.instance_id) || '';
     if (!licenseKey || !instanceId) {
       return jsonResponse(
         { deactivated: false, error: 'Missing license_key or instance_id.' },
+        400,
+        request,
+        env.ALLOWED_ORIGINS,
+      );
+    }
+    if (!isWithinUtf8Limit(licenseKey, MAX_PRODUCT_KEY_BYTES) ||
+        !isWithinUtf8Limit(instanceId, MAX_INSTANCE_ID_BYTES)) {
+      return jsonResponse(
+        { deactivated: false, error: 'License request is too long.' },
         400,
         request,
         env.ALLOWED_ORIGINS,
@@ -368,22 +488,43 @@ export async function handleDeactivate(
     const params = new URLSearchParams({ license_key: licenseKey, instance_id: instanceId });
     const upstream = await forwardToLS('deactivate', params);
 
-    // Remove the local device_token binding regardless of LS outcome — if LS
-    // succeeded the device is gone; if LS failed the orphan reaper picks it up.
-    try {
-      await revoke(env, licenseKey, readToken(request));
-    } catch {
-      /* non-fatal */
+    // A store/network failure must not be reported as success and must not
+    // delete our only record of the active instance. The browser keeps its
+    // license data and can retry later.
+    if (upstream.status === 0 || upstream.status >= 500) {
+      return jsonResponse(
+        { deactivated: false, error: 'License server is busy. Please try again in a moment.' },
+        503,
+        request,
+        env.ALLOWED_ORIGINS,
+      );
+    }
+    if (!upstream.json?.deactivated) {
+      return jsonResponse(
+        { deactivated: false, error: upstream.json?.error || 'The license could not be deactivated.' },
+        upstream.status >= 400 ? upstream.status : 409,
+        request,
+        env.ALLOWED_ORIGINS,
+      );
     }
 
-    // Clear the cookie on success.
-    const extra: Record<string, string> = {};
-    if (upstream.json?.deactivated) {
-      extra['Set-Cookie'] =
-        'rw_device=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Strict';
+    await revoke(env, licenseKey, readToken(request));
+    return jsonResponse(
+      { deactivated: true },
+      200,
+      request,
+      env.ALLOWED_ORIGINS,
+      { 'Set-Cookie': 'rw_device=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Strict' },
+    );
+  } catch (error) {
+    if (error instanceof BodyTooLargeError) {
+      return jsonResponse(
+        { deactivated: false, error: 'Request body is too large.' },
+        413,
+        request,
+        env.ALLOWED_ORIGINS,
+      );
     }
-    return jsonResponse(upstream.json, upstream.status || 200, request, env.ALLOWED_ORIGINS, extra);
-  } catch {
     return jsonResponse(
       { deactivated: false, error: 'License server is busy. Please try again in a moment.' },
       503,
@@ -412,11 +553,21 @@ export async function reapOrphans(env: LicenseEnv): Promise<{ scanned: number; r
   for (let i = 0; i < 50; i++) {
     const page = await env.DEVICES.list({ cursor, limit: 1000 });
     for (const k of page.keys) {
+      // itch.io records share this KV namespace but have no Lemon Squeezy
+      // instance. Never send their hashed bucket keys to Lemon Squeezy or reap
+      // them as if they were dead LS instances.
+      if (k.name.startsWith('itch:')) continue;
       scanned++;
-      const bucket = (await env.DEVICES.get(k.name, 'json')) as any;
-      if (!bucket || !Array.isArray(bucket.tokens)) {
-        await env.DEVICES.delete(k.name);
-        reaped++;
+      // Preserve malformed state so corruption cannot silently reset the device
+      // cap. Support can repair it without losing the evidence.
+      const stored = await env.DEVICES.get(k.name);
+      if (stored === null) continue;
+      let bucket: any;
+      try {
+        const parsed = JSON.parse(stored);
+        if (!isDeviceBucket(parsed)) continue;
+        bucket = parsed;
+      } catch {
         continue;
       }
       // Touch nothing if all tokens still fresh — fast path.
@@ -431,7 +582,7 @@ export async function reapOrphans(env: LicenseEnv): Promise<{ scanned: number; r
         // when LS AFFIRMATIVELY says the instance is no longer valid — a blip
         // (status 0) leaves the record intact so we never reap on an outage.
         const r = await forwardToLS('validate', params);
-        if (r.status !== 0 && !r.json?.valid) {
+        if (r.status >= 200 && r.status < 300 && r.json?.valid === false) {
           stale.push(t.token);
           reaped++;
         }
@@ -441,7 +592,7 @@ export async function reapOrphans(env: LicenseEnv): Promise<{ scanned: number; r
         if (survivors.length === 0) {
           await env.DEVICES.delete(k.name);
         } else {
-          const ttl = parseInt(env.DEVICE_TTL_SECONDS || '7776000', 10);
+          const ttl = deviceTtlSeconds(env);
           await env.DEVICES.put(k.name, JSON.stringify({ tokens: survivors }), {
             expirationTtl: ttl,
           });

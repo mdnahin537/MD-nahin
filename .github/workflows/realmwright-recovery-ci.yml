@@ -1,0 +1,50 @@
+name: RealmWright Recovery CI
+
+on:
+  push:
+    branches:
+      - agent/realmwright-recovery-2026-07-24
+  pull_request:
+    branches:
+      - claude/realmwright-pivot
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: realmwright-recovery-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-release-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: worker/package-lock.json
+
+      - name: Validate frontend inline JavaScript
+        run: node scripts/check-inline-js.mjs realmwright-v7.html
+
+      - name: Validate release-critical frontend contracts
+        run: node scripts/check-release-contract.mjs realmwright-v7.html
+
+      - name: Install Worker dependencies
+        working-directory: worker
+        run: npm ci
+
+      - name: Run Worker tests
+        working-directory: worker
+        run: npm test
+
+      - name: Run Worker typecheck
+        working-directory: worker
+        run: npm run typecheck
