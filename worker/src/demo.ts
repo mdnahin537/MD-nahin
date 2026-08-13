@@ -1,17 +1,18 @@
 // Free-demo OpenRouter proxy.
 //
-// This is the ONLY path where RealmWright spends Hunter's money, so it is
+// This is the only path that uses the owner's server-side provider key, so it is
 // fenced on three sides:
 //   1) Cloudflare Turnstile — a human, server-verified, single token per call,
 //      verified BEFORE any OpenRouter spend.
 //   2) Per-visitor lifetime cap — exactly DEMO_PER_VISITOR_LIMIT (product
 //      default: 5) messages per IP, EVER (see PIVOT FIX below) — stops one
 //      visitor draining the budget.
-//   3) Global daily cap — hard ceiling on total spend; once hit, the client is
-//      told to fall back to Sample Mode (canned content, zero cost).
+//   3) The free OpenRouter provider's own account quota. RealmWright can disable
+//      its optional local daily ceiling with DEMO_GLOBAL_DAILY=0; upstream 429s
+//      are refunded and become a clean Sample Mode fallback.
 //
 // The Worker FORCES the model (env.DEMO_MODEL) and ignores whatever the client
-// asks for, so a caller can never request an expensive model on Hunter's dime.
+// asks for, so a caller can never request a paid model on the owner's account.
 //
 // Licensed users never touch this route — they call OpenRouter directly with
 // their own key, so the Worker carries only demo traffic. Well under the
@@ -27,13 +28,10 @@
 // (DEMO_TRIAL_TTL_SECONDS, default 90 days — matches the DEVICE_TTL_SECONDS
 // convention elsewhere) instead of the ~25h day-rollover TTL. This acts as a
 // one-time trial per visitor while still self-healing if a dynamic/CGNAT IP
-// is later reassigned to a genuinely new visitor. The GLOBAL cap is untouched
-// and still resets daily, per spec.
-// NOTE FOR BUILD AGENT 2 / HUNTER: the client (realmwright-v7.html:17055)
-// currently renders this count as "N free previews left TODAY" — that copy is
-// now inaccurate and should drop "today" (see worker/README.md and the Build
-// Agent 1 report for detail). Flagged, not fixed here — that file is out of
-// this Worker's scope.
+// is later reassigned to a genuinely new visitor. The optional local GLOBAL
+// cap can now be disabled with DEMO_GLOBAL_DAILY=0 for a zero-cost provider.
+// The response retains the legacy `remaining_today` field name for compatibility
+// with older clients; the allowance itself remains one-time, not daily.
 //
 // Contract:  POST /api/demo/generate
 //   { turnstileToken: string, messages: [...], model?: string }   // model ignored
@@ -44,6 +42,8 @@
 //  one-time free trial", not a daily allowance.)
 
 import { jsonResponse } from './cors';
+import { readBoundedInt, readCounter } from './config';
+import { BodyTooLargeError, readBoundedRequestText, utf8ByteLength } from './input';
 
 export interface DemoEnv {
   ALLOWED_ORIGINS: string;
@@ -62,7 +62,10 @@ const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 // AUDIT FIX (MED #4): abort timeouts on every external call.
 const TURNSTILE_TIMEOUT_MS = 8000;
-const OPENROUTER_TIMEOUT_MS = 30000; // model calls are slower; still bounded
+// The free Nemotron endpoint currently has materially higher first-token latency
+// than paid low-latency models. Two minutes prevents the Worker from aborting a
+// valid free response before it can finish, while still bounding a hung request.
+const OPENROUTER_TIMEOUT_MS = 120000;
 
 // AUDIT FIX (MED #6): hard cap on the serialized `messages` payload so a caller
 // can't inflate input-token cost with a huge prompt (output is already capped
@@ -74,7 +77,7 @@ function today(): string {
 }
 
 async function bump(env: DemoEnv, key: string, ttl: number): Promise<number> {
-  const n = parseInt((await env.RATELIMIT.get(key)) || '0', 10) + 1;
+  const n = readCounter(await env.RATELIMIT.get(key)) + 1;
   await env.RATELIMIT.put(key, String(n), { expirationTtl: ttl });
   return n;
 }
@@ -84,11 +87,31 @@ async function bump(env: DemoEnv, key: string, ttl: number): Promise<number> {
 // not burn the day's pool with zero successful generations. Never drops below 0.
 async function unbump(env: DemoEnv, key: string, ttl: number): Promise<void> {
   try {
-    const cur = parseInt((await env.RATELIMIT.get(key)) || '0', 10);
+    const cur = readCounter(await env.RATELIMIT.get(key));
     const next = cur > 0 ? cur - 1 : 0;
     await env.RATELIMIT.put(key, String(next), { expirationTtl: ttl });
   } catch {
     /* best-effort; an un-refunded slot just under-spends, never over-spends */
+  }
+}
+
+type Reservation = { key: string; ttl: number };
+
+// KV writes are not transactional. Compensate every completed reservation if
+// a later counter write fails, so a server error never consumes a free use.
+async function reserveAll(env: DemoEnv, reservations: Reservation[]): Promise<boolean> {
+  const completed: Reservation[] = [];
+  try {
+    for (const reservation of reservations) {
+      await bump(env, reservation.key, reservation.ttl);
+      completed.push(reservation);
+    }
+    return true;
+  } catch {
+    for (const reservation of completed.reverse()) {
+      await unbump(env, reservation.key, reservation.ttl);
+    }
+    return false;
   }
 }
 
@@ -128,8 +151,11 @@ export async function handleDemoGenerate(request: Request, env: DemoEnv): Promis
 
     let body: any = {};
     try {
-      body = await request.json();
-    } catch {
+      body = JSON.parse(await readBoundedRequestText(request));
+    } catch (error) {
+      if (error instanceof BodyTooLargeError) {
+        return jsonResponse({ error: 'Request body is too large.' }, 413, request, allowed);
+      }
       return jsonResponse({ error: 'Invalid request body.' }, 400, request, allowed);
     }
 
@@ -142,7 +168,7 @@ export async function handleDemoGenerate(request: Request, env: DemoEnv): Promis
 
     // AUDIT FIX (MED #6): bound the prompt size BEFORE spending anything.
     const messagesJson = JSON.stringify(messages);
-    if (messagesJson.length > MAX_MESSAGES_BYTES) {
+    if (utf8ByteLength(messagesJson) > MAX_MESSAGES_BYTES) {
       return jsonResponse({ error: 'Prompt is too large for the free demo.' }, 413, request, allowed);
     }
 
@@ -154,28 +180,33 @@ export async function handleDemoGenerate(request: Request, env: DemoEnv): Promis
     }
 
     const day = today();
-    const perVisitorLimit = parseInt(env.DEMO_PER_VISITOR_LIMIT || '5', 10);
-    const globalLimit = parseInt(env.DEMO_GLOBAL_DAILY || '300', 10);
+    // Operators may lower the product cap, but a typo can never raise it above five.
+    const perVisitorLimit = readBoundedInt(env.DEMO_PER_VISITOR_LIMIT, 5, 1, 5);
+    // Zero intentionally disables the local daily ceiling for a free provider.
+    const globalLimit = readBoundedInt(env.DEMO_GLOBAL_DAILY, 0, 0, 10_000);
+    const hasLocalGlobalLimit = globalLimit > 0;
 
-    // 2) Global ceiling — read before spending. When hit, push to Sample Mode.
-    //    This one DOES reset daily — per spec, it is a spend ceiling, not the
-    //    per-visitor trial.
-    const globalKey = `demo:global:${day}`;
-    const globalUsed = parseInt((await env.RATELIMIT.get(globalKey)) || '0', 10);
-    if (globalUsed >= globalLimit) {
-      return jsonResponse(
-        { error: 'The free demo is at capacity for today. Try Sample Mode — no key needed.', fallback: true },
-        429,
-        request,
-        allowed,
-      );
+    // 2) Optional local global ceiling — read before the upstream call. A
+    //    positive value resets daily; zero delegates availability entirely to
+    //    the free provider's own account quota.
+    const globalKey = hasLocalGlobalLimit ? `demo:global:${day}` : null;
+    if (globalKey) {
+      const globalUsed = readCounter(await env.RATELIMIT.get(globalKey));
+      if (globalUsed >= globalLimit) {
+        return jsonResponse(
+          { error: 'The free demo is at capacity for today. Try Sample Mode — no key needed.', fallback: true },
+          429,
+          request,
+          allowed,
+        );
+      }
     }
 
     // 3) Per-visitor lifetime cap (PIVOT FIX: no `:${day}` suffix — see the
     //    file-header comment. "Exactly 5 messages per visitor" must not reset
     //    every UTC midnight or the free tier never converts to a sale.
     const ipKey = `demo:ip:${ip}`;
-    const ipUsed = parseInt((await env.RATELIMIT.get(ipKey)) || '0', 10);
+    const ipUsed = readCounter(await env.RATELIMIT.get(ipKey));
     if (ipUsed >= perVisitorLimit) {
       return jsonResponse(
         { error: "You've used all your free demo generations. Activate a key to keep going.", fallback: true },
@@ -186,16 +217,19 @@ export async function handleDemoGenerate(request: Request, env: DemoEnv): Promis
     }
 
     // Reserve the slots BEFORE the upstream call so a burst of concurrent
-    // requests can't all pass the read-check and overspend. (Counters are KV
-    // read-modify-write — see the residual-race note in ratelimit.ts. The
-    // effective ceiling is cap + peak_concurrency; set DEMO_GLOBAL_DAILY low
-    // enough that even an Nx overrun is affordable.)
-    const trialTtl = parseInt(env.DEMO_TRIAL_TTL_SECONDS || '7776000', 10); // ~90d per-visitor memory
+    // requests can't all pass the read-check and overrun the visitor cap.
+    // Counters are KV read-modify-write; see the residual-race note in
+    // ratelimit.ts. The optional local daily ceiling uses the same reservation
+    // only when DEMO_GLOBAL_DAILY is positive.
+    const trialTtl = readBoundedInt(env.DEMO_TRIAL_TTL_SECONDS, 7_776_000, 3_600, 31_536_000);
     const globalTtl = 90_000; // ~25h, covers the UTC day rollover
-    await bump(env, ipKey, trialTtl);
-    await bump(env, globalKey, globalTtl);
+    const reservations: Reservation[] = [{ key: ipKey, ttl: trialTtl }];
+    if (globalKey) reservations.push({ key: globalKey, ttl: globalTtl });
+    if (!(await reserveAll(env, reservations))) {
+      return jsonResponse({ error: 'Demo server is busy. Try Sample Mode.', fallback: true }, 503, request, allowed);
+    }
 
-    const maxTokens = parseInt(env.DEMO_MAX_TOKENS || '1200', 10);
+    const maxTokens = readBoundedInt(env.DEMO_MAX_TOKENS, 800, 128, 2_000);
     let upstream: Response;
     try {
       upstream = await fetch(OPENROUTER_URL, {
@@ -203,11 +237,18 @@ export async function handleDemoGenerate(request: Request, env: DemoEnv): Promis
         headers: {
           Authorization: `Bearer ${env.OPENROUTER_KEY}`,
           'Content-Type': 'application/json',
+          'HTTP-Referer': 'https://realmwright-gm.pages.dev',
+          'X-Title': 'RealmWright GM',
         },
         body: JSON.stringify({
           model: env.DEMO_MODEL, // server decides the model — client cannot upgrade it
           messages,
           max_tokens: maxTokens,
+          // Keep Nemotron's private drafting out of the buyer-facing preview.
+          // OpenRouter documents `exclude:true` as supported across reasoning
+          // models; the model may still think internally, but only final prose
+          // is returned to RealmWright.
+          reasoning: { exclude: true },
         }),
         signal: AbortSignal.timeout(OPENROUTER_TIMEOUT_MS),
       });
@@ -215,7 +256,7 @@ export async function handleDemoGenerate(request: Request, env: DemoEnv): Promis
       // AUDIT FIX (MED #7): clean upstream failure → refund the reserved slots so
       // an OpenRouter outage doesn't exhaust the day's pool with zero successes.
       await unbump(env, ipKey, trialTtl);
-      await unbump(env, globalKey, globalTtl);
+      if (globalKey) await unbump(env, globalKey, globalTtl);
       return jsonResponse({ error: 'Demo server could not reach the model. Try Sample Mode.', fallback: true }, 502, request, allowed);
     }
 
@@ -224,11 +265,31 @@ export async function handleDemoGenerate(request: Request, env: DemoEnv): Promis
       // AUDIT FIX (MED #7): upstream rejected (5xx/over-budget/etc) → refund too.
       // AUDIT FIX (LOW #12): do NOT echo upstream error text; use a fixed message.
       await unbump(env, ipKey, trialTtl);
-      await unbump(env, globalKey, globalTtl);
+      if (globalKey) await unbump(env, globalKey, globalTtl);
+      if (upstream.status === 429) {
+        return jsonResponse(
+          { error: 'The free AI provider has reached its current limit. Try Sample Mode or come back later.', fallback: true },
+          429,
+          request,
+          allowed,
+        );
+      }
       return jsonResponse({ error: 'The model declined this request. Try Sample Mode.', fallback: true }, 502, request, allowed);
     }
 
-    const content = data?.choices?.[0]?.message?.content ?? '';
+    const choice = data?.choices?.[0];
+    const content = choice?.message?.content;
+    const finishReason = choice?.finish_reason;
+    // A 200 response with empty or token-truncated output is not a usable
+    // preview and must not consume one of the visitor's five uses.
+    if (typeof content !== 'string' || !content.trim() || finishReason === 'length') {
+      await unbump(env, ipKey, trialTtl);
+      if (globalKey) await unbump(env, globalKey, globalTtl);
+      const error = finishReason === 'length'
+        ? 'The free Copilot response was cut off. Please try again.'
+        : 'The free Copilot returned no usable response. Please try again.';
+      return jsonResponse({ error, fallback: true }, 502, request, allowed);
+    }
     return jsonResponse(
       {
         ok: true,

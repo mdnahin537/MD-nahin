@@ -62,7 +62,7 @@ export const URLS = {
   LS_ACTIVATE: 'api.lemonsqueezy.com/v1/licenses/activate',
   LS_VALIDATE: 'api.lemonsqueezy.com/v1/licenses/validate',
   LS_DEACTIVATE: 'api.lemonsqueezy.com/v1/licenses/deactivate',
-  ITCH: 'itch.io/api/1',
+  ITCH: 'api.itch.io/games/',
   OPENROUTER: 'openrouter.ai/api/v1/chat/completions',
   TURNSTILE: 'challenges.cloudflare.com/turnstile/v0/siteverify',
 };
@@ -111,8 +111,8 @@ export function demoEnv(overrides = {}) {
     TURNSTILE_SECRET: 'test-turnstile-secret',
     DEMO_MODEL: 'test/demo-model',
     DEMO_PER_VISITOR_LIMIT: '5',
-    DEMO_GLOBAL_DAILY: '300',
-    DEMO_MAX_TOKENS: '1200',
+    DEMO_GLOBAL_DAILY: '0',
+    DEMO_MAX_TOKENS: '800',
     DEMO_TRIAL_TTL_SECONDS: '7776000',
     ...overrides,
   };
