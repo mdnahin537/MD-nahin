@@ -46,7 +46,7 @@ test('demo: partial quota reservation failure rolls back the completed visitor s
 
   const restore = withFetch(fetchMock);
   try {
-    const env = demoEnv({ RATELIMIT: kv });
+    const env = demoEnv({ RATELIMIT: kv, DEMO_GLOBAL_DAILY: '300' });
     const response = await handleDemoGenerate(
       jsonRequest({ turnstileToken: 'good', messages: [{ role: 'user', content: 'hi' }] }),
       env,
@@ -78,7 +78,7 @@ test('demo: an empty successful upstream response is refunded', async () => {
   ]);
   const restore = withFetch(fetchMock);
   try {
-    const env = demoEnv();
+    const env = demoEnv({ DEMO_GLOBAL_DAILY: '300' });
     const day = new Date().toISOString().slice(0, 10);
     const response = await handleDemoGenerate(
       jsonRequest({ turnstileToken: 'good', messages: [{ role: 'user', content: 'hi' }] }),
@@ -106,7 +106,7 @@ test('demo: a token-limit-truncated upstream response is refunded', async () => 
   ]);
   const restore = withFetch(fetchMock);
   try {
-    const env = demoEnv();
+    const env = demoEnv({ DEMO_GLOBAL_DAILY: '300' });
     const day = new Date().toISOString().slice(0, 10);
     const response = await handleDemoGenerate(
       jsonRequest({ turnstileToken: 'good', messages: [{ role: 'user', content: 'hi' }] }),

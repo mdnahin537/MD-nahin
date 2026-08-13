@@ -9,7 +9,17 @@ SECTION 1: DOCUMENT METADATA
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#040609">
-<meta name="description" content="RealmWright — A worldbuilding instrument for Game Masters and serious fiction.">
+<meta name="description" content="RealmWright GM is a local-first campaign and worldbuilding engine for living lore, timelines, continuity, session prep, solo play, and optional canon-aware AI.">
+<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
+<link rel="canonical" href="https://realmwright-gm.pages.dev/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="RealmWright GM">
+<meta property="og:title" content="RealmWright GM — The Living Campaign Engine">
+<meta property="og:description" content="Build a world that remembers. Track living lore, audit continuity, prepare sessions, and use optional AI that works with your canon instead of replacing your creativity.">
+<meta property="og:url" content="https://realmwright-gm.pages.dev/">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="RealmWright GM — The Living Campaign Engine">
+<meta name="twitter:description" content="A local-first GM engine for living worlds, campaign continuity, session prep, solo play, and optional canon-aware AI.">
 <!--
   P1.12 Content Security Policy
   ─────────────────────────────────────────────────────────────────────────
@@ -28,7 +38,7 @@ SECTION 1: DOCUMENT METADATA
                                 this codebase; Google Fonts ships CSS.
   font-src 'self' data: https://fonts.gstatic.com
   img-src 'self' data: blob:  - exports/snapshots use blob: and data: URIs
-  connect-src 'self' https://rw-license.realmwright.workers.dev
+  connect-src 'self' https://rw-license.mdnahin537.workers.dev
               https://openrouter.ai https://challenges.cloudflare.com
               http://localhost:11434
                               - Worker, OpenRouter API, Turnstile challenge,
@@ -40,8 +50,11 @@ SECTION 1: DOCUMENT METADATA
   object-src 'none'           - kill <object>/<embed>/<applet>
   base-uri 'self'             - prevent <base href> hijack
 -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://rw-license.realmwright.workers.dev https://openrouter.ai https://challenges.cloudflare.com http://localhost:11434; frame-src https://challenges.cloudflare.com; frame-ancestors 'self' https://*.itch.io https://itch.io; object-src 'none'; base-uri 'self'">
-<title>RealmWright</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://rw-license.mdnahin537.workers.dev https://openrouter.ai https://challenges.cloudflare.com http://localhost:11434; frame-src https://challenges.cloudflare.com; frame-ancestors 'self' https://*.itch.io https://itch.io; object-src 'none'; base-uri 'self'">
+<title>RealmWright GM — The Living Campaign Engine</title>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"SoftwareApplication","name":"RealmWright GM","alternateName":"RealmWright","description":"A local-first campaign and worldbuilding engine for Game Masters, with living lore, timelines, continuity tools, session preparation, solo play, and optional canon-aware AI.","url":"https://realmwright-gm.pages.dev/","applicationCategory":"GameApplication","operatingSystem":"Any modern web browser","browserRequirements":"Requires JavaScript and a modern web browser"}
+</script>
 <!--
 ==============================================================================
 SECTION 2: EMBEDDED FONTS
@@ -2894,7 +2907,7 @@ body.theme-manuscript .mode-dropdown__desc{color:var(--color-text-muted)}
 .unlock-field__row{display:flex;gap:var(--space-2);flex-wrap:wrap}
 .unlock-field__row .form-input{flex:1;min-width:200px;font-family:var(--font-mono);font-size:var(--text-mono-sm)}
 .unlock-field__err{color:var(--color-crisis,#ff6b6b);font-size:var(--text-label-sm);margin-top:var(--space-2);display:none}
-.unlock-field__licensed{display:none;align-items:center;gap:8px;font-size:var(--text-body-sm);color:var(--color-thriving)}
+.unlock-field__licensed{display:none;align-items:center;justify-content:space-between;gap:var(--space-3);flex-wrap:wrap;font-size:var(--text-body-sm);color:var(--color-thriving)}
 body.theme-ember .toast{background:#0a0705;border-color:rgba(255,185,100,0.30);box-shadow:0 8px 32px rgba(0,0,0,0.7),0 0 24px rgba(255,185,100,0.06)}
 body.theme-ember .toast__msg{color:var(--color-ink)}
 body.theme-ember .toast__link{color:var(--ember-color)}
@@ -4232,8 +4245,13 @@ body.theme-manuscript .run-mode{--run-exc-yes:#1f9d57;--run-exc-yes-glow:transpa
 /* Phase 5A: Turnstile + front-door demo output */
 .fd-turnstile{display:flex;justify-content:center;margin:var(--space-4) 0;min-height:65px}
 .fd-turnstile:empty::before{content:'Loading captcha…';font-size:var(--text-label-sm);color:var(--color-text-faint)}
+.fd-turnstile-status{min-height:1.4em;margin:calc(var(--space-2) * -1) 0 var(--space-3);text-align:center;font-size:var(--text-label-sm);line-height:1.4;color:var(--color-text-muted)}
+.fd-turnstile-status[data-state="ready"]{color:var(--color-success,#6fbf8f)}
+.fd-turnstile-status[data-state="error"]{color:var(--color-warning,#f87171)}
 .fd-demo{margin-top:var(--space-6);padding:var(--space-5);border:1px solid var(--color-border-hairline);border-radius:var(--radius-md,4px);background:rgba(255,185,100,0.025);display:none}
 .fd-demo__loading{font-style:italic;color:var(--color-text-muted);font-size:var(--text-body-sm);text-align:center;padding:var(--space-4)}
+.fd-demo__notice{margin:0 0 var(--space-4);padding:var(--space-3) var(--space-4);border:1px solid color-mix(in srgb,var(--color-accent) 30%,var(--color-border-hairline));border-radius:var(--radius-md);background:color-mix(in srgb,var(--color-accent) 6%,transparent);font-size:var(--text-body-sm);line-height:1.55;color:var(--color-text-muted)}
+.fd-demo__notice strong{color:var(--color-text-primary);font-weight:650}
 .fd-demo__result{font-size:var(--text-body-sm);line-height:1.65;color:var(--color-ink);white-space:pre-wrap}
 .fd-demo__result strong{color:var(--ember-color)}
 .fd-demo__error{color:var(--color-warning,#f87171);font-size:var(--text-body-sm);text-align:center;padding:var(--space-4)}
@@ -4351,7 +4369,7 @@ SECTION 8: DOM STRUCTURE
            see its own `licensed` check) so this is pure UI wiring, no new demo logic.
            Hidden once licensed by LicenseGateUI._updateStatusUI(), same gate as every
            other unlock affordance in the app. -->
-      <button class="identity-strip__settings-btn" id="try-ai-btn" title="A free taste of the AI — 5 messages on us, no key needed">✨</button>
+      <button class="identity-strip__settings-btn" id="try-ai-btn" title="Open RealmWright's welcome screen to unlock or explore sample realms">✨</button>
       <button class="identity-strip__settings-btn" id="settings-btn" title="Settings">⚙</button>
     </div>
   </header>
@@ -5051,15 +5069,16 @@ Description: A tunnel gave way, halting the eastern works.</pre>
          LicenseGateUI._updateStatusUI() — the field disappears (consumed) once licensed. -->
     <div class="settings-section" id="settings-unlock-section"><div class="settings-section__title">Full version</div>
       <div class="unlock-field" id="unlock-field">
-        <div class="unlock-field__desc">You're using the free demo — every feature works, capped on scale (1 realm, 8 NPCs, 6 locations, 3 factions, 10 chronicle entries), plus 5 free AI preview messages to try the Copilot. Paste your Lemon Squeezy or itch.io product key below to remove every cap and unlock the complete Copilot toolkit — powered by a free NVIDIA model or your own AI key, your choice.</div>
+        <div class="unlock-field__desc">You're using the local demo — the core world and session tools work under scale caps (1 realm, 8 NPCs, 6 locations, 3 factions, 10 chronicle entries). Paste your full itch.io access link or purchase key below to remove every cap and unlock the complete Copilot toolkit. After unlocking, connect the provider you choose.</div>
         <div class="unlock-field__row">
-          <input class="form-input" type="text" id="unlock-key-input" placeholder="Lemon Squeezy UUID or itch.io key" autocomplete="off" spellcheck="false" aria-describedby="unlock-key-err">
+          <input class="form-input" type="text" id="unlock-key-input" placeholder="itch.io access link or key" autocomplete="off" spellcheck="false" aria-describedby="unlock-key-err">
           <button class="btn btn--primary" type="button" id="unlock-key-submit">Unlock</button>
         </div>
         <p class="unlock-field__err" id="unlock-key-err" role="alert" aria-live="polite"></p>
       </div>
       <div class="unlock-field__licensed" id="unlock-field-licensed">
         <span>✓ Full version unlocked — thank you.</span>
+        <button class="btn btn--ghost btn--sm" type="button" id="settings-license-manage-btn">Manage license &amp; devices</button>
       </div>
     </div>
     <!-- Care-board connect (T1): links to the separately-hosted, live RealmWright
@@ -5104,17 +5123,17 @@ Description: A tunnel gave way, halting the eastern works.</pre>
            this is UI-level, not the only enforcement. Toggled by LicenseGateUI._updateStatusUI(). -->
       <div class="copilot-lock-notice" id="copilot-lock-notice" hidden>
         <div class="copilot-lock-notice__title">Unlock RealmWright to enable the Copilot</div>
-        <div class="copilot-lock-notice__desc">The Copilot — chat, session prep, NPCs, the Faction Council, and more — unlocks with a one-time product key, then runs on a free NVIDIA model or your own AI key, your choice. No key yet? The front door gives new visitors 5 free AI preview messages as an early-access taste, plus 3 fully-built Sample Realms — no key needed.</div>
-        <button class="btn btn--primary" type="button" id="copilot-lock-activate-btn">Paste your product key</button>
+        <div class="copilot-lock-notice__desc">The Copilot — chat, session prep, NPCs, the Faction Council, and more — unlocks when you verify your itch.io purchase link or key. After unlocking, connect the provider you choose, or explore the three fully-built Sample Realms without purchasing.</div>
+        <button class="btn btn--primary" type="button" id="copilot-lock-activate-btn">Unlock with itch.io</button>
       </div>
       <div id="copilot-settings-controls" hidden>
-      <!-- RECOMMENDED: one-click free AI for non-technical GMs. Wraps OpenRouter PKCE + free Nemotron. -->
+      <!-- RECOMMENDED: the single guided OpenRouter path for non-technical GMs. It refreshes the live catalog, then uses OAuth PKCE for the current compatible free NVIDIA model. -->
       <div class="rw-ai-rec">
         <div class="rw-ai-rec__badge">Recommended</div>
-        <div class="rw-ai-rec__title">✨ Free by NVIDIA</div>
-        <div class="rw-ai-rec__sub" id="copilot-free-nvidia-sub">A genuinely capable free model, built by NVIDIA and delivered through OpenRouter — one click, free sign-in, no card. About 50 free messages a day, and it can be a little slow or busy at peak times — but there's nothing to pay and nothing to manage.</div>
-        <button class="btn btn--primary rw-ai-rec__btn" id="copilot-free-nvidia">Use Free by NVIDIA</button>
-        <div class="rw-ai-rec__note">Opens a quick OpenRouter sign-in (Google works) and saves a free key for you — nothing to copy or paste.</div>
+      <div class="rw-ai-rec__title">✨ Use a provider-listed free model</div>
+      <div class="rw-ai-rec__sub" id="copilot-free-nvidia-sub"><strong>NVIDIA: Nemotron 3 Ultra (free)</strong> · Last-known fallback. RealmWright checks OpenRouter before selection. Provider availability, quotas, sign-in requirements, and response speed can change.</div>
+      <button class="btn btn--primary rw-ai-rec__btn" id="copilot-free-nvidia">Find a free model</button>
+      <div class="rw-ai-rec__note">You will review the provider connection before using it. If OpenRouter first shows Welcome or a key page, finish that account setup, return to RealmWright (use your browser's Back button if needed), and press <strong>Find a free model</strong> again; then choose <strong>Authorize</strong>. RealmWright saves the authorized key automatically when OpenRouter returns. You can also bring your own key or run a reachable local model.</div>
       </div>
       <details class="rw-ai-advanced">
         <summary class="rw-ai-advanced__summary">Other options (advanced) — bring your own key, any model, or run locally</summary>
@@ -5138,15 +5157,6 @@ Description: A tunnel gave way, halting the eastern works.</pre>
       <div id="copilot-openrouter-fields">
         <div class="settings-row">
           <div style="flex:1">
-            <div class="settings-label">Recommended: connect in one click</div>
-            <div class="settings-desc">Authorize once in your browser and a free key comes back automatically — no copy-paste. Needs the app served over http(s); if you opened it as a downloaded file, paste a key below instead.</div>
-            <div style="margin-top:var(--space-2)">
-              <button class="btn btn--primary" id="copilot-or-connect" style="font-size:var(--text-label-sm)">Connect to OpenRouter — free, one click</button>
-            </div>
-          </div>
-        </div>
-        <div class="settings-row">
-          <div style="flex:1">
             <div class="settings-label">Or paste an API key (fallback)</div>
             <div class="settings-desc">Stored locally only — never sent anywhere except OpenRouter. Create a free account and API key at <a href="https://openrouter.ai/keys" target="_blank" rel="noopener" style="color:var(--color-gold-deep)">openrouter.ai/keys</a> — you'll only ever pay OpenRouter for the models you choose to use.</div>
             <div style="position:relative;margin-top:var(--space-2)">
@@ -5164,7 +5174,7 @@ Description: A tunnel gave way, halting the eastern works.</pre>
         <div class="settings-row">
           <div style="flex:1">
             <div class="settings-label">Model</div>
-            <div class="settings-desc">The free NVIDIA model is great for casual play but shared and slow — it can be busy and may occasionally not answer (~20 requests/minute, ~50/day; 1000/day after $10 of OpenRouter credits). Prices below are pulled live from OpenRouter and update automatically, so they're never out of date. Paid models cost a few cents per message and are faster and more reliable. New models appear here automatically too — nothing to update.</div>
+            <div class="settings-desc">Provider-listed free models may be shared, rate-limited, unavailable, or changed without notice. Prices below are pulled live from OpenRouter when available. Paid models can cost more but may be faster or more reliable; review the provider's current terms before using one.</div>
             <input class="form-input" type="text" id="copilot-model-filter" placeholder="Search models — try &quot;gemini&quot;, &quot;gpt&quot;, or &quot;free&quot;…" style="width:100%;margin-top:var(--space-2)" autocomplete="off">
             <select class="form-select" id="copilot-model-select" style="width:100%;margin-top:var(--space-2)"></select>
           </div>
@@ -5996,27 +6006,23 @@ SECTION 9: DATA & STATE
    ══════════════════════════════════════════════════════════════════════ */
 // Phase 5A: DEMO_API_KEY removed — Worker now holds the OpenRouter key server-side.
 // Free-demo requests go through WORKER_URL + '/api/demo/generate' with Turnstile.
-// PIVOT — Build Agent 2 (task 7): this MUST be byte-identical to worker/wrangler.toml's
-// LS_PRODUCT_ID, or the client's own placeholder-guard below logs (and a future check
-// could act on) a mismatch even against a correctly-configured server. Both currently
-// carry the SAME documented placeholder — Hunter replaces BOTH with the real Lemon
-// Squeezy numeric product_id at deploy time (see the README/DEPLOY notes).
-const LS_PRODUCT_ID='REPLACE_WITH_LS_PRODUCT_ID'; // Hunter: paste Lemon Squeezy product_id after creating the product — MUST match worker/wrangler.toml's LS_PRODUCT_ID exactly
-const WORKER_URL='https://rw-license.realmwright.workers.dev'; // Cloudflare Worker
-const TURNSTILE_SITEKEY=''; // Hunter: paste Cloudflare Turnstile site key (public, safe to commit)
+// Lemon Squeezy is deliberately disabled for this itch.io-first release. If it is
+// added later, this value must exactly match worker/wrangler.toml's LS_PRODUCT_ID.
+const LS_PRODUCT_ID='';
+const WORKER_URL='https://rw-license.mdnahin537.workers.dev'; // Cloudflare Worker
+const TURNSTILE_SITEKEY='0x4AAAAAAECBGeynbJwC8Qu4'; // Cloudflare Turnstile public site key (safe to commit)
 // Build-time guard — scream loudly if a public (non-file://) build was shipped
 // with the license/demo site keys still blank OR still the documented placeholder.
 // Silent on file:// loads so itch.io desktop bundles and local opens don't nag
-// during development. PIVOT — Build Agent 2: LS_PRODUCT_ID is no longer EVER blank
-// (it now matches worker/wrangler.toml's own placeholder — task 7), so the old
-// falsy-check alone would stop catching "still a placeholder" — check for the
-// literal placeholder string too so this stays a real pre-launch tripwire.
+// during development.
 (function _siteKeyGuard(){
   try{
     if(location.protocol==='file:')return;
-    if(!LS_PRODUCT_ID||LS_PRODUCT_ID==='REPLACE_WITH_LS_PRODUCT_ID'||!TURNSTILE_SITEKEY){
-      console.error('[RealmWright] Missing site keys — license/demo disabled. Set LS_PRODUCT_ID and TURNSTILE_SITEKEY in src/index.html before publishing.');
+    if(!WORKER_URL||/REPLACE_WITH/.test(WORKER_URL)){
+      console.error('[RealmWright] Missing Worker URL — license activation is disabled.');
     }
+    if(!TURNSTILE_SITEKEY)console.warn('[RealmWright] Turnstile site key is not configured — the hosted free-AI trial is disabled.');
+    if(!LS_PRODUCT_ID||LS_PRODUCT_ID==='REPLACE_WITH_LS_PRODUCT_ID')console.info('[RealmWright] Lemon Squeezy activation is not configured; itch.io activation remains available.');
   }catch(e){}
 })();
 const DEMO_MESSAGE_LIMIT=5;
@@ -7296,10 +7302,10 @@ const Markdown={
       let s=Utils.escHtml(src);
       // Fenced code blocks first (so inner ** etc. is not re-tokenized).
       const codeBlocks=[];
-      s=s.replace(/```([\s\S]*?)```/g,(m,c)=>{codeBlocks.push(c);return' CB'+(codeBlocks.length-1)+' ';});
+      s=s.replace(/```([\s\S]*?)```/g,(m,c)=>{codeBlocks.push(c);return'\uE000CB'+(codeBlocks.length-1)+'\uE000';});
       // Inline code (single backticks).
       const inlineCodes=[];
-      s=s.replace(/`([^`\n]+)`/g,(m,c)=>{inlineCodes.push(c);return' IC'+(inlineCodes.length-1)+' ';});
+      s=s.replace(/`([^`\n]+)`/g,(m,c)=>{inlineCodes.push(c);return'\uE000IC'+(inlineCodes.length-1)+'\uE000';});
       // Headers (line-anchored) — render as h4/h5/h6 to avoid page hierarchy clash.
       s=s.replace(/^###\s+(.+)$/gm,'<h6>$1</h6>');
       s=s.replace(/^##\s+(.+)$/gm,'<h5>$1</h5>');
@@ -7331,8 +7337,8 @@ const Markdown={
         return'<p>'+p.replace(/\n/g,'<br>')+'</p>';
       }).join('');
       // Restore inline + fenced code (already HTML-escaped via initial escHtml pass).
-      s=s.replace(/ IC(\d+) /g,(m,i)=>'<code>'+inlineCodes[+i]+'</code>');
-      s=s.replace(/ CB(\d+) /g,(m,i)=>'<pre><code>'+codeBlocks[+i]+'</code></pre>');
+      s=s.replace(/\uE000IC(\d+)\uE000/g,(m,i)=>'<code>'+inlineCodes[+i]+'</code>');
+      s=s.replace(/\uE000CB(\d+)\uE000/g,(m,i)=>'<pre><code>'+codeBlocks[+i]+'</code></pre>');
       // P1.12: sanitize the rendered HTML through DOMPurify. Belt-and-braces:
       // even though Markdown.render escapes input first, any HTML the renderer
       // emits is now passed through an allow-list sanitizer so a crafted payload
@@ -7452,7 +7458,6 @@ const LicenseQueue={
       const stored=await IDB.get(LICENSE_QUEUE_KEY);
       if(Array.isArray(stored))return stored;
     }catch(e){/* fall through to one-time legacy migration */}
-    // Migrate the older localStorage queue only after the IDB write commits.
     try{
       const raw=localStorage.getItem(LICENSE_QUEUE_LEGACY_KEY);
       if(!raw)return[];
@@ -7470,9 +7475,6 @@ const LicenseQueue={
     return true;
   },
   _logMeta(entry){
-    // Never pass the queued object itself to console: it contains the complete
-    // product license key. Log only operational metadata that is safe for a GM
-    // to include in a screenshot or support report.
     return{action:entry?.action||'unknown',attempts:Number(entry?.attempts||0),has_instance:Boolean(entry?.instance_id)};
   },
   async push(entry){
@@ -7481,6 +7483,7 @@ const LicenseQueue={
       arr.push({...entry,queued_at:Date.now(),attempts:0});
       await this._write(arr);
       if(typeof showToast==='function')showToast('License sync queued — will retry on next launch.',[],4000);
+      // Never log the queued object: it contains the complete purchase key.
       console.warn('[license:queue] queued',this._logMeta(entry));
       return true;
     }catch(e){
@@ -7488,9 +7491,8 @@ const LicenseQueue={
       return false;
     }
   },
-  // Retry one deactivation POST with exponential backoff. A 2xx status alone
-  // is not success: the Worker must explicitly confirm {deactivated:true}.
-  // Returns 'success', 'retry', or 'terminal' (a rejection retries cannot fix).
+  // Retry one deactivation POST. A 2xx alone is not success: the Worker must
+  // explicitly confirm {deactivated:true}.
   async retryPost(url,bodyParams){
     const delays=[1000,2000,4000];
     for(let i=0;i<delays.length+1;i++){
@@ -7502,8 +7504,6 @@ const LicenseQueue={
         let json=null;
         try{json=await res.json();}catch(e){}
         if(res.ok&&json?.deactivated===true)return'success';
-        // Explicit server rejection or non-retryable 4xx: another launch will not
-        // repair it. The Worker has already attempted to revoke its local binding.
         if(json?.deactivated===false||(res.status>=400&&res.status<500&&res.status!==408&&res.status!==429))return'terminal';
       }catch(e){/* network — fall through to retry */}
       if(i<delays.length)await new Promise(r=>setTimeout(r,delays[i]));
@@ -7531,16 +7531,11 @@ const LicenseQueue={
         else console.error('[license:queue] giving up',this._logMeta(entry));
       }
     }
-    try{
-      await this._write(survivors);
-    }catch(e){
-      // Keep the previous IDB queue and device token untouched so startup can
-      // attempt the cleanup again instead of silently losing the operation.
-      console.error('[license:queue] could not save drain result');
-      return;
-    }
-    if(survivors.length===0){
-      try{await IDB.set(IDB_KEY_DEVICE_TOKEN,null);}catch(e){/* stale local token is non-authoritative */}
+    try{await this._write(survivors);}
+    catch(e){console.error('[license:queue] could not save drain result');return;}
+    // Do not erase a token belonging to a currently active itch.io license.
+    if(survivors.length===0&&!(typeof LicenseGate!=='undefined'&&LicenseGate._data)){
+      try{await IDB.set(IDB_KEY_DEVICE_TOKEN,null);}catch(e){}
     }
   },
 };
@@ -7590,18 +7585,15 @@ const LicenseGate={
       const nextData={key,instanceId:json.instance?.id||null,platform:'lemonsqueezy',activatedAt:Date.now(),valid:true};
       const writes=[[IDB_KEY_LICENSE,nextData]];
       if(json.device_token)writes.push([IDB_KEY_DEVICE_TOKEN,json.device_token]);
-      try{
-        await IDB.setMany(writes);
-      }catch(e){
-        // Never publish a live unlock that the browser failed to save. Best-effort
-        // rollback prevents the successful upstream activation from consuming an
-        // LS instance when local durable storage is unavailable.
-        const instanceId=nextData.instanceId;
-        if(instanceId){
+      try{await IDB.setMany(writes);}
+      catch(e){
+        // Do not publish an unlock the browser failed to save. Best-effort
+        // rollback prevents a successful activation consuming a device slot.
+        if(nextData.instanceId){
           try{
             const headers={Accept:'application/json','Content-Type':'application/x-www-form-urlencoded'};
             if(json.device_token)headers['X-Device-Token']=json.device_token;
-            await fetch(WORKER_URL+'/api/license/deactivate',{method:'POST',headers,credentials:'include',body:new URLSearchParams({license_key:key,instance_id:instanceId})});
+            await fetch(WORKER_URL+'/api/license/deactivate',{method:'POST',headers,credentials:'include',body:new URLSearchParams({license_key:key,instance_id:nextData.instanceId})});
           }catch(rollbackError){console.warn('[license:activate] storage rollback failed');}
         }
         return{success:false,error:'Activation succeeded, but this browser could not save it. Allow site storage or free browser space, then try again.'};
@@ -7621,10 +7613,16 @@ const LicenseGate={
       const nextData={key,instanceId:null,platform:'itchio',activatedAt:Date.now(),valid:true};
       const writes=[[IDB_KEY_LICENSE,nextData]];
       if(json.device_token)writes.push([IDB_KEY_DEVICE_TOKEN,json.device_token]);
-      try{
-        await IDB.setMany(writes);
-      }catch(e){
-        return{success:false,error:'This key is valid, but this browser could not save the activation. Allow site storage or free browser space, then try again.'};
+      try{await IDB.setMany(writes);}
+      catch(e){
+        // Release the just-issued itch.io device slot when durable browser
+        // storage fails, so retrying cannot silently consume another slot.
+        try{
+          const headers={Accept:'application/json','Content-Type':'application/json'};
+          if(json.device_token)headers['X-Device-Token']=json.device_token;
+          await fetch(WORKER_URL+'/api/itch/deactivate',{method:'POST',headers,credentials:'include',body:JSON.stringify({key})});
+        }catch(rollbackError){console.warn('[itch:activate] storage rollback failed');}
+        return{success:false,error:'This purchase is valid, but this browser could not save the activation. Allow site storage or free browser space, then try again.'};
       }
       this._data=nextData;
       document.dispatchEvent(new CustomEvent('license:changed'));
@@ -7640,20 +7638,32 @@ const LicenseGate={
     return{valid:currentValid,fireExpired:false};
   },
   async _backgroundValidate(){
-    if(!this._data||this._data.platform!=='lemonsqueezy')return;
+    if(!this._data)return;
     try{
-      const body=new URLSearchParams({license_key:this._data.key,instance_id:this._data.instanceId||''});
-      const res=await fetch(WORKER_URL+'/api/license/validate',
-        {method:'POST',headers:await this._hdr('application/x-www-form-urlencoded'),credentials:'include',body});
+      let res;
+      if(this._data.platform==='itchio'){
+        res=await fetch(WORKER_URL+'/api/itch/validate',{
+          method:'POST',
+          headers:await this._hdr('application/json'),
+          credentials:'include',
+          body:JSON.stringify({key:this._data.key}),
+        });
+      }else{
+        const body=new URLSearchParams({license_key:this._data.key,instance_id:this._data.instanceId||''});
+        res=await fetch(WORKER_URL+'/api/license/validate',
+          {method:'POST',headers:await this._hdr('application/x-www-form-urlencoded'),credentials:'include',body});
+      }
       let json;
       try{json=await res.json();}catch(e){json=null;}
       const current=this._data;
       const {valid,fireExpired}=this._decideValidity(res.ok,json,current.valid);
-      if(valid===current.valid)return;
+      const renewedToken=res.ok&&json&&json.valid===true&&json.device_token?json.device_token:null;
+      if(valid===current.valid&&!renewedToken)return;
       const nextData={...current,valid};
-      // Persist the new truth before publishing it to live gates. If storage fails,
-      // retain the prior live state and retry on a later launch (customer-safe).
-      await IDB.set(IDB_KEY_LICENSE,nextData);
+      const writes=[[IDB_KEY_LICENSE,nextData]];
+      if(renewedToken)writes.push([IDB_KEY_DEVICE_TOKEN,renewedToken]);
+      // Persist the complete transition before publishing it to live gates.
+      await IDB.setMany(writes);
       this._data=nextData;
       if(fireExpired)document.dispatchEvent(new CustomEvent('license:expired'));
       else document.dispatchEvent(new CustomEvent('license:changed'));
@@ -7665,31 +7675,53 @@ const LicenseGate={
   async deactivate(){
     if(!this._data)return{success:true};
     const current=this._data;
+    if(current.platform==='itchio'){
+      // Save the locked state before releasing the server slot. If the browser
+      // cannot save this transition, stop before touching the server; otherwise
+      // a reload could resurrect a purchase whose device slot was released.
+      try{await IDB.setMany([[IDB_KEY_LICENSE,null]]);}
+      catch(e){return{success:false,error:'This browser could not save the deactivation. Allow site storage or free browser space, then try again.'};}
+      try{
+        const res=await fetch(WORKER_URL+'/api/itch/deactivate',{
+          method:'POST',
+          headers:await this._hdr('application/json'),
+          credentials:'include',
+          body:JSON.stringify({key:current.key}),
+        });
+        const json=await res.json().catch(()=>({}));
+        if(!res.ok||!json.deactivated){
+          try{await IDB.set(IDB_KEY_LICENSE,current);}
+          catch(e){return{success:false,error:(json.error||'Could not release this device.')+' This session remains active, but the browser could not restore its saved activation; after a reload, unlock again with your itch.io purchase link.'};}
+          return{success:false,error:json.error||'Could not release this device. Check your connection and try again.'};
+        }
+      }catch(e){
+        try{await IDB.set(IDB_KEY_LICENSE,current);}
+        catch(restoreError){return{success:false,error:'Could not reach the license server, and the browser could not restore its saved activation. This session remains active; after a reload, unlock again with your itch.io purchase link.'};}
+        return{success:false,error:'Could not reach the license server. Your device remains active; try again while online.'};
+      }
+      this._data=null;
+      document.dispatchEvent(new CustomEvent('license:changed'));
+      try{await IDB.setMany([[IDB_KEY_DEVICE_TOKEN,null]]);}
+      catch(e){
+        return{success:true,warning:'This device was released and RealmWright is locked. The browser could not erase an obsolete device token; it cannot unlock RealmWright and will be replaced if you activate again.'};
+      }
+      return{success:true};
+    }
     const ls=current.platform==='lemonsqueezy'&&current.instanceId
       ?{license_key:current.key,instance_id:current.instanceId}
       :null;
-    // Commit the local lock first. For Lemon Squeezy, retain the device token
-    // until the Worker confirms deactivation so X-Device-Token can revoke the
-    // exact server-side binding. If storage rejects, keep the current license live
-    // and do not deactivate the server behind the user's back.
-    try{
-      const clears=ls?[[IDB_KEY_LICENSE,null]]:[[IDB_KEY_LICENSE,null],[IDB_KEY_DEVICE_TOKEN,null]];
-      await IDB.setMany(clears);
-    }catch(e){
-      return{success:false,error:'This browser could not save the deactivation. Allow site storage or free browser space, then try again.'};
-    }
+    // Lock locally first, but retain the device token until remote cleanup or a
+    // durable retry is confirmed.
+    try{await IDB.setMany([[IDB_KEY_LICENSE,null]]);}
+    catch(e){return{success:false,error:'This browser could not save the deactivation. Allow site storage or free browser space, then try again.'};}
     this._data=null;
     document.dispatchEvent(new CustomEvent('license:changed'));
     if(ls){
       const body=new URLSearchParams(ls);
       const result=await LicenseQueue.retryPost(WORKER_URL+'/api/license/deactivate',body);
       if(result==='retry'){
-        // Persist for next-startup drain so the LS instance doesn't leak active.
-        // The device token intentionally remains in IDB for that retry.
         const queued=await LicenseQueue.push({action:'deactivate',license_key:ls.license_key,instance_id:ls.instance_id});
         if(!queued){
-          // No confirmed remote success and no durable retry: restore the local
-          // license so the user can try deactivation again instead of losing control.
           try{
             await IDB.set(IDB_KEY_LICENSE,current);
             this._data=current;
@@ -7700,9 +7732,7 @@ const LicenseGate={
           }
         }
       }else{
-        // Success or a terminal rejection: no future retry can improve it, and the
-        // Worker has already attempted to remove its server-side device binding.
-        try{await IDB.set(IDB_KEY_DEVICE_TOKEN,null);}catch(e){/* token is non-authoritative */}
+        try{await IDB.set(IDB_KEY_DEVICE_TOKEN,null);}catch(e){}
       }
     }
     return{success:true};
@@ -7737,7 +7767,7 @@ function copilotGateMessage(action){
 
 // DemoCounter is now a client-side UX hint only. Real enforcement lives in the
 // Worker (a one-time per-visitor cap in Cloudflare KV — NOT daily, see demo.ts's
-// PIVOT FIX comment; only the separate global ceiling resets daily). Resetting
+// PIVOT FIX comment; the production-wide daily ceiling is disabled). Resetting
 // rw_demo_uses in DevTools is harmless — the Worker still rejects after
 // DEMO_PER_VISITOR_LIMIT regardless of what this local counter says.
 const DemoCounter={
@@ -7761,46 +7791,76 @@ const DemoCounter={
 const Demo={
   _turnstileWidgetId:null,
   _turnstileToken:null,
+  _setVerificationState(state){
+    const btn=document.getElementById('fd-generate-btn');
+    const status=document.getElementById('fd-turnstile-status');
+    const copy={
+      verifying:['Securing preview…','Securing your free preview…'],
+      ready:['Prep this session','Ready — your preview can be generated.'],
+      generating:['Generating…','The realm is taking shape…'],
+      error:['Preview verification unavailable','Verification could not load. Check browser blockers, then reopen this window — or use Sample Mode.'],
+    }[state];
+    if(!copy)return;
+    if(btn){
+      btn.disabled=state!=='ready';
+      btn.textContent=copy[0];
+      btn.setAttribute('aria-describedby','fd-turnstile-status');
+    }
+    if(status){
+      status.dataset.state=state;
+      status.textContent=copy[1];
+    }
+  },
   // Render the Turnstile widget into a container element. Called when the
   // demo UI becomes visible (front door or Tonight Mode unlocked path).
   renderTurnstile(containerId){
-    if(!TURNSTILE_SITEKEY){return false;}
+    this._turnstileToken=null;
+    this._setVerificationState('verifying');
+    if(!TURNSTILE_SITEKEY){this._setVerificationState('error');return false;}
     if(!window.turnstile){return false;}
     const el=document.getElementById(containerId);
-    if(!el){return false;}
-    if(this._turnstileWidgetId!==null){try{window.turnstile.reset(this._turnstileWidgetId);}catch(e){}return true;}
+    if(!el){this._setVerificationState('error');return false;}
+    if(this._turnstileWidgetId!==null){
+      try{window.turnstile.reset(this._turnstileWidgetId);return true;}
+      catch(e){this._turnstileWidgetId=null;el.replaceChildren();}
+    }
     try{
       this._turnstileWidgetId=window.turnstile.render(el,{
         sitekey:TURNSTILE_SITEKEY,
         size:'flexible',
-        callback:(token)=>{Demo._turnstileToken=token;},
-        'error-callback':()=>{Demo._turnstileToken=null;},
-        'expired-callback':()=>{Demo._turnstileToken=null;},
+        callback:(token)=>{Demo._turnstileToken=token;Demo._setVerificationState('ready');},
+        'error-callback':()=>{Demo._turnstileToken=null;Demo._setVerificationState('error');},
+        'expired-callback':()=>{Demo._turnstileToken=null;Demo.renderTurnstile(containerId);},
       });
       return true;
-    }catch(e){return false;}
+    }catch(e){this._setVerificationState('error');return false;}
   },
   hasToken(){return !!this._turnstileToken;},
   // POST to Worker /api/demo/generate. Returns {ok, content, usage, remaining_today} or {error}.
   async proxyRequest(messages,model){
     if(!this._turnstileToken){return{error:'Please complete the captcha before generating.'};}
+    const turnstileToken=this._turnstileToken;
+    this._turnstileToken=null;
     try{
       const res=await fetch(WORKER_URL+'/api/demo/generate',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body:JSON.stringify({
-          turnstileToken:this._turnstileToken,
+          turnstileToken,
           messages,
-          model:model||'anthropic/claude-haiku-latest',
+          model:model||'nvidia/nemotron-3-ultra-550b-a55b:free',
         }),
       });
       const data=await res.json();
-      // Reset Turnstile token — single-use
-      this._turnstileToken=null;
-      if(this._turnstileWidgetId!==null&&window.turnstile){try{window.turnstile.reset(this._turnstileWidgetId);}catch(e){}}
       if(!res.ok){return{error:data.error||'Demo request failed.',status:res.status};}
       return data;
-    }catch(e){return{error:'Could not reach demo server. Try Sample Mode below.'};}
+    }catch(e){
+      return{error:'Could not reach demo server. Try Sample Mode below.'};
+    }finally{
+      // Turnstile tokens are single-use. Prepare a fresh verified attempt whether
+      // the provider succeeded, refused, timed out, or the network disappeared.
+      this.renderTurnstile('fd-turnstile');
+    }
   },
 };
 
@@ -8542,8 +8602,8 @@ const IDB={
     const db=await this.open();if(!db)throw new Error('idb-unavailable');
     return new Promise((res,rej)=>{const tx=db.transaction('kv','readwrite');const st=tx.objectStore('kv');const rq=st.put(val,key);rq.onsuccess=()=>res();rq.onerror=()=>rej(rq.error);});
   },
-  // Recovery: commit related license records in one IndexedDB transaction so
-  // the saved license and its server-issued device token can never split.
+  // Commit related records together so a saved license and its server-issued
+  // device token can never split across a partial browser-storage failure.
   async setMany(entries){
     const db=await this.open();if(!db)throw new Error('idb-unavailable');
     return new Promise((res,rej)=>{
@@ -12598,7 +12658,7 @@ const Audience={
         try{ const j = await resp.json(); t = j?.error?.message || j?.error || t; }catch(e){}
         if(resp.status === 401) errMsg = 'Invalid API key. Check Settings → Copilot.';
         else if(resp.status === 402) errMsg = 'Out of credits. Top up at openrouter.ai/credits.';
-        else if(resp.status === 429) errMsg = 'Rate limited — wait a moment and retry. Free models cap at ~50 requests/day (1000/day after $10 of credits); a persistent 429 means the daily limit, not a hiccup.';
+        else if(resp.status === 429) errMsg = 'Rate limited by the provider. Wait a moment and retry, or choose another currently available model in Settings.';
         else errMsg = `Request failed: ${t}`;
         throw new Error(errMsg);
       }
@@ -14161,7 +14221,7 @@ const ModelCatalog={
     const chat=this.chatModels().slice().sort((a,b)=>(b.created||0)-(a.created||0));
     const used=new Set();
     const take=pred=>{const m=chat.find(x=>!used.has(x.id)&&pred(x));if(m)used.add(m.id);return m||null;};
-    const freeNvidia=take(x=>this.vendor(x)==='nvidia'&&this.isFree(x));
+    const freeNvidia=take(x=>this.vendor(x)==='nvidia'&&this.isFree(x)&&Array.isArray(x.supported_parameters)&&x.supported_parameters.includes('tools'));
     const sonnet=take(x=>/sonnet/i.test(x.id)||/sonnet/i.test(x.name||''));
     const geminiFlash=take(x=>this.vendor(x)==='google'&&/flash/i.test(x.id));
     const byVendor=v=>{const list=chat.filter(x=>!used.has(x.id)&&this.vendor(x)===v);list.forEach(x=>used.add(x.id));return list;};
@@ -14200,24 +14260,15 @@ const ModelCatalog={
 const Copilot={
   _open:false,
   _lastNationId:null,
-  // Static safety-net id for the free NVIDIA path — used only as a last resort
-  // before the live OpenRouter catalog has loaded (or if it never loads, e.g.
-  // fully offline with no cache yet). The one-click "Free by NVIDIA" button and
-  // a fresh OpenRouter sign-in both call freeNvidiaModelId() below, which
-  // resolves the CURRENT newest free NVIDIA chat model from the live catalog
-  // and only falls back to this id when that isn't available yet. Today those
-  // two happen to be the same model — that won't stay true forever, which is
-  // the point of resolving it live instead of hardcoding it here.
+  // Safe fallback before the live OpenRouter catalog loads. The Recommended
+  // action refreshes the catalog and selects NVIDIA's newest free general chat
+  // model that supports tools, which RealmWright's deeper workflows require.
   NEMOTRON_FREE:'nvidia/nemotron-3-ultra-550b-a55b:free',
-  // Resolves to whatever NVIDIA's newest FREE chat model is RIGHT NOW via the
-  // live catalog (ModelCatalog.curated() — never a frozen id, and never a
-  // content-safety/guardrail model masquerading as "newest free"). Falls back
-  // to the static seed above only if the catalog isn't available.
   freeNvidiaModelId(){
     try{
       if(typeof ModelCatalog!=='undefined'){
-        const cur=ModelCatalog.curated();
-        if(cur&&cur.freeNvidia&&cur.freeNvidia.id)return cur.freeNvidia.id;
+        const current=ModelCatalog.curated();
+        if(current&&current.freeNvidia&&current.freeNvidia.id)return current.freeNvidia.id;
       }
     }catch(e){}
     return Copilot.NEMOTRON_FREE;
@@ -14272,9 +14323,8 @@ const Copilot={
     if(typeof requestedMaxTokens!=='number')return requestedMaxTokens;
     return Copilot._supportsReasoning(model)?requestedMaxTokens+Copilot._REASONING_HEADROOM:requestedMaxTokens;
   },
-  // Central functional paywall for every provider-configuration path. The Settings
-  // panel is hidden while locked, but UI hiding alone is not enforcement: callback
-  // URLs, scripted clicks, and pre-pivot saved settings can bypass a visual gate.
+  // Provider setup is paid-only. Hiding the controls is not sufficient because
+  // saved settings, crafted callback URLs, or scripted clicks can bypass the UI.
   _requireLicensedSetup(action='configure the Copilot',silent=false){
     const active=typeof LicenseGate!=='undefined'&&LicenseGate.isActive();
     if(active)return true;
@@ -14291,6 +14341,12 @@ const Copilot={
   // separate slot — so it flows through the existing Secrets fork + scrub on persist.
   _OR_VERIFIER_KEY:'rw_or_pkce_verifier',
   _OR_REOPEN_KEY:'rw_or_reopen_settings',
+  // sessionStorage is the narrowest normal path. The short-lived IDB copy also
+  // survives providers that finish sign-in in a different tab or recreate the
+  // page session during first-account onboarding. It is a verifier, never an API
+  // key, and is deleted after a callback or replaced by the next attempt.
+  _OR_PENDING_KEY:'rw_or_pkce_pending',
+  _OR_PENDING_TTL_MS:15*60*1000,
   // base64url of raw bytes: base64 then +→- /→_ and strip trailing '='.
   _orB64url(bytes){
     let bin='';
@@ -14323,12 +14379,14 @@ const Copilot={
       sessionStorage.setItem(this._OR_VERIFIER_KEY,verifier);
       // Reopen Settings when OpenRouter sends us back, so the user lands where they left.
       sessionStorage.setItem(this._OR_REOPEN_KEY,'1');
+      try{await IDB.set(this._OR_PENDING_KEY,{verifier,startedAt:Date.now(),reopen:true});}
+      catch(e){/* same-tab sessionStorage flow still works if IDB is unavailable */}
       const challengeBytes=await this._orSha256(verifier);
       const challenge=this._orB64url(challengeBytes);
       // The callback strips its own query, so hand OpenRouter the clean page URL.
       const callback=location.origin+location.pathname;
       // Persist first — the redirect navigates away and unsaved work would otherwise be lost.
-      await State.persist();
+      await State.persistNow();
       location.href='https://openrouter.ai/auth?callback_url='+encodeURIComponent(callback)
         +'&code_challenge='+challenge+'&code_challenge_method=S256';
     }catch(e){
@@ -14340,18 +14398,31 @@ const Copilot={
     let code=null;
     try{code=new URLSearchParams(location.search).get('code');}catch(e){return;}
     if(!code)return;
-    const verifier=(()=>{try{return sessionStorage.getItem(this._OR_VERIFIER_KEY);}catch(e){return null;}})();
-    const reopen=(()=>{try{return sessionStorage.getItem(this._OR_REOPEN_KEY);}catch(e){return null;}})();
+    let verifier=(()=>{try{return sessionStorage.getItem(this._OR_VERIFIER_KEY);}catch(e){return null;}})();
+    let reopen=(()=>{try{return sessionStorage.getItem(this._OR_REOPEN_KEY);}catch(e){return null;}})();
+    // First-time provider onboarding can recreate the page session or return in
+    // another tab. Recover only the most recent, short-lived pending verifier.
+    if(!verifier){
+      try{
+        const pending=await IDB.get(this._OR_PENDING_KEY);
+        const age=pending&&Number.isFinite(Number(pending.startedAt))?Date.now()-Number(pending.startedAt):Infinity;
+        if(pending&&typeof pending.verifier==='string'&&pending.verifier&&age>=0&&age<=this._OR_PENDING_TTL_MS){
+          verifier=pending.verifier;
+          if(pending.reopen)reopen='1';
+        }
+      }catch(e){/* handled below as a missing verifier */}
+    }
     // Scrub ?code from the URL immediately so a refresh can't replay the exchange.
     try{history.replaceState({},document.title,location.origin+location.pathname);}catch(e){}
     try{sessionStorage.removeItem(this._OR_VERIFIER_KEY);}catch(e){}
     try{sessionStorage.removeItem(this._OR_REOPEN_KEY);}catch(e){}
+    try{await IDB.remove(this._OR_PENDING_KEY);}catch(e){}
     // LicenseGate.init() runs before this callback. Never exchange or store a key
-    // for a locked visitor, even if they craft a callback URL or began auth before
-    // their license expired. The one-time code is scrubbed above either way.
+    // for a locked visitor, even if a callback URL is crafted or access expired.
     if(!this._requireLicensedSetup('finish OpenRouter sign-in'))return;
     if(!verifier){showToast('OpenRouter sign-in didn\'t complete (the verifier was lost). Try Connect again.',[],7000);return;}
     try{
+      showToast('Finishing your OpenRouter connection…',[],12000);
       const resp=await fetch('https://openrouter.ai/api/v1/auth/keys',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
@@ -14369,36 +14440,51 @@ const Copilot={
       // Route through setSetting → Secrets fork + persist, the existing single path.
       State.setSetting('copilotKey',key);
       State.setSetting('copilotProvider','openrouter');
-      // Default a fresh connector to the free model, but never overwrite a chosen one.
+      // Default only when no model exists. A sign-in callback must never
+      // overwrite a model the GM personally selected.
       const cur=State.data?.meta?.settings?.copilotModel;
       const freeId=Copilot.freeNvidiaModelId();
-      if(!cur||cur===Copilot.NEMOTRON_FREE||cur===freeId)State.setSetting('copilotModel',freeId);
-      await State.persist();
+      if(!cur)State.setSetting('copilotModel',freeId);
+      // setSetting intentionally fire-and-forgets normal saves. An OAuth key is
+      // different: do not announce success until the dedicated secret store has
+      // actually accepted it and the rest of the settings are durably written.
+      await Secrets.saveKey(key);
+      await State.persistNow();
+      const storedKey=await Secrets.loadKey();
+      if(storedKey!==key)throw new Error('this browser did not confirm secure key storage');
       if(reopen&&typeof Modals!=='undefined')Modals.open('settings');
       if(typeof this._refreshKeySettingsUI==='function')this._refreshKeySettingsUI();
       this.updateStatus();
       if(typeof this.renderMessages==='function')this.renderMessages();
-      showToast('Connected to OpenRouter — a free key was saved. You\'re ready to chat.',[],5000);
+      showToast('Connected to OpenRouter — the access key was saved only in this browser, and your model choice was preserved.',[],7000);
     }catch(e){
       showToast('OpenRouter sign-in failed: '+(e&&e.message||e)+'. Paste a key manually instead.',[],7000);
     }
   },
-  // ── "FREE BY NVIDIA" — the one-click free path for non-technical GMs ─────────
-  // Wraps the existing OpenRouter PKCE login + the free Nemotron model into one
+  // ── RECOMMENDED PROVIDER-LISTED FREE MODEL ───────────────────────────────────
+  // Wraps the existing OpenRouter PKCE login + the current free NVIDIA recommendation into one
   // friendly action. Does NOT re-implement auth: if a working key already exists we
   // just switch the model; otherwise we pin provider+model and hand off to orConnect,
   // which owns the honesty gate (file:// / insecure context) and the PKCE redirect.
   async useFreeNvidia(){
-    if(!this._requireLicensedSetup('use Free by NVIDIA'))return;
+    if(!this._requireLicensedSetup('use the free NVIDIA model'))return;
     try{
       // Decide on an OpenRouter KEY, not isConfigured() — that returns true for
       // Ollama too, which would leave provider='ollama' and the free model never runs.
       const s=State.data?.meta?.settings;
       const hasOrKey=!!(s&&s.copilotKey&&s.copilotKey.length>10);
-      // Resolve the CURRENT newest free NVIDIA chat model once, up front — both
-      // branches below select this same id, so a stale/half-loaded catalog can't
-      // make them disagree with each other.
-      const freeId=Copilot.freeNvidiaModelId();
+      // Require a fresh provider catalog before changing any setting. Choose
+      // the newest free NVIDIA general chat model that supports tools; this is
+      // a truthful automatic rule, unlike claiming release date proves power.
+      const refreshed=typeof ModelCatalog!=='undefined'&&await ModelCatalog.refresh(true);
+      const recommendation=refreshed?ModelCatalog.curated().freeNvidia:null;
+      const supportsTools=!!(recommendation&&Array.isArray(recommendation.supported_parameters)&&recommendation.supported_parameters.includes('tools'));
+      if(!recommendation||ModelCatalog.vendor(recommendation)!=='nvidia'||!ModelCatalog.isChatModel(recommendation)||!ModelCatalog.isFree(recommendation)||!supportsTools){
+        showToast('OpenRouter could not confirm a compatible free NVIDIA model right now. Nothing was changed; try again later or choose another model under Other options.',[],8000);
+        return;
+      }
+      const freeId=recommendation.id;
+      const freeName=ModelCatalog.displayName(recommendation);
       if(hasOrKey){
         // Already have a key — no sign-in needed. Force the OpenRouter free path
         // (even over an existing Ollama setup) so the model actually runs.
@@ -14408,7 +14494,7 @@ const Copilot={
         if(typeof this._refreshKeySettingsUI==='function')this._refreshKeySettingsUI();
         this.updateStatus();
         if(typeof this.renderMessages==='function')this.renderMessages();
-        showToast('You\'re set — using the free NVIDIA model.',[],4000);
+        showToast('You\'re set — using '+freeName+', confirmed compatible and free in OpenRouter\'s latest catalog.',[],6000);
         return;
       }
       // No key yet — pin the free OpenRouter path, then let orConnect do the sign-in.
@@ -14416,7 +14502,7 @@ const Copilot={
       State.setSetting('copilotModel',freeId);
       await this.orConnect();
     }catch(e){
-      showToast('Couldn\'t start the free NVIDIA setup: '+(e&&e.message||e)+'. You can paste a key under Other options instead.',[],7000);
+      showToast('Couldn\'t start the free-model setup: '+(e&&e.message||e)+'. You can paste a key under Other options instead.',[],7000);
     }
   },
   // Per-nation conversation history is stored on n.copilotConversation as an array of {role, content, timestamp}.
@@ -15607,8 +15693,8 @@ Without a CANON block, your response is conversational only — no simulation ef
         catch(e){try{errText=(await resp.text()).slice(0,200)||errText;}catch(_){}}
         if(resp.status===401)errorMessage='Invalid API key. Check Settings → Copilot.';
         else if(resp.status===402)errorMessage='Out of credits. Top up at openrouter.ai/credits.';
-        else if(resp.status===429)errorMessage='Rate limited — wait a moment and retry. Free models cap at ~50 requests/day (1000/day after $10 of credits); a persistent 429 means the daily limit, not a hiccup.';
-        else if(resp.status===500||resp.status===502||resp.status===503)errorMessage='The model\'s server is overloaded right now — this is common on the free shared model at busy times. Wait a minute and try again, or choose a paid model in Settings.';
+        else if(resp.status===429)errorMessage='Rate limited by the provider. Wait a moment and retry, or choose another currently available model in Settings.';
+        else if(resp.status===500||resp.status===502||resp.status===503)errorMessage='The model provider is unavailable or overloaded right now. Wait a minute and try again, or choose another model in Settings.';
         else errorMessage=`Request failed: ${errText}`;
         throw new Error(errorMessage);
       }
@@ -15948,8 +16034,8 @@ Without a CANON block, your response is conversational only — no simulation ef
       try{const j=await resp.json();errText=j?.error?.message||j?.error||errText;}catch(e){}
       if(resp.status===401)throw new Error('Invalid API key. Check Settings → Copilot.');
       if(resp.status===402)throw new Error('Out of credits. Top up at openrouter.ai/credits.');
-      if(resp.status===429)throw new Error('Rate limited — wait a moment and retry. Free models cap at ~50 requests/day (1000/day after $10 of credits); a persistent 429 means the daily limit, not a hiccup.');
-      if(resp.status===500||resp.status===502||resp.status===503)throw new Error('The model\'s server is overloaded right now — this is common on the free shared model at busy times. Wait a minute and try again, or choose a paid model in Settings.');
+      if(resp.status===429)throw new Error('Rate limited by the provider. Wait a moment and retry, or choose another currently available model in Settings.');
+      if(resp.status===500||resp.status===502||resp.status===503)throw new Error('The model provider is unavailable or overloaded right now. Wait a minute and try again, or choose another model in Settings.');
       throw new Error(errText);
     }
     const data=await resp.json();
@@ -17273,7 +17359,7 @@ const SampleMode={
   },
 
   _renderPickerModalHtml(){
-    return`<div class="modal modal--md" id="modal-sample-picker" role="dialog" aria-modal="true" aria-labelledby="sample-picker-title"><div class="modal__header"><h2 class="modal__title" id="sample-picker-title">Try a sample realm</h2><button class="modal__close" data-close="sample-picker" aria-label="Close">&#215;</button></div><div class="modal__body"><p style="font-size:var(--text-body-sm);color:var(--color-text-muted);margin:0 0 20px">No API key needed. Each sample loads a fully-built realm and shows you what RealmWright's Copilot can produce when it knows your campaign.</p><div class="sample-picker__grid"><div class="sample-picker__card"><div class="sample-picker__card-header"><span class="sample-picker__tag">DM demo</span><h3 class="sample-picker__card-title">The Heist</h3><p class="sample-picker__card-sub">Solis Prime &middot; Near-Future Corporate</p></div><p class="sample-picker__card-pitch">A smuggling crew. A Board-member target. A magistrate who might be an ally or a trap. See how the Copilot tracks relationships across a seven-entry chronicle to answer your most tactically specific questions.</p><button class="btn btn--primary sample-picker__cta" type="button" data-sample-load="heist">Show me The Heist</button></div><div class="sample-picker__card"><div class="sample-picker__card-header"><span class="sample-picker__tag">Solo demo</span><h3 class="sample-picker__card-title">The Wandering Investigator</h3><p class="sample-picker__card-sub">Aetherholm &middot; Industrial Mystery</p></div><p class="sample-picker__card-pitch">A private investigator. His dead wife's name in a ledger. A woman who has appeared three times and is always one step ahead. See the Oracle and Scene Pivot tools working in a three-session solo campaign.</p><button class="btn btn--primary sample-picker__cta" type="button" data-sample-load="solo">Show me the Investigator</button></div><div class="sample-picker__card"><div class="sample-picker__card-header"><span class="sample-picker__tag">Worldbuilder demo</span><h3 class="sample-picker__card-title">The Saltmoot Council</h3><p class="sample-picker__card-sub">The Surassi Compact &middot; Industrial Political Intrigue</p></div><p class="sample-picker__card-pitch">Three factions at the edge of a constitutional crisis. A Chancellor who is buying time. A guildsman holding a document that could end her. See the Copilot produce faction forecasts and cultural analysis from a seven-entry chronicle.</p><button class="btn btn--primary sample-picker__cta" type="button" data-sample-load="political">Show me the Compact</button></div></div></div><div class="modal__footer" style="justify-content:flex-end"><button class="btn btn--secondary" type="button" data-close="sample-picker">Maybe later</button></div></div>`.trim();
+    return`<div class="modal modal--md" id="modal-sample-picker" role="dialog" aria-modal="true" aria-labelledby="sample-picker-title"><div class="modal__header"><h2 class="modal__title" id="sample-picker-title">Try a sample realm</h2><button class="modal__close" data-close="sample-picker" aria-label="Close">&#215;</button></div><div class="modal__body"><p style="font-size:var(--text-body-sm);color:var(--color-text-muted);margin:0 0 20px">No API key needed. Each sample loads a fully-built realm so you can inspect connected canon, pressure, preparation, and saved example output. Live AI actions still require an unlocked Copilot and a provider.</p><div class="sample-picker__grid"><div class="sample-picker__card"><div class="sample-picker__card-header"><span class="sample-picker__tag">DM demo</span><h3 class="sample-picker__card-title">The Heist</h3><p class="sample-picker__card-sub">Solis Prime &middot; Near-Future Corporate</p></div><p class="sample-picker__card-pitch">A smuggling crew. A Board-member target. A magistrate who might be an ally or a trap. Explore connected relationships across a seven-entry chronicle and the tactical questions this context can support.</p><button class="btn btn--primary sample-picker__cta" type="button" data-sample-load="heist">Show me The Heist</button></div><div class="sample-picker__card"><div class="sample-picker__card-header"><span class="sample-picker__tag">Solo demo</span><h3 class="sample-picker__card-title">The Wandering Investigator</h3><p class="sample-picker__card-sub">Aetherholm &middot; Industrial Mystery</p></div><p class="sample-picker__card-pitch">A private investigator. His dead wife's name in a ledger. A woman who has appeared three times and is always one step ahead. Explore the Oracle, scene history, and the context prepared for solo play.</p><button class="btn btn--primary sample-picker__cta" type="button" data-sample-load="solo">Show me the Investigator</button></div><div class="sample-picker__card"><div class="sample-picker__card-header"><span class="sample-picker__tag">Worldbuilder demo</span><h3 class="sample-picker__card-title">The Saltmoot Council</h3><p class="sample-picker__card-sub">The Surassi Compact &middot; Industrial Political Intrigue</p></div><p class="sample-picker__card-pitch">Three factions at the edge of a constitutional crisis. A Chancellor who is buying time. A guildsman holding a document that could end her. Explore connected faction forecasts and cultural analysis across a seven-entry chronicle.</p><button class="btn btn--primary sample-picker__cta" type="button" data-sample-load="political">Show me the Compact</button></div></div></div><div class="modal__footer" style="justify-content:flex-end"><button class="btn btn--secondary" type="button" data-close="sample-picker">Maybe later</button></div></div>`.trim();
   },
 };
 
@@ -17287,10 +17373,9 @@ const FrontDoor={
   _MAX_RECENT:5,
   _pendingDemoCanon:null,
 
-  // Compact, bounded context for the hosted five-use demo. This is intentionally
-  // separate from the paid Copilot context builder: the paid interface remains
-  // locked, while the demo gets enough of the active realm to propose useful,
-  // reviewable changes without exceeding the Worker's 16 KB prompt ceiling.
+  // The five-use preview receives a bounded slice of the active realm. It is
+  // enough to demonstrate canon-aware help without exposing the full campaign
+  // or exceeding the Worker's request ceiling.
   _demoRealmContext(){
     const n=(typeof State!=='undefined'&&State.get)?State.get():null;
     if(!n)return{nation:null,text:'No active realm is open. Give session-prep prose only; do not emit a [CANON] block.'};
@@ -17353,20 +17438,31 @@ Never state that a change has already been applied. Never include more than 3 li
     // Phase 5A: render Turnstile only for unlicensed visitors who don't have their own key
     const turnstileEl=document.getElementById('fd-turnstile');
     const demoOut=document.getElementById('fd-demo-output');
+    const previewArea=document.getElementById('fd-preview-area');
+    const generateBtn=document.getElementById('fd-generate-btn');
+    const turnstileStatus=document.getElementById('fd-turnstile-status');
     if(demoOut)demoOut.style.display='none';
-    const licensed=(typeof LicenseGate!=='undefined'&&LicenseGate.isActive())||(typeof Copilot!=='undefined'&&Copilot.isConfigured());
-    if(licensed){
+    const licensed=typeof LicenseGate!=='undefined'&&LicenseGate.isActive();
+    const copilotReady=typeof Copilot!=='undefined'&&Copilot.isConfigured();
+    if(previewArea)previewArea.style.display=(licensed||DemoCounter.hasKey())?'':'none';
+    if(copilotReady){
       if(turnstileEl)turnstileEl.style.display='none';
+      if(turnstileStatus)turnstileStatus.style.display='none';
+      if(generateBtn){generateBtn.disabled=false;generateBtn.textContent='Prep this session';generateBtn.removeAttribute('aria-describedby');}
     }else if(turnstileEl&&DemoCounter.hasKey()){
       turnstileEl.style.display='flex';
-      // Wait briefly for the Turnstile script to load
+      if(turnstileStatus)turnstileStatus.style.display='';
+      Demo._setVerificationState('verifying');
+      // Wait up to ten seconds for the privacy-preserving verification script.
       const tryRender=(attempt=0)=>{
         if(window.turnstile){Demo.renderTurnstile('fd-turnstile');}
-        else if(attempt<10){setTimeout(()=>tryRender(attempt+1),300);}
+        else if(attempt<20){setTimeout(()=>tryRender(attempt+1),500);}
+        else{Demo._setVerificationState('error');}
       };
       tryRender();
     }else if(turnstileEl){
       turnstileEl.style.display='none';
+      if(turnstileStatus)turnstileStatus.style.display='none';
     }
   },
 
@@ -17455,8 +17551,19 @@ Never state that a change has already been applied. Never include more than 3 li
       await this._runDemoGeneration(prefixed,prompt,style);
     }else if(DemoCounter.hasKey()){
       // Demo configured but local quota hit (client-side hint only — Worker is source of truth)
-      showToast('You\'ve used your free preview messages on this device. Activate to unlock the full app, or try Sample Mode.',
-        [{label:'Activate',handler:()=>LicenseGateUI.openModal()},{label:'Sample Mode',handler:()=>{this.close();SampleMode.openPicker();}}],8000);
+      const licensed=typeof LicenseGate!=='undefined'&&LicenseGate.isActive();
+      showToast(
+        licensed
+          ?'The five hosted previews have been used on this device. Connect OpenRouter or Ollama in Settings to use the complete Copilot, or explore Sample Mode.'
+          :'The preview is not available on this device. Unlock RealmWright for the complete Copilot, or explore Sample Mode.',
+        [
+          licensed
+            ?{label:'Open AI settings',handler:()=>{this.close();Modals.open('settings');}}
+            :{label:'Unlock',handler:()=>LicenseGateUI.openModal()},
+          {label:'Sample Mode',handler:()=>{this.close();SampleMode.openPicker();}},
+        ],
+        9000,
+      );
     }else{
       // Demo not configured at all — route to activation
       LicenseGateUI.openModal();
@@ -17474,15 +17581,14 @@ Never state that a change has already been applied. Never include more than 3 li
       showToast('Please complete the captcha first.',[],4000);
       return;
     }
-    if(btn){btn.disabled=true;btn.textContent='Generating…';}
+    Demo._setVerificationState('generating');
     if(outBox){outBox.style.display='block';outBox.innerHTML='<div class="fd-demo__loading">The realm is taking shape…</div>';}
     const demoCtx=this._demoRealmContext();
     const sys=this._demoSystemPrompt(style,!!demoCtx.nation);
     const result=await Demo.proxyRequest([
       {role:'system',content:sys},
       {role:'user',content:`# Active realm context\n${demoCtx.text}\n\n# GM request\n${prompt}`},
-    ],'anthropic/claude-haiku-latest');
-    if(btn){btn.disabled=false;btn.textContent='Prep this session';}
+    ],'nvidia/nemotron-3-ultra-550b-a55b:free');
     if(result.error){
       // PIVOT — Build Agent 4 (Part 4, polish item 2): this path renders EVERY demo
       // failure — captcha reject, per-visitor trial used up, the Worker's global daily
@@ -17504,8 +17610,6 @@ Never state that a change has already been applied. Never include more than 3 li
         const sb=outBox.querySelector('[data-fd-sample]');
         if(sb)sb.addEventListener('click',()=>{this.close();if(typeof SampleMode!=='undefined')SampleMode.openPicker();});
       }
-      // Re-render captcha for the next attempt
-      Demo.renderTurnstile('fd-turnstile');
       return;
     }
     await DemoCounter.consume();
@@ -17515,17 +17619,17 @@ Never state that a change has already been applied. Never include more than 3 li
     const candidates=demoCtx.nation&&parsed&&Array.isArray(parsed.candidates)?parsed.candidates.slice(0,3):[];
     const failures=demoCtx.nation&&parsed&&Array.isArray(parsed.failures)?parsed.failures.slice(0,8):[];
     this._pendingDemoCanon=candidates.length?{nationId:demoCtx.nation.id,candidates,failures}:null;
-    const visible=this._stripCanonBlock(content)||(demoCtx.nation?'The demo prepared reviewable changes for your realm.':'No preview text was returned.');
+    const visible=this._stripCanonBlock(content)||(demoCtx.nation?'The preview prepared reviewable changes for your realm.':'No preview text was returned.');
     const safe=(typeof Markdown!=='undefined'&&Markdown.render)?Markdown.render(visible):Utils.escHtml(visible).replace(/\n/g,'<br>');
     const remaining=typeof result.remaining_today==='number'?result.remaining_today:null;
     if(outBox){
       outBox.innerHTML=`
         <div class="fd-demo__result">${safe}</div>
         <div class="fd-demo__footer">
-          ${remaining!==null?`<span class="fd-demo__quota">${remaining} free use${remaining===1?'':'s'} left in your one-time trial</span>`:''}
+          ${remaining!==null?`<span class="fd-demo__quota">${remaining} free preview${remaining===1?'':'s'} left in your one-time trial</span>`:''}
           ${candidates.length?`<button class="btn btn--secondary btn--sm" type="button" data-fd-review="true">Review ${candidates.length} proposed world change${candidates.length===1?'':'s'}</button>`:''}
           ${!demoCtx.nation?`<button class="btn btn--secondary btn--sm" type="button" data-fd-create="true">Create a realm for reviewable changes</button>`:''}
-          <button class="btn btn--primary btn--sm" type="button" data-fd-activate="true">Activate for full Copilot</button>
+          <button class="btn btn--primary btn--sm" type="button" data-fd-activate="true">Unlock the complete Copilot</button>
         </div>`;
       const rb=outBox.querySelector('[data-fd-review]');
       if(rb)rb.addEventListener('click',()=>{
@@ -17538,8 +17642,6 @@ Never state that a change has already been applied. Never include more than 3 li
       const ab=outBox.querySelector('[data-fd-activate]');
       if(ab)ab.addEventListener('click',()=>LicenseGateUI.openModal());
     }
-    // Re-render the captcha so the visitor can try another prompt
-    setTimeout(()=>Demo.renderTurnstile('fd-turnstile'),200);
   },
 
   _handleSample(){
@@ -27160,8 +27262,6 @@ function bindEventListeners(){
       }
     });
   }
-  // OpenRouter one-click OAuth — primary connect button (PKCE redirect).
-  document.getElementById('copilot-or-connect')?.addEventListener('click',()=>Copilot.orConnect());
   // "Free by NVIDIA" — recommended one-click free path (wraps orConnect + free Nemotron).
   document.getElementById('copilot-free-nvidia')?.addEventListener('click',()=>Copilot.useFreeNvidia());
   // Settings: API key save/clear
@@ -27386,14 +27486,17 @@ function bindEventListeners(){
       sel.value=cur;
     }
   };
-  // Keeps the "Free by NVIDIA" card honest about which model it actually runs
-  // — shows the real catalog name instead of a fixed description that would go
-  // stale the moment NVIDIA ships a newer free model.
+  // Show the current dynamic recommendation without treating the bundled
+  // fallback as proof of current availability. The click performs a fresh check.
   Copilot._refreshFreeCardCopy=function(){
     const el=document.getElementById('copilot-free-nvidia-sub');
     if(!el||typeof ModelCatalog==='undefined'||typeof Copilot.freeNvidiaModelId!=='function')return;
-    const name=ModelCatalog.displayName(Copilot.freeNvidiaModelId());
-    el.textContent=(name?name+' · ':'')+'Free — built by NVIDIA, delivered through OpenRouter. About 50 free messages a day, and it can be a little slow or busy at peak times, but there\'s nothing to pay and nothing to manage.';
+    const recommendation=ModelCatalog.curated().freeNvidia;
+    const name=recommendation?ModelCatalog.displayName(recommendation):'NVIDIA: Nemotron 3 Ultra (free)';
+    const checked=ModelCatalog._fetchedAt>0&&recommendation&&ModelCatalog.isChatModel(recommendation)&&ModelCatalog.isFree(recommendation);
+    el.textContent=checked
+      ?name+' · Currently listed as free in OpenRouter and provided by NVIDIA. RealmWright checks again before selection. Provider availability, quotas, sign-in requirements, and response speed can change.'
+      :name+' · Last-known fallback. RealmWright checks OpenRouter before selection. Provider availability, quotas, sign-in requirements, and response speed can change.';
   };
   // Helper to update the Settings UI (key indicator, button visibility)
   Copilot._refreshKeySettingsUI=function(){
@@ -28137,6 +28240,7 @@ const LicenseGateUI={
     // product-key field in Settings › Full version.
     document.getElementById('copilot-lock-activate-btn')?.addEventListener('click',()=>this.openModal());
     document.getElementById('unlock-key-submit')?.addEventListener('click',()=>this._submitSettingsUnlock());
+    document.getElementById('settings-license-manage-btn')?.addEventListener('click',()=>this.openModal());
     document.getElementById('unlock-key-input')?.addEventListener('keydown',e=>{if(e.key==='Enter')this._submitSettingsUnlock();});
     document.getElementById('unlock-key-input')?.addEventListener('input',()=>{
       const err=document.getElementById('unlock-key-err');if(err)err.style.display='none';
@@ -28187,9 +28291,9 @@ const LicenseGateUI={
     }else{
       body.innerHTML=`
         <div class="form-field">
-          <label class="form-label" for="la-key-input">License key</label>
-          <input class="form-input" id="la-key-input" type="text" placeholder="Lemon Squeezy UUID or itch.io key" autocomplete="off" spellcheck="false" aria-describedby="la-key-err la-key-hint">
-          <p class="form-hint" id="la-key-hint">Paste the key from your purchase email. Works with both Lemon Squeezy and itch.io purchases.</p>
+          <label class="form-label" for="la-key-input">itch.io purchase link or key</label>
+          <input class="form-input" id="la-key-input" type="text" placeholder="itch.io access link or key" autocomplete="off" spellcheck="false" aria-describedby="la-key-err la-key-hint">
+          <p class="form-hint" id="la-key-hint">Paste the full itch.io access/download link, or just the key token.</p>
           <p class="form-error" id="la-key-err" role="alert" aria-live="polite" style="display:none"></p>
         </div>`;
       const inp=document.getElementById('la-key-input');
@@ -28224,7 +28328,7 @@ const LicenseGateUI={
       // cleared browser or a new device means re-entering this exact key, and there was no
       // prompt anywhere to save it. One-time reminder with a real copy action (Utils.copyToClipboard
       // already handles the file:// / no-clipboard-API fallback chain used elsewhere in the app).
-      showToast("RealmWright activated. Welcome. Save your license key somewhere safe — you'll need it again on a new device or after clearing browser data.",[{label:'Copy key',handler:()=>Utils.copyToClipboard(key)}],12000);
+      showToast("RealmWright activated. Welcome. Save your itch.io access link or key somewhere safe — you'll need it again on a new device or after clearing browser data.",[{label:'Copy',handler:()=>Utils.copyToClipboard(key)}],12000);
       if(typeof Modals!=='undefined')Modals.close('license-activate');
       this._updateModalStatus();
     }else{
@@ -28257,7 +28361,7 @@ const LicenseGateUI={
     const result=await LicenseGate.activate(key);
     if(result.success){
       inp.value='';
-      showToast("RealmWright unlocked. Welcome. Save your license key somewhere safe — you'll need it again on a new device or after clearing browser data.",[{label:'Copy key',handler:()=>Utils.copyToClipboard(key)}],12000);
+      showToast("RealmWright unlocked. Welcome. Save your itch.io access link or key somewhere safe — you'll need it again on a new device or after clearing browser data.",[{label:'Copy',handler:()=>Utils.copyToClipboard(key)}],12000);
       // _updateStatusUI() (fired by the 'license:changed' event LicenseGate.activate
       // dispatches) hides this field and shows the "unlocked" confirmation instead.
     }else{
@@ -28291,7 +28395,7 @@ const LicenseGateUI={
     const result=await LicenseGate.activate(key);
     if(result.success){
       inp.value='';
-      showToast("RealmWright unlocked. Welcome. Save your license key somewhere safe — you'll need it again on a new device or after clearing browser data.",[{label:'Copy key',handler:()=>Utils.copyToClipboard(key)}],12000);
+      showToast("RealmWright unlocked. Welcome. Save your itch.io access link or key somewhere safe — you'll need it again on a new device or after clearing browser data.",[{label:'Copy',handler:()=>Utils.copyToClipboard(key)}],12000);
       if(typeof Render!=='undefined')Render.all();
       if(typeof FrontDoor!=='undefined')FrontDoor.close();
     }else{
@@ -28308,11 +28412,11 @@ const LicenseGateUI={
   async _deactivate(){
     if(!confirm('Deactivate this device? You can re-activate later with the same key.'))return;
     const result=await LicenseGate.deactivate();
-    if(!result?.success){
-      showToast(result?.error||'Could not deactivate this device.',[],7000);
+    if(!result||!result.success){
+      showToast((result&&result.error)||'Could not deactivate this device. Try again while online.',[],6000);
       return;
     }
-    showToast(result?.warning||'License deactivated on this device.',[],result?.warning?9000:4000);
+    showToast(result.warning||'License deactivated on this device.',[],result.warning?9000:4000);
     this._updateModalStatus();
   },
   _onLicenseChanged(){
@@ -28438,12 +28542,11 @@ async function bootstrap(){
   await State.load();
   applyDriftOverrides(State.data); // P5.1: re-apply persisted House-Rules drift edits onto the live engine array.
   bindEventListeners();
-  // Load the license before processing any paid-provider callback. This makes the
-  // PKCE exchange subject to the same functional paywall as every Copilot action.
-  await LicenseGate.init();
-  // OpenRouter one-click OAuth callback — no-op unless we returned with ?code=.
-  if(typeof Copilot!=='undefined')await Copilot.orInit().catch(e=>console.error('[copilot:orInit]',e));
   // Bind front door, sample mode, and tonight module (DOM already exists)
+  await LicenseGate.init();
+  // Process a provider callback only after paid access has been established.
+  // This also lets the callback reopen the paid Settings controls immediately.
+  if(typeof Copilot!=='undefined')await Copilot.orInit().catch(e=>console.error('[copilot:orInit]',e));
   // Fire-and-forget: drain any license operations that failed network calls
   // on a previous session. Best-effort; failures are logged, not surfaced.
   LicenseQueue.drain().catch(e=>console.error('[license:queue] drain failed',e));
@@ -28846,7 +28949,7 @@ window.__rwClearDevTheme=function(){localStorage.removeItem('rw_dev_theme');loca
       <h1 class="fd-wordmark__name" id="fd-title">RealmWright</h1>
       <span class="fd-wordmark__diamond" aria-hidden="true">◆</span>
     </div>
-    <p class="fd-subtitle" id="fd-subtitle">Run a great session on 15 minutes of prep.</p>
+    <p class="fd-subtitle" id="fd-subtitle">From living canon to the next playable decision.</p>
   </div>
   <div class="modal__body fd-body">
     <!-- PIVOT — Build Agent 3: THE WELCOME. Single first-open surface (the legacy
@@ -28857,43 +28960,42 @@ window.__rwClearDevTheme=function(){localStorage.removeItem('rw_dev_theme');loca
       <div class="fd-welcome__option fd-welcome__option--primary" id="fd-welcome-unlock">
         <div id="fd-welcome-unlock-form">
           <div class="fd-welcome__eyebrow">One-time purchase</div>
-          <h2 class="fd-welcome__title">Unlock with your product key</h2>
-          <p class="fd-welcome__desc">Paste the key from your $23 purchase to remove every cap — unlimited worlds, NPCs, and locations — plus the complete Copilot toolkit, powered by a free NVIDIA model or your own AI key.</p>
+          <h2 class="fd-welcome__title">Unlock with your itch.io purchase link or key</h2>
+          <p class="fd-welcome__desc">Paste the full access link or key from your itch.io purchase to remove every cap — unlimited worlds, NPCs, and locations — plus the complete Copilot toolkit. After unlocking, connect the provider you choose.</p>
           <div class="fd-welcome__row">
-            <input class="form-input" type="text" id="fd-welcome-key-input" placeholder="Lemon Squeezy UUID or itch.io key" autocomplete="off" spellcheck="false" aria-describedby="fd-welcome-key-err">
+            <input class="form-input" type="text" id="fd-welcome-key-input" placeholder="itch.io access link or key" autocomplete="off" spellcheck="false" aria-describedby="fd-welcome-key-err">
             <button class="btn btn--primary" type="button" id="fd-welcome-key-submit">Unlock</button>
           </div>
           <p class="fd-welcome__err" id="fd-welcome-key-err" role="alert" aria-live="polite"></p>
-          <!-- PLACEHOLDER STORE LINKS — Hunter to replace both hrefs with the real
-               itch.io and Lemon Squeezy product page URLs before this ships live. -->
           <p class="fd-welcome__stores">Don't have a key yet? Get one on
-            <a href="https://REPLACE-WITH-ITCHIO-STORE-URL.example" target="_blank" rel="noopener noreferrer" data-store="itchio">itch.io</a> or
-            <a href="https://REPLACE-WITH-LEMONSQUEEZY-STORE-URL.example" target="_blank" rel="noopener noreferrer" data-store="lemonsqueezy">Lemon Squeezy</a>.
+            <a href="https://realmwright-gm.itch.io/realmwright-gm-the-living-campaign-engine" target="_blank" rel="noopener noreferrer" data-store="itchio">itch.io</a>.
           </p>
         </div>
         <div class="fd-welcome__licensed" id="fd-welcome-licensed">
           <h2 class="fd-welcome__title">✓ Full version unlocked</h2>
-          <p class="fd-welcome__desc" style="margin-bottom:0">Thank you — every feature and the complete Copilot toolkit are unlocked on this device. Power it with the free NVIDIA model or your own AI key — your choice.</p>
+          <p class="fd-welcome__desc" style="margin-bottom:0">Thank you — every feature and the complete Copilot toolkit are unlocked on this device. Connect the provider you choose when you are ready.</p>
         </div>
       </div>
       <div class="fd-welcome__secondary-row">
         <div class="fd-welcome__option">
           <h2 class="fd-welcome__title">Explore a sample world</h2>
-          <p class="fd-welcome__desc">A complete, no-setup tour. Pick one of three fully-built worlds and every feature works right away, on rich content that's already in place.</p>
+          <p class="fd-welcome__desc">Pick one of three fully-built realms and explore populated world, campaign, session, and solo surfaces immediately. Live AI actions require an unlocked Copilot and a provider.</p>
           <button type="button" class="btn btn--secondary" id="fd-sample" aria-label="Browse the three sample worlds">Browse sample worlds</button>
         </div>
         <div class="fd-welcome__option">
           <h2 class="fd-welcome__title">Start your own (free)</h2>
-          <p class="fd-welcome__desc">Build a new world from scratch under the free demo — up to 1 world, 8 NPCs, 6 locations, 3 factions, 10 chronicle entries, and 5 free AI preview messages. Your work saves in this browser and exports to a file any time; it's yours either way. Unlock whenever you want to go further.</p>
+          <p class="fd-welcome__desc">Build a new world from scratch in the local demo — up to 1 world, 8 NPCs, 6 locations, 3 factions, and 10 chronicle entries. Your work saves in this browser and exports to a file any time; it is yours either way. Unlock whenever you want to go further.</p>
           <button type="button" class="btn btn--secondary" id="fd-build-scratch" aria-label="Build a brand-new world from scratch, free">Start building</button>
         </div>
       </div>
     </div>
+    <div id="fd-preview-area">
     <div class="fd-divider" role="separator" aria-hidden="true">
       <hr class="fd-divider__rule">
-      <span class="fd-divider__label">or, try a free AI preview first</span>
+      <span class="fd-divider__label">or, try up to five free AI previews — no provider account needed</span>
       <hr class="fd-divider__rule">
     </div>
+    <p class="fd-demo__notice"><strong>Your five-message trial is enforced by RealmWright.</strong> Free-provider capacity can vary. Preview prompts are processed by OpenRouter and NVIDIA and may be logged for security and product improvement, so do not include personal or confidential information.</p>
     <div class="form-field">
       <label class="form-label" for="fd-prompt">Tonight's session is about…</label>
       <textarea class="form-textarea fd-textarea" id="fd-prompt" rows="4" placeholder="A heist gone wrong inside the Solis Data Vault…" autocomplete="off" spellcheck="true"></textarea>
@@ -28909,9 +29011,11 @@ window.__rwClearDevTheme=function(){localStorage.removeItem('rw_dev_theme');loca
     </div>
     <!-- Phase 5A: Turnstile captcha for unlicensed visitors. Auto-hides for licensed users via FrontDoor.open(). -->
     <div class="fd-turnstile" id="fd-turnstile" aria-label="Free-preview verification"></div>
-    <button type="button" class="btn btn--primary fd-generate-btn" id="fd-generate-btn">Prep this session</button>
+    <p class="fd-turnstile-status" id="fd-turnstile-status" data-state="verifying" aria-live="polite">Securing your free preview…</p>
+    <button type="button" class="btn btn--primary fd-generate-btn" id="fd-generate-btn" aria-describedby="fd-turnstile-status" disabled>Securing preview…</button>
     <!-- Phase 5A: Inline demo output (single-shot preview for unlicensed visitors). -->
     <div class="fd-demo" id="fd-demo-output" aria-live="polite"></div>
+    </div>
     <div class="fd-recent" id="fd-recent" aria-label="Recent sessions">
       <p class="fd-recent__heading">Recent</p>
       <ul class="fd-recent__list" id="fd-recent-list" role="list"></ul>

@@ -1,6 +1,6 @@
 # RealmWright Recovery State
 
-**Last updated:** 2026-07-25
+**Last updated:** 2026-08-13
 
 This is the durable handoff for every future session. Read it before changing RealmWright and update it after every verified decision, fix, test, or blocker.
 
@@ -217,6 +217,59 @@ Still unproven:
 4. Perform one real licensed OpenRouter authorization and free-NVIDIA generation on the final callback origin.
 5. Run the complete license device-cap matrix against Lemon Squeezy test mode.
 6. Keep all five backup branches intact and update this file and PR #13 after every verified change.
+
+## 2026-08-13 release-candidate reconciliation
+
+This section supersedes stale counts and placeholder claims above where they conflict.
+
+### Current repository state
+
+- Branch: `agent/realmwright-recovery-2026-07-24`.
+- Remote HEAD before this candidate: `9e419f87539fdebae7930cdbfb80739c28bdcdbf`.
+- PR #13 remains Draft until its replacement CI and private live tests pass.
+- Release-candidate frontend SHA-256: `AE4622691AC7A3FB9F21AC01054F5CBC8C3790C65C13A50DD5D61F97F4CCCAF9`.
+- Generated Wrangler, Graphify, and local audit output is ignored. Only the explicitly reviewed source, tests, workflow, lockfile, and documentation may be staged.
+- The obsolete hidden patch payload is removed; Git history and backup branches remain the recovery path.
+
+### Verified local release checks
+
+- `npm ci` succeeds from the committed lockfile and `npm audit --audit-level=high` reports zero vulnerabilities.
+- All three real inline frontend JavaScript blocks parse successfully.
+- The release-contract checker verifies dynamic NVIDIA recommendation, preserved user model choice, OpenRouter PKCE, and itch.io deactivation wiring.
+- Worker: 67/67 tests pass, including full itch.io purchase-link activation, three-device enforcement, reload validation, outage behavior, and deactivation.
+- Worker TypeScript typecheck passes.
+- Wrangler 4.120.1 packages the configured Worker successfully in deployment dry-run mode.
+- `git diff --check` reports no whitespace errors.
+- A targeted current-file scan reports zero embedded Cloudflare tokens, itch.io seller API keys, OpenRouter keys, or Turnstile secrets. The visible `sk-or-v1-...` text is only a password-field placeholder.
+
+### Verified workflow correction
+
+- The old CI decoded and applied a hidden patch, then had permission to commit and push. Its red check was caused by that stale patch failing to apply.
+- The replacement workflow is read-only (`contents: read`). It validates frontend syntax and release contracts, installs from the lockfile, runs Worker tests, and runs TypeScript typecheck.
+- CI no longer edits the repository or pushes code.
+
+### Verified product behavior
+
+- Settings shows one recommended NVIDIA/OpenRouter connection path and keeps the full model picker; the user's selected model policy is not silently replaced by this release work.
+- OpenRouter authorization uses PKCE, exchanges the returned code, stores the returned key in the browser-local secret store, clears the callback query, and returns to Settings.
+- Exactly five one-time hosted demo messages remain. The owner-selected local global daily ceiling is disabled; provider availability and provider quota remain authoritative.
+- A buyer may paste either the complete private itch.io purchase/download URL or its `/download/` token. The Worker verifies that it owns RealmWright, issues a private device token, permits up to three active devices, preserves existing access during a temporary itch.io outage, and supports deactivation.
+
+### Non-code launch state
+
+- The itch.io tax interview is at the final W-8BEN certification step. Rahima must personally review and submit it; tax identity details do not belong in this repository.
+- Payoneer is intentionally left unconfigured until a payout is requested.
+- The itch.io product page must remain Draft until Rahima finishes the tax certification and provides the final storefront screenshots.
+
+### Authorized continuation order
+
+1. Commit the explicitly scoped candidate and push it to PR #13 without force-pushing.
+2. Require the replacement GitHub CI to pass; fix only a proven failure.
+3. Upload private Worker and Pages previews without changing production traffic.
+4. Test a real itch.io review purchase link through unlock, reload validation, and deactivation.
+5. Test the real OpenRouter authorization and one minimal generation on the preview origin.
+6. Merge PR #13 only after those gates pass.
+7. Deploy the exact tested Worker version and exact tested frontend bytes to production, verify them by command, and keep itch.io Draft.
 
 ## Safety rules
 

@@ -6,6 +6,8 @@
 //   POST /api/license/deactivate       -> license.handleDeactivate
 //   POST /api/license/cleanup-orphans  -> license.handleCleanupOrphans (manual; gated by CLEANUP_TOKEN)
 //   POST /verify                       -> itch.handleItchVerify
+//   POST /api/itch/validate            -> itch.handleItchValidate
+//   POST /api/itch/deactivate          -> itch.handleItchDeactivate
 //   POST /api/demo/generate            -> demo.handleDemoGenerate
 //
 // Cron: fortnightly invokes reapOrphans().
@@ -19,7 +21,7 @@ import {
   reapOrphans,
 } from './license';
 import type { LicenseEnv } from './license';
-import { handleItchVerify } from './itch';
+import { handleItchDeactivate, handleItchValidate, handleItchVerify } from './itch';
 import type { ItchEnv } from './itch';
 import { handleDemoGenerate } from './demo';
 import type { DemoEnv } from './demo';
@@ -67,6 +69,10 @@ export default {
         return handleCleanupOrphans(request, env);
       case '/verify':
         return handleItchVerify(request, env);
+      case '/api/itch/validate':
+        return handleItchValidate(request, env);
+      case '/api/itch/deactivate':
+        return handleItchDeactivate(request, env);
       case '/api/demo/generate':
         return handleDemoGenerate(request, env);
       default:

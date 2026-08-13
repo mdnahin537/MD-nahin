@@ -51,7 +51,7 @@ test('config: invalid per-visitor limit falls back to the locked five-use cap', 
   }
 });
 
-test('config: oversized global limit falls back to the bounded default', async () => {
+test('config: an invalid global limit safely preserves the owner-selected disabled ceiling', async () => {
   let openrouterCalled = false;
   const day = new Date().toISOString().slice(0, 10);
   const kv = makeKV({ [`demo:global:${day}`]: '300' });
@@ -62,17 +62,17 @@ test('config: oversized global limit falls back to the bounded default', async (
       RATELIMIT: kv,
       DEMO_GLOBAL_DAILY: '999999999999',
     }));
-    assert.equal(res.status, 429);
-    assert.equal(openrouterCalled, false);
+    assert.equal(res.status, 200);
+    assert.equal(openrouterCalled, true);
+    assert.equal(await kv.get(`demo:global:${day}`), '300', 'disabled local ceiling must not touch the global counter');
   } finally {
     restore();
   }
 });
 
-test('config: corrupt demo counter fails closed without model spend', async () => {
+test('config: corrupt visitor counter fails closed without model spend', async () => {
   let openrouterCalled = false;
-  const day = new Date().toISOString().slice(0, 10);
-  const kv = makeKV({ [`demo:global:${day}`]: 'broken-counter' });
+  const kv = makeKV({ 'demo:ip:203.0.113.7': 'broken-counter' });
   const fetchMock = successfulDemoFetch(() => { openrouterCalled = true; });
   const restore = withFetch(fetchMock);
   try {
@@ -92,7 +92,7 @@ test('config: oversized max_tokens cannot raise owner spend', async () => {
   try {
     const res = await handleDemoGenerate(demoRequest(), demoEnv({ DEMO_MAX_TOKENS: '999999999999' }));
     assert.equal(res.status, 200);
-    assert.equal(sent.max_tokens, 1200);
+    assert.equal(sent.max_tokens, 800);
   } finally {
     restore();
   }

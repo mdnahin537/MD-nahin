@@ -11,7 +11,9 @@ import { readBoundedInt } from './config';
 //         "created_at": 1716200000000, "last_seen_at": 1716200000000 }
 //     ]
 //   }
-// TTL: 90 days (refreshed on every touch). Tokens beyond DEVICE_CAP are rejected.
+// Device-lease TTL: 90 days (refreshed on every validation). This is cleanup
+// for inactive browser slots, not a purchase-key expiry. A still-valid itch.io
+// buyer receives a renewed lease automatically after a long absence.
 
 export interface DeviceEnv {
   DEVICES: KVNamespace;
@@ -19,14 +21,11 @@ export interface DeviceEnv {
   DEVICE_TTL_SECONDS: string;
 }
 
-
 export function deviceTtlSeconds(env: DeviceEnv): number {
   return readBoundedInt(env.DEVICE_TTL_SECONDS, 7_776_000, 3_600, 31_536_000);
 }
 
 export function deviceCap(env: DeviceEnv): number {
-  // The paid product promises a three-device ceiling. Operators may lower it,
-  // but an invalid or oversized variable must not silently create extra slots.
   return readBoundedInt(env.DEVICE_CAP, 3, 1, 3);
 }
 
@@ -64,11 +63,8 @@ async function readBucket(env: DeviceEnv, key: string): Promise<DeviceBucket> {
   const stored = await env.DEVICES.get(key);
   if (stored === null) return { tokens: [] };
   let raw: unknown;
-  try {
-    raw = JSON.parse(stored);
-  } catch {
-    throw new Error('invalid-device-bucket');
-  }
+  try { raw = JSON.parse(stored); }
+  catch { throw new Error('invalid-device-bucket'); }
   if (!isDeviceBucket(raw)) throw new Error('invalid-device-bucket');
   return raw;
 }
@@ -99,9 +95,8 @@ export interface ExistingDeviceResult {
   cap: number;
 }
 
-// Read-only lookup used before Lemon Squeezy activation. A known token with an
-// existing instance lets the Worker validate/reuse that instance instead of
-// consuming a fresh LS activation slot on every re-entry of the same key.
+// Validate the bucket before any upstream activation. A known token with an
+// existing instance can be reused instead of consuming another LS slot.
 export async function findExistingDevice(
   env: DeviceEnv,
   licenseKey: string,
@@ -109,8 +104,6 @@ export async function findExistingDevice(
 ): Promise<ExistingDeviceResult | null> {
   const ttl = deviceTtlSeconds(env);
   const cap = deviceCap(env);
-  // Validate an existing bucket before any upstream activation, even when this
-  // request has no device token. Corrupt state must not look like zero devices.
   const bucket = prune(await readBucket(env, licenseKey), ttl);
   if (!presentedToken) return null;
   const record = bucket.tokens.find((t) => t.token === presentedToken);
@@ -174,14 +167,15 @@ export async function touch(
   env: DeviceEnv,
   licenseKey: string,
   token: string | null,
-): Promise<void> {
-  if (!token) return;
+): Promise<boolean> {
+  if (!token) return false;
   const ttl = deviceTtlSeconds(env);
   const bucket = prune(await readBucket(env, licenseKey), ttl);
   const existing = bucket.tokens.find((t) => t.token === token);
-  if (!existing) return;
+  if (!existing) return false;
   existing.last_seen_at = Date.now();
   await writeBucket(env, licenseKey, bucket);
+  return true;
 }
 
 // On deactivate — remove the token for this device only.
@@ -189,15 +183,17 @@ export async function revoke(
   env: DeviceEnv,
   licenseKey: string,
   token: string | null,
-): Promise<void> {
-  if (!token) return;
+): Promise<boolean> {
+  if (!token) return false;
   const bucket = await readBucket(env, licenseKey);
   const filtered = bucket.tokens.filter((t) => t.token !== token);
+  if (filtered.length === bucket.tokens.length) return false;
   if (filtered.length === 0) {
     await env.DEVICES.delete(licenseKey);
-    return;
+    return true;
   }
   await writeBucket(env, licenseKey, { tokens: filtered });
+  return true;
 }
 
 // Read token from cookie (preferred) or X-Device-Token header (itch.io iframe /

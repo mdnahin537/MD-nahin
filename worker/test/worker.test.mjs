@@ -13,12 +13,12 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { handleDemoGenerate } from '../src/demo.ts';
-import { handleItchVerify } from '../src/itch.ts';
-import { handleActivate, handleValidate } from '../src/license.ts';
+import { handleItchDeactivate, handleItchValidate, handleItchVerify } from '../src/itch.ts';
+import { handleActivate, handleDeactivate, handleValidate } from '../src/license.ts';
+import worker from '../src/index.ts';
 
 import {
   makeFetch,
-  makeKV,
   withFetch,
   URLS,
   jsonRequest,
@@ -129,7 +129,7 @@ test('demo: an OpenRouter network failure refunds the reserved slot', async () =
   ]);
   const restore = withFetch(fetchMock);
   try {
-    const env = demoEnv({ DEMO_PER_VISITOR_LIMIT: '5' });
+    const env = demoEnv({ DEMO_PER_VISITOR_LIMIT: '5', DEMO_GLOBAL_DAILY: '300' });
     const day = new Date().toISOString().slice(0, 10);
     // PIVOT FIX: the per-visitor key is no longer day-scoped (see src/demo.ts) —
     // only the global ceiling still carries the UTC day in its key.
@@ -169,6 +169,29 @@ test('demo: an OpenRouter 5xx also refunds the reserved slot', async () => {
     // And it does NOT leak the upstream error text.
     const body = await res.json();
     assert.ok(!/overloaded/.test(body.error || ''), 'upstream error text must not be echoed');
+  } finally {
+    restore();
+  }
+});
+
+test('demo: a zero local daily ceiling relies on the free provider quota', async () => {
+  const fetchMock = makeFetch([
+    { match: (u) => u.includes(URLS.TURNSTILE), respond: () => ({ status: 200, body: { success: true } }) },
+    { match: (u) => u.includes(URLS.OPENROUTER), respond: () => ({ status: 429, body: { error: { message: 'provider quota' } } }) },
+  ]);
+  const restore = withFetch(fetchMock);
+  try {
+    const env = demoEnv({ DEMO_GLOBAL_DAILY: '0' });
+    const day = new Date().toISOString().slice(0, 10);
+    const res = await handleDemoGenerate(
+      jsonRequest({ turnstileToken: 'good', messages: [{ role: 'user', content: 'hi' }] }),
+      env,
+    );
+    assert.equal(res.status, 429, 'provider quota is surfaced as temporary free-provider capacity');
+    const body = await res.json();
+    assert.match(body.error, /free AI provider/i);
+    assert.equal(await env.RATELIMIT.get('demo:ip:203.0.113.7'), '0', 'provider quota must refund the visitor slot');
+    assert.equal(await env.RATELIMIT.get(`demo:global:${day}`), null, 'disabled local ceiling must not create a global counter');
   } finally {
     restore();
   }
@@ -256,12 +279,15 @@ test('demo: an unexpected KV throw degrades gracefully instead of crashing', asy
 
 test('demo: model is server-forced (client model is ignored)', async () => {
   let sentModel = null;
+  let sentReasoning = null;
   const fetchMock = makeFetch([
     { match: (u) => u.includes(URLS.TURNSTILE), respond: () => ({ status: 200, body: { success: true } }) },
     {
       match: (u) => u.includes(URLS.OPENROUTER),
       respond: (_u, init) => {
-        sentModel = JSON.parse(init.body).model;
+        const sent = JSON.parse(init.body);
+        sentModel = sent.model;
+        sentReasoning = sent.reasoning;
         return { status: 200, body: { choices: [{ message: { content: 'ok' } }], usage: {} } };
       },
     },
@@ -274,6 +300,7 @@ test('demo: model is server-forced (client model is ignored)', async () => {
       env,
     );
     assert.equal(sentModel, 'server/forced-model', 'the Worker must force DEMO_MODEL, never the client value');
+    assert.deepEqual(sentReasoning, { exclude: true }, 'private model reasoning must be excluded from the buyer response');
   } finally {
     restore();
   }
@@ -309,12 +336,60 @@ test('itch: a valid download key -> {valid:true} + a device_token (3-device cap)
   ]);
   const restore = withFetch(fetchMock);
   try {
-    const res = await handleItchVerify(jsonRequest({ key: 'real-key' }), itchEnv());
+    const env = itchEnv();
+    const res = await handleItchVerify(jsonRequest({ key: 'real-key' }), env);
     assert.equal(res.status, 200);
     const body = await res.json();
     assert.equal(body.valid, true);
     assert.ok(body.device_token, 'a valid itch buyer must receive a device_token');
     assert.equal(body.device_cap, 3);
+    const call = fetchMock.calls.find((c) => c.url.includes(URLS.ITCH));
+    assert.equal(call.init.headers.Authorization, 'Bearer test-itch-key', 'seller API key must be a bearer header');
+    assert.ok(!call.url.includes('test-itch-key'), 'seller API key must never appear in the URL');
+    assert.ok(
+      [...env.DEVICES._store.keys()].every((key) => !key.includes('real-key')),
+      'the buyer key must not appear in the Cloudflare KV key list',
+    );
+  } finally {
+    restore();
+  }
+});
+
+test('itch: a buyer can paste the full itch.io access URL, not only the token', async () => {
+  const fetchMock = makeFetch([
+    { match: (u) => u.includes(URLS.ITCH), respond: () => ({ status: 200, body: { download_key: { id: 12345 } } }) },
+  ]);
+  const restore = withFetch(fetchMock);
+  try {
+    const token = 'YWKse5jeAeuZ8w3a5qO2b2PId1sChw2B9b637w6z';
+    const fullUrl =
+      `https://realmwright-gm.itch.io/realmwright-gm-the-living-campaign-engine/download/${token}` +
+      '?source=receipt#access';
+    const res = await handleItchVerify(jsonRequest({ key: fullUrl }), itchEnv());
+    assert.equal(res.status, 200);
+    assert.equal((await res.json()).valid, true);
+
+    const call = fetchMock.calls.find((c) => c.url.includes(URLS.ITCH));
+    const upstream = new URL(call.url);
+    assert.equal(upstream.searchParams.get('download_key'), token);
+    assert.ok(!upstream.searchParams.get('download_key').includes('/download/'));
+  } finally {
+    restore();
+  }
+});
+
+test('itch: a non-itch URL is rejected before any seller API call', async () => {
+  const fetchMock = makeFetch([
+    { match: (u) => u.includes(URLS.ITCH), respond: () => ({ status: 200, body: { download_key: { id: 12345 } } }) },
+  ]);
+  const restore = withFetch(fetchMock);
+  try {
+    const res = await handleItchVerify(
+      jsonRequest({ key: 'https://attacker.example/download/not-an-itch-key' }),
+      itchEnv(),
+    );
+    assert.equal(res.status, 400);
+    assert.equal(fetchMock.calls.length, 0);
   } finally {
     restore();
   }
@@ -322,7 +397,9 @@ test('itch: a valid download key -> {valid:true} + a device_token (3-device cap)
 
 test('itch: an unknown key -> {valid:false}, no raw upstream text, no token', async () => {
   const fetchMock = makeFetch([
-    { match: (u) => u.includes(URLS.ITCH), respond: () => ({ status: 200, body: { errors: ['invalid download key'] } }) },
+    // The live itch.io API currently uses HTTP 400 for this semantic result,
+    // despite the public docs showing HTTP 200.
+    { match: (u) => u.includes(URLS.ITCH), respond: () => ({ status: 400, body: { errors: ['invalid download key'] } }) },
   ]);
   const restore = withFetch(fetchMock);
   try {
@@ -331,6 +408,25 @@ test('itch: an unknown key -> {valid:false}, no raw upstream text, no token', as
     assert.equal(body.valid, false);
     assert.ok(!body.device_token, 'an invalid key must not get a device token');
     assert.ok(!/invalid download key/.test(body.error || ''), 'must not echo itch raw error text');
+  } finally {
+    restore();
+  }
+});
+
+test('itch: a seller credential/scope 4xx is an outage, never a buyer revocation', async () => {
+  const fetchMock = makeFetch([
+    {
+      match: (u) => u.includes(URLS.ITCH),
+      respond: () => ({ status: 401, body: { errors: ['invalid API key'] } }),
+    },
+  ]);
+  const restore = withFetch(fetchMock);
+  try {
+    const res = await handleItchVerify(jsonRequest({ key: 'buyer-key' }), itchEnv());
+    assert.equal(res.status, 502);
+    const body = await res.json();
+    assert.equal(body.valid, false, 'a new activation must fail closed');
+    assert.match(body.error, /try again/i);
   } finally {
     restore();
   }
@@ -366,6 +462,254 @@ test('itch: a 5xx from itch -> not a valid:true, fails closed', async () => {
   }
 });
 
+test('itch validate: a valid purchase and active device stay valid', async () => {
+  const fetchMock = makeFetch([
+    {
+      match: (u) => u.includes(URLS.ITCH),
+      respond: () => ({ status: 200, body: { download_key: { id: 12345, game_id: 99999 } } }),
+    },
+  ]);
+  const restore = withFetch(fetchMock);
+  try {
+    const env = itchEnv();
+    const activation = await handleItchVerify(jsonRequest({ key: 'real-key' }), env);
+    const activated = await activation.json();
+    const validation = await handleItchValidate(
+      jsonRequest({ key: 'real-key' }, { headers: { 'X-Device-Token': activated.device_token } }),
+      env,
+    );
+    assert.equal(validation.status, 200);
+    const body = await validation.json();
+    assert.equal(body.valid, true);
+    assert.equal(body.device_token, activated.device_token, 'an active browser keeps the same lease token');
+    assert.equal(body.active_devices, 1);
+    assert.equal(body.device_cap, 3);
+    assert.match(validation.headers.get('Set-Cookie') || '', /Max-Age=7776000/);
+  } finally {
+    restore();
+  }
+});
+
+test('itch validate: a valid buyer automatically renews an expired 90-day device lease', async () => {
+  const fetchMock = makeFetch([
+    {
+      match: (u) => u.includes(URLS.ITCH),
+      respond: () => ({ status: 200, body: { download_key: { id: 12345, game_id: 99999 } } }),
+    },
+  ]);
+  const restore = withFetch(fetchMock);
+  try {
+    const env = itchEnv();
+    const activation = await handleItchVerify(jsonRequest({ key: 'real-key' }), env);
+    const activated = await activation.json();
+
+    // Cloudflare KV removes the inactive device bucket after its 90-day lease.
+    // The browser still has its purchase key and old opaque token in IndexedDB.
+    env.DEVICES._store.clear();
+
+    const renewal = await handleItchValidate(
+      jsonRequest({ key: 'real-key' }, { headers: { 'X-Device-Token': activated.device_token } }),
+      env,
+    );
+    assert.equal(renewal.status, 200);
+    const renewed = await renewal.json();
+    assert.equal(renewed.valid, true, 'a valid one-time purchase must not become a 90-day license');
+    assert.ok(renewed.device_token);
+    assert.notEqual(renewed.device_token, activated.device_token, 'the expired browser lease is replaced');
+    assert.equal(renewed.active_devices, 1);
+    assert.equal(renewed.device_cap, 3);
+    assert.match(renewal.headers.get('Set-Cookie') || '', new RegExp(`rw_device=${renewed.device_token}`));
+
+    const nextValidation = await handleItchValidate(
+      jsonRequest({ key: 'real-key' }, { headers: { 'X-Device-Token': renewed.device_token } }),
+      env,
+    );
+    const next = await nextValidation.json();
+    assert.equal(next.valid, true);
+    assert.equal(next.device_token, renewed.device_token, 'the renewed browser is stable on later launches');
+    assert.equal(next.active_devices, 1);
+  } finally {
+    restore();
+  }
+});
+
+test('itch validate: a revoked key explicitly invalidates the local license', async () => {
+  let checks = 0;
+  const fetchMock = makeFetch([
+    {
+      match: (u) => u.includes(URLS.ITCH),
+      respond: () => {
+        checks++;
+        return checks === 1
+          ? { status: 200, body: { download_key: { id: 12345, game_id: 99999 } } }
+          : { status: 200, body: { errors: ['invalid download key'] } };
+      },
+    },
+  ]);
+  const restore = withFetch(fetchMock);
+  try {
+    const env = itchEnv();
+    const activation = await handleItchVerify(jsonRequest({ key: 'real-key' }), env);
+    const activated = await activation.json();
+    const validation = await handleItchValidate(
+      jsonRequest({ key: 'real-key' }, { headers: { 'X-Device-Token': activated.device_token } }),
+      env,
+    );
+    const body = await validation.json();
+    assert.equal(body.valid, false);
+  } finally {
+    restore();
+  }
+});
+
+test('itch validate: an itch.io outage never emits valid:false', async () => {
+  const fetchMock = makeFetch([
+    { match: (u) => u.includes(URLS.ITCH), respond: () => ({ throws: 'ETIMEDOUT' }) },
+  ]);
+  const restore = withFetch(fetchMock);
+  try {
+    const validation = await handleItchValidate(
+      jsonRequest({ key: 'real-key' }, { headers: { 'X-Device-Token': '11111111-1111-4111-8111-111111111111' } }),
+      itchEnv(),
+    );
+    assert.equal(validation.status, 502);
+    const body = await validation.json();
+    assert.equal('valid' in body, false, 'temporary store failure must preserve the current paid state');
+  } finally {
+    restore();
+  }
+});
+
+test('itch deactivate: releases the server-side device slot', async () => {
+  const fetchMock = makeFetch([
+    {
+      match: (u) => u.includes(URLS.ITCH),
+      respond: () => ({ status: 200, body: { download_key: { id: 12345, game_id: 99999 } } }),
+    },
+  ]);
+  const restore = withFetch(fetchMock);
+  try {
+    const env = itchEnv({ DEVICE_CAP: '1' });
+    const first = await handleItchVerify(jsonRequest({ key: 'real-key' }), env);
+    const firstBody = await first.json();
+
+    const blocked = await handleItchVerify(jsonRequest({ key: 'real-key' }), env);
+    assert.equal(blocked.status, 403, 'second device must initially hit the cap');
+
+    const deactivated = await handleItchDeactivate(
+      jsonRequest({ key: 'real-key' }, { headers: { 'X-Device-Token': firstBody.device_token } }),
+      env,
+    );
+    assert.equal(deactivated.status, 200);
+    assert.deepEqual(await deactivated.json(), { deactivated: true });
+
+    const replacement = await handleItchVerify(jsonRequest({ key: 'real-key' }), env);
+    assert.equal(replacement.status, 200, 'a new device can activate after the old device releases its slot');
+  } finally {
+    restore();
+  }
+});
+
+test('router: itch activation, validation, and deactivation routes are wired', async () => {
+  const fetchMock = makeFetch([
+    {
+      match: (u) => u.includes(URLS.ITCH),
+      respond: () => ({ status: 200, body: { download_key: { id: 12345, game_id: 99999 } } }),
+    },
+  ]);
+  const restore = withFetch(fetchMock);
+  try {
+    const env = itchEnv();
+    const make = (path, body, token) =>
+      new Request(`https://worker.example${path}`, {
+        method: 'POST',
+        headers: {
+          Origin: 'https://realmwright.app',
+          'Content-Type': 'application/json',
+          'CF-Connecting-IP': '203.0.113.7',
+          ...(token ? { 'X-Device-Token': token } : {}),
+        },
+        body: JSON.stringify(body),
+      });
+
+    const activation = await worker.fetch(make('/verify', { key: 'real-key' }), env);
+    const activated = await activation.json();
+    assert.equal(activated.valid, true);
+
+    const validation = await worker.fetch(
+      make('/api/itch/validate', { key: 'real-key' }, activated.device_token),
+      env,
+    );
+    assert.equal((await validation.json()).valid, true);
+
+    const deactivation = await worker.fetch(
+      make('/api/itch/deactivate', { key: 'real-key' }, activated.device_token),
+      env,
+    );
+    assert.equal((await deactivation.json()).deactivated, true);
+  } finally {
+    restore();
+  }
+});
+
+test('router: a disallowed browser origin is refused before any itch.io call', async () => {
+  const fetchMock = makeFetch([
+    {
+      match: (u) => u.includes(URLS.ITCH),
+      respond: () => ({ status: 200, body: { download_key: { id: 12345, game_id: 99999 } } }),
+    },
+  ]);
+  const restore = withFetch(fetchMock);
+  try {
+    const req = new Request('https://worker.example/verify', {
+      method: 'POST',
+      headers: {
+        Origin: 'https://attacker.example',
+        'Content-Type': 'application/json',
+        'CF-Connecting-IP': '203.0.113.7',
+      },
+      body: JSON.stringify({ key: 'real-key' }),
+    });
+    const res = await worker.fetch(req, itchEnv());
+    assert.equal(res.status, 403);
+    assert.equal(fetchMock.calls.length, 0, 'disallowed origin must not reach itch.io');
+  } finally {
+    restore();
+  }
+});
+
+test('license deactivate: an LS outage preserves the device record and reports failure', async () => {
+  const fetchMock = makeFetch([
+    {
+      match: (u) => u.includes(URLS.LS_ACTIVATE),
+      respond: () => ({
+        status: 200,
+        body: { activated: true, instance: { id: 'inst-1' }, meta: { product_id: 222, store_id: 111 } },
+      }),
+    },
+    { match: (u) => u.includes(URLS.LS_DEACTIVATE), respond: () => ({ throws: 'ECONNRESET' }) },
+  ]);
+  const restore = withFetch(fetchMock);
+  try {
+    const env = licenseEnv();
+    const activated = await handleActivate(formRequest({ license_key: 'KEY-OK', instance_name: 'RW' }), env);
+    const activationBody = await activated.json();
+    const deactivated = await handleDeactivate(
+      formRequest(
+        { license_key: 'KEY-OK', instance_id: 'inst-1' },
+        { headers: { 'X-Device-Token': activationBody.device_token } },
+      ),
+      env,
+    );
+    assert.equal(deactivated.status, 503);
+    const body = await deactivated.json();
+    assert.equal(body.deactivated, false);
+    assert.ok(await env.DEVICES.get('KEY-OK'), 'the device record must remain so the client can retry safely');
+  } finally {
+    restore();
+  }
+});
+
 // ─────────────────────────────────────────────────────────────────────────────
 // LICENSE adapter (Lemon Squeezy): valid / wrong-product / store error.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -387,109 +731,6 @@ test('license activate: a valid, OWN-product key activates and returns a device_
     assert.equal(body.activated, true);
     assert.ok(body.device_token, 'client depends on json.device_token');
     assert.equal(body.device_cap, 3);
-  } finally {
-    restore();
-  }
-});
-
-test('license activate: a known device reuses its valid LS instance without activating again', async () => {
-  const token = '11111111-1111-4111-8111-111111111111';
-  const now = Date.now();
-  const env = licenseEnv({
-    DEVICES: makeKV({
-      'KEY-OK': JSON.stringify({
-        tokens: [{ token, instance_id: 'inst-existing', created_at: now, last_seen_at: now }],
-      }),
-    }),
-  });
-  const fetchMock = makeFetch([
-    {
-      match: (u) => u.includes(URLS.LS_VALIDATE),
-      respond: () => ({ status: 200, body: { valid: true, meta: { product_id: 222, store_id: 111 } } }),
-    },
-  ]);
-  const restore = withFetch(fetchMock);
-  try {
-    const res = await handleActivate(
-      formRequest({ license_key: 'KEY-OK', instance_name: 'RW' }, { headers: { 'X-Device-Token': token } }),
-      env,
-    );
-    assert.equal(res.status, 200);
-    const body = await res.json();
-    assert.equal(body.activated, true);
-    assert.equal(body.reused, true);
-    assert.equal(body.instance.id, 'inst-existing');
-    assert.equal(body.device_token, token);
-    assert.equal(fetchMock.calls.filter((c) => c.url.includes(URLS.LS_ACTIVATE)).length, 0);
-    assert.equal(fetchMock.calls.filter((c) => c.url.includes(URLS.LS_VALIDATE)).length, 1);
-  } finally {
-    restore();
-  }
-});
-
-test('license activate: existing-instance validation outage does not create a duplicate instance', async () => {
-  const token = '22222222-2222-4222-8222-222222222222';
-  const now = Date.now();
-  const env = licenseEnv({
-    DEVICES: makeKV({
-      'KEY-OK': JSON.stringify({
-        tokens: [{ token, instance_id: 'inst-existing', created_at: now, last_seen_at: now }],
-      }),
-    }),
-  });
-  const fetchMock = makeFetch([
-    { match: (u) => u.includes(URLS.LS_VALIDATE), respond: () => ({ throws: 'ECONNRESET' }) },
-  ]);
-  const restore = withFetch(fetchMock);
-  try {
-    const res = await handleActivate(
-      formRequest({ license_key: 'KEY-OK' }, { headers: { 'X-Device-Token': token } }),
-      env,
-    );
-    assert.equal(res.status, 503);
-    const body = await res.json();
-    assert.equal(body.activated, false);
-    assert.equal(fetchMock.calls.filter((c) => c.url.includes(URLS.LS_ACTIVATE)).length, 0);
-  } finally {
-    restore();
-  }
-});
-
-test('license activate: explicitly dead existing instance is replaced on the same device token', async () => {
-  const token = '33333333-3333-4333-8333-333333333333';
-  const now = Date.now();
-  const env = licenseEnv({
-    DEVICES: makeKV({
-      'KEY-OK': JSON.stringify({
-        tokens: [{ token, instance_id: 'inst-dead', created_at: now, last_seen_at: now }],
-      }),
-    }),
-  });
-  const fetchMock = makeFetch([
-    { match: (u) => u.includes(URLS.LS_VALIDATE), respond: () => ({ status: 200, body: { valid: false } }) },
-    {
-      match: (u) => u.includes(URLS.LS_ACTIVATE),
-      respond: () => ({
-        status: 200,
-        body: { activated: true, instance: { id: 'inst-new' }, meta: { product_id: 222, store_id: 111 } },
-      }),
-    },
-  ]);
-  const restore = withFetch(fetchMock);
-  try {
-    const res = await handleActivate(
-      formRequest({ license_key: 'KEY-OK' }, { headers: { 'X-Device-Token': token } }),
-      env,
-    );
-    assert.equal(res.status, 200);
-    const body = await res.json();
-    assert.equal(body.activated, true);
-    assert.equal(body.device_token, token);
-    assert.equal(fetchMock.calls.filter((c) => c.url.includes(URLS.LS_ACTIVATE)).length, 1);
-    const bucket = await env.DEVICES.get('KEY-OK', 'json');
-    assert.equal(bucket.tokens.length, 1);
-    assert.equal(bucket.tokens[0].token, token);
-    assert.equal(bucket.tokens[0].instance_id, 'inst-new');
   } finally {
     restore();
   }
