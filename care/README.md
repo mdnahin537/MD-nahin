@@ -10,6 +10,8 @@ Customer Care is a separate Cloudflare Worker that provides:
 
 The [September 30 audit](docs/customer-care-audit-2026-09-30.md) records the source/live comparison, confirmed fixes, test evidence, and deployment limits.
 
+The [graphics update](docs/graphics-update-2026-09-30.md) adds the board's optional 3D copper sculpture, layered motion wall, and local static fallback, with separate test evidence.
+
 This version deliberately uses **no Google login, no OAuth, no passwords, and no paid authentication service**. It runs on a free Cloudflare Workers address such as:
 
     https://realmwright-care.<your-subdomain>.workers.dev
@@ -236,7 +238,17 @@ npm run test:runtime
 python3 tests/preflight.py
 ~~~
 
-npm test builds the actual Worker without deploying, runs backend and client regression tests, and checks migration preservation. test:runtime starts a separate local Worker with temporary D1 state and dummy identity secrets; remote AI and mail are disabled. It needs no Cloudflare login. preflight verifies the handoff ZIP, runs its archived tests in isolation, and reads public live endpoints without credentials. The client tests execute production scripts with a small DOM fixture; they do not verify browser rendering.
+npm test builds the actual Worker without deploying, runs backend and client regression tests, and checks migration preservation. test:runtime starts a separate local Worker with temporary D1 state and dummy identity secrets; remote AI and mail are disabled. It needs no Cloudflare login. preflight verifies the handoff ZIP, runs its archived tests in isolation, and reads public live endpoints without credentials. The client and motion tests execute production scripts with a small DOM fixture; they do not verify browser rendering.
+
+The optional native shader check needs Linux EGL/GLES libraries. CI installs them and always enables this check. On Ubuntu, install the libraries once, then opt in from care:
+
+~~~text
+sudo apt-get update
+sudo apt-get install -y --no-install-recommends libegl1 libegl-mesa0 libgles2 libgl1-mesa-dri
+CARE_VALIDATE_NATIVE_SHADERS=1 npm test
+~~~
+
+Without CARE_VALIDATE_NATIVE_SHADERS=1, npm test skips only native shader compilation; the motion lifecycle and fallback tests still run. Native validation compiles and links production shaders without a browser, images, or screenshots.
 
 ---
 
@@ -261,6 +273,8 @@ These controls reduce casual abuse and automated flooding; they are not a replac
 New Care identities have no email and no Google profile. Accepted report text, comments, aggregate vote counts, and the generic Care name are visible on the board. Public item responses show only coarse app version, OS, and browser context. Owner-only views and email copies include the complete accepted details and legacy contributor addresses.
 
 Unsent reports and comments are kept in per-tab sessionStorage for up to 24 hours and removed on explicit discard, confirmed submission, or logout. Reloading the same tab can restore a draft; closing the tab can discard it. Recovery codes remain secrets shown on request and are not stored as drafts.
+
+The board can also remember whether decorative motion is paused. This local preference is independent of the Care identity and customer drafts; reduced-motion settings keep the scene still automatically.
 
 Customers can request deletion through the configured contact address. Historical legacy rows remain preserved unless the owner removes them through the existing moderation/data process.
 

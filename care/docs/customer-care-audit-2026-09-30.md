@@ -35,6 +35,8 @@ Restored the archive's existing Brevo transport, immutable outbox snapshots, bou
 
 No production database writes, migrations, secret rotations, owner claims, fixture cleanup, or deployment were performed. Customer data and the handoff/recovery ZIP remain unchanged. Additive migrations preserve representative customer rows, session/recovery verifiers, payloads, comments, and votes. Historical rows are not retroactively emailed. Existing seed-cleanup tests still prove that only identified demonstration fixtures are held, not deleted.
 
+The later [graphics update](graphics-update-2026-09-30.md) adds the 3D scene, ambient motion wall, pause controls, and new graphics test evidence. The results below describe the completed functional audit before that follow-up.
+
 ## Visual improvements
 
 Added a coherent ink/parchment/copper palette, readable blue status text, self-hosted typography, a concise board introduction, and a small CSS faceted seal with perspective depth. Forms and cards have subtle shading. Focus is visible, touch targets are larger, narrow layouts wrap, and reduced-motion preferences disable animation and transitions. Owner tabs support arrow/Home/End navigation.

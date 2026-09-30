@@ -1,0 +1,72 @@
+{
+  "date": "2026-09-30",
+  "repository": "mdnahin537/MD-nahin",
+  "base_branch": "codex/care-local-identity-auth",
+  "review_branch": "codex/care-audit-recovery",
+  "tested_source_commit": "9e4c173b13c9b261a2b6e486a1f3cd964aa542e6",
+  "pull_request_merge_checkout": "3eccf16285fb49228b4110262a75427da7652226",
+  "workflow": {
+    "id": 36736726354,
+    "url": "https://github.com/mdnahin537/MD-nahin/actions/runs/36736726354",
+    "conclusion": "success",
+    "artifact_id": 11107203064,
+    "artifact_url": "https://github.com/mdnahin537/MD-nahin/actions/runs/36736726354/artifacts/11107203064"
+  },
+  "checks": {
+    "node": {
+      "backend": 26,
+      "client": 13,
+      "graphics": 6,
+      "total": 45,
+      "passed": 45,
+      "failed": 0,
+      "skipped": 0
+    },
+    "migration_and_fixture_preservation": 9,
+    "native_local_worker_and_d1": 8,
+    "archived_source": 21,
+    "public_read_only_live": 11,
+    "worker_dry_run": "passed",
+    "stylesheets_parsed": 6,
+    "client_scripts_parsed": 6,
+    "dependency_advisories": 0
+  },
+  "graphics": {
+    "renderer": "Native WebGL 1 with local procedural meshes",
+    "static_fallback": "Local original SVG",
+    "ambient_wall": "Three transform-animated contour layers",
+    "native_shader_compilation": "passed",
+    "native_shader_linking": "passed",
+    "browser_pixel_validation": false,
+    "motion_controls": [
+      "Pause/resume remembered locally",
+      "Reduced-motion static rendering",
+      "Stop when hidden or offscreen"
+    ],
+    "code_limits": {
+      "maximum_draws_per_second": 30,
+      "maximum_device_pixel_ratio": 1.5,
+      "maximum_canvas_width": 960
+    },
+    "limits_are_measured_performance": false
+  },
+  "preservation": {
+    "customer_records_written": false,
+    "production_deployed": false,
+    "secrets_rotated": false,
+    "owner_changed": false,
+    "email_transport_changed": false,
+    "fresh_email_sent": false,
+    "handoff_or_recovery_zip_changed": false,
+    "external_graphics_dependencies_added": false
+  },
+  "unverified": [
+    "Rendered browser and mobile appearance",
+    "Assistive technology behavior",
+    "Measured Core Web Vitals",
+    "Private current Cloudflare configuration",
+    "Fresh inbox delivery"
+  ],
+  "screenshots_taken": false,
+  "computer_use_automation": false
+}
