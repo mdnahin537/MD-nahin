@@ -9,7 +9,7 @@ globalThis.crypto ??= webcrypto;
 globalThis.caches = { default: { match: async () => null, put: async () => {} } };
 const origin = 'https://care.test';
 const now = () => Math.floor(Date.now() / 1000);
-function fixture({ beforeStatement } = {}) {
+function fixture({ beforeStatement, beforeBatch } = {}) {
   const sqlite = new DatabaseSync(':memory:');
   for (const name of readdirSync(new URL('../migrations/', import.meta.url)).sort()) {
     sqlite.exec(readFileSync(new URL('../migrations/' + name, import.meta.url), 'utf8'));
@@ -28,6 +28,7 @@ function fixture({ beforeStatement } = {}) {
       first: async () => run().results[0] || null, all: async () => run(), run: async () => run() };
   }
   const DB = { prepare: statement, async batch(statements) {
+    if (beforeBatch) await beforeBatch(statements);
     sqlite.exec('BEGIN');
     try {
       const result = statements.map(statement => statement.execute());
@@ -482,4 +483,67 @@ test('Owner build briefs retain original idea requests, reasons, and success cri
     assert.ok(brief.text.includes('One full readable PDF'));
     assert.ok(brief.text.includes('1 reports'));
   } finally { await f.close(); }
+});
+
+test('A merge between validation and a public write cannot save new content on the old entry', async () => {
+  for (const action of ['report', 'comment', 'vote']) {
+    let armed = false, loser, winner;
+    const f = fixture({ beforeBatch: async statements => {
+      if (!armed) return;
+      armed = false;
+      assert.equal((await f.call('/api/desk/item/' + loser.itemId + '/merge', { intoId: winner })).status, 200);
+    }});
+    try {
+      await owner(f);
+      loser = await (await f.call('/api/report', bug)).json();
+      winner = seedItem(f, 'Concurrent merge destination');
+      const before = {
+        reports: f.sqlite.prepare('SELECT COUNT(*) AS n FROM reports').get().n,
+        comments: f.sqlite.prepare('SELECT COUNT(*) AS n FROM comments').get().n,
+        events: f.sqlite.prepare('SELECT COUNT(*) AS n FROM vote_events').get().n,
+        mail: f.sqlite.prepare('SELECT COUNT(*) AS n FROM care_mail_outbox').get().n,
+      };
+      armed = true;
+      const response = action === 'report'
+        ? await f.call('/api/report', { ...bug, mode: 'join', joinItemId: loser.itemId, freetext: 'Keep this draft after the merge' })
+        : action === 'comment'
+        ? await f.call('/api/comment', { itemId: loser.itemId, body: 'Keep this comment after the merge' })
+        : await f.call('/api/vote/' + loser.itemId, { value: -1 }, null, 'PUT');
+      assert.equal(response.status, 409, action + ' must acknowledge the changed destination');
+      const data = await response.json();
+      assert.equal(data.mergedInto, winner);
+      for (const [table, expected] of Object.entries({ reports: before.reports, comments: before.comments, vote_events: before.events, care_mail_outbox: before.mail })) {
+        assert.equal(f.sqlite.prepare('SELECT COUNT(*) AS n FROM ' + table).get().n, expected, action + ': no unacknowledged record');
+      }
+      assert.equal(f.sqlite.prepare('SELECT COUNT(*) AS n FROM votes WHERE item_id=?').get(loser.itemId).n, 0);
+      const destination = await (await f.call('/api/item/' + winner)).json();
+      assert.equal(destination.reports.length, 1);
+      assert.equal(destination.net, 1);
+    } finally { await f.close(); }
+  }
+});
+test('A held item or reply parent changing before the write keeps drafts out of hidden threads', async () => {
+  for (const action of ['report', 'comment', 'vote', 'reply']) {
+    let armed = false, item, parentId;
+    const f = fixture({ beforeBatch: () => {
+      if (!armed) return;
+      armed = false;
+      if (action === 'reply') f.sqlite.prepare('UPDATE comments SET held=1 WHERE id=?').run(parentId);
+      else f.sqlite.prepare('UPDATE items SET held=1 WHERE id=?').run(item.itemId);
+    }});
+    try {
+      await signedIn(f);
+      item = await (await f.call('/api/report', bug)).json();
+      if (action === 'reply') parentId = (await (await f.call('/api/comment', { itemId: item.itemId, body: 'Existing parent' })).json()).id;
+      const tables = ['reports', 'comments', 'votes', 'vote_events', 'care_mail_outbox'];
+      const before = Object.fromEntries(tables.map(table=>[table, f.sqlite.prepare('SELECT COUNT(*) AS n FROM ' + table).get().n]));
+      armed = true;
+      const response = action === 'report'
+        ? await f.call('/api/report', { ...bug, mode: 'join', joinItemId: item.itemId })
+        : action === 'vote' ? await f.call('/api/vote/' + item.itemId, { value: -1 }, null, 'PUT')
+        : await f.call('/api/comment', { itemId: item.itemId, body: 'Preserve my draft', ...(action === 'reply' ? { parentId } : {}) });
+      assert.ok([404, 409].includes(response.status), action + ': changed visibility must not accept a write');
+      for (const table of tables) assert.equal(f.sqlite.prepare('SELECT COUNT(*) AS n FROM ' + table).get().n, before[table]);
+    } finally { await f.close(); }
+  }
 });
