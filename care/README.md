@@ -5,7 +5,10 @@ Customer Care is a separate Cloudflare Worker that provides:
 - a public board that anyone can read without an account;
 - a report wizard for bugs and ideas;
 - voting and comments;
-- a private Owner Desk for moderation and build planning.
+- a private Owner Desk for moderation and build planning;
+- saved submission copies through the existing Brevo email integration.
+
+The [September 30 audit](docs/customer-care-audit-2026-09-30.md) records the source/live comparison, confirmed fixes, test evidence, and deployment limits.
 
 This version deliberately uses **no Google login, no OAuth, no passwords, and no paid authentication service**. It runs on a free Cloudflare Workers address such as:
 
@@ -23,8 +26,8 @@ The RealmWright product must not implement Google login or product authenticatio
 
 | Product entry point | Destination |
 |---|---|
-| Report a problem | CARE_BASE_URL + /report/ |
-| Suggest an idea | CARE_BASE_URL + /report/ |
+| Report a problem | CARE_BASE_URL + /report/?type=bug |
+| Suggest an idea | CARE_BASE_URL + /report/?type=idea |
 | Community | CARE_BASE_URL + / |
 
 The report wizard asks the user to continue with a local Care identity. The product source is intentionally not changed in this branch; after the Care Worker is deployed, replace the placeholder base URL in the product integration wherever those links are wired.
@@ -74,6 +77,8 @@ A recovery code is a bearer secret. Anyone who obtains it can recover that Care 
 
 The Owner Desk does not use Google.
 
+For a **new deployment without an owner**, complete this setup once. An existing deployment keeps its owner and uses the existing session or recovery code.
+
 1. Configure the Cloudflare secret named OWNER_SETUP_TOKEN.
 2. Open /auth/owner on the deployed Care Worker.
 3. Enter that setup token once.
@@ -98,7 +103,15 @@ Migration 0004_local_identity_auth.sql also creates:
 - recovery fields on users;
 - the single-owner index.
 
-Migration 0003 repairs denormalized public comment counts so held/deleted comments do not inflate them.
+Migration 0003 repairs denormalized public comment counts so held/deleted comments do not inflate them. Migration 0005 hides only the identified demonstration fixtures and keeps their rows for restoration.
+
+The audit adds:
+
+- 0006_mail_outbox.sql: immutable email snapshots and insert/update triggers; existing reports are not retroactively emailed. Tables and triggers use IF NOT EXISTS to accommodate the recovery deployment.
+- 0007_submission_retries.sql: optional report/comment retry keys and hashes, with per-author unique indexes. Existing rows get NULL values.
+- 0008_moderation_review.sql: nullable review timestamps and queue indexes. Existing payloads and visibility are preserved.
+
+Apply the schema before deploying the new Worker. The live recovery may have applied SQL outside Wrangler's migration history: inspect the existing schema and migration history first, retain a private D1 export, and reconcile recorded migrations without replaying destructive setup or seeds. Tests verify that 0006–0008 preserve every original column in representative customer, owner, session, report, comment, and vote rows.
 
 ---
 
@@ -111,7 +124,7 @@ Care uses a free Cloudflare account and the free workers.dev hostname. No purcha
 From the care directory:
 
 ~~~text
-npm install
+npm ci
 npx wrangler login
 ~~~
 
@@ -129,7 +142,7 @@ Put the returned database ID into wrangler.toml only if this is a new account/da
 
 ### 3. Configure secrets
 
-Set these with Wrangler or the Cloudflare dashboard. The values must never be committed:
+For an existing deployment, **retain its current secrets**. Rotating SESSION_SECRET invalidates sessions and recovery codes. The following commands are for missing values in a new setup; values must never be committed:
 
 ~~~text
 npx wrangler secret put SESSION_SECRET
@@ -154,7 +167,12 @@ Secret names only:
 |---|---|---|
 | SESSION_SECRET | Yes | HMACs session tokens, recovery codes, and anti-abuse fingerprints |
 | OWNER_SETUP_TOKEN | Yes for first owner claim | One-time Owner Desk bootstrap |
+| CARE_MAIL_API_KEY | Yes when owner email copies are enabled | Existing Brevo API key; retain it on an existing deployment |
 | OPENROUTER_KEY | No | Optional AI fallback |
+
+Owner email copies use the non-secret settings CARE_MAIL_ENABLED, CARE_MAIL_TO, and CARE_MAIL_FROM. CONTACT_EMAIL supplies the public privacy contact. The checked-in configuration uses keep_vars=true and leaves these existing live values intact. Configure a verified Brevo sender for a new installation; never use a customer's email as the sender or destination.
+
+An accepted Brevo message is not proof of inbox delivery. D1 remains the saved record. Failed deliveries retry with bounded backoff, including the five-minute scheduled drain; the owner can inspect counts and retry failed copies in the Desk. Sending does not block saving a report.
 
 ### 4. Apply every migration
 
@@ -162,7 +180,7 @@ Secret names only:
 npm run migrate:remote
 ~~~
 
-This applies migrations 0001 through 0004 in order. Do not skip 0004: the local identity session tables and owner flag are required.
+This applies migrations 0001 through 0008 in order for a new database. For the existing live database, follow the schema/history reconciliation described above. Do not recreate the database or run development seeds against it.
 
 ### 5. Deploy
 
@@ -172,7 +190,7 @@ npm run deploy
 
 Cloudflare prints the free workers.dev URL. Use that URL as CARE_BASE_URL in the product-to-Care contract above.
 
-### 6. Claim the Owner Desk
+### 6. Claim the Owner Desk on a new installation
 
 Open:
 
@@ -196,7 +214,7 @@ Copy care/.dev.vars.example to care/.dev.vars and keep the copy uncommitted. It 
 Apply the local database and start Wrangler:
 
 ~~~text
-npm install
+npm ci
 npm run migrate:local
 npm run dev
 ~~~
@@ -209,11 +227,22 @@ For local owner setup, use the dummy OWNER_SETUP_TOKEN in your local .dev.vars f
 
 The local flow is self-contained and does not require an external identity server.
 
+With Node 22 and Python 3.11 or newer, run the automated checks from care:
+
+~~~text
+npm ci
+npm test
+npm run test:runtime
+python3 tests/preflight.py
+~~~
+
+npm test builds the actual Worker without deploying, runs backend and client regression tests, and checks migration preservation. test:runtime starts a separate local Worker with temporary D1 state and dummy identity secrets; remote AI and mail are disabled. It needs no Cloudflare login. preflight verifies the handoff ZIP, runs its archived tests in isolation, and reads public live endpoints without credentials. The client tests execute production scripts with a small DOM fixture; they do not verify browser rendering.
+
 ---
 
 ## Abuse and request protection
 
-- Public reads remain cacheable and unauthenticated.
+- Public board reads remain unauthenticated; responses containing session or owner details are private and not cached.
 - Report, vote, comment, and follow-up writes require a valid local session.
 - Existing per-identity daily limits remain active.
 - Bootstrap, recovery, and owner-claim attempts are bucket-rate-limited per HMAC’d Cloudflare client fingerprint.
@@ -229,11 +258,13 @@ These controls reduce casual abuse and automated flooding; they are not a replac
 
 ## Privacy behavior
 
-New Care identities have no email and no Google profile. Public reports, votes, comments, and the generic Care name are visible on the board.
+New Care identities have no email and no Google profile. Accepted report text, comments, aggregate vote counts, and the generic Care name are visible on the board. Public item responses show only coarse app version, OS, and browser context. Owner-only views and email copies include the complete accepted details and legacy contributor addresses.
 
-The owner can request deletion through the configured contact address. Historical legacy rows remain preserved unless the owner removes them through the existing moderation/data process.
+Unsent reports and comments are kept in per-tab sessionStorage for up to 24 hours and removed on explicit discard, confirmed submission, or logout. Reloading the same tab can restore a draft; closing the tab can discard it. Recovery codes remain secrets shown on request and are not stored as drafts.
 
-The public privacy page is /privacy. CONTACT_EMAIL remains a non-secret [vars] value in wrangler.toml and can be left empty during testing.
+Customers can request deletion through the configured contact address. Historical legacy rows remain preserved unless the owner removes them through the existing moderation/data process.
+
+The public privacy page is /privacy. CONTACT_EMAIL is a non-secret Worker setting inherited from the existing deployment. Keep the working production address; use a dummy address for local testing. Removing a board record does not automatically delete copies already sent to email.
 
 ---
 
