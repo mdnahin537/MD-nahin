@@ -1,3 +1,4 @@
+import { drainCareMail } from './lib/notifications.js';
 import { routeAuth } from './routes/auth.js';
 import { json, jsonError, notFound, isSameOrigin } from './lib/http.js';
 import { handlePostReport, handlePatchFollowup, handleGetFollowupQuestion } from './routes/report.js';
@@ -16,11 +17,17 @@ const WRITE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 // wrangler.toml's `run_worker_first` list, which is what keeps the public
 // board free & unlimited at any traffic level (design §2.2).
 export default {
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(drainCareMail(env));
+  },
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
     try {
       if (url.pathname.startsWith('/auth/')) {
+        if (WRITE_METHODS.has(request.method) && !isSameOrigin(request, url)) {
+          return jsonError(403, 'Cross-site request blocked.');
+        }
         return await routeAuth(request, env, url);
       }
 
@@ -28,7 +35,13 @@ export default {
         if (WRITE_METHODS.has(request.method) && !isSameOrigin(request, url)) {
           return jsonError(403, 'Cross-site request blocked.');
         }
-        return await routeApi(request, env, ctx, url);
+        const response = await routeApi(request, env, ctx, url);
+        const reportOrComment = url.pathname === '/api/report' || url.pathname.startsWith('/api/report/') || url.pathname === '/api/comment';
+        const retryMail = url.pathname === '/api/desk/notifications';
+        if (response.ok && WRITE_METHODS.has(request.method) && (reportOrComment || retryMail)) {
+          ctx.waitUntil(drainCareMail(env));
+        }
+        return response;
       }
 
       if (url.pathname === '/desk' || url.pathname.startsWith('/desk/')) {
@@ -68,7 +81,7 @@ async function servePrivacy(env) {
   const res = await env.ASSETS.fetch(new Request('https://internal/privacy/index.html'));
   let html = await res.text();
   const email = (env.CONTACT_EMAIL || '').trim();
-  const inject = `<script>window.__CONTACT_EMAIL__=${JSON.stringify(email)};</script>`;
+  const inject = `<script>window.__CONTACT_EMAIL__=${JSON.stringify(email).replace(/</g, '\\u003c')};</script>`;
   html = html.replace('</head>', inject + '</head>');
   return new Response(html, {
     status: res.status,
@@ -82,7 +95,7 @@ async function routeApi(request, env, ctx, url) {
   const method = request.method;
 
   if (method === 'GET' && pathname === '/api/health') {
-    return json({ ok: true, service: 'realmwright-care', time: new Date().toISOString() });
+    return json({ ok: true, service: 'realmwright-care', release: '2026-09-30-care-audit', time: new Date().toISOString() });
   }
   if (method === 'GET' && pathname === '/api/me') {
     return handleGetMe(request, env, url);

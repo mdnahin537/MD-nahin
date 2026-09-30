@@ -1,6 +1,11 @@
 name = "realmwright-care"
 main = "src/index.js"
 compatibility_date = "2026-07-01"
+# Preserve live mail settings and contact details during a reviewed deployment.
+keep_vars = true
+
+[triggers]
+crons = ["*/5 * * * *"]
 
 # ── Static assets: intake wizard, board, owner-desk SHELL are all plain
 # files served by Cloudflare's asset layer directly — free & unlimited,
@@ -46,4 +51,5 @@ SESSION_COOKIE_NAME = "rw_care_session"
 # secret store. Left EMPTY on purpose: fill in your own address at deploy
 # (see care/README.md). While empty, the privacy page shows a plain
 # "set at deploy" placeholder instead of a broken mailto link.
-CONTACT_EMAIL = ""
+# CONTACT_EMAIL and CARE_MAIL_* values are inherited from the existing Worker.
+# Set local dummy values only in .dev.vars. Existing Worker secrets stay installed.

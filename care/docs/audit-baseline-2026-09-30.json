@@ -1,0 +1,241 @@
+{
+  "checked_at_utc": "2026-09-30T07:46:50Z",
+  "source_commit": "31c95564f529860a777b2dd7243bfb0ed5515d65",
+  "verification_commit": "b39280d205bd6f10ea19b0745111c46afe5ae5f1",
+  "workflow_url": "https://github.com/mdnahin537/MD-nahin/actions/runs/36685673194",
+  "archive_sha256": "d188c7c284397eabd3a07f3b5be4ccdb4be79718b983cc54204f2244ff673533",
+  "scope": "Read-only public requests, no cookies or credentials; isolated in-memory recovery tests",
+  "live_checks": [
+    {
+      "path": "/api/health",
+      "status": 200,
+      "expected_status": 200,
+      "public_metadata": {
+        "ok": true,
+        "release": "2026-09-29-care-repair"
+      },
+      "passed": true
+    },
+    {
+      "path": "/report/",
+      "status": 200,
+      "expected_status": 200,
+      "passed": true
+    },
+    {
+      "path": "/api/feed",
+      "status": 200,
+      "expected_status": 200,
+      "passed": true
+    },
+    {
+      "path": "/api/desk/summary",
+      "status": 404,
+      "expected_status": 404,
+      "passed": true
+    },
+    {
+      "path": "/api/desk/notifications",
+      "status": 404,
+      "expected_status": 404,
+      "passed": true
+    },
+    {
+      "path": "/desk/",
+      "status": 404,
+      "expected_status": 404,
+      "passed": true
+    },
+    {
+      "path": "/desk/desk.js",
+      "status": 404,
+      "expected_status": 404,
+      "passed": true
+    },
+    {
+      "path": "/js/wizard.js",
+      "status": 200,
+      "expected_status": 200,
+      "sha256": "9d55cdc64b4357e9a082e4f77de890d4de70c113da08ea9392bf1b10481ec8fe",
+      "expected_sha256": "9d55cdc64b4357e9a082e4f77de890d4de70c113da08ea9392bf1b10481ec8fe",
+      "source_match": true,
+      "passed": true
+    },
+    {
+      "path": "/js/board.js",
+      "status": 200,
+      "expected_status": 200,
+      "sha256": "c993ee75813b2dfc09725f6ff2169d252c2328ac7996a9a92ad302b474fe3582",
+      "expected_sha256": "c993ee75813b2dfc09725f6ff2169d252c2328ac7996a9a92ad302b474fe3582",
+      "source_match": true,
+      "passed": true
+    },
+    {
+      "path": "/js/item.js",
+      "status": 200,
+      "expected_status": 200,
+      "sha256": "03a25d651f00a329f1879587882ab1d47f1d914557566910c2603f31a67b178c",
+      "expected_sha256": "03a25d651f00a329f1879587882ab1d47f1d914557566910c2603f31a67b178c",
+      "source_match": true,
+      "passed": true
+    },
+    {
+      "path": "/privacy/",
+      "status": 200,
+      "expected_status": 200,
+      "passed": true
+    }
+  ],
+  "recovery_checks_passed": 21,
+  "asset_comparison": [
+    {
+      "path": "care/public/404.html",
+      "repo_bytes": 647,
+      "archive_bytes": 647,
+      "equal": true,
+      "repo_sha256": "1ed4915848c78d568a1a438e011f70ec4ea5ce379ba67f44f8e4b77038467a0c",
+      "archive_sha256": "1ed4915848c78d568a1a438e011f70ec4ea5ce379ba67f44f8e4b77038467a0c"
+    },
+    {
+      "path": "care/public/css/board.css",
+      "repo_bytes": 6892,
+      "archive_bytes": 6886,
+      "equal": false,
+      "repo_sha256": "5dd38db058162dfb26eec5d5bd8f1f17616f964fe51e83e24a88387fafc04f0f",
+      "archive_sha256": "4f6b3d8a7d7247a873a986d6fa0ef16fa0c45624fe9488437fc2718680d690c3"
+    },
+    {
+      "path": "care/public/css/item.css",
+      "repo_bytes": 5013,
+      "archive_bytes": 5013,
+      "equal": true,
+      "repo_sha256": "5a59ac8b0abfb309bcb7120c2c448cd64577c29bec6bd8e06723cbb1cf0f5e92",
+      "archive_sha256": "5a59ac8b0abfb309bcb7120c2c448cd64577c29bec6bd8e06723cbb1cf0f5e92"
+    },
+    {
+      "path": "care/public/css/style.css",
+      "repo_bytes": 5349,
+      "archive_bytes": 5349,
+      "equal": true,
+      "repo_sha256": "0470088af34b470fb912e6a0b4dc07e91f9ea5220d81f2de36dd4e8dfc462ff7",
+      "archive_sha256": "0470088af34b470fb912e6a0b4dc07e91f9ea5220d81f2de36dd4e8dfc462ff7"
+    },
+    {
+      "path": "care/public/css/wizard.css",
+      "repo_bytes": 9031,
+      "archive_bytes": 9031,
+      "equal": true,
+      "repo_sha256": "b86e9f87b4286e790aa635c53a17084ff1cb465064f8969ab419236a6afe49fb",
+      "archive_sha256": "b86e9f87b4286e790aa635c53a17084ff1cb465064f8969ab419236a6afe49fb"
+    },
+    {
+      "path": "care/public/data/taxonomy.json",
+      "repo_bytes": 9292,
+      "archive_bytes": 9292,
+      "equal": true,
+      "repo_sha256": "773c9c120031bb5e53c7854f4bd1a187a17cb9eeaaefc8a4ee09618163a37771",
+      "archive_sha256": "773c9c120031bb5e53c7854f4bd1a187a17cb9eeaaefc8a4ee09618163a37771"
+    },
+    {
+      "path": "care/public/desk/desk.css",
+      "repo_bytes": 5826,
+      "archive_bytes": 5826,
+      "equal": true,
+      "repo_sha256": "59799dbad5d465ff232b207d42d0bf5fcb405e3e113a1a1b0a11f357d82fbb74",
+      "archive_sha256": "59799dbad5d465ff232b207d42d0bf5fcb405e3e113a1a1b0a11f357d82fbb74"
+    },
+    {
+      "path": "care/public/desk/desk.js",
+      "repo_bytes": 18008,
+      "archive_bytes": 18008,
+      "equal": true,
+      "repo_sha256": "74c5322cc3eab74ba028d06e197eb70b8fab1957570ab61aada295a43904dcc3",
+      "archive_sha256": "74c5322cc3eab74ba028d06e197eb70b8fab1957570ab61aada295a43904dcc3"
+    },
+    {
+      "path": "care/public/desk/index.html",
+      "repo_bytes": 2343,
+      "archive_bytes": 2325,
+      "equal": false,
+      "repo_sha256": "e2db2f47233aa1b50054e97508856e37c33d8b0d0116a050bc9a096736f524c6",
+      "archive_sha256": "31a4e0270d2fccf33c7561230955e1e3f891d017940ab33e39c79d1a2b7231c7"
+    },
+    {
+      "path": "care/public/favicon.svg",
+      "repo_bytes": 383,
+      "archive_bytes": 383,
+      "equal": true,
+      "repo_sha256": "8239ff441bf35af6a94b7db3da7581bc0060be222754b842fb96b2c9e22a7b3a",
+      "archive_sha256": "8239ff441bf35af6a94b7db3da7581bc0060be222754b842fb96b2c9e22a7b3a"
+    },
+    {
+      "path": "care/public/index.html",
+      "repo_bytes": 3301,
+      "archive_bytes": 3290,
+      "equal": false,
+      "repo_sha256": "71b3a565492c58aa21d464e9d3274ba214d9975cf06e580f6fadc65d0954ad53",
+      "archive_sha256": "928cb7241465bdf168f22e569fd5dbd83795dc9da59709b843277a2ed5288c77"
+    },
+    {
+      "path": "care/public/item/index.html",
+      "repo_bytes": 1564,
+      "archive_bytes": 1553,
+      "equal": false,
+      "repo_sha256": "328ea92a03d75c7a8f356424ca8835c4af7cf666dfe05867d39ee1e8840d5435",
+      "archive_sha256": "5c255a2862889d7f8ebf8a6a4093c1026d5dd1242aeff3797723d91b2387353b"
+    },
+    {
+      "path": "care/public/js/board.js",
+      "repo_bytes": 16076,
+      "archive_bytes": 16362,
+      "equal": false,
+      "repo_sha256": "56e277cf0741eab567162315ac788a397883a76468195b3c8478a302ee2786ed",
+      "archive_sha256": "c993ee75813b2dfc09725f6ff2169d252c2328ac7996a9a92ad302b474fe3582"
+    },
+    {
+      "path": "care/public/js/care.js",
+      "repo_bytes": 10980,
+      "archive_bytes": 10961,
+      "equal": false,
+      "repo_sha256": "df9ee3cbed1ee07cb77185fa792aff643d774606d714a8190ae8bf61b3d91d4b",
+      "archive_sha256": "505c66ca05477949a779948a3451da9c612038c9a1232c96d2a788b1afb4a87d"
+    },
+    {
+      "path": "care/public/js/item.js",
+      "repo_bytes": 12749,
+      "archive_bytes": 13445,
+      "equal": false,
+      "repo_sha256": "b78fdd4414f693268bcc6644fbb2b5ee574173821a14ec0e020c326d10e6cbac",
+      "archive_sha256": "03a25d651f00a329f1879587882ab1d47f1d914557566910c2603f31a67b178c"
+    },
+    {
+      "path": "care/public/js/wizard.js",
+      "repo_bytes": 26790,
+      "archive_bytes": 27616,
+      "equal": false,
+      "repo_sha256": "1faf353242e1219a4077d671ce9b09de1bc223f15a0045cb31b2451d26266413",
+      "archive_sha256": "9d55cdc64b4357e9a082e4f77de890d4de70c113da08ea9392bf1b10481ec8fe"
+    },
+    {
+      "path": "care/public/privacy/index.html",
+      "repo_bytes": 3767,
+      "archive_bytes": 3767,
+      "equal": true,
+      "repo_sha256": "83863e2ae2f92a68e1765006a272d77bb18db2ca36fa0e80963bf44636b67278",
+      "archive_sha256": "83863e2ae2f92a68e1765006a272d77bb18db2ca36fa0e80963bf44636b67278"
+    },
+    {
+      "path": "care/public/report/index.html",
+      "repo_bytes": 1022,
+      "archive_bytes": 1007,
+      "equal": false,
+      "repo_sha256": "5a6a067f65b9d7a3b6cea80048aa1ea2ed2bf8b449d165369a7365bc683d11fc",
+      "archive_sha256": "669f168787ea53ab12f48e8ac34f18fb66ca90fb426fc8781b0a97552432598d"
+    }
+  ],
+  "limitations": [
+    "Private current Worker bindings and uploaded Worker source were not read.",
+    "No new mail was sent and inbox delivery was not rerun.",
+    "No screenshots, browser automation, rendered mobile, or assistive-technology checks were performed."
+  ]
+}

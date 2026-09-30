@@ -104,7 +104,7 @@ test('Hidden items and hidden/deleted reply parents reject public writes', async
 test('New ideas require a useful request on the server', async () => {
   const f = fixture(); try {
     await signedIn(f);
-    const response = await f.call('/api/report', { type: 'idea', area: 'exports-data', ideaKind: 'workflow', ask: '  ' });
+    const response = await f.call('/api/report', { type: 'idea', area: 'exports-data', ideaKind: 'new_tool', ask: '  ' });
     assert.equal(response.status, 400);
     assert.equal(f.sqlite.prepare('SELECT COUNT(*) AS n FROM items').get().n, 0);
   } finally { await f.close(); }

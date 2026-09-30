@@ -1,3 +1,4 @@
+import { readCareJson } from '../lib/http.js';
 import { getSession } from '../lib/auth.js';
 import { json, jsonError, notFound } from '../lib/http.js';
 import { deterministicDigest, deskSummary, decisionQueue, buildBriefData, renderBriefText } from '../lib/desk.js';
@@ -42,6 +43,14 @@ export async function routeDeskApi(request, env, url) {
   if (!gate.ok) return gate.response;
   const { pathname } = url;
   const method = request.method;
+
+  if (pathname === '/api/desk/notifications' && ['GET', 'POST'].includes(method)) {
+    if (method === 'POST') {
+      await env.DB.prepare("UPDATE care_mail_outbox SET state='pending',next_attempt_at=0 WHERE state='failed'").run();
+    }
+    const rows = await env.DB.prepare("SELECT state,COUNT(*) AS count FROM care_mail_outbox GROUP BY state").all();
+    return deskJson({ enabled: env.CARE_MAIL_ENABLED === 'true', counts: rows.results });
+  }
 
   if (method === 'GET' && pathname === '/api/desk/summary') {
     const lastVisit = Number(url.searchParams.get('since')) || Math.floor(Date.now() / 1000) - 7 * 86400;
@@ -131,7 +140,7 @@ async function synthesizeThread(env, thread) {
   const { results } = await env.DB.prepare(
     'SELECT payload FROM reports WHERE item_id = ?1 AND held = 0 LIMIT 30'
   ).bind(thread.id).all();
-  const facts = results.map((r) => { try { const p = JSON.parse(r.payload); return { symptom: p.symptom, frequency: p.frequency, detail: p.symptom_detail, expected: p.expected, actual: p.actual }; } catch { return {}; } });
+  const facts = results.map((r) => { try { const p = JSON.parse(r.payload); return { type: p.type, symptom: p.symptom, frequency: p.frequency, detail: p.symptom_detail, expected: p.expected, actual: p.actual, freetext: p.freetext, ideaKind: p.ideaKind, ask: p.ask, why: p.why, doneLooksLike: p.doneLooksLike, importance: p.importance, followups: p.followups }; } catch { return {}; } });
   const prompt =
     `You are summarizing ${facts.length} bug/feature reports for one thread. Write ONE sentence, max 30 words, ` +
     `quantified ("N of ${facts.length} say…"), grounded ONLY in this data, no invention:\n` +
@@ -162,7 +171,7 @@ async function deskItemDetail(env, id) {
 // ---- actions --------------------------------------------------------------
 async function deskAction(request, env, itemId, action) {
   let body = {};
-  try { body = await request.json(); } catch {}
+  try { body = await readCareJson(request); } catch {}
 
   const item = await env.DB.prepare('SELECT id, status, merged_into FROM items WHERE id = ?1').bind(itemId).first();
   if (!item) return jsonError(404, 'Item not found.');
@@ -266,7 +275,7 @@ async function deskBan(env, sub) {
 
 async function deskBrief(request, env) {
   let body = {};
-  try { body = await request.json(); } catch {}
+  try { body = await readCareJson(request); } catch {}
   const ids = Array.isArray(body.items) ? body.items.map(Number).filter(Number.isInteger) : [];
   if (ids.length === 0) return jsonError(400, 'Provide items:[...].');
 
