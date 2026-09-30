@@ -22,7 +22,7 @@ def digest(data):
     return hashlib.sha256(data).hexdigest()
 
 def get(path):
-    request = urllib.request.Request(ORIGIN + path, headers={"Accept": "*/*"})
+    request = urllib.request.Request(ORIGIN + path, headers={"Accept": "*/*", "User-Agent": "RealmWright-Care-Audit/1.0"})
     try:
         with urllib.request.urlopen(request, timeout=25) as response:
             return response.status, response.read()
@@ -39,9 +39,15 @@ def live_check(path, expected_status, expected_source=None, json_fields=None):
         row["source_match"] = body == expected_source
         passed = passed and row["source_match"]
     if json_fields:
-        data = json.loads(body)
-        row["public_metadata"] = {key: data.get(key) for key in json_fields}
-        passed = passed and all(data.get(key) == value for key, value in json_fields.items())
+        try:
+            data = json.loads(body)
+            row["public_metadata"] = {key: data.get(key) for key in json_fields}
+            passed = passed and all(data.get(key) == value for key, value in json_fields.items())
+        except (ValueError, AttributeError):
+            passed = False
+            row["error"] = "Expected JSON response"
+            if path == "/api/health":
+                row["public_error_response"] = body.decode("utf-8", errors="replace")[:800]
     row["passed"] = passed
     report["live_checks"].append(row)
     print(json.dumps(row, ensure_ascii=False), flush=True)
@@ -67,7 +73,7 @@ def main():
         live_check("/report/", 200)
         live_check("/api/feed", 200)
         live_check("/api/desk/summary", 404)
-        live_check("/api/desk/email-status", 404)
+        live_check("/api/desk/notifications", 404)
         live_check("/desk/", 404)
         live_check("/desk/desk.js", 404)
         for name in ["wizard", "board", "item"]:
