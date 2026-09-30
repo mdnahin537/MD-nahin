@@ -22,10 +22,10 @@ window.Care = (function () {
         credentials: 'same-origin',
         headers: { Accept: 'application/json' },
       });
-      if (!res.ok) return { loggedIn: false };
+      if (!res.ok) return { loggedIn: false, unavailable: true };
       return await res.json();
     } catch {
-      return { loggedIn: false };
+      return { loggedIn: false, unavailable: true };
     }
   }
 
@@ -54,7 +54,7 @@ window.Care = (function () {
     if (panel.isConnected === false) return;
     if (!me.loggedIn) {
       btn.disabled = false;
-      showError(panel, 'Care could not save this device identity. Please try again.');
+      showError(panel, me.unavailable ? 'Care could not verify this device just now. Your identity has been kept; try again.' : 'Care could not save this device identity. Please try again.');
       return;
     }
     panel.innerHTML =
@@ -237,6 +237,11 @@ window.Care = (function () {
   }
 
   function renderAuthSlot(el, me) {
+    if (me.unavailable) {
+      el.innerHTML = '<span role="status">Care could not verify this device.</span><button class="linkbtn" id="retry-identity">Try again</button>';
+      el.querySelector('#retry-identity').addEventListener('click', () => location.reload());
+      return;
+    }
     if (me.loggedIn) {
       el.innerHTML =
         (me.avatar ? '<img class="avatar" src="' + esc(me.avatar) + '" alt="" width="28" height="28">' : '') +

@@ -694,18 +694,18 @@
     // micro-interview must never block it.
     const reportId = state.resultReportId || null;
     if (!reportId) return; // nothing to enrich; confirmation already complete
-    let asked = 0;
+    let asked = 0, stopped = false;
     await askOne(reportId);
 
     async function askOne(reportId) {
-      if (asked >= 2) return;
+      if (asked >= 2 || stopped || state.resultReportId !== reportId) return;
       let q = null;
       try {
-        const res = await fetch('/api/report/' + reportId + '/followup-question');
+        const res = await fetch('/api/report/' + reportId + '/followup-question', { signal: AbortSignal.timeout(10000) });
         const data = await res.json();
         q = data.question;
       } catch { q = null; }
-      if (!q) return; // AI down or no gap → nothing extra shows (instant, never blocks)
+      if (!q || stopped || state.resultReportId !== reportId) return; // AI down or no gap → nothing extra shows (instant, never blocks)
       renderMicro(q, reportId);
     }
 
@@ -728,7 +728,7 @@
           b.classList.add('is-active');
           try {
             const saved=await fetch('/api/report/' + reportId + '/followup', {
-              method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+              method: 'PATCH', signal: AbortSignal.timeout(20000), headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ q: q.q, a: o.key }),
             });
             if (!saved.ok) throw new Error('Answer was not saved.');
@@ -746,7 +746,7 @@
       const skip = document.createElement('button');
       skip.className = 'linkbtn micro__skip';
       skip.textContent = 'Skip';
-      skip.addEventListener('click', () => box.remove());
+      skip.addEventListener('click', () => { stopped = true; box.remove(); });
       box.appendChild(opts);
       box.appendChild(skip);
       slot.appendChild(box);
@@ -771,6 +771,13 @@
       return;
     }
 
+    if (me.unavailable) {
+      screen('<div class="wiz__screen wiz__center">' + heading('Care could not verify this device', 'Your identity and saved draft have been kept. Try again when the connection is ready.') +
+        '<button class="btn btn-primary" id="retry-identity">Try again</button></div>');
+      backBtn.hidden = true;
+      document.getElementById('retry-identity').addEventListener('click', () => location.reload());
+      return;
+    }
     if (!me.loggedIn) {
       goTo('signin');
     } else {

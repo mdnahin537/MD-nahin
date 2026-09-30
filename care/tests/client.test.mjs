@@ -273,3 +273,20 @@ test('Recovery errors are visible and repeated clicks issue one code', async () 
   release(); await first;
   assert.equal(e.document.querySelector('.care-auth-error').textContent, 'Isolated outage');
 });
+
+test('Identity service failures show a retry state and preserve saved drafts', async () => {
+  const saved = storage();
+  saved.setItem('rw_care_report_draft_v1', 'original preserved draft');
+  const shared = environment('shared', source('care'), taxonomy, { storage: saved, fetch: async () => result({ error: 'Isolated outage' }, 503) });
+  const identity = await shared.context.window.Care.getMe();
+  assert.equal(identity.unavailable, true);
+  const slot = shared.document.getElementById('auth-slot');
+  shared.context.window.Care.renderAuthSlot(slot, identity);
+  assert.ok(shared.document.getElementById('retry-identity'));
+  assert.ok(!shared.document.getElementById('login-btn'));
+  const wizard = environment('wizard', source('wizard'), taxonomy, { storage: saved });
+  wizard.context.window.Care.getMe = async () => identity;
+  await wizard.api.init();
+  assert.ok(wizard.document.getElementById('retry-identity'));
+  assert.equal(saved.getItem('rw_care_report_draft_v1'), 'original preserved draft');
+});

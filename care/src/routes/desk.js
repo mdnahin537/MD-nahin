@@ -220,7 +220,7 @@ async function deskAction(request, env, itemId, action) {
 
   if (action === 'remove') {
     // soft-remove: hold it out of public view (kept for audit).
-    await env.DB.prepare('UPDATE items SET held = 1, moderation_reviewed_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?1').bind(itemId).run();
+    await env.DB.prepare(`UPDATE items SET held = 1, moderation_reviewed_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?1`).bind(itemId).run();
     await logAction(env, 'remove', itemId, null);
     return deskJson({ ok: true });
   }
