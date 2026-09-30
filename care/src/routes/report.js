@@ -1,3 +1,4 @@
+import { visibleItemGuard, changedBoardItem } from '../lib/board-writes.js';
 import { getSession } from '../lib/auth.js';
 import { json, jsonError } from '../lib/http.js';
 import {
@@ -126,13 +127,14 @@ export async function handlePostReport(request, env, url) {
     }
     if (item.type !== body.type || item.area !== body.area) return jsonError(400, "Choose a matching report in the same area.");
     const reportInsert2 = env.DB.prepare(
-      "INSERT INTO reports (item_id, user_sub, payload, created_at, held, submission_key, submission_hash) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7) RETURNING id"
+      `INSERT INTO reports (item_id, user_sub, payload, created_at, held, submission_key, submission_hash)
+       SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?7 WHERE ${visibleItemGuard} RETURNING id`
     ).bind(item.id, session.sub, JSON.stringify(contract), now, textIsHeld ? 1 : 0, key, fingerprint);
     const batch = [reportInsert2];
     if (!textIsHeld) {
       const { statements: voteStatements2 } = await buildVoteStatements(env, item.id, session.sub, 1);
       batch.push(
-        env.DB.prepare("UPDATE items SET reports_count = reports_count + 1 WHERE id = ?1").bind(item.id),
+        env.DB.prepare(`UPDATE items SET reports_count = reports_count + 1 WHERE id = ?1 AND ${visibleItemGuard}`).bind(item.id),
         ...voteStatements2
       );
     }
@@ -144,6 +146,7 @@ export async function handlePostReport(request, env, url) {
       throw error;
     }
     const reportIdRow2 = saved[0].results?.[0];
+    if (!reportIdRow2) return changedBoardItem(env, item.id);
     return json({ ok: true, itemId: item.id, reportId: reportIdRow2?.id ?? null, joined: true, held: !!textIsHeld });
   }
   const taxonomy = await loadTaxonomy(env);

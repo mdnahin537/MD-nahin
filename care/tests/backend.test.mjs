@@ -547,3 +547,23 @@ test('A held item or reply parent changing before the write keeps drafts out of 
     } finally { await f.close(); }
   }
 });
+
+test('A previously saved comment retry acknowledges its record after owner merge or hold', async () => {
+  const f = fixture(); try {
+    await owner(f);
+    const source = await (await f.call('/api/report', bug)).json();
+    const destination = seedItem(f, 'Retry destination');
+    const body = { itemId: source.itemId, body: 'Accepted original comment', submissionKey: 'comment-ack-after-move-01' };
+    const original = await (await f.call('/api/comment', body)).json();
+    assert.equal((await f.call('/api/desk/item/' + source.itemId + '/merge', { intoId: destination })).status, 200);
+    const moved = await f.call('/api/comment', body);
+    assert.equal(moved.status, 200);
+    const saved = await moved.json();
+    assert.equal(saved.id, original.id); assert.equal(saved.itemId, destination); assert.equal(saved.retried, true);
+    assert.equal((await f.call('/api/desk/item/' + destination + '/hide', { hidden: true })).status, 200);
+    const held = await (await f.call('/api/comment', body)).json();
+    assert.equal(held.id, original.id); assert.equal(held.held, true);
+    assert.equal(f.sqlite.prepare('SELECT COUNT(*) AS n FROM comments').get().n, 1);
+    assert.equal(f.sqlite.prepare('SELECT COUNT(*) AS n FROM care_mail_outbox').get().n, 2);
+  } finally { await f.close(); }
+});

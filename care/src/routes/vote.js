@@ -1,3 +1,4 @@
+import { changedBoardItem } from '../lib/board-writes.js';
 import { getSession } from '../lib/auth.js';
 import { json, jsonError } from '../lib/http.js';
 import { checkVoteLimit } from '../lib/ratelimit.js';
@@ -25,6 +26,7 @@ export async function handlePutVote(request, env, url, itemId) {
   const limitCheck = await checkVoteLimit(env, session.sub);
   if (!limitCheck.allowed) return jsonError(429, limitCheck.message);
   const result = await castVote(env, itemId, session.sub, body.value);
+  if (!result) return changedBoardItem(env, itemId);
   return json({ ok: true, ...result });
 }
 
