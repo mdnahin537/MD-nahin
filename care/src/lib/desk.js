@@ -220,6 +220,7 @@ export async function buildBriefData(env, itemId) {
   const browserTally = {};
   const builds = {};
   const expectedActual = [];
+  const ideaRequests = [];
   const quotes = [];
   const followupTally = {};
 
@@ -236,6 +237,7 @@ export async function buildBriefData(env, itemId) {
     if (p.expected || p.actual) expectedActual.push({ expected: p.expected || '', actual: p.actual || '' });
     if (p.freetext) quotes.push(p.freetext);
     if (p.ask) quotes.push(p.ask);
+    if (p.type === 'idea') ideaRequests.push({ ask: p.ask || '', why: p.why || '', doneLooksLike: p.doneLooksLike || '' });
     for (const f of p.followups || []) {
       const k = f.q + '=' + f.a;
       followupTally[k] = (followupTally[k] || 0) + 1;
@@ -248,6 +250,7 @@ export async function buildBriefData(env, itemId) {
     reportCount: parsed.length,
     symptomTally, freqTally, detailTally, importanceTally,
     versions, osTally, browserTally, builds,
+    ideaRequests,
     expectedActual: expectedActual.slice(0, 8),
     quotes: quotes.slice(0, 6),
     followupTally,
@@ -266,9 +269,17 @@ export function renderBriefText(d, mergedIds) {
   };
   L.push(`BUILD BRIEF — #${d.id} ${areaTitle(d.area)}: ${d.title}`);
   const impStr = tally(d.importanceTally);
-  L.push(`Demand: ${d.reportsCount} GMs · ${d.net >= 0 ? '+' : ''}${d.net} net${Object.keys(d.importanceTally).length ? ' · importance: ' + impStr : ''}`);
+  L.push(`Demand: ${d.reportsCount} reports · ${d.net >= 0 ? '+' : ''}${d.net} net${Object.keys(d.importanceTally).length ? ' · importance: ' + impStr : ''}`);
   if (d.type === 'bug') {
     L.push(`Symptom matrix: ${tally(d.symptomTally)}; ${tally(d.freqTally)}${Object.keys(d.detailTally).length ? '; detail: ' + tally(d.detailTally) : ''}.`);
+  }
+  if (d.type === 'idea' && d.ideaRequests?.length) {
+    L.push('Idea requests (verbatim):');
+    for (const request of d.ideaRequests) {
+      L.push('Request: ' + (request.ask || 'Not supplied'));
+      L.push('Why it matters: ' + (request.why || 'Not supplied'));
+      L.push('What success looks like: ' + (request.doneLooksLike || 'Not supplied'));
+    }
   }
   const envBits = [];
   if (Object.keys(d.versions).length) envBits.push(tally(d.versions, 'v'));

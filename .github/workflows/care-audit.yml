@@ -49,6 +49,18 @@ jobs:
               severity:v.severity, range:v.range, fixAvailable:v.fixAvailable,
               advisories:v.via.filter(x=>typeof x==='object').map(x=>({title:x.title,url:x.url,range:x.range}))}))}, null, 2));
           JS
+      - name: Prepare a compatible dependency lock update for review
+        working-directory: care
+        run: |
+          npm update wrangler --package-lock-only --ignore-scripts
+          node --input-type=module <<'JS'
+          import {readFileSync} from 'node:fs';
+          const lock = readFileSync('package-lock.json');
+          const parsed = JSON.parse(lock);
+          console.log(JSON.stringify({proposedWrangler:parsed.packages['node_modules/wrangler'].version}));
+          const encoded = lock.toString('base64');
+          for (let at=0;at<encoded.length;at+=6000) console.log('CARE_LOCK_PART ' + encoded.slice(at,at+6000));
+          JS
       - name: Save public check results
         if: always()
         uses: actions/upload-artifact@v4

@@ -465,3 +465,18 @@ test('Saved retries still succeed after the new-device report allowance is full'
     assert.equal(f.sqlite.prepare('SELECT COUNT(*) AS n FROM reports').get().n, 2);
   } finally { await f.close(); }
 });
+
+test('Owner build briefs retain original idea requests, reasons, and success criteria', async () => {
+  const f = fixture(); try {
+    await owner(f);
+    const response = await f.call('/api/report', { type: 'idea', area: 'exports-data', ideaKind: 'new_tool',
+      ask: 'Export one faction <&> বাংলা', why: 'Reduce repetitive preparation', doneLooksLike: 'One full readable PDF' });
+    assert.equal(response.status, 200);
+    const idea = await response.json();
+    const brief = await (await f.call('/api/desk/brief', { items: [idea.itemId] })).json();
+    assert.ok(brief.text.includes('Export one faction <&> বাংলা'));
+    assert.ok(brief.text.includes('Reduce repetitive preparation'));
+    assert.ok(brief.text.includes('One full readable PDF'));
+    assert.ok(brief.text.includes('1 reports'));
+  } finally { await f.close(); }
+});
