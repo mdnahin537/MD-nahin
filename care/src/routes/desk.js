@@ -327,7 +327,7 @@ async function deskReview(request, env, target, id) {
       (target === 'comment' ? ` AND NOT EXISTS(SELECT 1 FROM comments parent WHERE parent.id=comments.parent_id AND (parent.held=1 OR parent.deleted=1))` : '');
   const update = env.DB.prepare(`UPDATE ${table} SET held=?2,moderation_reviewed_at=?3
     WHERE id=?1 AND held=?4 AND moderation_reviewed_at IS ?5${publishGuard}` +
-    (target === 'item' ? '' : ' AND item_id=?6'))
+    (target === 'item' ? '' : ' AND item_id=?6') + ' RETURNING id')
     .bind(...[id,held,now,row.held,row.moderation_reviewed_at,...(target === 'item' ? [] : [itemId])]);
   const [saved] = await env.DB.batch([
     update,
@@ -339,7 +339,7 @@ async function deskReview(request, env, target, id) {
       comments_count=(SELECT COUNT(*) FROM comments WHERE item_id=?1 AND held=0 AND deleted=0)
       WHERE id=?1`).bind(itemId),
   ]);
-  if (saved.meta.changes !== 1) return jsonError(409, 'This content changed or its parent is held. Reload before reviewing.');
+  if (saved.results.length !== 1) return jsonError(409, 'This content changed or its parent is held. Reload before reviewing.');
   return deskJson({ ok: true, published: body.publish, itemId });
 }
 

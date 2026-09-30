@@ -18,8 +18,11 @@ function fixture({ beforeStatement } = {}) {
     function run() {
       beforeStatement?.(sql, args);
       const values = Object.fromEntries(args.map((v, i) => [String(i + 1), v]));
+      const before = sqlite.prepare('SELECT total_changes() AS n').get().n;
       const results = sqlite.prepare(sql).all(values);
-      return { results, meta: { changes: sqlite.prepare('SELECT changes() AS n').get().n } };
+      // D1 metadata includes trigger writes, unlike SQLite changes().
+      const changes = sqlite.prepare('SELECT total_changes() AS n').get().n - before;
+      return { results, meta: { changes } };
     }
     return { sql, args, execute: run, bind: (...values) => statement(sql, values),
       first: async () => run().results[0] || null, all: async () => run(), run: async () => run() };

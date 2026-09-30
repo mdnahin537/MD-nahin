@@ -206,9 +206,11 @@ export async function handlePatchFollowup(request, env, url, reportId) {
   const question=detectGaps(payload).find(q=>q.q===body.q);
   if (!question || !question.options.some(o=>o.key===body.a)) return jsonError(400,"Choose one of the offered answers.");
   payload.followups.push({q:body.q,a:body.a});
-  const saved=await env.DB.prepare("UPDATE reports SET payload=?1 WHERE id=?2 AND payload=?3")
-    .bind(JSON.stringify(payload),reportId,report.payload).run();
-  if (saved.meta.changes!==1) return jsonError(409,"Another answer was saved. Please try again.");
+  // D1 change metadata includes the email trigger; the returned report row is
+  // the acknowledgement that this conditional update actually succeeded.
+  const saved=await env.DB.prepare("UPDATE reports SET payload=?1 WHERE id=?2 AND payload=?3 RETURNING id")
+    .bind(JSON.stringify(payload),reportId,report.payload).first();
+  if (!saved) return jsonError(409,"Another answer was saved. Please try again.");
   return json({ok:true});
 }
 export async function handleGetFollowupQuestion(request, env, url, reportId) {
