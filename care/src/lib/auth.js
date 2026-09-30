@@ -131,15 +131,12 @@ async function checkAuthRateLimit(request, env, kind) {
   const bucket = Math.floor(now / cfg.windowSeconds);
   const fingerprint = await hmacHex(env.SESSION_SECRET, clientFingerprint(request));
   const row = await env.DB.prepare(
-    'SELECT count FROM care_auth_attempts WHERE kind = ?1 AND fingerprint = ?2 AND bucket = ?3'
-  ).bind(kind, fingerprint, bucket).first();
-  if ((row?.count || 0) >= cfg.max) return false;
-  await env.DB.prepare(
     `INSERT INTO care_auth_attempts (kind, fingerprint, bucket, count)
      VALUES (?1, ?2, ?3, 1)
-     ON CONFLICT(kind, fingerprint, bucket) DO UPDATE SET count = count + 1`
-  ).bind(kind, fingerprint, bucket).run();
-  return true;
+     ON CONFLICT(kind, fingerprint, bucket) DO UPDATE SET count = count + 1
+     WHERE count < ?4 RETURNING count`
+  ).bind(kind, fingerprint, bucket, cfg.max).first();
+  return !!row;
 }
 
 function setSessionCookie(headers, token, env) {
@@ -332,7 +329,11 @@ export async function handleLogout(request, env, url) {
   return new Response(null,{status:302,headers});
 }
 
-/** Read and verify the opaque session cookie. */
+export class CareSessionUnavailable extends Error {
+  constructor() { super('Care identity verification is temporarily unavailable.'); }
+}
+
+/** Read and verify the opaque session cookie. Operational failures must never create a new identity. */
 export async function getSession(request, env) {
   try {
     const cookies = parseCookies(request);
@@ -354,7 +355,7 @@ export async function getSession(request, env) {
       authProvider: row.auth_provider || 'legacy-google',
     };
   } catch {
-    return null;
+    throw new CareSessionUnavailable();
   }
 }
 

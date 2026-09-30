@@ -228,43 +228,41 @@ async function deskAction(request, env, itemId, action) {
 // PK one-vote rule), re-point reports, then RECOMPUTE the winner's denormalized
 // counts from the now-merged raw rows so counters and rows can't drift.
 async function deskMerge(env, loserId, winnerId) {
-  if (!Number.isInteger(winnerId) || winnerId === loserId) return jsonError(400, 'Bad merge target.');
-  const winner = await env.DB.prepare('SELECT id FROM items WHERE id = ?1').bind(winnerId).first();
-  const loser = await env.DB.prepare('SELECT id, merged_into FROM items WHERE id = ?1').bind(loserId).first();
+  if (!Number.isSafeInteger(winnerId) || winnerId <= 0 || winnerId === loserId) return jsonError(400, 'Bad merge target.');
+  const winner = await env.DB.prepare('SELECT id, type, merged_into FROM items WHERE id = ?1').bind(winnerId).first();
+  const loser = await env.DB.prepare('SELECT id, type, merged_into FROM items WHERE id = ?1').bind(loserId).first();
   if (!winner || !loser) return jsonError(404, 'Item not found.');
-  if (loser.merged_into) return jsonError(409, 'Already merged.');
+  if (winner.merged_into || loser.merged_into) return jsonError(409, 'Choose two unmerged items.');
+  if (winner.type !== loser.type) return jsonError(400, 'Merge bug reports with bugs, and ideas with ideas.');
 
-  // Move votes: insert loser's votes onto the winner, skipping any voter who
-  // already voted on the winner (their existing stance wins — one vote per
-  // identity). Keep created_at so velocity stays truthful.
-  await env.DB.prepare(
-    `INSERT OR IGNORE INTO votes (item_id, user_sub, value, created_at)
-     SELECT ?1, user_sub, value, created_at FROM votes WHERE item_id = ?2`
-  ).bind(winnerId, loserId).run();
-  // Remove the loser's now-duplicated vote rows.
-  await env.DB.prepare('DELETE FROM votes WHERE item_id = ?1').bind(loserId).run();
-  // Re-point reports and comments to the winner.
-  await env.DB.prepare('UPDATE reports SET item_id = ?1 WHERE item_id = ?2').bind(winnerId, loserId).run();
-  await env.DB.prepare('UPDATE comments SET item_id = ?1 WHERE item_id = ?2').bind(winnerId, loserId).run();
-
-  // Recompute the winner's denormalized counters from raw rows (no drift).
-  await recomputeCounts(env, winnerId);
-  // Mark the loser merged (its page 301s to the winner).
-  await env.DB.prepare('UPDATE items SET merged_into = ?1, held = 0 WHERE id = ?2').bind(winnerId, loserId).run();
-  await logAction(env, 'merge', loserId, 'into ' + winnerId);
+  // Each write checks the pair inside one D1 transaction. A concurrent merge
+  // that wins before this batch makes every statement a no-op.
+  const guard = `EXISTS (SELECT 1 FROM items src JOIN items dst ON dst.id = ?1
+    WHERE src.id = ?2 AND src.merged_into IS NULL AND dst.merged_into IS NULL AND src.type = dst.type)`;
+  const statement = sql => env.DB.prepare(sql).bind(winnerId, loserId);
+  const results = await env.DB.batch([
+    statement(`INSERT OR IGNORE INTO votes (item_id, user_sub, value, created_at)
+      SELECT ?1, user_sub, value, created_at FROM votes WHERE item_id = ?2 AND ${guard}`),
+    statement(`DELETE FROM votes WHERE item_id = ?2 AND ${guard}`),
+    statement(`UPDATE reports SET item_id = ?1,
+      held = CASE WHEN (SELECT held FROM items WHERE id = ?2) = 1 THEN 1 ELSE held END
+      WHERE item_id = ?2 AND ${guard}`),
+    statement(`UPDATE comments SET item_id = ?1,
+      held = CASE WHEN (SELECT held FROM items WHERE id = ?2) = 1 THEN 1 ELSE held END
+      WHERE item_id = ?2 AND ${guard}`),
+    statement(`UPDATE items SET
+      agree_count = (SELECT COUNT(*) FROM votes WHERE item_id = ?1 AND value = 1),
+      disagree_count = (SELECT COUNT(*) FROM votes WHERE item_id = ?1 AND value = -1),
+      reports_count = (SELECT COUNT(*) FROM reports WHERE item_id = ?1 AND held = 0),
+      comments_count = (SELECT COUNT(*) FROM comments WHERE item_id = ?1 AND held = 0 AND deleted = 0)
+      WHERE id = ?1 AND ${guard}`),
+    statement(`INSERT INTO owner_log (at, action, item_id, detail)
+      SELECT CAST(strftime('%s','now') AS INTEGER), 'merge', ?2, 'into ' || ?1 WHERE ${guard}`),
+    statement(`UPDATE items SET merged_into = ?1, held = 0, agree_count = 0, disagree_count = 0,
+      reports_count = 0, comments_count = 0 WHERE id = ?2 AND ${guard} RETURNING id`),
+  ]);
+  if (!results.at(-1).results.length) return jsonError(409, 'These items changed. Reload before merging.');
   return deskJson({ ok: true, winnerId });
-}
-
-async function recomputeCounts(env, itemId) {
-  const agree = await env.DB.prepare('SELECT COUNT(*) AS n FROM votes WHERE item_id = ?1 AND value = 1').bind(itemId).first();
-  const disagree = await env.DB.prepare('SELECT COUNT(*) AS n FROM votes WHERE item_id = ?1 AND value = -1').bind(itemId).first();
-  // Held reports are hidden from the public rollup and are not counted toward
-  // reports_count at write time (routes/report.js) — exclude them here too, or
-  // a merge would silently resurrect a held join's inflation of the count.
-  const reports = await env.DB.prepare('SELECT COUNT(*) AS n FROM reports WHERE item_id = ?1 AND held = 0').bind(itemId).first();
-  const comments = await env.DB.prepare('SELECT COUNT(*) AS n FROM comments WHERE item_id = ?1 AND deleted = 0').bind(itemId).first();
-  await env.DB.prepare('UPDATE items SET agree_count = ?1, disagree_count = ?2, reports_count = ?3, comments_count = ?4 WHERE id = ?5')
-    .bind(agree.n, disagree.n, reports.n, comments.n, itemId).run();
 }
 
 async function deskBan(env, sub) {

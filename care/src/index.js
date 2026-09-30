@@ -1,3 +1,4 @@
+import { CareSessionUnavailable } from './lib/auth.js';
 import { drainCareMail } from './lib/notifications.js';
 import { routeAuth } from './routes/auth.js';
 import { json, jsonError, notFound, isSameOrigin } from './lib/http.js';
@@ -64,6 +65,10 @@ export default {
       // fallback behavior identical to what a direct static request would do.
       return env.ASSETS.fetch(request);
     } catch (err) {
+      if (err instanceof CareSessionUnavailable) {
+        return json({ error: 'Care could not verify this device just now. Your identity has been kept; try again shortly.' },
+          503, { 'Cache-Control': 'private, no-store', 'Vary': 'Cookie', 'Retry-After': '5' });
+      }
       return jsonError(500, "Something broke on our end — try again in a moment.");
     }
   },
