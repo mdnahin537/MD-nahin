@@ -11,7 +11,8 @@
     "seed:local": "node scripts/seed.mjs",
     "deploy": "wrangler deploy",
     "check": "wrangler deploy --dry-run --outdir=test-results/bundle",
-    "test": "npm run check && node --test tests/*.test.mjs && python3 -m unittest discover -s tests -p 'test_*.py'"
+    "test": "npm run check && node --test tests/*.test.mjs && python3 -m unittest discover -s tests -p 'test_*.py'",
+    "test:runtime": "node tests/runtime-smoke.mjs"
   },
   "devDependencies": {
     "wrangler": "4.144.0"

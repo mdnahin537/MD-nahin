@@ -18,19 +18,19 @@
   </header>
 
   <nav class="desk-tabs" role="tablist">
-    <button class="desk-tab is-active" data-tab="digest" role="tab">Digest</button>
-    <button class="desk-tab" data-tab="queue" role="tab">Decisions</button>
-    <button class="desk-tab" data-tab="brief" role="tab">Build Brief</button>
+    <button class="desk-tab is-active" id="desk-tab-digest" data-tab="digest" role="tab" aria-controls="tab-digest" aria-selected="true" tabindex="0">Digest</button>
+    <button class="desk-tab" id="desk-tab-queue" data-tab="queue" role="tab" aria-controls="tab-queue" aria-selected="false" tabindex="-1">Decisions</button>
+    <button class="desk-tab" id="desk-tab-brief" data-tab="brief" role="tab" aria-controls="tab-brief" aria-selected="false" tabindex="-1">Build Brief</button>
   </nav>
 
   <main class="desk-main">
-    <section id="tab-digest" class="desk-panel" role="tabpanel">
+    <section id="tab-digest" class="desk-panel" role="tabpanel" aria-labelledby="desk-tab-digest">
       <div id="digest-body"><div class="skeleton desk-skel"></div></div>
     </section>
-    <section id="tab-queue" class="desk-panel" hidden role="tabpanel">
+    <section id="tab-queue" class="desk-panel" hidden role="tabpanel" aria-labelledby="desk-tab-queue">
       <div id="queue-body"><div class="skeleton desk-skel"></div></div>
     </section>
-    <section id="tab-brief" class="desk-panel" hidden role="tabpanel">
+    <section id="tab-brief" class="desk-panel" hidden role="tabpanel" aria-labelledby="desk-tab-brief">
       <div class="brief-controls">
         <p class="desk-hint">Selected threads (tick items in the digest, or type serials):</p>
         <input id="brief-ids" class="desk-input" placeholder="e.g. 1, 3, 5" aria-label="Item serials for the brief">

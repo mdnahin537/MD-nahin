@@ -34,6 +34,28 @@ jobs:
           set -o pipefail
           node --test care/tests/*.test.mjs | tee care/test-results/workflow-tests.tap
           python3 -m unittest discover -s care/tests -p 'test_*.py' -v
+      - name: Run an isolated local Workers and D1 runtime check
+        working-directory: care
+        run: node tests/runtime-smoke.mjs
+      - name: Parse public stylesheets and client scripts
+        working-directory: care
+        run: |
+          node --input-type=module <<'JS'
+          import {transform} from 'esbuild';
+          import {readFileSync,readdirSync} from 'node:fs';
+          import {spawnSync} from 'node:child_process';
+          const styles = readdirSync('public/css').filter(name=>name.endsWith('.css')).map(name=>'public/css/'+name).concat('public/desk/desk.css');
+          for (const path of styles) {
+            const parsed = await transform(readFileSync(path,'utf8'), {loader:'css'});
+            if (parsed.warnings.length) throw new Error('Stylesheet parser warning in '+path);
+          }
+          const scripts = readdirSync('public/js').filter(name=>name.endsWith('.js')).map(name=>'public/js/'+name).concat('public/desk/desk.js');
+          for (const path of scripts) {
+            const result = spawnSync('node',['--check',path],{encoding:'utf8'});
+            if (result.status!==0) throw new Error(path+': '+result.stderr);
+          }
+          console.log(JSON.stringify({stylesheetsParsed:styles.length,clientScriptsParsed:scripts.length}));
+          JS
       - name: Inspect dependency advisories
         working-directory: care
         run: |

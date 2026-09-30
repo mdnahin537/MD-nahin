@@ -340,7 +340,12 @@
 
   // ---- tabs ------------------------------------------------------------
   function switchTab(name) {
-    document.querySelectorAll('.desk-tab').forEach((t) => t.classList.toggle('is-active', t.dataset.tab === name));
+    document.querySelectorAll('.desk-tab').forEach(t => {
+      const selected = t.dataset.tab === name;
+      t.classList.toggle('is-active', selected);
+      t.setAttribute('aria-selected', String(selected));
+      t.setAttribute('tabindex', selected ? '0' : '-1');
+    });
     document.querySelectorAll('.desk-panel').forEach((p) => (p.hidden = p.id !== 'tab-' + name));
     if (name === 'queue' && !queue) loadQueue().catch(error => { $('queue-body').innerHTML = '<p class="desk-empty" role="alert">' + C.esc(error.message) + '</p>'; toast(error.message); });
     rebuildNav();
@@ -356,7 +361,16 @@
   // ---- init ------------------------------------------------------------
   async function init() {
     window._tax = await fetch('/data/taxonomy.json').then((r) => r.json()).catch(() => null);
-    document.querySelectorAll('.desk-tab').forEach((t) => t.addEventListener('click', () => switchTab(t.dataset.tab)));
+    const tabs = [...document.querySelectorAll('.desk-tab')];
+    tabs.forEach(t => t.addEventListener('click', () => switchTab(t.dataset.tab)));
+    tabs.forEach(t => t.addEventListener('keydown', event => {
+      if (!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
+      event.preventDefault();
+      let index = tabs.indexOf(t);
+      index = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length-1 :
+        (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+      switchTab(tabs[index].dataset.tab); tabs[index].focus();
+    }));
     $('refresh-digest').addEventListener('click', async () => {
       $('refresh-digest').disabled = true;
       try { await loadDigest(true); toast('Digest refreshed'); }
