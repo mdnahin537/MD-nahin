@@ -327,6 +327,7 @@ test('Review respects a held parent and atomic failures; owner bans are blocked'
 test('Bug and idea follow-ups preserve full details and validate offered choices', async () => {
   const f = fixture(); try {
     await signedIn(f);
+    f.sqlite.prepare('UPDATE users SET created_at=?').run(now()-86401);
     const base = await (await f.call('/api/report', bug)).json();
     const offered = (await (await f.call('/api/report/' + base.reportId + '/followup-question')).json()).question;
     assert.equal(offered.q, 'which_export');
@@ -340,8 +341,10 @@ test('Bug and idea follow-ups preserve full details and validate offered choices
     const idea = await (await f.call('/api/report', { type: 'idea', area: 'exports-data', ideaKind: 'new_tool', ask: 'Export one faction', doneLooksLike: 'One readable PDF' })).json();
     const ideaQuestion = (await (await f.call('/api/report/' + idea.reportId + '/followup-question')).json()).question;
     assert.equal(ideaQuestion.q, 'idea_payoff');
-    const joined = await (await f.call('/api/report', { type: 'idea', area: 'exports-data', ideaKind: 'new_tool',
-      ask: 'My matching request', why: 'Less prep', doneLooksLike: 'Same full detail', mode: 'join', joinItemId: idea.itemId })).json();
+    const joinResponse = await f.call('/api/report', { type: 'idea', area: 'exports-data', ideaKind: 'new_tool',
+      ask: 'My matching request', why: 'Less prep', doneLooksLike: 'Same full detail', mode: 'join', joinItemId: idea.itemId });
+    const joined = await joinResponse.json();
+    assert.equal(joinResponse.status, 200, JSON.stringify(joined));
     const detail = JSON.parse(f.sqlite.prepare('SELECT payload FROM reports WHERE id=?').get(joined.reportId).payload);
     assert.equal(detail.ask, 'My matching request'); assert.equal(detail.why, 'Less prep'); assert.equal(detail.doneLooksLike, 'Same full detail');
   } finally { await f.close(); }
@@ -447,4 +450,18 @@ test('An HTTP success without provider acceptance stays pending rather than clai
     assert.equal(event.state, 'pending'); assert.equal(event.accepted_at, null);
     assert.match(event.last_error, /not confirmed acceptance/);
   } finally { await f.close(); globalThis.fetch = originalFetch; }
+});
+
+test('Saved retries still succeed after the new-device report allowance is full', async () => {
+  const f = fixture(); try {
+    await signedIn(f);
+    const body = { ...bug, submissionKey: 'limited-device-fixture-01' };
+    const first = await (await f.call('/api/report', body)).json();
+    assert.equal((await f.call('/api/report', { ...bug, title: 'Second report' })).status, 200);
+    assert.equal((await f.call('/api/report', { ...bug, title: 'Third report' })).status, 429);
+    const repeated = await f.call('/api/report', body);
+    assert.equal(repeated.status, 200);
+    assert.equal((await repeated.json()).reportId, first.reportId);
+    assert.equal(f.sqlite.prepare('SELECT COUNT(*) AS n FROM reports').get().n, 2);
+  } finally { await f.close(); }
 });

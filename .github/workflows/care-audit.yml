@@ -34,6 +34,21 @@ jobs:
           set -o pipefail
           node --test care/tests/*.test.mjs | tee care/test-results/workflow-tests.tap
           python3 -m unittest discover -s care/tests -p 'test_*.py' -v
+      - name: Inspect dependency advisories
+        working-directory: care
+        run: |
+          node --input-type=module <<'JS'
+          import {spawnSync} from 'node:child_process';
+          import {writeFileSync} from 'node:fs';
+          const result = spawnSync('npm', ['audit', '--json'], {encoding: 'utf8'});
+          if (!result.stdout) throw new Error('Dependency audit did not return a report');
+          const report = JSON.parse(result.stdout);
+          writeFileSync('test-results/dependencies.json', JSON.stringify(report, null, 2));
+          console.log(JSON.stringify({counts: report.metadata?.vulnerabilities,
+            packages: Object.values(report.vulnerabilities || {}).map(v => ({name:v.name,
+              severity:v.severity, range:v.range, fixAvailable:v.fixAvailable,
+              advisories:v.via.filter(x=>typeof x==='object').map(x=>({title:x.title,url:x.url,range:x.range}))}))}, null, 2));
+          JS
       - name: Save public check results
         if: always()
         uses: actions/upload-artifact@v4
