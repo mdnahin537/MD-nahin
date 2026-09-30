@@ -24,6 +24,8 @@ jobs:
           node-version: '22'
       - name: Compare recovery source with repository and live public endpoints
         run: python3 care/tests/preflight.py
+      - name: Check confirmed workflow regressions
+        run: node --test care/tests/backend.test.mjs
       - name: Save public check results
         if: always()
         uses: actions/upload-artifact@v4
