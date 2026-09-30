@@ -69,17 +69,17 @@ function fixture(source, html, options={}) {
     ARRAY_BUFFER:0x8892,ELEMENT_ARRAY_BUFFER:0x8893,STATIC_DRAW:0x88E4,DYNAMIC_DRAW:0x88E8,FLOAT:0x1406,
     TRIANGLES:4,LINES:1,LINE_STRIP:3,POINTS:0,DEPTH_TEST:0x0B71,BLEND:0x0BE2,CULL_FACE:0x0B44,
     SRC_ALPHA:0x0302,ONE_MINUS_SRC_ALPHA:0x0303,COLOR_BUFFER_BIT:0x4000,DEPTH_BUFFER_BIT:0x0100,UNSIGNED_SHORT:0x1403,
-    HIGH_FLOAT:0x8DF2,MAX_RENDERBUFFER_SIZE:0x84E8,MAX_TEXTURE_SIZE:0x0D33};
+    NO_ERROR:0,HIGH_FLOAT:0x8DF2,MAX_RENDERBUFFER_SIZE:0x84E8,MAX_TEXTURE_SIZE:0x0D33};
   const gl=new Proxy({...constants,
     createShader:type=>({type}),shaderSource(shader,source){shader.source=source;},
     getShaderParameter:()=>!options.shaderFailure,getShaderInfoLog:()=>options.shaderFailure?'Isolated shader failure':'',
     createProgram(){const program={shaders:[]};programs.push(program);return program;},
     attachShader(program,shader){program.shaders.push(shader);},getProgramParameter:()=>!options.linkFailure,
     getProgramInfoLog:()=>options.linkFailure?'Isolated link failure':'',
-    createBuffer:()=>({}),bufferData(target,data){if(ArrayBuffer.isView(data))calls.buffers.push(Array.from(data));},
+    createBuffer:()=>options.bufferFailure?null:({}),bufferData(target,data){if(ArrayBuffer.isView(data))calls.buffers.push(Array.from(data));},
     getAttribLocation:()=>0,getUniformLocation:(_,name)=>({name}),
     getShaderPrecisionFormat:()=>({precision:23,rangeMin:127,rangeMax:127}),
-    getParameter:()=>4096,getExtension:()=>null,isContextLost:()=>false,getError:()=>0,
+    getParameter:()=>4096,getExtension:()=>null,isContextLost:()=>!!options.contextLost,getError:()=>options.drawFailure&&calls.draws>0?0x0502:0,
     drawArrays(){calls.draws++;},drawElements(){calls.draws++;}
   },{get(target,name){return name in target?target[name]:()=>{};}});
   for(const canvas of nodes.filter(node=>node.tagName==='CANVAS'))canvas.getContext=()=>options.noGL?null:gl;
@@ -126,7 +126,8 @@ function scene(options={}){
 function hero(f){return f.document.querySelector('[data-care-hero]');}
 function toggle(f){return f.document.querySelector('[data-care-motion-toggle]');}
 
-test('Production 3D shaders compile and link in native GLES without a browser',()=>{
+test('Production 3D shaders compile and link in native GLES without a browser',
+  {skip:process.env.CARE_VALIDATE_NATIVE_SHADERS!=='1'},()=>{
   const f=scene();
   const programs=f.shaders();
   assert.ok(programs.length>0,'The actual scene must supply shader programs');
@@ -176,7 +177,7 @@ test('Hidden and offscreen scenes stop work and resume one animation loop',()=>{
   assert.ok(f.calls.draws>offscreen);assert.ok(f.frames.size<=1);
 });
 test('Graphics initialization failure keeps the static artwork and core page intact',()=>{
-  for(const options of [{noGL:true},{shaderFailure:true},{linkFailure:true}]){
+  for(const options of [{noGL:true},{shaderFailure:true},{linkFailure:true},{bufferFailure:true},{drawFailure:true},{contextLost:true}]){
     const f=scene(options);
     assert.ok(f.document.getElementById('board-title'));
     assert.ok(f.document.querySelector('[data-care-scene]').querySelector('img'));

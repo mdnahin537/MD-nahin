@@ -106,6 +106,7 @@
       if(!gl)throw new Error('Graphics unavailable');
       const vs=shader(gl.VERTEX_SHADER,vertex),fs=shader(gl.FRAGMENT_SHADER,fragment);
       program=gl.createProgram();
+      if(!program)throw new Error('Graphics unavailable');
       gl.attachShader(program,vs);gl.attachShader(program,fs);gl.linkProgram(program);
       gl.deleteShader(vs);gl.deleteShader(fs);shaders=[];
       if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw new Error('Graphics unavailable');
@@ -114,12 +115,16 @@
         rotation:gl.getUniformLocation(program,'u_rotation'),aspect:gl.getUniformLocation(program,'u_aspect')
       };
       for(const data of [lantern(),orbit(1.66,.023,[.43,.24,.12]),orbit(1.91,.033,[.37,.21,.10])]){
-        const buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
+        const buffer=gl.createBuffer();
+        if(!buffer)throw new Error('Graphics unavailable');
+        gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
         gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(data),gl.STATIC_DRAW);
         meshes.push({buffer,count:data.length/9});
       }
       gl.enable(gl.DEPTH_TEST);gl.clearColor(0,0,0,0);ready=true;
-      size();draw();scene.classList.add('is-rendered');sync();
+      size();draw();
+      if(gl.isContextLost()||gl.getError()!==gl.NO_ERROR)throw new Error('Graphics unavailable');
+      scene.classList.add('is-rendered');sync();
     }catch{dispose();ready=false;scene.classList.remove('is-rendered');stop();button.hidden=true;hero.dataset.careMotion='still';}
   }
   function size(){

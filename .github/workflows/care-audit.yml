@@ -15,6 +15,8 @@ jobs:
   audit:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      CARE_VALIDATE_NATIVE_SHADERS: '1'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -29,6 +31,10 @@ jobs:
         run: |
           npm ci
           npx wrangler deploy --dry-run --outdir=test-results/bundle
+      - name: Prepare the native shader compiler
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libegl1 libegl-mesa0 libgles2 libgl1-mesa-dri
       - name: Check confirmed workflow regressions
         run: |
           set -o pipefail
