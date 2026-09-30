@@ -44,6 +44,11 @@ export async function routeDeskApi(request, env, url) {
   const { pathname } = url;
   const method = request.method;
 
+  const reviewMatch = pathname.match(/^\/api\/desk\/review\/(item|report|comment)\/(\d+)$/);
+  if (reviewMatch && ['GET', 'POST'].includes(method)) {
+    return deskReview(request, env, reviewMatch[1], Number(reviewMatch[2]));
+  }
+
   if (pathname === '/api/desk/notifications' && ['GET', 'POST'].includes(method)) {
     if (method === 'POST') {
       await env.DB.prepare("UPDATE care_mail_outbox SET state='pending',next_attempt_at=0 WHERE state='failed'").run();
@@ -159,8 +164,12 @@ async function deskItemDetail(env, id) {
     `SELECT r.id, r.payload, r.created_at, r.held, u.name, u.email
      FROM reports r JOIN users u ON u.sub = r.user_sub WHERE r.item_id = ?1 ORDER BY r.created_at ASC`
   ).bind(id).all();
+  const { results: comments } = await env.DB.prepare(
+    `SELECT c.*,u.name,u.email FROM comments c LEFT JOIN users u ON u.sub=c.user_sub
+      WHERE c.item_id=?1 ORDER BY c.id`).bind(id).all();
   return {
     item,
+    comments,
     reports: reports.map((r) => ({
       id: r.id, name: r.name, email: r.email, held: r.held, createdAt: r.created_at,
       payload: safeParse(r.payload),
@@ -171,7 +180,7 @@ async function deskItemDetail(env, id) {
 // ---- actions --------------------------------------------------------------
 async function deskAction(request, env, itemId, action) {
   let body = {};
-  try { body = await readCareJson(request); } catch {}
+  try { body = await readCareJson(request); } catch { return jsonError(400, 'Malformed request body.'); }
 
   const item = await env.DB.prepare('SELECT id, status, merged_into FROM items WHERE id = ?1').bind(itemId).first();
   if (!item) return jsonError(404, 'Item not found.');
@@ -196,20 +205,22 @@ async function deskAction(request, env, itemId, action) {
   }
 
   if (action === 'pin') {
+    if (typeof body.pinned !== 'boolean') return jsonError(400, 'Choose pin or unpin.');
     await env.DB.prepare('UPDATE items SET pinned = ?1 WHERE id = ?2').bind(body.pinned ? 1 : 0, itemId).run();
     await logAction(env, body.pinned ? 'pin' : 'unpin', itemId, null);
     return deskJson({ ok: true });
   }
 
   if (action === 'hide') {
-    await env.DB.prepare('UPDATE items SET held = ?1 WHERE id = ?2').bind(body.hidden ? 1 : 0, itemId).run();
+    if (typeof body.hidden !== 'boolean') return jsonError(400, 'Choose hide or publish.');
+    await env.DB.prepare('UPDATE items SET held = ?1, moderation_reviewed_at = NULL WHERE id = ?2').bind(body.hidden ? 1 : 0, itemId).run();
     await logAction(env, body.hidden ? 'hide' : 'unhide', itemId, null);
     return deskJson({ ok: true });
   }
 
   if (action === 'remove') {
     // soft-remove: hold it out of public view (kept for audit).
-    await env.DB.prepare('UPDATE items SET held = 1 WHERE id = ?1').bind(itemId).run();
+    await env.DB.prepare('UPDATE items SET held = 1, moderation_reviewed_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?1').bind(itemId).run();
     await logAction(env, 'remove', itemId, null);
     return deskJson({ ok: true });
   }
@@ -266,7 +277,10 @@ async function deskMerge(env, loserId, winnerId) {
 }
 
 async function deskBan(env, sub) {
-  await env.DB.prepare('UPDATE users SET banned = 1 WHERE sub = ?1').bind(sub).run();
+  const user = await env.DB.prepare('SELECT is_owner FROM users WHERE sub=?1').bind(sub).first();
+  if (!user) return jsonError(404, 'Contributor not found.');
+  if (user.is_owner) return jsonError(403, 'The owner identity is protected.');
+  await env.DB.prepare('UPDATE users SET banned = 1 WHERE sub = ?1 AND is_owner=0').bind(sub).run();
   await logAction(env, 'ban', null, sub);
   return deskJson({ ok: true });
 }
@@ -287,6 +301,46 @@ async function deskBrief(request, env) {
   }
   const text = briefs.join('\n\n———\n\n');
   return deskJson({ text });
+}
+
+
+async function deskReview(request, env, target, id) {
+  const table = { item: 'items', report: 'reports', comment: 'comments' }[target];
+  const row = await env.DB.prepare(`SELECT * FROM ${table} WHERE id=?1`).bind(id).first();
+  if (!row || (target === 'comment' && row.deleted)) return jsonError(404, 'Saved content not found.');
+  const itemId = target === 'item' ? row.id : row.item_id;
+  const item = await env.DB.prepare('SELECT id,title,held,merged_into FROM items WHERE id=?1').bind(itemId).first();
+  if (request.method === 'GET') {
+    const details = target === 'item' ? await deskItemDetail(env, id)
+      : { record: { ...row, ...(target === 'report' ? { payload: safeParse(row.payload) } : {}) }, item };
+    return deskJson({ target, ...details });
+  }
+  let body;
+  try { body = await readCareJson(request); } catch { return jsonError(400, 'Malformed review request.'); }
+  if (typeof body.publish !== 'boolean') return jsonError(400, 'Choose publish or keep held.');
+  if (item?.merged_into) return jsonError(409, 'Review the destination after this merge.');
+  if (body.publish && target !== 'item' && item?.held) return jsonError(409, 'Publish the parent item before publishing its details.');
+  const now = Math.floor(Date.now()/1000);
+  const held = body.publish ? 0 : 1;
+  const publishGuard = !body.publish ? '' : target === 'item' ? ' AND merged_into IS NULL'
+    : ` AND EXISTS(SELECT 1 FROM items i WHERE i.id=${table}.item_id AND i.held=0 AND i.merged_into IS NULL)` +
+      (target === 'comment' ? ` AND NOT EXISTS(SELECT 1 FROM comments parent WHERE parent.id=comments.parent_id AND (parent.held=1 OR parent.deleted=1))` : '');
+  const update = env.DB.prepare(`UPDATE ${table} SET held=?2,moderation_reviewed_at=?3
+    WHERE id=?1 AND held=?4 AND moderation_reviewed_at IS ?5${publishGuard}` +
+    (target === 'item' ? '' : ' AND item_id=?6'))
+    .bind(...[id,held,now,row.held,row.moderation_reviewed_at,...(target === 'item' ? [] : [itemId])]);
+  const [saved] = await env.DB.batch([
+    update,
+    env.DB.prepare(`INSERT INTO owner_log(at,action,item_id,detail)
+      SELECT ?1,?2,?3,?4 WHERE changes()=1`)
+      .bind(now,body.publish?'publish:'+target:'retain:'+target,itemId,String(id)),
+    env.DB.prepare(`UPDATE items SET
+      reports_count=(SELECT COUNT(*) FROM reports WHERE item_id=?1 AND held=0),
+      comments_count=(SELECT COUNT(*) FROM comments WHERE item_id=?1 AND held=0 AND deleted=0)
+      WHERE id=?1`).bind(itemId),
+  ]);
+  if (saved.meta.changes !== 1) return jsonError(409, 'This content changed or its parent is held. Reload before reviewing.');
+  return deskJson({ ok: true, published: body.publish, itemId });
 }
 
 // ---- usage counters (free-tier gauge, §7.1) -------------------------------

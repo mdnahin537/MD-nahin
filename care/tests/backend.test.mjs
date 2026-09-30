@@ -250,3 +250,201 @@ test('Comment retries and concurrent report retries save one original record eac
     assert.equal((await f.call('/api/comment', { ...commentBody, body: 'Changed after save' })).status, 409);
   } finally { await f.close(); }
 });
+
+function holdReport(f, id) { f.sqlite.prepare('UPDATE reports SET held=1 WHERE id=?').run(id); }
+test('Owners can review held joins and comments; public readers cannot see them until approval', async () => {
+  const f = fixture(); try {
+    await owner(f);
+    const base = await (await f.call('/api/report', bug)).json();
+    const joined = await (await f.call('/api/report', { ...bug, mode: 'join', joinItemId: base.itemId, freetext: 'Held original join <&> বাংলা' })).json();
+    const comment = await (await f.call('/api/comment', { itemId: base.itemId, body: 'Held original comment <&> বাংলা' })).json();
+    holdReport(f, joined.reportId);
+    f.sqlite.prepare('UPDATE comments SET held=1 WHERE id=?').run(comment.id);
+    f.sqlite.prepare('UPDATE items SET reports_count=1,comments_count=0 WHERE id=?').run(base.itemId);
+    const original = f.sqlite.prepare('SELECT payload FROM reports WHERE id=?').get(joined.reportId).payload;
+    const summary = await (await f.call('/api/desk/summary')).json();
+    assert.equal(summary.summary.holds, 2);
+    const queue = (await (await f.call('/api/desk/queue')).json()).queue;
+    assert.ok(queue.some(row => row.target === 'report' && row.id === joined.reportId));
+    assert.ok(queue.some(row => row.target === 'comment' && row.id === comment.id));
+    const reportDetailResponse = await f.call('/api/desk/review/report/' + joined.reportId);
+    assert.match(reportDetailResponse.headers.get('Cache-Control'), /no-store/);
+    assert.equal((await reportDetailResponse.json()).record.payload.freetext, 'Held original join <&> বাংলা');
+    assert.equal((await (await f.call('/api/desk/review/comment/' + comment.id)).json()).record.body, 'Held original comment <&> বাংলা');
+    const ownerCookie = f.getCookie();
+    f.setCookie('');
+    for (const path of ['/api/desk/queue', '/api/desk/review/report/' + joined.reportId, '/api/desk/review/comment/' + comment.id, '/desk/', '/desk/desk.js']) {
+      assert.equal((await f.call(path)).status, 404);
+    }
+    assert.equal((await f.call('/api/desk/review/report/' + joined.reportId, { publish: true })).status, 404);
+    let item = await (await f.call('/api/item/' + base.itemId)).json();
+    assert.equal(item.reports.length, 1); assert.equal(item.comments.length, 0);
+    f.setCookie(ownerCookie);
+    assert.equal((await f.call('/api/desk/review/report/' + joined.reportId, { publish: true })).status, 200);
+    assert.equal((await f.call('/api/desk/review/comment/' + comment.id, { publish: true })).status, 200);
+    item = await (await f.call('/api/item/' + base.itemId)).json();
+    assert.equal(item.reports.length, 2); assert.equal(item.comments.length, 1);
+    assert.equal(f.sqlite.prepare('SELECT payload FROM reports WHERE id=?').get(joined.reportId).payload, original);
+    assert.deepEqual({ ...f.sqlite.prepare('SELECT reports_count,comments_count FROM items WHERE id=?').get(base.itemId) },
+      { reports_count: 2, comments_count: 1 });
+    assert.equal((await (await f.call('/api/desk/summary')).json()).summary.holds, 0);
+  } finally { await f.close(); }
+});
+test('Keep-held closes review without publishing or deleting the saved record', async () => {
+  const f = fixture(); try {
+    await owner(f);
+    const base = await (await f.call('/api/report', bug)).json();
+    const joined = await (await f.call('/api/report', { ...bug, mode: 'join', joinItemId: base.itemId })).json();
+    holdReport(f, joined.reportId);
+    const before = f.sqlite.prepare('SELECT payload FROM reports WHERE id=?').get(joined.reportId).payload;
+    assert.equal((await f.call('/api/desk/review/report/' + joined.reportId, { publish: false })).status, 200);
+    const after = f.sqlite.prepare('SELECT payload,held,moderation_reviewed_at FROM reports WHERE id=?').get(joined.reportId);
+    assert.equal(after.payload, before); assert.equal(after.held, 1); assert.ok(after.moderation_reviewed_at);
+    const queue = (await (await f.call('/api/desk/queue')).json()).queue;
+    assert.ok(!queue.some(row => row.target === 'report' && row.id === joined.reportId));
+    assert.equal((await (await f.call('/api/item/' + base.itemId)).json()).reports.length, 1);
+    assert.equal(f.sqlite.prepare('SELECT COUNT(*) AS n FROM reports').get().n, 2);
+  } finally { await f.close(); }
+});
+test('Review respects a held parent and atomic failures; owner bans are blocked', async () => {
+  const f = fixture(); try {
+    await owner(f);
+    const base = await (await f.call('/api/report', bug)).json();
+    holdReport(f, base.reportId);
+    f.sqlite.prepare('UPDATE items SET held=1 WHERE id=?').run(base.itemId);
+    assert.equal((await f.call('/api/desk/review/report/' + base.reportId, { publish: true })).status, 409);
+    assert.equal((await f.call('/api/desk/review/item/' + base.itemId, { publish: true })).status, 200);
+    f.sqlite.exec("CREATE TRIGGER fail_review BEFORE INSERT ON owner_log BEGIN SELECT RAISE(ABORT,'isolated review failure'); END;");
+    assert.equal((await f.call('/api/desk/review/report/' + base.reportId, { publish: true })).status, 500);
+    assert.equal(f.sqlite.prepare('SELECT held FROM reports WHERE id=?').get(base.reportId).held, 1);
+    f.sqlite.exec('DROP TRIGGER fail_review');
+    assert.equal((await f.call('/api/desk/review/report/' + base.reportId, { publish: true })).status, 200);
+    const sub = f.sqlite.prepare('SELECT sub FROM users WHERE is_owner=1').get().sub;
+    assert.equal((await f.call('/api/desk/user/' + sub + '/ban', {})).status, 403);
+    assert.equal(f.sqlite.prepare('SELECT banned FROM users WHERE sub=?').get(sub).banned, 0);
+  } finally { await f.close(); }
+});
+test('Bug and idea follow-ups preserve full details and validate offered choices', async () => {
+  const f = fixture(); try {
+    await signedIn(f);
+    const base = await (await f.call('/api/report', bug)).json();
+    const offered = (await (await f.call('/api/report/' + base.reportId + '/followup-question')).json()).question;
+    assert.equal(offered.q, 'which_export');
+    assert.equal((await f.call('/api/report/' + base.reportId + '/followup', { q: offered.q, a: 'invented' }, null, 'PATCH')).status, 400);
+    const answer = { q: offered.q, a: offered.options[0].key };
+    assert.equal((await f.call('/api/report/' + base.reportId + '/followup', answer, null, 'PATCH')).status, 200);
+    assert.equal((await f.call('/api/report/' + base.reportId + '/followup', answer, null, 'PATCH')).status, 200);
+    assert.equal(f.sqlite.prepare("SELECT COUNT(*) AS n FROM care_mail_outbox WHERE kind='followup'").get().n, 1);
+    const original = JSON.parse(f.sqlite.prepare('SELECT payload FROM reports WHERE id=?').get(base.reportId).payload);
+    assert.equal(original.freetext, bug.freetext); assert.equal(original.expected, bug.expected); assert.equal(original.ctx.schema, 4);
+    const idea = await (await f.call('/api/report', { type: 'idea', area: 'exports-data', ideaKind: 'new_tool', ask: 'Export one faction', doneLooksLike: 'One readable PDF' })).json();
+    const ideaQuestion = (await (await f.call('/api/report/' + idea.reportId + '/followup-question')).json()).question;
+    assert.equal(ideaQuestion.q, 'idea_payoff');
+    const joined = await (await f.call('/api/report', { type: 'idea', area: 'exports-data', ideaKind: 'new_tool',
+      ask: 'My matching request', why: 'Less prep', doneLooksLike: 'Same full detail', mode: 'join', joinItemId: idea.itemId })).json();
+    const detail = JSON.parse(f.sqlite.prepare('SELECT payload FROM reports WHERE id=?').get(joined.reportId).payload);
+    assert.equal(detail.ask, 'My matching request'); assert.equal(detail.why, 'Less prep'); assert.equal(detail.doneLooksLike, 'Same full detail');
+  } finally { await f.close(); }
+});
+async function mailFixture() {
+  const f = fixture();
+  await signedIn(f);
+  await f.call('/api/report', bug);
+  await f.settle();
+  f.env.CARE_MAIL_ENABLED = 'true';
+  f.env.CARE_MAIL_API_KEY = 'isolated-provider-key';
+  f.env.CARE_MAIL_TO = 'owner@example.test';
+  f.env.CARE_MAIL_FROM = 'sender@example.test';
+  return f;
+}
+test('Scheduled email sends immutable complete snapshots with escaped HTML and fixed destinations', async () => {
+  const f = fixture(), originalFetch = globalThis.fetch;
+  try {
+    await signedIn(f);
+    const report = await (await f.call('/api/report', bug)).json();
+    const originalSnapshot = f.sqlite.prepare('SELECT snapshot FROM care_mail_outbox WHERE event_key=?').get('report:' + report.reportId).snapshot;
+    await f.call('/api/report/' + report.reportId + '/followup', { q: 'which_export', a: 'json' }, null, 'PATCH');
+    await f.call('/api/comment', { itemId: report.itemId, body: 'Comment <script>test</script> বাংলা' });
+    await f.settle();
+    const copies = [];
+    globalThis.fetch = async (url, opts) => {
+      assert.equal(url, 'https://api.brevo.com/v3/smtp/email');
+      copies.push(JSON.parse(opts.body));
+      return Response.json({ messageId: 'isolated-acceptance-' + copies.length });
+    };
+    f.env.CARE_MAIL_ENABLED = 'true'; f.env.CARE_MAIL_API_KEY = 'isolated-provider-key';
+    f.env.CARE_MAIL_TO = 'owner@example.test'; f.env.CARE_MAIL_FROM = 'sender@example.test';
+    await f.scheduled();
+    assert.equal(copies.length, 3);
+    for (const copy of copies) {
+      assert.equal(copy.to[0].email, 'owner@example.test');
+      assert.equal(copy.sender.email, 'sender@example.test');
+      assert.ok(copy.headers['X-Care-Event']);
+      assert.ok(!copy.htmlContent.includes('<script>'));
+      assert.ok(copy.textContent.includes('বাংলা'));
+    }
+    const reportCopy = copies.find(copy => copy.headers['X-Care-Event'] === 'report:' + report.reportId);
+    assert.ok(reportCopy.textContent.includes('Data schema: 4'));
+    assert.ok(reportCopy.textContent.includes('Original submitted details (complete)'));
+    assert.ok(reportCopy.textContent.includes('Expected α'));
+    assert.ok(reportCopy.htmlContent.includes('&lt;&amp;&gt;'));
+    const updatedCopy = copies.find(copy => copy.headers['X-Care-Event'].startsWith('followup:'));
+    assert.ok(updatedCopy.textContent.includes('Which export was it?: JSON'));
+    assert.equal(f.sqlite.prepare('SELECT snapshot FROM care_mail_outbox WHERE event_key=?').get('report:' + report.reportId).snapshot, originalSnapshot);
+    assert.equal(f.sqlite.prepare("SELECT COUNT(*) AS n FROM care_mail_outbox WHERE state='accepted' AND accepted_at IS NOT NULL").get().n, 3);
+    await f.scheduled(); assert.equal(copies.length, 3);
+  } finally { await f.close(); globalThis.fetch = originalFetch; }
+});
+test('Provider failures back off and exhausted events stay saved for owner retry', async () => {
+  const f = await mailFixture(), originalFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = async () => new Response('', { status: 503 });
+    await f.scheduled();
+    let event = f.sqlite.prepare('SELECT * FROM care_mail_outbox').get();
+    assert.equal(event.state, 'pending'); assert.equal(event.attempts, 1);
+    assert.ok(event.next_attempt_at >= now() + 100); assert.match(event.last_error, /HTTP 503/);
+    const snapshot = event.snapshot;
+    f.sqlite.exec('UPDATE care_mail_outbox SET attempts=11,next_attempt_at=0');
+    await f.scheduled();
+    event = f.sqlite.prepare('SELECT * FROM care_mail_outbox').get();
+    assert.equal(event.state, 'failed'); assert.equal(event.attempts, 12); assert.equal(event.snapshot, snapshot);
+    let calls = 0; globalThis.fetch = async () => { calls++; return Response.json({ messageId: 'isolated-retry-acceptance' }); };
+    await f.scheduled(); assert.equal(calls, 0);
+    f.sqlite.exec('UPDATE users SET is_owner=1');
+    f.env.CARE_MAIL_ENABLED = 'false';
+    assert.equal((await f.call('/api/desk/notifications', {})).status, 200);
+    f.env.CARE_MAIL_ENABLED = 'true';
+    await f.scheduled(); assert.equal(calls, 1);
+    assert.equal(f.sqlite.prepare('SELECT state FROM care_mail_outbox').get().state, 'accepted');
+  } finally { await f.close(); globalThis.fetch = originalFetch; }
+});
+test('Mail leases exclude active work, recover expired work, and protect newer ownership', async () => {
+  const f = await mailFixture(), originalFetch = globalThis.fetch;
+  try {
+    let calls = 0;
+    globalThis.fetch = async () => { calls++; return Response.json({ messageId: 'isolated-lease-acceptance' }); };
+    f.sqlite.prepare("UPDATE care_mail_outbox SET state='sending',lease_token='active',lease_until=?").run(now()+120);
+    await f.scheduled(); assert.equal(calls, 0);
+    f.sqlite.prepare('UPDATE care_mail_outbox SET lease_until=?').run(now()-1);
+    await f.scheduled(); assert.equal(calls, 1);
+    assert.equal(f.sqlite.prepare('SELECT state FROM care_mail_outbox').get().state, 'accepted');
+    f.sqlite.exec("UPDATE care_mail_outbox SET state='pending',next_attempt_at=0,accepted_at=NULL");
+    globalThis.fetch = async () => {
+      f.sqlite.prepare("UPDATE care_mail_outbox SET state='sending',lease_token='newer-owner',lease_until=?").run(now()+120);
+      return Response.json({ messageId: 'isolated-stale-acceptance' });
+    };
+    await f.scheduled();
+    const event = f.sqlite.prepare('SELECT state,lease_token FROM care_mail_outbox').get();
+    assert.equal(event.state, 'sending'); assert.equal(event.lease_token, 'newer-owner');
+  } finally { await f.close(); globalThis.fetch = originalFetch; }
+});
+test('An HTTP success without provider acceptance stays pending rather than claiming delivery', async () => {
+  const f = await mailFixture(), originalFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = async () => Response.json({});
+    await f.scheduled();
+    const event = f.sqlite.prepare('SELECT state,accepted_at,last_error FROM care_mail_outbox').get();
+    assert.equal(event.state, 'pending'); assert.equal(event.accepted_at, null);
+    assert.match(event.last_error, /not confirmed acceptance/);
+  } finally { await f.close(); globalThis.fetch = originalFetch; }
+});
