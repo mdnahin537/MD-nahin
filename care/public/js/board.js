@@ -1,4 +1,4 @@
-// The public board (design Â§6, Â§8). Renders the shipped strip and one woven
+// The public board (design §6, §8). Renders the shipped strip and one woven
 // feed with serials/tags/status chips;
 // filters, search, sort toggle, pagination; inline agree/disagree with
 // login-on-first-tap and post-login replay at the same scroll position.
@@ -15,6 +15,9 @@
   let me = { loggedIn: false };
   let state = { area: '', type: '', status: '', q: '', sort: 'woven', page: 0 };
   let taxonomy = null;
+  let feedGeneration = 0;
+  let loadingPage = false;
+  let voteRevision = 0;
   let loadedItems = []; // accumulated across pages
 
   // ---- URL <-> state ---------------------------------------------------
@@ -65,11 +68,11 @@
     const mine = item._myVote || 0;
     return (
       '<div class="vote" data-item="' + item.id + '">' +
-      '<button class="vote__btn vote__up' + (mine === 1 ? ' is-on' : '') + '" data-val="1" aria-pressed="' + (mine === 1) + '" title="Agree â€” I want this too">' +
-      '<span aria-hidden="true">â–²</span></button>' +
+      '<button class="vote__btn vote__up' + (mine === 1 ? ' is-on' : '') + '" data-val="1" aria-pressed="' + (mine === 1) + '" title="Agree — I want this too">' +
+      '<span aria-hidden="true">▲</span></button>' +
       '<span class="vote__net mono" aria-label="' + item.net + ' net agreement">' + item.net + '</span>' +
       '<button class="vote__btn vote__down' + (mine === -1 ? ' is-on' : '') + '" data-val="-1" aria-pressed="' + (mine === -1) + '" title="Disagree">' +
-      '<span aria-hidden="true">â–¼</span></button>' +
+      '<span aria-hidden="true">▼</span></button>' +
       '</div>'
     );
   }
@@ -94,9 +97,9 @@
       '<span class="row__meta">' +
       tagStamp(item.tag) + statusChip(item.status) +
       '<span class="row__area">' + C.esc(areaLabel(item.area)) + '</span>' +
-      '<span class="row__dot">Â·</span>' +
+      '<span class="row__dot">·</span>' +
       '<span class="row__reports">' + gms + '</span>' +
-      (item.commentsCount ? '<span class="row__dot">Â·</span><span class="row__comments">' + item.commentsCount + ' comment' + (item.commentsCount === 1 ? '' : 's') + '</span>' : '') +
+      (item.commentsCount ? '<span class="row__dot">·</span><span class="row__comments">' + item.commentsCount + ' comment' + (item.commentsCount === 1 ? '' : 's') + '</span>' : '') +
       '</span>' +
       (item.ownerNote ? '<span class="row__ownernote">' + C.esc(item.ownerNote) + '</span>' : '') +
       '</span>' +
@@ -127,31 +130,47 @@
 
   // ---- data ------------------------------------------------------------
   async function loadFeed(reset) {
+    if (!reset && loadingPage) return;
+    const generation = reset ? ++feedGeneration : feedGeneration;
+    const page = reset ? 0 : state.page + 1;
+    loadingPage = true;
     if (reset) {
       state.page = 0;
       loadedItems = [];
       feedList.innerHTML = '';
       feedEmpty.hidden = true;
+      shippedSection.hidden = true;
     }
     feedLoading.hidden = false;
     loadMoreBtn.hidden = true;
 
     let data;
     try {
-      const res = await fetch(feedUrl(state.page), { headers: { Accept: 'application/json' } });
+      const res = await fetch(feedUrl(page), { headers: { Accept: 'application/json' } });
+      if (!res.ok) throw new Error('Board unavailable');
       data = await res.json();
+      if (!Array.isArray(data.items)) throw new Error('Board unavailable');
     } catch {
+      if (generation !== feedGeneration) return;
+      loadingPage = false;
       feedLoading.hidden = true;
       feedEmpty.hidden = false;
-      feedEmpty.innerHTML = '<h2>The board is catching its breath</h2><p>Live data will be back shortly.</p>';
+      feedEmpty.innerHTML = '<h2>Could not load the board</h2><p>Your filters are still selected.</p><button class="btn" id="retry-feed">Try again</button>';
+      document.getElementById('retry-feed').addEventListener('click', () => loadFeed(reset));
       return;
     }
+    if (generation !== feedGeneration) return;
+    loadingPage = false;
+    state.page = page;
     feedLoading.hidden = true;
+    feedEmpty.hidden = true;
 
-    // /api/feed never carries per-user data (it's the shared edge cache) â€”
+    // /api/feed never carries per-user data (it's the shared edge cache) —
     // the viewer's own vote is reflected afterwards by syncMyVotes() below.
     if (state.page === 0) renderShipped(data);
 
+    const seen = new Set(loadedItems.map(item => item.id));
+    data.items = data.items.filter(item => !seen.has(item.id));
     for (const it of data.items) loadedItems.push(it);
     if (state.page === 0 && data.items.length === 0) {
       feedEmpty.hidden = false;
@@ -161,13 +180,13 @@
     }
     loadMoreBtn.hidden = !data.hasMore;
 
-    // Reflect the viewer's own vote (button highlighted, no arithmetic â€”
+    // Reflect the viewer's own vote (button highlighted, no arithmetic —
     // the net shown already includes it) on exactly the rows THIS call
-    // just rendered â€” never the whole accumulated `loadedItems` list, so
+    // just rendered — never the whole accumulated `loadedItems` list, so
     // the id list stays small regardless of how many pages are loaded.
     // Shipped cards carry no vote UI.
     const newIds = data.items.map((it) => it.id);
-    await syncMyVotes(newIds, data.generatedAt);
+    await syncMyVotes(newIds, data.generatedAt, generation);
   }
   function renderShipped(data) {
     if (!data.shipped || !data.shipped.length) {
@@ -195,18 +214,20 @@
     }
 
     // Determine the toggle: pressing the on-button again clears the vote.
+    if (wrap.dataset.saving==='1') return;
+    wrap.dataset.saving='1';
+    voteRevision += 1;
+    const previous=wrap.querySelector('[data-val="1"]').classList.contains('is-on')?1:wrap.querySelector('[data-val="-1"]').classList.contains('is-on')?-1:0;
     const currentlyOn = btn.classList.contains('is-on');
     const newValue = currentlyOn ? 0 : val;
     applyVoteToDom(wrap, newValue);
 
-    const result = await C.vote(itemId, newValue);
+    let result; try {result=await C.vote(itemId,newValue);} catch {result={ok:false,status:0,body:{}};} finally {delete wrap.dataset.saving;}
     if (!result.ok) {
       // revert on failure
-      applyVoteToDom(wrap, currentlyOn ? val : (val === 1 ? 0 : 0));
-      if (result.status === 429) alert(result.body.error || 'You have hit todayâ€™s limit.');
-    } else if (typeof result.body.agreeDelta === 'number') {
-      // trust the server-confirmed net if we can recompute; otherwise leave optimistic value
-    }
+      applyVoteToDom(wrap, previous);
+      alert(result.body.error || 'Could not save your vote. Please try again.');
+    } else if (typeof result.body.net==='number') {wrap.querySelector('.vote__net').textContent=result.body.net;}
   }
 
   function applyVoteToDom(wrap, newValue) {
@@ -229,9 +250,9 @@
     down.setAttribute('aria-pressed', String(newValue === -1));
   }
 
-  // Toggle button state only â€” no net arithmetic. Used to reflect a vote
+  // Toggle button state only — no net arithmetic. Used to reflect a vote
   // that the server already counted (the row's net, freshly rendered from
-  // /api/feed, already includes it) â€” unlike applyVoteToDom, which is for
+  // /api/feed, already includes it) — unlike applyVoteToDom, which is for
   // a change that hasn't been counted yet.
   function markVoteState(wrap, value) {
     const up = wrap.querySelector('.vote__up');
@@ -243,37 +264,42 @@
   }
 
   // Fetch the signed-in viewer's own votes for `ids` via a separate
-  // authenticated call (âš  never fold this into /api/feed â€” that response is
+  // authenticated call (⚠ never fold this into /api/feed — that response is
   // shared-cached across every anonymous reader; see src/routes/me.js) and
   // paint them onto the DOM. Failure just leaves the board at its correct
-  // (unhighlighted) public state â€” never blocks or breaks rendering.
+  // (unhighlighted) public state — never blocks or breaks rendering.
   //
   // `feedGeneratedAt` is the cached feed snapshot's own timestamp. The feed
-  // is edge-cached up to 60s (design Â§6.3/Â§6.4 â€” deliberate, for stability
+  // is edge-cached up to 60s (design §6.3/§6.4 — deliberate, for stability
   // and cost), so a vote cast inside that window can be NEWER than the net
   // currently on screen. If so its contribution isn't counted yet and must
   // be added (applyVoteToDom's delta math); if the vote predates the
   // snapshot, the net already includes it and only the button should change
-  // (markVoteState) â€” adding the delta again would double-count.
-  async function syncMyVotes(ids, feedGeneratedAt) {
+  // (markVoteState) — adding the delta again would double-count.
+  async function syncMyVotes(ids, feedGeneratedAt, generation = feedGeneration) {
+    const revision = voteRevision;
     if (!me.loggedIn || !ids.length) return;
     try {
       const res = await fetch('/api/me/votes?ids=' + ids.join(','), { headers: { Accept: 'application/json' } });
       if (!res.ok) return;
       const data = await res.json();
+      if (generation !== feedGeneration || revision !== voteRevision) return;
       const votes = data.votes || {};
       document.querySelectorAll('.vote[data-item]').forEach((wrap) => {
         const id = wrap.dataset.item;
         const v = votes[id];
-        if (!v) return;
-        if (typeof feedGeneratedAt === 'number' && v.createdAt > feedGeneratedAt) {
+        if (!v || wrap.dataset.saving === '1') return;
+        if (typeof v.net === 'number') {
+          markVoteState(wrap, v.value);
+          wrap.querySelector('.vote__net').textContent = v.net;
+        } else if (typeof feedGeneratedAt === 'number' && v.createdAt > feedGeneratedAt) {
           applyVoteToDom(wrap, v.value);
         } else {
           markVoteState(wrap, v.value);
         }
       });
     } catch {
-      // network hiccup â€” board stays fully usable, just unhighlighted
+      // network hiccup — board stays fully usable, just unhighlighted
     }
   }
 
@@ -283,14 +309,19 @@
     if (me.loggedIn) {
       // loadFeed(true) already awaited syncMyVotes, so the DOM's current
       // button state is the viewer's PRE-replay vote (whatever it was
-      // before this pending tap) â€” applyVoteToDom's delta math is only
+      // before this pending tap) — applyVoteToDom's delta math is only
       // correct if it reads that as "prev". Casting first, then applying,
       // keeps that ordering intact.
-      const result = await C.vote(pending.itemId, pending.value);
+      let result;
+      try { result = await C.vote(pending.itemId, pending.value); }
+      catch { result = { ok: false, body: {} }; }
       if (result.ok) {
         const wrap = document.querySelector('.vote[data-item="' + pending.itemId + '"]');
-        if (wrap) applyVoteToDom(wrap, pending.value);
-      }
+        if (wrap) {
+          applyVoteToDom(wrap, pending.value);
+          if (typeof result.body.net === 'number') wrap.querySelector('.vote__net').textContent = result.body.net;
+        }
+      } else alert(result.body.error || 'Could not save your vote. Please try again.');
     }
     if (pending.scrollTo) {
       const el = document.getElementById(pending.scrollTo);
@@ -309,7 +340,9 @@
     // Status
     const statusChips = document.getElementById('status-chips');
     statusChips.innerHTML =
-      chipBtn('Any status', state.status === '', 'status', '') +
+      chipBtn('Active and shipped', state.status === '', 'status', '') +
+      chipBtn('Open', state.status === 'open', 'status', 'open') +
+      chipBtn('In progress', state.status === 'in_progress', 'status', 'in_progress') +
       chipBtn('Planned', state.status === 'planned', 'status', 'planned') +
       chipBtn('Shipped', state.status === 'shipped', 'status', 'shipped') +
       chipBtn('Declined', state.status === 'declined', 'status', 'declined');
@@ -319,14 +352,14 @@
     let html = chipBtn('All areas', state.area === '', 'area', '');
     if (taxonomy) {
       for (const a of taxonomy.areas) {
-        if (a.key === 'other') continue;
         html += chipBtn(a.label, state.area === a.key, 'area', a.key);
       }
     }
+    if (taxonomy?.ideaExtraTile) html += chipBtn(taxonomy.ideaExtraTile.label, state.area === taxonomy.ideaExtraTile.key, 'area', taxonomy.ideaExtraTile.key);
     areaChips.innerHTML = html;
   }
   function chipBtn(label, active, dim, val) {
-    return '<button class="filter-chip' + (active ? ' is-active' : '') + '" data-dim="' + dim + '" data-val="' + C.esc(val) + '">' + C.esc(label) + '</button>';
+    return '<button class="filter-chip' + (active ? ' is-active' : '') + '" aria-pressed="' + active + '" data-dim="' + dim + '" data-val="' + C.esc(val) + '">' + C.esc(label) + '</button>';
   }
 
   function onChipClick(e) {
@@ -380,8 +413,7 @@
       }, 250);
     });
     loadMoreBtn.addEventListener('click', () => {
-      state.page += 1;
-      loadFeed(false);
+      return loadFeed(false);
     });
     // event delegation for votes in the woven feed
     document.querySelector('main').addEventListener('click', handleVoteClick);
@@ -389,4 +421,3 @@
 
   init();
 })();
-

@@ -27,10 +27,92 @@
     ctx: {}, clientCtx: {},
     joinItemId: null,
     // for the confirmation screen
-    resultItemId: null, resultReportId: null,
+    resultItemId: null, resultReportId: null, resultHeld: false, submissionKey: null,
   };
 
+  const INITIAL_STATE = JSON.parse(JSON.stringify(state));
+  const DRAFT_KEY = 'rw_care_report_draft_v1';
+  const RECEIPT_KEY = 'rw_care_report_receipt_v1';
+  const DRAFT_FIELDS = Object.keys(INITIAL_STATE).filter(key => !key.startsWith('result'));
+  let navigationVersion = 0;
+  let submitting = false;
   const history = []; // screen-name stack for Back
+
+
+  function readSaved(key) {
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(key));
+      if (!saved || saved.version !== 1 || !Number.isFinite(saved.at) ||
+          Date.now() - saved.at > 86400000 || saved.at > Date.now() + 60000) return null;
+      return saved;
+    } catch { return null; }
+  }
+  function productContext(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+    const context = {};
+    for (const key of ['v', 'schema', 'build', 'mode', 'theme', 'ai']) {
+      const item = value[key];
+      if (typeof item === 'string') context[key] = item.slice(0, 120);
+      else if (typeof item === 'number' && Number.isFinite(item)) context[key] = item;
+    }
+    return context;
+  }
+  function saveDraft() {
+    if (!state.flow || history[history.length - 1] === 'confirm') return;
+    const savedState = {};
+    for (const key of DRAFT_FIELDS) savedState[key] = state[key];
+    try {
+      sessionStorage.setItem(DRAFT_KEY, JSON.stringify({
+        version: 1, at: Date.now(), state: savedState,
+        history: history.filter(name => name !== 'signin'),
+        removed: [...removedCtx],
+      }));
+    } catch {}
+  }
+  function changedDraft() {
+    state.submissionKey = null;
+    saveDraft();
+  }
+  function clearDraft() {
+    try { sessionStorage.removeItem(DRAFT_KEY); } catch {}
+  }
+  function startAgain() {
+    if (submitting) return;
+    clearDraft();
+    try { sessionStorage.removeItem(RECEIPT_KEY); } catch {}
+    Object.assign(state, INITIAL_STATE, {
+      ctx: productContext(parseCtxFragment()), clientCtx: collectClientCtx(),
+    });
+    removedCtx.clear();
+    history.length = 0;
+    goTo('branch');
+  }
+  function restoreDraft() {
+    const saved = readSaved(DRAFT_KEY);
+    if (!saved?.state || !['bug', 'idea'].includes(saved.state.flow)) return false;
+    const validArea = !saved.state.area ||
+      taxonomy.areas.some(area => area.key === saved.state.area) ||
+      (saved.state.flow === 'idea' && taxonomy.ideaExtraTile.key === saved.state.area);
+    if (!validArea) return false;
+    for (const key of DRAFT_FIELDS) {
+      if (!Object.prototype.hasOwnProperty.call(saved.state, key)) continue;
+      const value = saved.state[key];
+      if (key === 'ctx') state[key] = productContext(value);
+      else if (key === 'clientCtx') state[key] = collectClientCtx();
+      else if (key === 'joinItemId') state[key] = Number.isInteger(value) && value > 0 ? value : null;
+      else if (key === 'titleEdited') state[key] = value === true;
+      else if (typeof INITIAL_STATE[key] === 'string') state[key] = typeof value === 'string' ? value : INITIAL_STATE[key];
+      else if (typeof value === 'string' || value === null) state[key] = value;
+    }
+    state.ctx = productContext(state.ctx);
+    for (const key of (Array.isArray(saved.removed) ? saved.removed : [])) if (typeof key === 'string') removedCtx.add(key);
+    const steps = (Array.isArray(saved.history) ? saved.history : []).filter(name => typeof RENDER[name] === 'function' && name !== 'confirm' && name !== 'signin');
+    history.push(...steps);
+    const last = steps[steps.length - 1] || 'area';
+    goTo(last === 'priorart' ? state.flow === 'bug' ? 'frequency' : 'kind' : last, { push: false });
+    if (last === 'priorart') goToPriorArt();
+    return true;
+  }
 
   // ---- phase mapping for the 4-dot progress strip ----------------------
   const PHASE = {
@@ -67,15 +149,15 @@
   function collectClientCtx() {
     const ua = navigator.userAgent || '';
     let os = 'other';
-    if (/Windows/i.test(ua)) os = 'windows';
-    else if (/Mac OS X|Macintosh/i.test(ua)) os = 'mac';
+    if (/iPhone|iPad|iPod/i.test(ua) || (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1)) os = 'ios';
+    else if (/Windows/i.test(ua)) os = 'windows';
     else if (/Android/i.test(ua)) os = 'android';
-    else if (/iPhone|iPad|iPod/i.test(ua)) os = 'ios';
+    else if (/Mac OS X|Macintosh/i.test(ua)) os = 'mac';
     else if (/Linux/i.test(ua)) os = 'linux';
     let browser = 'other';
-    if (/Edg\//i.test(ua)) browser = 'edge';
-    else if (/Chrome\//i.test(ua)) browser = 'chrome';
-    else if (/Firefox\//i.test(ua)) browser = 'firefox';
+    if (/Edg\/|EdgiOS\//i.test(ua)) browser = 'edge';
+    else if (/Chrome\/|CriOS\//i.test(ua)) browser = 'chrome';
+    else if (/Firefox\/|FxiOS\//i.test(ua)) browser = 'firefox';
     else if (/Safari\//i.test(ua) && !/Chrome/i.test(ua)) browser = 'safari';
     const w = window.innerWidth;
     const screen = w < 600 ? 'phone' : w < 1024 ? 'tablet' : 'desktop';
@@ -104,14 +186,18 @@
 
   // ---- navigation ------------------------------------------------------
   function goTo(screen, { push = true } = {}) {
+    navigationVersion += 1;
+    stage.removeAttribute('aria-busy');
     if (push && history[history.length - 1] !== screen) history.push(screen);
     backBtn.hidden = history.length <= 1 || screen === 'confirm';
     renderProgress(screen);
     RENDER[screen]();
     stage.scrollTop = 0;
+    stage.querySelector('h1')?.focus({ preventScroll: true });
+    saveDraft();
   }
   function back() {
-    if (history.length <= 1) return;
+    if (submitting || history.length <= 1) return;
     history.pop();
     const prev = history[history.length - 1];
     goTo(prev, { push: false });
@@ -119,7 +205,16 @@
   backBtn.addEventListener('click', back);
 
   // ---- screen builders (return DOM string; wire after inject) ----------
-  function screen(html) { stage.innerHTML = html; }
+  function screen(html) {
+    stage.innerHTML = html;
+    if (state.flow && !['signin', 'branch', 'confirm'].includes(history[history.length - 1])) {
+      const reset = document.createElement('button');
+      reset.className = 'linkbtn wiz__skip';
+      reset.textContent = 'Discard draft and start again';
+      reset.addEventListener('click', startAgain);
+      stage.querySelector('.wiz__screen')?.appendChild(reset);
+    }
+  }
 
   function tileGrid(items, onPick, { extraFirst } = {}) {
     const all = extraFirst ? [extraFirst, ...items] : items;
@@ -153,7 +248,7 @@
   }
 
   function heading(text, sub) {
-    return `<h1 class="wiz__h">${C.esc(text)}</h1>` + (sub ? `<p class="wiz__sub">${C.esc(sub)}</p>` : '');
+    return `<h1 class="wiz__h" tabindex="-1">${C.esc(text)}</h1>` + (sub ? `<p class="wiz__sub">${C.esc(sub)}</p>` : '');
   }
   function skipRow(label, onSkip) {
     const div = document.createElement('div');
@@ -173,9 +268,9 @@
     screen(
       '<div class="wiz__screen wiz__center">' +
       '<div class="wiz__mark mono">RW</div>' +
-      heading('Tell Hunter what you found', 'Sign in so your report has a name we can follow up with. Reports are public; your email never is.') +
+      heading('Tell Hunter what you found', 'Your Care identity stays in this browser. Reports appear publicly unless held for review. No email address is required.') +
       '<button class="btn btn-primary btn--big" id="wiz-continue">Continue to Care</button>' +
-      '<p class="wiz__fine">One quick step, then it’s all taps.</p>' +
+      '<p class="wiz__fine">Bug details are optional. Ideas need one short description.</p>' +
       '</div>'
     );
     document.getElementById('wiz-continue').addEventListener('click', () => {
@@ -192,7 +287,8 @@
         { key: 'idea', label: 'I have an idea', icon: 'idea' },
       ],
       (it) => {
-        state.flow = it.key;
+        if (state.flow !== it.key) Object.assign(state, INITIAL_STATE, { ctx: state.ctx, clientCtx: state.clientCtx });
+        state.flow = it.key; state.joinItemId=null; state.titleEdited=false; state.title=null; state.submissionKey=null;
         goTo('area');
       }
     );
@@ -207,7 +303,8 @@
     screen('<div class="wiz__screen">' + heading(title, sub) + '<div id="area-slot"></div></div>');
     const extraFirst = isIdea ? { key: taxonomy.ideaExtraTile.key, label: taxonomy.ideaExtraTile.label, icon: taxonomy.ideaExtraTile.icon } : null;
     const grid = tileGrid(taxonomy.areas, (it) => {
-      state.area = it.key; state.areaLabel = it.label;
+      state.area = it.key; state.areaLabel = it.label; state.joinItemId=null; state.titleEdited=false; state.title=null; state.submissionKey=null;
+      state.symptom=null; state.symptomDetail=null; state.frequency=null;
       state.part = null; state.partLabel = null;
       if (isIdea) {
         goTo('kind');
@@ -217,13 +314,6 @@
         goTo('part');
       }
     }, { extraFirst });
-    // handle the idea "new" tile specially
-    if (extraFirst) {
-      grid.firstChild.addEventListener('click', () => {
-        state.area = extraFirst.key; state.areaLabel = extraFirst.label; state.part = null;
-        goTo('kind');
-      }, true);
-    }
     document.getElementById('area-slot').appendChild(grid);
   };
 
@@ -309,21 +399,24 @@
 
   // ---- prior art (B5 / I3): fetch matches, offer join ------------------
   async function goToPriorArt() {
-    // fetch in the background; if none, skip silently to the write/ask screen
+    const requestVersion = ++navigationVersion;
+    stage.setAttribute('aria-busy', 'true');
+    stage.querySelectorAll('button').forEach(button => { button.disabled = true; });
     let matches = [];
+    let unavailable = false;
     try {
-      const p = new URLSearchParams({ type: state.flow, area: state.area });
-      if (state.part) p.set('part', state.part);
-      const res = await fetch('/api/related?' + p.toString());
-      const data = await res.json();
-      matches = data.items || [];
-    } catch { matches = []; }
-    if (matches.length === 0) {
-      goTo(state.flow === 'bug' ? 'write' : 'ask');
-      return;
-    }
+      const parameters = new URLSearchParams({ type: state.flow, area: state.area });
+      if (state.part) parameters.set('part', state.part);
+      const response = await fetch('/api/related?' + parameters.toString(), { signal: AbortSignal.timeout(10000) });
+      if (!response.ok) throw new Error('Matching reports unavailable');
+      const data = await response.json();
+      if (!Array.isArray(data.items)) throw new Error('Matching reports unavailable');
+      matches = data.items;
+    } catch { unavailable = true; }
+    if (requestVersion !== navigationVersion) return;
     state._matches = matches;
-    goTo('priorart');
+    goTo(matches.length ? 'priorart' : state.flow === 'bug' ? 'write' : 'ask');
+    if (unavailable) showError('Could not check matching reports. You can still send your details.');
   }
 
   RENDER.priorart = function () {
@@ -332,13 +425,13 @@
       '<button class="priorart__row" data-id="' + m.id + '">' +
       '<span class="priorart__serial mono">#' + m.id + '</span>' +
       '<span class="priorart__body"><span class="priorart__title">' + C.esc(m.title) + '</span>' +
-      '<span class="priorart__meta">' + (m.reportsCount === 1 ? '1 GM' : m.reportsCount + ' GMs') + ' · ' + statusLabel(m.status) + '</span></span>' +
+      '<span class="priorart__meta">' + (m.reportsCount === 1 ? '1 submission' : m.reportsCount + ' submissions') + ' · ' + statusLabel(m.status) + '</span></span>' +
       '<span class="priorart__join">This is mine →</span>' +
       '</button>'
     ).join('');
     screen(
       '<div class="wiz__screen">' +
-      heading('GMs already reported these', 'Tap one if it’s the same — your voice adds to it.') +
+      heading('These submissions may match', 'Tap one if it’s the same — your voice adds to it.') +
       '<div class="priorart">' + rows + '</div>' +
       '<div class="wiz__actions"><button class="btn" id="mine-different">Mine is different</button></div>' +
       '</div>'
@@ -347,15 +440,14 @@
       row.addEventListener('click', () => joinItem(Number(row.dataset.id)));
     });
     document.getElementById('mine-different').addEventListener('click', () => {
+      state.joinItemId = null; state.submissionKey = null;
       goTo(state.flow === 'bug' ? 'write' : 'ask');
     });
   };
 
   async function joinItem(itemId) {
-    state.joinItemId = itemId;
-    // slim path: submit the join immediately (their taps already carry the data),
-    // optional details can still be added on the confirm screen later.
-    await submitReport(true);
+    state.joinItemId = itemId; state.submissionKey = null;
+    goTo(state.flow === 'bug' ? 'write' : 'ask');
   }
 
   // ---- write (B6, bug) -------------------------------------------------
@@ -363,15 +455,15 @@
     state.title = state.titleEdited ? state.title : composeTitle();
     screen(
       '<div class="wiz__screen">' +
-      heading('Anything to add?', 'All optional — your taps already told the story.') +
+      heading(state.joinItemId ? 'Add details to #' + state.joinItemId : 'Anything to add?', 'All optional. Your draft stays in this tab until you send or discard it.') +
       '<div class="writefields">' +
       field('expected', 'What did you expect?', state.expected) +
       field('actual', 'What actually happened?', state.actual) +
       textarea('freetext', 'Anything else, in your own words', state.freetext) +
       '</div>' +
       contextCard() +
-      titlePreview() +
-      '<div class="wiz__actions"><button class="btn btn-primary btn--big" id="send">Send report</button></div>' +
+      (state.joinItemId ? '<p>These details will join submission #' + state.joinItemId + '.</p>' : titlePreview()) +
+      '<div class="wiz__actions"><button class="btn btn-primary btn--big" id="send">' + (state.joinItemId ? 'Add details' : 'Send report') + '</button></div>' +
       '</div>'
     );
     wireWriteScreen();
@@ -382,7 +474,7 @@
     state.title = state.titleEdited ? state.title : composeTitle();
     screen(
       '<div class="wiz__screen">' +
-      heading('What’s the idea?', 'One line is plenty. The rest is optional.') +
+      heading(state.joinItemId ? 'Add details to #' + state.joinItemId : 'What’s the idea?', state.joinItemId ? 'Extra details are optional. Your draft stays in this tab.' : 'Describe what it should do. Everything else is optional. Your draft stays in this tab.') +
       '<div class="writefields">' +
       field('ask', 'What should it do?', state.ask, 'Let me export just one faction as its own PDF') +
       field('why', 'What would it let you do at your table? (optional)', state.why) +
@@ -391,11 +483,12 @@
       '<div class="importance"><p class="wiz__inline-q">How much would you use it?</p><div id="imp-slot"></div></div>' +
       contextCard() +
       titlePreview() +
-      '<div class="wiz__actions"><button class="btn btn-primary btn--big" id="send">Send idea</button></div>' +
+      '<div class="wiz__actions"><button class="btn btn-primary btn--big" id="send">' + (state.joinItemId ? 'Add details' : 'Send idea') + '</button></div>' +
       '</div>'
     );
     const impList = chipList(taxonomy.importance, (it, btn) => {
       state.importance = it.key;
+      changedDraft();
       impList.querySelectorAll('.choicechip').forEach((c) => c.classList.remove('is-active'));
       btn.classList.add('is-active');
     });
@@ -438,7 +531,9 @@
   function ctxRows() {
     const rows = [];
     const push = (key, label) => { if (label) rows.push({ key, label }); };
-    push('v', state.ctx.v && ('v' + state.ctx.v));
+    push('v', state.ctx.v != null && ('App version: ' + state.ctx.v));
+    push('schema', state.ctx.schema != null && ('Data schema: ' + state.ctx.schema));
+    push('lang', state.clientCtx.lang && ('Language: ' + state.clientCtx.lang));
     push('build', state.ctx.build && (state.ctx.build === 'demo' ? 'Demo build' : 'Full build'));
     push('mode', state.ctx.mode && (cap(state.ctx.mode) + ' mode'));
     push('theme', state.ctx.theme && cap(state.ctx.theme));
@@ -455,8 +550,8 @@
   function titlePreview() {
     const t = state.title || composeTitle();
     return (
-      '<div class="titleprev"><span class="titleprev__label">Title (tap to edit)</span>' +
-      '<input class="titleprev__input" id="title-input" value="' + C.esc(t) + '" maxlength="300"></div>'
+      '<label class="titleprev"><span class="titleprev__label">Title (tap to edit)</span>' +
+      '<input class="titleprev__input" id="title-input" value="' + C.esc(t) + '" maxlength="300"></label>'
     );
   }
 
@@ -464,6 +559,7 @@
     stage.querySelectorAll('[data-field]').forEach((el) => {
       el.addEventListener('input', () => {
         state[el.dataset.field] = el.value;
+        changedDraft();
         if (!state.titleEdited) {
           const ti = document.getElementById('title-input');
           if (ti) ti.value = composeTitle();
@@ -471,12 +567,13 @@
       });
     });
     const ti = document.getElementById('title-input');
-    if (ti) ti.addEventListener('input', () => { state.titleEdited = true; state.title = ti.value; });
+    if (ti) ti.addEventListener('input', () => { state.titleEdited = true; state.title = ti.value; changedDraft(); });
     stage.querySelectorAll('.ctxpill__x').forEach((x) => {
       x.addEventListener('click', (e) => {
         e.preventDefault();
         const key = x.closest('.ctxpill').dataset.key;
         removedCtx.add(key);
+        changedDraft();
         const card = document.getElementById('ctxcard');
         const fresh = document.createElement('div');
         fresh.innerHTML = contextCard();
@@ -487,6 +584,7 @@
             nx.addEventListener('click', (ev) => {
               ev.preventDefault();
               removedCtx.add(nx.closest('.ctxpill').dataset.key);
+              changedDraft();
               RENDER[state.flow === 'bug' ? 'write' : 'ask']();
             });
           });
@@ -494,11 +592,19 @@
       });
     });
     const send = document.getElementById('send');
-    if (send) send.addEventListener('click', () => submitReport(false));
+    if (send) send.addEventListener('click', () => submitReport(!!state.joinItemId));
   }
 
   // ---- submit ----------------------------------------------------------
   async function submitReport(isJoin) {
+    if (submitting) return;
+    if (state.flow==='idea' && !isJoin && !state.ask.trim()) {showError('Tell Hunter what the idea should do.');return;}
+    state.submissionKey ||= crypto.randomUUID();
+    saveDraft();
+    submitting=true;
+    backBtn.disabled = true;
+    stage.setAttribute('aria-busy', 'true');
+    stage.querySelectorAll('input, textarea, button').forEach(control => { control.disabled = true; });
     const btn = document.getElementById('send');
     if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
 
@@ -507,39 +613,54 @@
     const filteredClientCtx = {};
     for (const [k, v] of Object.entries(state.clientCtx)) if (!removedCtx.has(k)) filteredClientCtx[k] = v;
 
-    const payload = isJoin
-      ? { mode: 'join', joinItemId: state.joinItemId, type: state.flow, area: state.area, part: state.part }
-      : {
-          mode: 'create', type: state.flow, area: state.area, part: state.part,
-          symptom: state.symptom, symptomDetail: state.symptomDetail, frequency: state.frequency,
-          expected: state.expected, actual: state.actual, freetext: state.freetext,
-          ideaKind: state.kind, ask: state.ask, why: state.why, doneLooksLike: state.doneLooksLike,
-          importance: state.importance,
-          title: state.titleEdited ? state.title : undefined,
-          ctx: filteredCtx, clientCtx: filteredClientCtx,
-        };
+    const payload = {
+      submissionKey: state.submissionKey,
+      mode: isJoin ? 'join' : 'create', joinItemId: isJoin ? state.joinItemId : undefined,
+      type: state.flow, area: state.area, part: state.part,
+      symptom: state.symptom, symptomDetail: state.symptomDetail, frequency: state.frequency,
+      expected: state.expected, actual: state.actual, freetext: state.freetext,
+      ideaKind: state.kind, ask: state.ask, why: state.why, doneLooksLike: state.doneLooksLike,
+      importance: state.importance, title: state.titleEdited ? state.title : undefined,
+      ctx: filteredCtx, clientCtx: filteredClientCtx,
+    };
 
     let data;
     try {
       const res = await fetch('/api/report', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(payload), signal: AbortSignal.timeout(20000),
       });
       data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Send failed');
+      if (!Number.isInteger(data.itemId) || !Number.isInteger(data.reportId)) throw new Error('The save was not confirmed. Retry this draft.');
     } catch (err) {
-      if (btn) { btn.disabled = false; btn.textContent = state.flow === 'bug' ? 'Send report' : 'Send idea'; }
-      showError(err.message);
+      submitting=false;
+      backBtn.disabled = false;
+      stage.removeAttribute('aria-busy');
+      stage.querySelectorAll('input, textarea, button').forEach(control => { control.disabled = false; });
+      if (btn) { btn.disabled = false; btn.textContent = state.joinItemId ? 'Add details' : state.flow === 'bug' ? 'Send report' : 'Send idea'; }
+      showError(err.name === 'TimeoutError' ? 'The save was not confirmed. Your draft is here; try sending it again.' : err.message);
       return;
     }
+    submitting=false;
+    state.resultHeld=!!data.held;
     state.resultItemId = data.itemId;
     state.resultReportId = data.reportId || null;
+    clearDraft();
+    try {
+      sessionStorage.setItem(RECEIPT_KEY, JSON.stringify({
+        version: 1, at: Date.now(), itemId: data.itemId, reportId: data.reportId, held: !!data.held,
+      }));
+    } catch {}
+    backBtn.disabled = false;
     goTo('confirm');
   }
 
   function showError(msg) {
+    stage.querySelector('.wiz__error')?.remove();
     const el = document.createElement('div');
     el.className = 'wiz__error';
+    el.setAttribute('role', 'alert');
     el.textContent = msg || 'Something went wrong — please try again.';
     stage.querySelector('.wiz__screen')?.prepend(el);
   }
@@ -550,16 +671,18 @@
     screen(
       '<div class="wiz__screen wiz__center">' +
       '<div class="confirm__check" aria-hidden="true">✓</div>' +
-      '<h1 class="wiz__h">Filed as <span class="mono">#' + id + '</span></h1>' +
-      '<p class="wiz__sub">GMs who agree will push it up Hunter’s list.</p>' +
+      '<h1 class="wiz__h">Saved as <span class="mono">#' + id + '</span></h1>' +
+      '<p class="wiz__sub">' + (state.resultHeld ? 'Saved for Hunter to review before it appears on the board.' : 'Saved to Customer Care. GMs can find it, discuss it and vote.') + '</p>' +
       '<div id="micro-slot"></div>' +
       '<div class="confirm__actions">' +
-      '<a class="btn btn-primary" href="/item/?id=' + id + '">Watch #' + id + '</a>' +
+      (state.resultHeld ? '' : '<a class="btn btn-primary" href="/item/?id=' + id + '">View #' + id + '</a>') +
       '<a class="btn" href="/">Back to the board</a>' +
+      '<button class="linkbtn" id="another-report">Send another report or idea</button>' +
       '</div>' +
       '</div>'
     );
     backBtn.hidden = true;
+    document.getElementById('another-report').addEventListener('click', startAgain);
     maybeAskMicroInterview();
   };
 
@@ -604,11 +727,17 @@
           opts.querySelectorAll('button').forEach((x) => (x.disabled = true));
           b.classList.add('is-active');
           try {
-            await fetch('/api/report/' + reportId + '/followup', {
+            const saved=await fetch('/api/report/' + reportId + '/followup', {
               method: 'PATCH', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ q: q.q, a: o.key }),
             });
-          } catch {}
+            if (!saved.ok) throw new Error('Answer was not saved.');
+          } catch {
+            asked-=1; opts.querySelectorAll('button').forEach(x=>x.disabled=false);
+            b.classList.remove('is-active');
+            if (!box.querySelector('[role="alert"]')) {const error=document.createElement('p');error.setAttribute('role','alert');error.textContent='Could not save that answer. Please try again.';box.appendChild(error);}
+            return;
+          }
           box.remove();
           await askOne(reportId); // maybe one more (max 2)
         });
@@ -628,7 +757,7 @@
 
   // ---- init ------------------------------------------------------------
   async function init() {
-    state.ctx = parseCtxFragment();
+    state.ctx = productContext(parseCtxFragment());
     state.clientCtx = collectClientCtx();
 
     const [meRes, taxRes] = await Promise.all([
@@ -645,7 +774,15 @@
     if (!me.loggedIn) {
       goTo('signin');
     } else {
-      goTo('branch');
+      const receipt = readSaved(RECEIPT_KEY);
+      if (Number.isInteger(receipt?.itemId) && Number.isInteger(receipt?.reportId)) {
+        state.resultItemId = receipt.itemId; state.resultReportId = receipt.reportId; state.resultHeld = !!receipt.held;
+        goTo('confirm');
+      } else if (!restoreDraft()) {
+        const flow = new URLSearchParams(location.search).get('type');
+        if (['bug', 'idea'].includes(flow)) { state.flow = flow; goTo('area'); }
+        else goTo('branch');
+      }
     }
   }
 
