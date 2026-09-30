@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 430" fill="none">
+  <defs>
+    <linearGradient id="metal" x1="115" y1="84" x2="362" y2="356" gradientUnits="userSpaceOnUse"><stop stop-color="#fbe8c9"/><stop offset=".42" stop-color="#ca8a47"/><stop offset="1" stop-color="#4b2a20"/></linearGradient>
+    <linearGradient id="orbit" x1="120" y1="60" x2="422" y2="352" gradientUnits="userSpaceOnUse"><stop stop-color="#f6d6a5"/><stop offset=".48" stop-color="#92603c"/><stop offset=".73" stop-color="#d2ac7b"/><stop offset="1" stop-color="#563b2b"/></linearGradient>
+    <radialGradient id="halo"><stop stop-color="#d39a51" stop-opacity=".19"/><stop offset="1" stop-color="#d39a51" stop-opacity="0"/></radialGradient>
+  </defs>
+  <ellipse cx="261" cy="222" rx="225" ry="195" fill="url(#halo)"/>
+  <g stroke="url(#orbit)">
+    <ellipse cx="260" cy="215" rx="193" ry="176" transform="rotate(-25 260 215)" stroke-width="2.4"/>
+    <ellipse cx="260" cy="215" rx="172" ry="89" transform="rotate(38 260 215)" stroke-width="2"/>
+    <ellipse cx="260" cy="215" rx="70" ry="170" transform="rotate(-19 260 215)" stroke-width="1.1" opacity=".5"/>
+    <path d="M116 93l10 10m264 235l10 10M93 315l11-6m311-194l11-6" opacity=".65"/>
+  </g>
+  <path d="M259 104l101 56-16 126-84 42-92-49-17-120 108-55Z" fill="url(#metal)" stroke="#f0c68f" stroke-opacity=".55"/>
+  <path d="m259 104-23 96-85-41 108-55Z" fill="#efd2a5"/>
+  <path d="m259 104 101 56-83 48-41-8 23-96Z" fill="#c3894f"/>
+  <path d="m151 159 85 41-68 79-17-120Z" fill="#b77340"/>
+  <path d="m236 200 41 8 67 78-84 42-24-128Z" fill="#855031"/>
+  <path d="m236 200 24 128-92-49 68-79Z" fill="#d5a268"/>
+  <path d="m277 208 83-48-16 126-67-78Z" fill="#583529"/>
+  <path d="m259 104-23 96 41 8 83-48m-124 40-68 79m68-79 24 128m17-120 67 78" stroke="#fff1d7" stroke-opacity=".22"/>
+  <g stroke="url(#orbit)" stroke-width="1.8"><path d="M67 218c25 47 95 91 160 101m49-227c79 4 141 43 174 97"/></g>
+  <g fill="#e5c290"><circle cx="85" cy="132" r="2.4"/><circle cx="407" cy="291" r="2"/><circle cx="398" cy="98" r="1.4"/><circle cx="156" cy="351" r="1.2"/></g>
+</svg>

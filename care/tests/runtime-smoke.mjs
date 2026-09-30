@@ -71,6 +71,8 @@ try {
     for(const path of ['/desk/','/desk/desk.js','/api/desk/summary','/api/desk/notifications'])
       assert.equal((await publicClient.call(path)).status,404);
     assert.equal((await publicClient.call('/report/')).status,200);
+    for(const path of ['/js/care-scene.js','/css/care-scene.css','/art/care-lantern.svg'])
+      assert.equal((await publicClient.call(path)).status,200);
   });
   await check('Local identity and complete bug creation',async()=>{
     assert.equal((await customer.call('/auth/bootstrap',{},'bootstrap')).status,200);

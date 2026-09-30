@@ -5,9 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>RealmWright — Community Board</title>
   <meta name="description" content="What GMs want built next for RealmWright. Report a bug, request a feature, and watch it move up the list.">
+  <link rel="preload" href="/fonts/worksans-var.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/fraunces-600.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/css/style.css?v=20260930-care-audit">
   <link rel="stylesheet" href="/css/board.css?v=20260930-care-audit">
+  <link rel="stylesheet" href="/css/care-scene.css?v=20260930-care-motion">
 </head>
 <body>
   <header class="masthead">
@@ -27,14 +30,23 @@
   </header>
 
   <main class="container board">
-    <section class="board-intro" aria-labelledby="board-title">
-      <div>
+    <section class="board-intro care-hero" data-care-hero data-care-motion="still" aria-labelledby="board-title">
+      <div class="care-hero__wall" aria-hidden="true"><span></span><span></span><span></span></div>
+      <div class="care-hero__copy">
         <p class="board-intro__eyebrow">RealmWright Customer Care</p>
-        <h1 id="board-title">Help shape what comes next.</h1>
-        <p class="board-intro__copy">Share a problem or an idea. Add your details to an existing report, or start a new one.</p>
-        <div class="board-intro__links"><a href="/report/?type=bug">Report a bug</a><a href="/report/?type=idea">Suggest an idea</a></div>
+        <h1 id="board-title">Help shape<br>what comes next.</h1>
+        <p class="board-intro__copy">Every world gets better with a little care. Share a problem, bring an idea, or add your experience to an existing report.</p>
+        <div class="board-intro__links care-hero__actions"><a class="btn btn-primary" href="/report/?type=bug">Report a bug <span aria-hidden="true">↗</span></a><a class="btn" href="/report/?type=idea">Suggest an idea <span aria-hidden="true">↗</span></a></div>
+        <p class="care-hero__note">A public place for your feedback. No email required.</p>
       </div>
-      <div class="board__seal" aria-hidden="true"><span>RW</span></div>
+      <div class="care-hero__art">
+        <div class="care-scene" data-care-scene aria-hidden="true">
+          <img src="/art/care-lantern.svg?v=20260930-care-motion" width="520" height="430" alt="" decoding="async">
+          <canvas width="520" height="430"></canvas>
+        </div>
+        <p class="care-hero__caption" aria-hidden="true"><span class="care-hero__caption-line"></span>Made better, together.</p>
+      </div>
+      <button class="care-motion-toggle" type="button" data-care-motion-toggle aria-pressed="false" hidden><span class="care-motion-toggle__icon" aria-hidden="true">◌</span><span data-care-motion-label>Pause motion</span></button>
     </section>
     <!-- Shipped strip: the care loop, made visible. Hidden when empty. -->
     <section id="shipped" class="strip" hidden aria-labelledby="shipped-heading">
@@ -85,6 +97,7 @@
     </div>
   </footer>
 
+  <script defer src="/js/care-scene.js?v=20260930-care-motion"></script>
   <script src="/js/care.js?v=20260930-care-audit"></script>
   <script src="/js/board.js?v=20260930-care-audit"></script>
 </body>
