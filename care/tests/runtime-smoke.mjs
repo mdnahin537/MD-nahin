@@ -78,7 +78,7 @@ try {
     assert.equal(response.status,200);report=await response.json();
     assert.ok(Number.isInteger(report.reportId));
     const item=await (await customer.call('/api/item/'+report.itemId)).json();
-    assert.equal(item.reports[0].freetext,bug.freetext);assert.equal(item.reports[0].ctx.schema,4);
+    assert.equal(item.reports[0].freetext,bug.freetext);assert.equal(item.reports[0].version,'3.2');
   });
   await check('Retry and matching details on actual D1',async()=>{
     const repeated=await (await customer.call('/api/report',{...bug,submissionKey:'runtime-report-fixture-01'})).json();
@@ -97,6 +97,16 @@ try {
     assert.equal((await (await customer.call('/api/vote/'+report.itemId,{value:1},null,'PUT')).json()).net,1);
     assert.equal((await (await customer.call('/api/vote/'+report.itemId,{value:1},null,'PUT')).json()).net,1);
   });
+  await check('Follow-up choices and duplicate-safe updates on actual D1',async()=>{
+    const question=(await (await customer.call('/api/report/'+report.reportId+'/followup-question')).json()).question;
+    assert.equal(question.q,'which_export');
+    const answer={q:question.q,a:'json'};
+    assert.equal((await customer.call('/api/report/'+report.reportId+'/followup',answer,null,'PATCH')).status,200);
+    assert.equal((await customer.call('/api/report/'+report.reportId+'/followup',answer,null,'PATCH')).status,200);
+    const item=await (await customer.call('/api/item/'+report.itemId)).json();
+    assert.ok(item.reports.some(r=>r.followups.some(f=>f.answer==='JSON')));
+    assert.equal(item.reports[0].freetext,bug.freetext);
+  });
   await check('Full idea submission and single protected owner',async()=>{
     assert.equal((await ideas.call('/auth/bootstrap',{},'bootstrap')).status,200);
     const response=await ideas.call('/api/report',{type:'idea',area:'exports-data',ideaKind:'new_tool',
@@ -105,6 +115,10 @@ try {
     assert.equal((await owner.call('/auth/owner/claim',{token:'isolated-runtime-owner'},'owner-claim')).status,200);
     assert.equal((await owner.call('/auth/owner/claim',{token:'isolated-runtime-owner'},'owner-claim')).status,409);
     assert.equal((await owner.call('/desk/')).status,200);
+    const saved=await (await owner.call('/api/desk/review/report/'+report.reportId)).json();
+    assert.equal(saved.record.payload.ctx.schema,4);
+    const outbox=await (await owner.call('/api/desk/notifications')).json();
+    assert.equal(outbox.counts.find(row=>row.state==='pending').count,5);
     const brief=await (await owner.call('/api/desk/brief',{items:[idea.itemId]})).json();
     assert.ok(brief.text.includes('Less repeated preparation'));assert.ok(brief.text.includes('One readable PDF'));
   });

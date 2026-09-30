@@ -27,7 +27,7 @@
     ctx: {}, clientCtx: {},
     joinItemId: null,
     // for the confirmation screen
-    resultItemId: null, resultReportId: null, resultHeld: false, submissionKey: null,
+    resultItemId: null, resultReportId: null, resultHeld: false, submissionKey: null, submissionPayload: null,
   };
 
   const INITIAL_STATE = JSON.parse(JSON.stringify(state));
@@ -399,6 +399,7 @@
 
   // ---- prior art (B5 / I3): fetch matches, offer join ------------------
   async function goToPriorArt() {
+    state.joinItemId = null;
     const requestVersion = ++navigationVersion;
     stage.setAttribute('aria-busy', 'true');
     stage.querySelectorAll('button').forEach(button => { button.disabled = true; });
@@ -482,7 +483,7 @@
       '</div>' +
       '<div class="importance"><p class="wiz__inline-q">How much would you use it?</p><div id="imp-slot"></div></div>' +
       contextCard() +
-      titlePreview() +
+      (state.joinItemId ? '<p>These details will join submission #' + state.joinItemId + '.</p>' : titlePreview()) +
       '<div class="wiz__actions"><button class="btn btn-primary btn--big" id="send">' + (state.joinItemId ? 'Add details' : 'Send idea') + '</button></div>' +
       '</div>'
     );
@@ -623,6 +624,14 @@
       importance: state.importance, title: state.titleEdited ? state.title : undefined,
       ctx: filteredCtx, clientCtx: filteredClientCtx,
     };
+
+    const submissionPayload = JSON.stringify({ ...payload, submissionKey: undefined });
+    if (state.submissionPayload && state.submissionPayload !== submissionPayload) {
+      state.submissionKey = crypto.randomUUID();
+      payload.submissionKey = state.submissionKey;
+    }
+    state.submissionPayload = submissionPayload;
+    saveDraft();
 
     let data;
     try {

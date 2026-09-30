@@ -290,3 +290,36 @@ test('Identity service failures show a retry state and preserve saved drafts', a
   assert.ok(wizard.document.getElementById('retry-identity'));
   assert.equal(saved.getItem('rw_care_report_draft_v1'), 'original preserved draft');
 });
+
+test('Changing a tap answer after an unconfirmed save starts a distinct safe submission', async () => {
+  const requests=[];let attempts=0;
+  const e=environment('wizard',source('wizard'),taxonomy,{fetch:async(url,opts)=>{
+    if(url==='/data/taxonomy.json')return result(taxonomy);
+    if(url==='/api/report'){
+      requests.push(JSON.parse(opts.body));
+      if(++attempts===1)throw new Error('Isolated acknowledgement loss');
+      return result({ok:true,itemId:17,reportId:22});
+    }
+    return result({items:[],question:null});
+  }});
+  await e.api.init();
+  Object.assign(e.api.state,{flow:'bug',area:'exports-data',areaLabel:'Exports',symptom:'slow',frequency:'once',freetext:'Keep my draft'});
+  e.api.goTo('write');
+  await e.api.submitReport(false);
+  e.api.goTo('frequency');
+  const index=taxonomy.frequency.findIndex(option=>option.key!==requests[0].frequency);
+  await e.document.getElementById('freq-slot').querySelectorAll('button')[index].click();
+  await new Promise(resolve=>setTimeout(resolve,0));
+  await e.api.submitReport(false);
+  assert.notEqual(requests[0].submissionKey,requests[1].submissionKey);
+  assert.equal(requests[1].frequency,taxonomy.frequency[index].key);
+  assert.equal(requests[1].freetext,'Keep my draft');
+});
+test('Matched ideas show the existing reference without an ineffective title editor', async () => {
+  const e=environment('wizard',source('wizard'),taxonomy);
+  await e.api.init();
+  Object.assign(e.api.state,{flow:'idea',area:'exports-data',areaLabel:'Exports',joinItemId:17,ask:'Extra idea details'});
+  e.api.goTo('ask');
+  assert.ok(!e.document.getElementById('title-input'));
+  assert.ok(e.document.getElementById('wiz-stage').innerHTML.includes('submission #17'));
+});
