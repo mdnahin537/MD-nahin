@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync, readdirSync } from 'node:fs';
 import { webcrypto } from 'node:crypto';
-import worker from '../src/index.js';
+import worker from '../test-results/bundle/index.js';
 
 globalThis.crypto ??= webcrypto;
 globalThis.caches = { default: { match: async () => null, put: async () => {} } };

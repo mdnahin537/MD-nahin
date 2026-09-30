@@ -24,6 +24,11 @@ jobs:
           node-version: '22'
       - name: Compare recovery source with repository and live public endpoints
         run: python3 care/tests/preflight.py
+      - name: Build the Worker without deploying
+        working-directory: care
+        run: |
+          npm ci
+          npx wrangler deploy --dry-run --outdir=test-results/bundle
       - name: Check confirmed workflow regressions
         run: node --test care/tests/backend.test.mjs
       - name: Save public check results
