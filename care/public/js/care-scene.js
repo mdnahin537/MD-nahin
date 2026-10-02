@@ -61,26 +61,91 @@
     if(normal.reduce((sum,value,i)=>sum+value*(a[i]+b[i]+c[i]),0)<0)normal=normal.map(value=>-value);
     for(const point of [a,b,c])data.push(...point,...normal,...colour);
   }
+  // Broad, stable wear is baked into vertex colours, keeping the shader and
+  // motion lifecycle unchanged. The colours stay attached to the metal.
+  function bronzeColour(point,base,recess=0){
+    const weather=(Math.sin(point[0]*4.7+point[2]*3.1)+Math.sin(point[1]*5.3-point[0]*2.2)+Math.cos(point[2]*4.1+point[1]*2.6))/3;
+    const wear=.89+.075*weather;
+    const oxide=Math.min(.56,Math.max(0,weather-.25)*(.22+recess));
+    const patina=[.16,.285,.225];
+    return base.map((value,i)=>value*wear*(1-oxide)+patina[i]*oxide);
+  }
   function lantern(){
     const p=(1+Math.sqrt(5))/2;
     const vertices=[[-1,p,0],[1,p,0],[-1,-p,0],[1,-p,0],[0,-1,p],[0,1,p],[0,-1,-p],[0,1,-p],[p,0,-1],[p,0,1],[-p,0,-1],[-p,0,1]]
       .map(point=>normalize(point).map(value=>value*1.18));
     const faces=[[0,11,5],[0,5,1],[0,1,7],[0,7,10],[0,10,11],[1,5,9],[5,11,4],[11,10,2],[10,7,6],[7,1,8],[3,9,4],[3,4,2],[3,2,6],[3,6,8],[3,8,9],[4,9,5],[2,4,11],[6,2,10],[8,6,7],[9,8,1]];
     const data=[];
-    faces.forEach((face,index)=>triangle(data,...face.map(i=>vertices[i]),[.57+.06*(index%3),.27+.025*(index%4),.11+.016*(index%5)]));
+    function fillPanel(a,b,c,base){
+      const divisions=4;
+      const at=(u,v)=>a.map((value,i)=>value+(b[i]-value)*u/divisions+(c[i]-value)*v/divisions);
+      function wornTriangle(a,b,c){
+        const start=data.length;
+        triangle(data,a,b,c,base);
+        [a,b,c].forEach((point,index)=>bronzeColour(point,base).forEach((value,i)=>{data[start+index*9+6+i]=value;}));
+      }
+      for(let u=0;u<divisions;u++)for(let v=0;v<divisions-u;v++){
+        const a=at(u,v),b=at(u+1,v),c=at(u,v+1);
+        wornTriangle(a,b,c);
+        if(v<divisions-u-1)wornTriangle(b,at(u+1,v+1),c);
+      }
+    }
+    faces.forEach((face,index)=>{
+      const corners=face.map(i=>vertices[i]);
+      const centre=corners[0].map((_,i)=>corners.reduce((sum,point)=>sum+point[i],0)/3);
+      const normal=normalize(centre);
+      const panel=corners.map(point=>point.map((value,i)=>value*.89+centre[i]*.11-normal[i]*.018));
+      const tone=index%3,bronze=[.50+tone*.012,.315+tone*.008,.14+tone*.005];
+      const edge=bronzeColour(centre,[.54,.36,.175]);
+      const seam=index%5===1?[.27,.325,.235]:bronzeColour(centre,[.42,.30,.15],.35);
+      for(let i=0;i<3;i++){
+        const j=(i+1)%3;
+        triangle(data,corners[i],corners[j],panel[j],edge);
+        triangle(data,corners[i],panel[j],panel[i],seam);
+      }
+      // The original recessed engravings remain part of the surface.
+      if(index%4===0){
+        const panelCentre=centre.map((value,i)=>value-normal[i]*.018);
+        const inner=panel.map(point=>point.map((value,i)=>value*.68+panelCentre[i]*.32));
+        const inset=panel.map(point=>point.map((value,i)=>value*.65+panelCentre[i]*.35));
+        const groove=bronzeColour(panelCentre,[.24,.245,.145],.45);
+        for(let i=0;i<3;i++){
+          const j=(i+1)%3;
+          triangle(data,panel[i],panel[j],inner[j],bronzeColour(panel[i],bronze));
+          triangle(data,panel[i],inner[j],inner[i],bronzeColour(inner[i],bronze));
+          triangle(data,inner[i],inner[j],inset[j],groove);
+          triangle(data,inner[i],inset[j],inset[i],groove);
+        }
+        fillPanel(...inset,bronze);
+      }else fillPanel(...panel,bronze);
+    });
     return data;
   }
   function orbit(radius,tube,colour){
-    const data=[],segments=72,sides=6;
+    const data=[],segments=72,sides=10;
     function sample(i,j){
       const angle=i/segments*Math.PI*2,around=j/sides*Math.PI*2;
-      const distance=radius+tube*Math.cos(around);
-      return {point:[distance*Math.cos(angle),distance*Math.sin(angle),tube*Math.sin(around)],
+      const phase=i%6,side=j%sides,longCut=Math.floor(i)%12===0;
+      const cut=phase>=.159999&&phase<=.360001&&side>=1&&side<=(longCut?5:3);
+      const profile=tube*((side===2||side===3)?.88:1)*(cut?.94:1);
+      const distance=radius+profile*Math.cos(around);
+      return {point:[distance*Math.cos(angle),distance*Math.sin(angle),profile*Math.sin(around)],
         normal:[Math.cos(around)*Math.cos(angle),Math.cos(around)*Math.sin(angle),Math.sin(around)]};
     }
-    for(let i=0;i<segments;i++)for(let j=0;j<sides;j++){
-      const a=sample(i,j),b=sample(i+1,j),c=sample(i+1,j+1),d=sample(i,j+1);
-      for(const vertex of [a,b,c,a,c,d])data.push(...vertex.point,...vertex.normal,...colour);
+    for(let i=0;i<segments;i++){
+      // Fine long/short calibration cuts, rather than broad mechanical joints.
+      const stops=i%6===0?[0,.16,.36,1]:[0,1];
+      for(let k=0;k<stops.length-1;k++)for(let j=0;j<sides;j++){
+        const left=i+stops[k],right=i+stops[k+1];
+        const a=sample(left,j),b=sample(right,j),c=sample(right,j+1),d=sample(left,j+1);
+        const engraved=stops.length===4&&k===1&&j>=1&&j<(i%12===0?6:4);
+        for(const vertex of [a,b,c,a,c,d]){
+          let material=bronzeColour(vertex.point,colour,j===2?.50:.04);
+          if(j===0)material=colour.map(value=>value*1.08);
+          if(engraved)material=colour.map(value=>value*.64);
+          data.push(...vertex.point,...vertex.normal,...material);
+        }
+      }
     }
     return data;
   }
@@ -114,7 +179,7 @@
         position:gl.getAttribLocation(program,'a_position'),normal:gl.getAttribLocation(program,'a_normal'),colour:gl.getAttribLocation(program,'a_color'),
         rotation:gl.getUniformLocation(program,'u_rotation'),aspect:gl.getUniformLocation(program,'u_aspect')
       };
-      for(const data of [lantern(),orbit(1.66,.023,[.43,.24,.12]),orbit(1.91,.033,[.37,.21,.10])]){
+      for(const data of [lantern(),orbit(1.66,.036,[.43,.305,.165]),orbit(1.91,.043,[.37,.265,.145])]){
         const buffer=gl.createBuffer();
         if(!buffer)throw new Error('Graphics unavailable');
         gl.bindBuffer(gl.ARRAY_BUFFER,buffer);

@@ -1,24 +1,30 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 430" fill="none">
   <defs>
-    <linearGradient id="metal" x1="115" y1="84" x2="362" y2="356" gradientUnits="userSpaceOnUse"><stop stop-color="#fbe8c9"/><stop offset=".42" stop-color="#ca8a47"/><stop offset="1" stop-color="#4b2a20"/></linearGradient>
-    <linearGradient id="orbit" x1="120" y1="60" x2="422" y2="352" gradientUnits="userSpaceOnUse"><stop stop-color="#f6d6a5"/><stop offset=".48" stop-color="#92603c"/><stop offset=".73" stop-color="#d2ac7b"/><stop offset="1" stop-color="#563b2b"/></linearGradient>
+    <linearGradient id="metal" x1="115" y1="84" x2="362" y2="356" gradientUnits="userSpaceOnUse"><stop stop-color="#e6cf9a"/><stop offset=".42" stop-color="#977047"/><stop offset="1" stop-color="#3a3020"/></linearGradient>
+    <linearGradient id="orbit" x1="120" y1="60" x2="422" y2="352" gradientUnits="userSpaceOnUse"><stop stop-color="#dbc392"/><stop offset=".48" stop-color="#8b704d"/><stop offset=".73" stop-color="#bca177"/><stop offset="1" stop-color="#4c4030"/></linearGradient>
     <radialGradient id="halo"><stop stop-color="#d39a51" stop-opacity=".19"/><stop offset="1" stop-color="#d39a51" stop-opacity="0"/></radialGradient>
+    <clipPath id="aged-face"><path d="M259 104l101 56-16 126-84 42-92-49-17-120 108-55Z"/></clipPath>
+    <pattern id="bronze-grain" width="54" height="47" patternUnits="userSpaceOnUse"><path d="m7 12 9-2m18 9 7 1M13 38l6-2m24-4 5 2" fill="none" stroke="#493e2a" stroke-opacity=".27" stroke-width=".65"/></pattern>
   </defs>
   <ellipse cx="261" cy="222" rx="225" ry="195" fill="url(#halo)"/>
   <g stroke="url(#orbit)">
-    <ellipse cx="260" cy="215" rx="193" ry="176" transform="rotate(-25 260 215)" stroke-width="2.4"/>
-    <ellipse cx="260" cy="215" rx="172" ry="89" transform="rotate(38 260 215)" stroke-width="2"/>
+    <ellipse cx="260" cy="215" rx="193" ry="176" transform="rotate(-25 260 215)" stroke-width="3.4"/>
+    <ellipse cx="260" cy="215" rx="172" ry="89" transform="rotate(38 260 215)" stroke-width="3"/>
     <ellipse cx="260" cy="215" rx="70" ry="170" transform="rotate(-19 260 215)" stroke-width="1.1" opacity=".5"/>
     <path d="M116 93l10 10m264 235l10 10M93 315l11-6m311-194l11-6" opacity=".65"/>
   </g>
   <path d="M259 104l101 56-16 126-84 42-92-49-17-120 108-55Z" fill="url(#metal)" stroke="#f0c68f" stroke-opacity=".55"/>
-  <path d="m259 104-23 96-85-41 108-55Z" fill="#efd2a5"/>
-  <path d="m259 104 101 56-83 48-41-8 23-96Z" fill="#c3894f"/>
-  <path d="m151 159 85 41-68 79-17-120Z" fill="#b77340"/>
-  <path d="m236 200 41 8 67 78-84 42-24-128Z" fill="#855031"/>
-  <path d="m236 200 24 128-92-49 68-79Z" fill="#d5a268"/>
-  <path d="m277 208 83-48-16 126-67-78Z" fill="#583529"/>
+  <path d="m259 104-23 96-85-41 108-55Z" fill="#c9b27c"/>
+  <path d="m259 104 101 56-83 48-41-8 23-96Z" fill="#907044"/>
+  <path d="m151 159 85 41-68 79-17-120Z" fill="#80633f"/>
+  <path d="m236 200 41 8 67 78-84 42-24-128Z" fill="#6c5437"/>
+  <path d="m236 200 24 128-92-49 68-79Z" fill="#b99b64"/>
+  <path d="m277 208 83-48-16 126-67-78Z" fill="#484634"/>
   <path d="m259 104-23 96 41 8 83-48m-124 40-68 79m68-79 24 128m17-120 67 78" stroke="#fff1d7" stroke-opacity=".22"/>
+  <g clip-path="url(#aged-face)"><path d="M259 104l101 56-16 126-84 42-92-49-17-120 108-55Z" fill="url(#bronze-grain)"/><path d="M233 188c-16-8-32-8-35 4s14 23 9 39-20 18-16 33 24 23 33 4 2-34 12-41 15-29-3-39Z" fill="#466b55" opacity=".16"/><path d="M295 184c19-13 43-18 48-3s-14 15-16 32 17 15 9 33-26 12-26-5 4-18-4-31-24-15-11-26Z" fill="#466b55" opacity=".13"/><path d="m185 167 14 7m12 38 9-5m80 52 10 12m-52 30 8 4" stroke="#ead29e" stroke-width=".65" opacity=".28"/></g>
+  <g fill="none"><polygon points="253.8,110 233.5,194.5 158.7,158.4" stroke="#4f482f" stroke-width="1.1" stroke-opacity=".6"/><polygon points="261.9,111.7 350.8,161 277.7,203.2 241.6,196.2" stroke="#4f482f" stroke-width="1.1" stroke-opacity=".6"/><polygon points="267.6,127 332.3,162.9 279.2,193.6 252.9,188.5" stroke="#4f482f" stroke-width=".8" stroke-opacity=".45"/><polygon points="155.1,165.4 229.9,201.5 170,271" stroke="#4f482f" stroke-width="1.1" stroke-opacity=".6"/><polygon points="241.2,206.7 277.3,213.7 336.2,282.3 262.3,319.3" stroke="#4f482f" stroke-width="1.1" stroke-opacity=".6"/><polygon points="234.2,208.3 255.4,320.9 174.4,277.8" stroke="#4f482f" stroke-width="1.1" stroke-opacity=".6"/><polygon points="230.7,224.8 246.1,306.8 187.2,275.4" stroke="#4f482f" stroke-width=".8" stroke-opacity=".45"/><polygon points="283,209.2 356,167 342,277.8" stroke="#4f482f" stroke-width="1.1" stroke-opacity=".6"/></g>
+  <g fill="none" stroke="#466b55" opacity=".28"><ellipse cx="260" cy="215" rx="193" ry="176" transform="rotate(-25 260 215)" pathLength="72" stroke-width="1.4" stroke-dasharray="7 23 4 38"/><ellipse cx="260" cy="215" rx="172" ry="89" transform="rotate(38 260 215)" pathLength="72" stroke-width="1.2" stroke-dasharray="4 29 6 33"/></g>
+  <g stroke="#594732" stroke-width="1.1" opacity=".65"><ellipse cx="260" cy="215" rx="193" ry="176" transform="rotate(-25 260 215)" pathLength="72" stroke-dasharray=".2 5.8"/><ellipse cx="260" cy="215" rx="172" ry="89" transform="rotate(38 260 215)" pathLength="72" stroke-dasharray=".2 5.8"/></g>
   <g stroke="url(#orbit)" stroke-width="1.8"><path d="M67 218c25 47 95 91 160 101m49-227c79 4 141 43 174 97"/></g>
   <g fill="#e5c290"><circle cx="85" cy="132" r="2.4"/><circle cx="407" cy="291" r="2"/><circle cx="398" cy="98" r="1.4"/><circle cx="156" cy="351" r="1.2"/></g>
 </svg>

@@ -50,6 +50,7 @@
   --control-line: #878170;
   --radius: 12px;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.25);
+  --care-paper-texture: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22420%22%20height%3D%22340%22%20viewBox%3D%220%200%20420%20340%22%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%23e1b88a%22%20stroke-opacity%3D%22.09%22%20stroke-width%3D%22.65%22%20stroke-linecap%3D%22round%22%3E%3Cpath%20d%3D%22m23%2047%2017-2m86%2025%209-3m58-46%2022%202m135%2043%2015-1M49%20132l12%203m91-26%2019-2m104%2040%2013-3m91-42%208%202M17%20242l19-3m72-40%2013%202m93%2022%2017-2m124%2038%2010-2M61%20315l16-3m83-29%208%201m83%2032%2019-2m108-31%2014%203%22%2F%3E%3C%2Fg%3E%3Cg%20fill%3D%22%23e1b88a%22%20fill-opacity%3D%22.09%22%3E%3Ccircle%20cx%3D%2277%22%20cy%3D%2261%22%20r%3D%22.55%22%2F%3E%3Ccircle%20cx%3D%22242%22%20cy%3D%2287%22%20r%3D%22.45%22%2F%3E%3Ccircle%20cx%3D%2294%22%20cy%3D%22174%22%20r%3D%22.55%22%2F%3E%3Ccircle%20cx%3D%22312%22%20cy%3D%22208%22%20r%3D%22.45%22%2F%3E%3Ccircle%20cx%3D%22183%22%20cy%3D%22254%22%20r%3D%22.5%22%2F%3E%3Ccircle%20cx%3D%22391%22%20cy%3D%22329%22%20r%3D%22.45%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E");
 }
 
 @media (prefers-color-scheme: light) {
@@ -71,6 +72,7 @@
     --info: #315d85;
     --control-line: #928571;
     --shadow: 0 1px 2px rgba(60, 40, 10, 0.06), 0 8px 24px rgba(60, 40, 10, 0.08);
+    --care-paper-texture: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22420%22%20height%3D%22340%22%20viewBox%3D%220%200%20420%20340%22%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%23795438%22%20stroke-opacity%3D%22.10%22%20stroke-width%3D%22.65%22%20stroke-linecap%3D%22round%22%3E%3Cpath%20d%3D%22m23%2047%2017-2m86%2025%209-3m58-46%2022%202m135%2043%2015-1M49%20132l12%203m91-26%2019-2m104%2040%2013-3m91-42%208%202M17%20242l19-3m72-40%2013%202m93%2022%2017-2m124%2038%2010-2M61%20315l16-3m83-29%208%201m83%2032%2019-2m108-31%2014%203%22%2F%3E%3C%2Fg%3E%3Cg%20fill%3D%22%23795438%22%20fill-opacity%3D%22.10%22%3E%3Ccircle%20cx%3D%2277%22%20cy%3D%2261%22%20r%3D%22.55%22%2F%3E%3Ccircle%20cx%3D%22242%22%20cy%3D%2287%22%20r%3D%22.45%22%2F%3E%3Ccircle%20cx%3D%2294%22%20cy%3D%22174%22%20r%3D%22.55%22%2F%3E%3Ccircle%20cx%3D%22312%22%20cy%3D%22208%22%20r%3D%22.45%22%2F%3E%3Ccircle%20cx%3D%22183%22%20cy%3D%22254%22%20r%3D%22.5%22%2F%3E%3Ccircle%20cx%3D%22391%22%20cy%3D%22329%22%20r%3D%22.45%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E");
   }
 }
 
@@ -194,7 +196,9 @@ a:hover { text-decoration: underline; }
 /* Quiet material depth; the document remains the central interaction. */
 [hidden] { display: none !important; }
 body {
-  background-image: radial-gradient(ellipse at 14% 0%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 38rem);
+  background-image: var(--care-paper-texture), radial-gradient(ellipse at 14% 0%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 38rem);
+  background-size: 420px 340px, auto;
+  background-repeat: repeat, no-repeat;
 }
 button, input, textarea, select { font: inherit; }
 button, .btn { touch-action: manipulation; }

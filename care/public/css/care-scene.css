@@ -48,7 +48,7 @@
 .masthead__mark { border-color: var(--care-rim); }
 .controls { box-shadow: inset 0 1px 0 #ffffff0a, 0 12px 36px #00000008; }
 .feed__list { border-top-color: var(--care-rim); }
-.wizard-body { background-image: radial-gradient(ellipse at 50% -10%, color-mix(in srgb, var(--care-glow) 9%, transparent), transparent 34rem); }
+.wizard-body { background-image: var(--care-paper-texture), radial-gradient(ellipse at 50% -10%, color-mix(in srgb, var(--care-glow) 9%, transparent), transparent 34rem); }
 .wiz__mark { border-color: var(--care-rim); box-shadow: inset 0 1px 0 #ffffff20, 0 6px 24px #00000014; }
 .thread__title { font-size: clamp(1.8rem, 4vw, 2.5rem); text-wrap: balance; }
 .rep, .commentbox, .ownernote { border-color: var(--care-rim); }
@@ -68,3 +68,20 @@
   .care-hero__caption { justify-content: flex-start; font-size: .58rem; margin-bottom: 1.5rem; }
 }
 @media (prefers-reduced-motion: reduce) { .care-hero__wall span { animation: none !important; } }
+
+/* Copper chrome shares the sculpture's material; text stays dark and crisp. */
+.masthead, .wiz__bar {
+  --ink: #301b10; --ink-dim: #301b10; --ink-faint: #301b10;
+  --accent: #563019; --accent-strong: #301b10; --accent-ink: #fff4e6;
+  --line: #563019; --control-line: #684022;
+  --surface: #b97b4d; --surface-raised: #c58b5c; --surface-overlay: #e4b081;
+  background: linear-gradient(110deg, #c58b5c, #b97b4d);
+  color: var(--ink); border-bottom-color: #8b5633;
+}
+.masthead__mark { background: #fff4e626; box-shadow: inset 0 1px 0 #ffe0b847; }
+.masthead .btn { border-color: #563019; }
+.masthead .btn-primary { background: #563019; border-color: #563019; color: #fff4e6; }
+.masthead .btn-primary:hover { background: #301b10; }
+.wiz__bar { border-bottom: 1px solid #8b5633; }
+
+.masthead :focus-visible, .wiz__bar :focus-visible { outline-color: #301b10; }

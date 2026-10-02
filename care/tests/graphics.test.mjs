@@ -192,3 +192,15 @@ test('Graphics context loss returns to the static scene and stops motion',()=>{
   assert.equal(f.document.querySelector('[data-care-scene]').classList.contains('is-rendered'),false);
   assert.equal(f.frames.size,0);assert.equal(hero(f).dataset.careMotion,'still');
 });
+
+test('Detailed metal meshes stay finite and within the mobile geometry budget',()=>{
+  const f=scene({reduced:true});
+  const numbers=f.calls.buffers.flat();
+  assert.ok(numbers.length>0,'The actual scene must upload geometry');
+  assert.ok(numbers.every(Number.isFinite),'Positions, normals and colours must be finite');
+  assert.ok(numbers.length*4<=500000,'The scene must stay below 500 KB of vertex data');
+  for(let i=0;i<numbers.length;i+=9){
+    assert.ok(Math.hypot(...numbers.slice(i,i+3))<=2.2,'Detail must fit the original sculpture envelope');
+    assert.ok(Math.abs(Math.hypot(...numbers.slice(i+3,i+6))-1)<.03,'Lighting needs unit surface normals');
+  }
+});
