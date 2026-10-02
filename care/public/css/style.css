@@ -28,45 +28,51 @@
 
 :root {
   color-scheme: dark;
-  --surface: #0f1219;
-  --surface-raised: #171b25;
-  --surface-overlay: #1d2230;
-  --ink: #ede6da;
-  --ink-dim: #a39a8c;
-  --ink-faint: #6b6459;
-  --accent: #fed7aa;
-  --accent-strong: #f4a94f;
+  --surface: #12151b;
+  --surface-raised: #1c2029;
+  --surface-overlay: #262a34;
+  --ink: #f3eadc;
+  --ink-dim: #c4b8a6;
+  --ink-faint: #ada28f;
+  --accent: #f5ce9e;
+  --accent-strong: #efb16d;
   --accent-ink: #241505;
-  --line: #2a2f3d;
-  --good: #8fbf8f;
-  --bad: #e08a7a;
-  --held: #d9b25c;
+  --line: #41444c;
+  --good: #a4c8a2;
+  --bad: #f2a396;
+  --held: #e7c47a;
 
   --serif: 'Fraunces', Georgia, 'Times New Roman', serif;
   --sans: 'Work Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
   --mono: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
 
-  --radius: 10px;
+  --info: #a8c9e6;
+  --control-line: #878170;
+  --radius: 12px;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.25);
+  --care-paper-texture: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22420%22%20height%3D%22340%22%20viewBox%3D%220%200%20420%20340%22%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%23e1b88a%22%20stroke-opacity%3D%22.09%22%20stroke-width%3D%22.65%22%20stroke-linecap%3D%22round%22%3E%3Cpath%20d%3D%22m23%2047%2017-2m86%2025%209-3m58-46%2022%202m135%2043%2015-1M49%20132l12%203m91-26%2019-2m104%2040%2013-3m91-42%208%202M17%20242l19-3m72-40%2013%202m93%2022%2017-2m124%2038%2010-2M61%20315l16-3m83-29%208%201m83%2032%2019-2m108-31%2014%203%22%2F%3E%3C%2Fg%3E%3Cg%20fill%3D%22%23e1b88a%22%20fill-opacity%3D%22.09%22%3E%3Ccircle%20cx%3D%2277%22%20cy%3D%2261%22%20r%3D%22.55%22%2F%3E%3Ccircle%20cx%3D%22242%22%20cy%3D%2287%22%20r%3D%22.45%22%2F%3E%3Ccircle%20cx%3D%2294%22%20cy%3D%22174%22%20r%3D%22.55%22%2F%3E%3Ccircle%20cx%3D%22312%22%20cy%3D%22208%22%20r%3D%22.45%22%2F%3E%3Ccircle%20cx%3D%22183%22%20cy%3D%22254%22%20r%3D%22.5%22%2F%3E%3Ccircle%20cx%3D%22391%22%20cy%3D%22329%22%20r%3D%22.45%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E");
 }
 
 @media (prefers-color-scheme: light) {
   :root {
     color-scheme: light;
-    --surface: #faf6ee;
-    --surface-raised: #ffffff;
-    --surface-overlay: #fffdf9;
-    --ink: #241f16;
-    --ink-dim: #6b6255;
-    --ink-faint: #948a7a;
-    --accent: #b3541e;
-    --accent-strong: #8a3d12;
+    --surface: #faf5eb;
+    --surface-raised: #fffdf8;
+    --surface-overlay: #f4ede1;
+    --ink: #2d261c;
+    --ink-dim: #665b4b;
+    --ink-faint: #766b5c;
+    --accent: #93471f;
+    --accent-strong: #773513;
     --accent-ink: #fff6ec;
-    --line: #e4dbc9;
-    --good: #2f7a3d;
-    --bad: #a83e2c;
-    --held: #8a6a1a;
+    --line: #d3c6b1;
+    --good: #2b683b;
+    --bad: #a1372c;
+    --held: #7d5a0f;
+    --info: #315d85;
+    --control-line: #928571;
     --shadow: 0 1px 2px rgba(60, 40, 10, 0.06), 0 8px 24px rgba(60, 40, 10, 0.08);
+    --care-paper-texture: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22420%22%20height%3D%22340%22%20viewBox%3D%220%200%20420%20340%22%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%23795438%22%20stroke-opacity%3D%22.10%22%20stroke-width%3D%22.65%22%20stroke-linecap%3D%22round%22%3E%3Cpath%20d%3D%22m23%2047%2017-2m86%2025%209-3m58-46%2022%202m135%2043%2015-1M49%20132l12%203m91-26%2019-2m104%2040%2013-3m91-42%208%202M17%20242l19-3m72-40%2013%202m93%2022%2017-2m124%2038%2010-2M61%20315l16-3m83-29%208%201m83%2032%2019-2m108-31%2014%203%22%2F%3E%3C%2Fg%3E%3Cg%20fill%3D%22%23795438%22%20fill-opacity%3D%22.10%22%3E%3Ccircle%20cx%3D%2277%22%20cy%3D%2261%22%20r%3D%22.55%22%2F%3E%3Ccircle%20cx%3D%22242%22%20cy%3D%2287%22%20r%3D%22.45%22%2F%3E%3Ccircle%20cx%3D%2294%22%20cy%3D%22174%22%20r%3D%22.55%22%2F%3E%3Ccircle%20cx%3D%22312%22%20cy%3D%22208%22%20r%3D%22.45%22%2F%3E%3Ccircle%20cx%3D%22183%22%20cy%3D%22254%22%20r%3D%22.5%22%2F%3E%3Ccircle%20cx%3D%22391%22%20cy%3D%22329%22%20r%3D%22.45%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E");
   }
 }
 
@@ -186,3 +192,48 @@ a:hover { text-decoration: underline; }
   color: var(--ink-dim);
 }
 .empty-state h2 { color: var(--ink); }
+
+/* Quiet material depth; the document remains the central interaction. */
+[hidden] { display: none !important; }
+body {
+  background-image: var(--care-paper-texture), radial-gradient(ellipse at 14% 0%, color-mix(in srgb, var(--accent) 7%, transparent), transparent 38rem);
+  background-size: 420px 340px, auto;
+  background-repeat: repeat, no-repeat;
+}
+button, input, textarea, select { font: inherit; }
+button, .btn { touch-action: manipulation; }
+button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible,
+[tabindex]:focus-visible { outline: 3px solid var(--accent-strong); outline-offset: 3px; }
+button:disabled { cursor: not-allowed; }
+.btn { min-height: 44px; }
+.btn-primary { box-shadow: inset 0 1px 0 #ffffff55, 0 3px 9px #00000012; }
+.tag-new, .chip.status-planned { color: var(--info); }
+input, textarea { accent-color: var(--accent-strong); }
+.card { box-shadow: inset 0 1px 0 #ffffff08, var(--shadow); }
+p, h1, h2, h3 { overflow-wrap: anywhere; }
+@media (hover: hover) and (pointer: fine) {
+  .btn-primary:hover { transform: translateY(-1px); }
+}
+#care-auth-overlay { background: #090c12c9 !important; }
+#care-auth-overlay > div {
+  background: var(--surface-raised) !important; color: var(--ink) !important;
+  border: 1px solid var(--control-line) !important; border-radius: 18px;
+  box-shadow: 0 24px 80px #00000055, inset 0 1px 0 #ffffff15 !important;
+  max-height: calc(100dvh - 2rem); overflow-y: auto; overscroll-behavior: contain;
+}
+#care-auth-overlay h2 { color: var(--ink); font-family: var(--serif) !important; }
+#care-auth-panel p { color: var(--ink-dim); }
+#care-auth-panel input {
+  background: var(--surface); color: var(--ink);
+  border: 1px solid var(--control-line); border-radius: 8px;
+}
+#care-auth-panel .care-auth-error { color: var(--bad) !important; }
+#care-auth-panel [role="status"] { color: var(--ink-dim) !important; }
+#care-auth-panel #care-recovery-code {
+  background: var(--surface-overlay) !important; color: var(--ink) !important;
+  border: 1px solid var(--line); border-radius: 10px; user-select: all;
+}
+#care-auth-panel .linkbtn { color: var(--ink-dim); min-height: 44px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}

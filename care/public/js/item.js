@@ -8,6 +8,8 @@
   let me = { loggedIn: false };
   let taxonomy = null;
   let item = null;
+  const drafts = new Map();
+  const savingComments = new Set();
 
   const itemId = Number(new URLSearchParams(location.search).get('id'));
 
@@ -34,7 +36,7 @@
     if (r.browser) bits.push(cap(r.browser));
     return bits.join(' · ');
   }
-  function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+  function cap(s) { return s ? String(s).charAt(0).toUpperCase() + String(s).slice(1) : s; }
 
   function reportBlock(r) {
     const details = [];
@@ -47,6 +49,7 @@
     if (r.importance) details.push('<div class="rep__imp">' + C.esc(prettyImportance(r.importance)) + '</div>');
     if (r.freetext) details.push('<div class="rep__free">' + C.esc(r.freetext) + '</div>');
 
+    for (const f of r.followups || []) details.push('<div class="rep__field"><span class="rep__label">'+C.esc(f.question)+'</span> '+C.esc(f.answer)+'</div>');
     const ctx = ctxLine(r);
     return (
       '<li class="rep">' +
@@ -85,7 +88,7 @@
   }
 
   function render() {
-    const gms = item.reportsCount === 1 ? '1 GM reports this' : item.reportsCount + ' GMs report this';
+    const gms = item.reportsCount === 1 ? '1 submission' : item.reportsCount + ' submissions';
     const commentsFlat = item.comments || [];
 
     root.innerHTML =
@@ -119,7 +122,7 @@
       '<button class="votebar__btn' + (mine === 1 ? ' is-on is-up' : '') + '" data-val="1" aria-pressed="' + (mine === 1) + '">▲ Agree</button>' +
       '<span class="votebar__net mono">' + item.net + '</span>' +
       '<button class="votebar__btn' + (mine === -1 ? ' is-on is-down' : '') + '" data-val="-1" aria-pressed="' + (mine === -1) + '">▼ Disagree</button>' +
-      '<span class="votebar__hint">Agree pushes it up Hunter’s list.</span>' +
+      '<span class="votebar__hint">Agree adds support to this submission.</span>' +
       '</div>'
     );
   }
@@ -129,7 +132,7 @@
   function topCommentBox() {
     return (
       '<div class="commentbox">' +
-      '<textarea id="new-comment" class="commentbox__input" rows="2" placeholder="Add a comment… (links show as plain text)" maxlength="2000"></textarea>' +
+      '<label for="new-comment">Your comment</label><textarea id="new-comment" class="commentbox__input" rows="2" placeholder="Add a comment… (links show as plain text)" maxlength="2000"></textarea>' +
       '<button class="btn btn-primary" id="post-comment">Post comment</button>' +
       '</div>'
     );
@@ -143,6 +146,8 @@
     const signin = document.getElementById('comment-signin');
     if (signin) signin.addEventListener('click', () => C.login());
 
+    const input = document.getElementById('new-comment');
+    if (input) restoreCommentDraft(null, input);
     const postBtn = document.getElementById('post-comment');
     if (postBtn) postBtn.addEventListener('click', () => postComment(null, document.getElementById('new-comment')));
 
@@ -161,14 +166,17 @@
       return;
     }
     const wrap = btn.closest('.votebar');
+    if (wrap.dataset.saving==='1') return;
+    wrap.dataset.saving='1';
+    const previous=wrap.querySelector('[data-val="1"]').classList.contains('is-on')?1:wrap.querySelector('[data-val="-1"]').classList.contains('is-on')?-1:0;
     const currentlyOn = btn.classList.contains('is-on');
     const newValue = currentlyOn ? 0 : val;
     applyVote(wrap, newValue);
-    const res = await C.vote(item.id, newValue);
+    let res;try{res=await C.vote(item.id,newValue);}catch{res={ok:false,status:0,body:{}};}finally{delete wrap.dataset.saving;}
     if (!res.ok) {
-      applyVote(wrap, currentlyOn ? val : 0);
-      if (res.status === 429) alert(res.body.error || 'You have hit today’s limit.');
-    }
+      applyVote(wrap, previous);
+      alert(res.body.error || 'Could not save your vote. Please try again.');
+    } else if (typeof res.body.net==='number') {wrap.querySelector('.votebar__net').textContent=res.body.net;}
   }
   function applyVote(wrap, newValue) {
     const up = wrap.querySelector('[data-val="1"]');
@@ -195,10 +203,11 @@
     if (box.hidden) {
       box.hidden = false;
       box.innerHTML =
-        '<textarea class="commentbox__input" rows="2" placeholder="Reply…" maxlength="2000"></textarea>' +
+        '<label>Reply<textarea class="commentbox__input" rows="2" placeholder="Reply…" maxlength="2000"></textarea></label>' +
         '<button class="btn btn-primary btn--sm">Reply</button>';
       const btn = box.querySelector('button');
       btn.addEventListener('click', () => postComment(parentId, box.querySelector('textarea')));
+      restoreCommentDraft(parentId, box.querySelector('textarea'));
       box.querySelector('textarea').focus();
     } else {
       box.hidden = true;
@@ -206,24 +215,73 @@
     }
   }
 
+  function commentKey(parentId) {
+    return 'rw_care_comment_draft_' + itemId + '_' + (parentId || 'new');
+  }
+  function rememberComment(parentId, value, submissionKey) {
+    const draft = { version: 1, at: Date.now(), body: value, submissionKey };
+    drafts.set(commentKey(parentId), draft);
+    try { sessionStorage.setItem(commentKey(parentId), JSON.stringify(draft)); } catch {}
+    return draft;
+  }
+  function readCommentDraft(parentId) {
+    let draft = drafts.get(commentKey(parentId));
+    try { draft ||= JSON.parse(sessionStorage.getItem(commentKey(parentId))); } catch {}
+    if (!draft || draft.version !== 1 || typeof draft.body !== 'string' || Date.now() - draft.at > 86400000) return null;
+    return draft;
+  }
+  function restoreCommentDraft(parentId, textarea) {
+    const draft = readCommentDraft(parentId);
+    if (draft) textarea.value = draft.body;
+    textarea.addEventListener('input', () => rememberComment(parentId, textarea.value, null));
+  }
+  function showThreadStatus(message, error = false) {
+    root.querySelector('.thread-status')?.remove();
+    const notice = document.createElement('p');
+    notice.className = 'thread-status';
+    notice.setAttribute('role', error ? 'alert' : 'status');
+    notice.textContent = message;
+    root.prepend(notice);
+  }
   async function postComment(parentId, textarea) {
     const body = (textarea.value || '').trim();
-    if (!body) return;
-    const btn = textarea.parentElement.querySelector('button');
+    const key = commentKey(parentId);
+    if (!body || savingComments.has(key)) return;
+    const draft = readCommentDraft(parentId);
+    const submissionKey = draft?.body.trim() === body && draft.submissionKey ? draft.submissionKey : crypto.randomUUID();
+    rememberComment(parentId, textarea.value, submissionKey);
+    savingComments.add(key);
+    const container = textarea.closest('.cmt__reply-box') || textarea.closest('.commentbox') || textarea.parentElement;
+    const btn = container.querySelector('button');
     if (btn) btn.disabled = true;
-    const res = await fetch('/api/comment', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ itemId: item.id, body, parentId: parentId || undefined }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
+    textarea.disabled = true;
+    let data;
+    try {
+      const response = await fetch('/api/comment', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ itemId: item.id, body, parentId: parentId || undefined, submissionKey }),
+        signal: AbortSignal.timeout(20000),
+      });
+      data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || 'Could not save your comment.');
+      if (!data.ok || !Number.isInteger(data.id)) throw new Error('The save was not confirmed. Your comment is still here; try again.');
+    } catch (error) {
+      showThreadStatus(error.name === 'TimeoutError' ? 'The save was not confirmed. Your comment is still here; try again.' : error.message, true);
+      return;
+    } finally {
+      savingComments.delete(key);
+      textarea.disabled = false;
       if (btn) btn.disabled = false;
-      alert(data.error || 'Could not post your comment.');
+    }
+    drafts.delete(key);
+    try { sessionStorage.removeItem(key); } catch {}
+    textarea.value = '';
+    if (data.held) {
+      showThreadStatus('Your comment was saved for Hunter to review before it appears.');
       return;
     }
-    // reload the thread to show the new comment (and correct held-state handling server-side)
-    await load();
+    try { await load(); }
+    catch { showThreadStatus('Your comment was saved. Reload the page to see the updated thread.'); }
   }
 
   // ---- pretty labels (map contract keys to human text) -----------------
@@ -246,22 +304,37 @@
   // the new state, never a stale browser-cached copy (belt-and-suspenders on
   // top of the server's Vary: Cookie).
   async function load() {
-    const res = await fetch('/api/item/' + itemId, { headers: { Accept: 'application/json' }, cache: 'no-store' });
+    let res;
+    try { res = await fetch('/api/item/' + itemId, { headers: { Accept: 'application/json' }, cache: 'no-store', signal: AbortSignal.timeout(15000) }); }
+    catch {
+      showThreadStatus('Could not load this submission. Your draft stays in this tab; reload to try again.', true);
+      return;
+    }
     if (res.status === 409) {
       const body = await res.json().catch(() => ({}));
       if (body.mergedInto) { location.replace('/item/?id=' + body.mergedInto); return; }
+    }
+    if (res.status >= 500 || res.status === 429) {
+      showThreadStatus('Customer Care is temporarily unavailable. Your draft stays in this tab; reload to try again.', true);
+      return;
     }
     if (!res.ok) {
       root.innerHTML = '<div class="empty-state"><h2>That report isn’t here</h2><p>It may have been removed or merged.</p><a class="btn btn-primary" href="/">Back to the board</a></div>';
       return;
     }
-    item = await res.json();
+    try {
+      item = await res.json();
+      if (!Number.isInteger(item?.id) || !Array.isArray(item.reports) || !Array.isArray(item.comments)) throw new Error('Invalid submission');
+    } catch {
+      showThreadStatus('Could not read this submission. Your draft stays in this tab; reload to try again.', true);
+      return;
+    }
     document.title = '#' + item.id + ' · ' + item.title + ' — RealmWright';
     render();
   }
 
   async function init() {
-    if (!Number.isInteger(itemId)) {
+    if (!Number.isInteger(itemId) || itemId <= 0) {
       root.innerHTML = '<div class="empty-state"><h2>No report selected</h2><a class="btn btn-primary" href="/">Back to the board</a></div>';
       return;
     }
@@ -275,8 +348,11 @@
     // replay a pending vote from a pre-login tap
     const pending = C.takePending();
     if (pending && pending.kind === 'vote' && me.loggedIn && item) {
-      await C.vote(pending.itemId, pending.value);
-      await load();
+      try {
+        const result = await C.vote(pending.itemId, pending.value);
+        if (!result.ok) showThreadStatus(result.body.error || 'Could not save your vote. Please try again.', true);
+        else await load();
+      } catch { showThreadStatus('Could not save your vote. Please try again.', true); }
     }
   }
 

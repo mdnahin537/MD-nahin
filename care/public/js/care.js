@@ -1,10 +1,13 @@
-// Shared client helpers for every Care page â€” no framework, no build step.
+// Shared client helpers for every Care page — no framework, no build step.
 // Care identity is local to this browser profile. No OAuth or external login.
 // Recovery is an explicit one-time code the user can copy/print for another
 // device or for cookie loss; it is never stored in localStorage.
 
 window.Care = (function () {
   const PENDING_KEY = 'rw_care_pending_action';
+  let issuingRecovery = false;
+  let overlayCleanup = null;
+  let overlayFocus = null;
 
   function esc(str) {
     return String(str == null ? '' : str).replace(/[&<>"']/g, (c) => (
@@ -15,19 +18,21 @@ window.Care = (function () {
   async function getMe() {
     try {
       const res = await fetch('/api/me', {
+        signal: AbortSignal.timeout(10000),
         credentials: 'same-origin',
         headers: { Accept: 'application/json' },
       });
-      if (!res.ok) return { loggedIn: false };
+      if (!res.ok) return { loggedIn: false, unavailable: true };
       return await res.json();
     } catch {
-      return { loggedIn: false };
+      return { loggedIn: false, unavailable: true };
     }
   }
 
   async function postAuth(path, action, body) {
     try {
       const res = await fetch(path, {
+        signal: AbortSignal.timeout(20000),
         method: 'POST',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json', 'X-Care-Action': action },
@@ -46,13 +51,14 @@ window.Care = (function () {
 
   async function continueWithVerifiedSession(target, panel, btn) {
     const me = await getMe();
+    if (panel.isConnected === false) return;
     if (!me.loggedIn) {
       btn.disabled = false;
-      showError(panel, 'Care could not save this device identity. Please try again.');
+      showError(panel, me.unavailable ? 'Care could not verify this device just now. Your identity has been kept; try again.' : 'Care could not save this device identity. Please try again.');
       return;
     }
     panel.innerHTML =
-      '<p role="status" style="margin:0;color:#28613b;font-weight:600">âœ“ This device is ready. Continuing to Careâ€¦</p>';
+      '<p role="status" style="margin:0;color:#28613b;font-weight:600">✓ This device is ready. Continuing to Care…</p>';
     window.setTimeout(() => {
       // When Care opened this choice from the current page, use a true reload
       // after the session cookie has been verified. This makes the new
@@ -68,8 +74,9 @@ window.Care = (function () {
   }
 
   function overlay(title, inner) {
-    const existing = document.getElementById('care-auth-overlay');
-    if (existing) existing.remove();
+    const previousFocus = document.activeElement;
+    closeOverlay();
+    overlayFocus = previousFocus;
     const el = document.createElement('div');
     el.id = 'care-auth-overlay';
     el.setAttribute('role', 'dialog');
@@ -82,12 +89,31 @@ window.Care = (function () {
       '<div id="care-auth-panel">' + inner + '</div>' +
       '</div>';
     document.body.appendChild(el);
+    const focusable = () => [...el.querySelectorAll('button, a[href], input, textarea, select, [tabindex]')]
+      .filter(node => !node.disabled && !node.hidden && node.getAttribute('tabindex') !== '-1');
+    const onKey = event => {
+      if (event.key === 'Escape') { event.preventDefault(); closeOverlay(); return; }
+      if (event.key !== 'Tab') return;
+      const nodes = focusable();
+      if (!nodes.length) { event.preventDefault(); return; }
+      const first = nodes[0], last = nodes[nodes.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault(); last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault(); first.focus();
+      }
+    };
+    el.addEventListener('keydown', onKey);
+    overlayCleanup = () => el.removeEventListener('keydown', onKey);
+    focusable()[0]?.focus();
     return el;
   }
 
   function closeOverlay() {
     const el = document.getElementById('care-auth-overlay');
     if (el) el.remove();
+    overlayCleanup?.(); overlayCleanup = null;
+    overlayFocus?.focus(); overlayFocus = null;
   }
 
   function showError(panel, message) {
@@ -140,7 +166,7 @@ window.Care = (function () {
     el.querySelector('#care-use-device').addEventListener('click', async () => {
       const btn = el.querySelector('#care-use-device');
       btn.disabled = true;
-      btn.textContent = 'Setting up this deviceâ€¦';
+      btn.textContent = 'Setting up this device…';
       const result = await postAuth('/auth/bootstrap', 'bootstrap');
       if (!result.ok) {
         btn.disabled = false;
@@ -160,19 +186,35 @@ window.Care = (function () {
   }
 
   async function logout() {
+    try {
+      for (const key of ['rw_care_report_draft_v1', 'rw_care_report_receipt_v1', PENDING_KEY]) sessionStorage.removeItem(key);
+      const keys = [];
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (key?.startsWith('rw_care_comment_draft_')) keys.push(key);
+      }
+      keys.forEach(key => sessionStorage.removeItem(key));
+    } catch {}
     location.href = '/auth/logout?return=' + encodeURIComponent(location.pathname + location.search);
   }
 
   async function issueRecovery() {
+    if (issuingRecovery) return;
+    issuingRecovery = true;
+    const button = document.getElementById('recovery-btn');
+    if (button) button.disabled = true;
+    const waiting = overlay('Create your recovery code', '<p role="status">Creating a new one-time code…</p><button class="linkbtn" id="care-close-waiting" type="button">Close</button>');
+    waiting.querySelector('#care-close-waiting').addEventListener('click', closeOverlay);
+    try {
     const result = await postAuth('/auth/recovery', 'issue-recovery');
     if (!result.ok) {
-      const panel = document.querySelector('#care-auth-panel');
+      const panel = waiting.querySelector('#care-auth-panel');
       if (panel) showError(panel, result.body.error || 'Could not create a recovery code.');
       return;
     }
     const code = result.body.recoveryCode || '';
     const el = overlay('Save your Care recovery code',
-      '<p>This code works once on another device or after cookie loss. It is shown only now. Store it offline; anyone who has it can access this Care identity.</p>' +
+      '<p>This code replaces any previous unused code. It works once on another device or after cookie loss. It is shown only now. Store it offline; anyone who has it can access this Care identity.</p>' +
       '<p style="font:600 1.35rem monospace;letter-spacing:.08em;word-break:break-all;background:#f1e6d4;padding:.8rem" id="care-recovery-code">' + esc(code) + '</p>' +
       '<div style="display:flex;gap:.6rem;flex-wrap:wrap">' +
       '<button class="btn btn-primary" id="care-copy-recovery">Copy code</button>' +
@@ -188,9 +230,18 @@ window.Care = (function () {
         status.textContent = 'Copy was blocked; select the code and save it manually.';
       }
     });
+    } finally {
+      issuingRecovery = false;
+      if (button) button.disabled = false;
+    }
   }
 
   function renderAuthSlot(el, me) {
+    if (me.unavailable) {
+      el.innerHTML = '<span role="status">Care could not verify this device.</span><button class="linkbtn" id="retry-identity">Try again</button>';
+      el.querySelector('#retry-identity').addEventListener('click', () => location.reload());
+      return;
+    }
     if (me.loggedIn) {
       el.innerHTML =
         (me.avatar ? '<img class="avatar" src="' + esc(me.avatar) + '" alt="" width="28" height="28">' : '') +

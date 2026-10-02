@@ -1,6 +1,11 @@
 name = "realmwright-care"
 main = "src/index.js"
 compatibility_date = "2026-07-01"
+# Preserve live mail settings and contact details during a reviewed deployment.
+keep_vars = true
+
+[triggers]
+crons = ["*/5 * * * *"]
 
 # ── Static assets: intake wizard, board, owner-desk SHELL are all plain
 # files served by Cloudflare's asset layer directly — free & unlimited,
@@ -41,9 +46,7 @@ ENVIRONMENT = "production"
 SITE_NAME = "RealmWright — Community Board"
 FEATURE_MICRO_INTERVIEW = "true"
 SESSION_COOKIE_NAME = "rw_care_session"
-# Public contact address shown on the /privacy page (deletion/questions).
-# Not a secret — it's meant to be published — so it lives here, not in the
-# secret store. Left EMPTY on purpose: fill in your own address at deploy
-# (see care/README.md). While empty, the privacy page shows a plain
-# "set at deploy" placeholder instead of a broken mailto link.
-CONTACT_EMAIL = ""
+# The public privacy contact is a non-secret Worker setting.
+# Preserve the working production value; use a dummy address for local tests.
+# CONTACT_EMAIL and CARE_MAIL_* values are inherited from the existing Worker.
+# Set local dummy values only in .dev.vars. Existing Worker secrets stay installed.

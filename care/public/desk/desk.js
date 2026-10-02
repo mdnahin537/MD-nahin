@@ -17,6 +17,8 @@
 
   function toast(msg) {
     const t = $('desk-toast');
+    t.setAttribute('role', 'status');
+    t.setAttribute('aria-live', 'polite');
     t.textContent = msg;
     t.hidden = false;
     clearTimeout(t._timer);
@@ -24,7 +26,7 @@
   }
 
   async function api(path, opts) {
-    const res = await fetch('/api/desk' + path, opts);
+    const res = await fetch('/api/desk' + path, { ...opts, signal: AbortSignal.timeout(20000) });
     if (!res.ok) {
       let msg = 'Action failed';
       try { msg = (await res.json()).error || msg; } catch {}
@@ -123,10 +125,10 @@
     const versions = Object.entries(t.versions || {}).map(([v, n]) => `v${v}×${n}`).join(' ');
     return (
       `<div class="thread" data-id="${t.id}" tabindex="-1">` +
-      `<label class="thread__pick"><input type="checkbox" class="thread__cb" data-id="${t.id}"></label>` +
+      `<label class="thread__pick"><input type="checkbox" class="thread__cb" data-id="${t.id}" aria-label="Select report #${t.id}"></label>` +
       `<span class="thread__serial mono">#${t.id}</span>` +
       `<span class="thread__title">${C.esc(t.title)}</span>` +
-      `<span class="thread__stat mono">${t.reportsCount} GMs · ${fmtNet(t.net)}${t.vel >= 3 ? ' ↑vel ' + t.vel : ''}${versions ? ' · ' + versions : ''}</span>` +
+      `<span class="thread__stat mono">${t.reportsCount} reports · ${fmtNet(t.net)}${t.vel >= 3 ? ' ↑vel ' + t.vel : ''}${versions ? ' · ' + versions : ''}</span>` +
       (syn ? `<div class="thread__ai">AI: ${C.esc(syn)}</div>` : '') +
       `<div class="thread__actions">` +
       statusSelect(t.id, t.status) +
@@ -139,7 +141,7 @@
   function statusSelect(id, current) {
     const opts = ['open', 'planned', 'in_progress', 'shipped', 'declined']
       .map((s) => `<option value="${s}"${s === current ? ' selected' : ''}>${C.STATUS_LABEL[s]}</option>`).join('');
-    return `<select class="status-sel" data-id="${id}">${opts}</select>`;
+    return `<select class="status-sel" data-id="${id}" aria-label="Status for report #${id}">${opts}</select>`;
   }
 
   // ---- decision queue --------------------------------------------------
@@ -175,22 +177,41 @@
   }
   function moverRow(m) {
     return `<div class="qrow" data-kind="mover" data-id="${m.id}" tabindex="-1">` +
-      `<span class="qrow__body"><span class="mono">#${m.id}</span> ↑vel ${m.vel} · ${fmtNet(m.net)} · ${m.reportsCount} GMs<br><span class="qrow__sub">${C.esc(m.title)}</span></span>` +
+      `<span class="qrow__body"><span class="mono">#${m.id}</span> ↑vel ${m.vel} · ${fmtNet(m.net)} · ${m.reportsCount} reports<br><span class="qrow__sub">${C.esc(m.title)}</span></span>` +
       `<span class="qrow__actions">${statusSelect(m.id, 'open')}<button class="desk-btn desk-btn--sm" data-act="brief" data-id="${m.id}">brief</button></span></div>`;
   }
   function holdRow(h) {
-    const label = h.target === 'item' ? `item #${h.id} — ${C.esc((h.title || '').slice(0, 60))}` : `comment on #${h.itemId}: ${C.esc((h.body || '').slice(0, 60))}`;
-    return `<div class="qrow" data-kind="hold" tabindex="-1">` +
-      `<span class="qrow__body">${label}</span>` +
-      `<span class="qrow__actions">` +
-      (h.target === 'item'
-        ? `<button class="desk-btn desk-btn--sm" data-act="unhide" data-id="${h.id}">Approve</button><button class="desk-btn desk-btn--sm desk-btn--ghost" data-act="remove" data-id="${h.id}">Remove</button>`
-        : `<span class="qrow__sub">review on the item page</span>`) +
-      `</span></div>`;
+    const label = h.target === 'item' ? `Item #${h.id}: ${h.title || ''}`
+      : h.target === 'report' ? `Held submission #${h.id} on item #${h.itemId}: ${h.title || ''}`
+      : `Held comment #${h.id} on item #${h.itemId}: ${h.body || ''}`;
+    return `<div class="qrow qrow--review" data-kind="hold" tabindex="-1">
+      <span class="qrow__body">${C.esc(label)}</span>
+      <span class="qrow__actions">
+        <button class="desk-btn desk-btn--sm" data-act="review" data-target="${h.target}" data-id="${h.id}">Review saved details</button>
+        <button class="desk-btn desk-btn--sm" data-act="publish" data-target="${h.target}" data-id="${h.id}" disabled>Publish</button>
+        <button class="desk-btn desk-btn--sm desk-btn--ghost" data-act="retain" data-target="${h.target}" data-id="${h.id}" disabled>Keep held</button>
+      </span><div class="review-details" hidden></div></div>`;
+  }
+  function reviewFields(payload) {
+    const labels = { type: 'Type', area: 'Area', part: 'Part', symptom: 'Symptom',
+      symptom_detail: 'Symptom detail', frequency: 'Frequency', expected: 'Expected',
+      actual: 'Actually happened', freetext: 'Additional details', ideaKind: 'Idea type',
+      ask: 'What it should do', why: 'Why it matters', doneLooksLike: 'What success looks like',
+      importance: 'Importance', ctx: 'Attached context', followups: 'Follow-up answers' };
+    return '<dl class="review-fields">' + Object.entries(labels).filter(([key]) => payload?.[key] != null && payload[key] !== '')
+      .map(([key,label]) => '<dt>' + label + '</dt><dd>' + C.esc(typeof payload[key] === 'object' ? JSON.stringify(payload[key], null, 2) : payload[key]) + '</dd>').join('') + '</dl>';
+  }
+  function reviewContent(data) {
+    const report = r => '<section><h3>Submission #' + r.id + ' · ' + C.esc(r.name || 'A GM') + '</h3>' + reviewFields(r.payload) + '</section>';
+    const comment = c => '<section><h3>Comment #' + c.id + ' · ' + C.esc(c.name || 'A GM') + '</h3><p class="review-verbatim">' + C.esc(c.body) + '</p>' +
+      (c.parent_id ? '<p>Reply to comment #' + c.parent_id + '</p>' : '') + '</section>';
+    return '<p>Read the complete saved details before choosing. Publishing makes this content public; keeping it held closes this review and preserves the record.</p>' +
+      (data.target === 'item' ? '<h3>' + C.esc(data.item?.title || '') + '</h3>' + (data.reports || []).map(report).join('') + (data.comments || []).map(comment).join('')
+        : data.target === 'report' ? report(data.record) : comment(data.record));
   }
   function controRow(c) {
     return `<div class="qrow" data-kind="controversial" data-id="${c.id}" tabindex="-1">` +
-      `<span class="qrow__body"><span class="mono">#${c.id}</span> ${fmtNet(c.net)} but ${c.reportsCount} GMs — read it<br><span class="qrow__sub">${C.esc(c.title)}</span></span>` +
+      `<span class="qrow__body"><span class="mono">#${c.id}</span> ${fmtNet(c.net)} but ${c.reportsCount} reports — read it<br><span class="qrow__sub">${C.esc(c.title)}</span></span>` +
       `<span class="qrow__actions"><a class="desk-btn desk-btn--sm" href="/item/?id=${c.id}" target="_blank">open</a></span></div>`;
   }
   function prolificRow(p) {
@@ -217,14 +238,33 @@
     $('queue-body').querySelectorAll('[data-act]').forEach((btn) => {
       btn.addEventListener('click', async () => {
         const act = btn.dataset.act;
+        if (btn.disabled) return;
+        btn.disabled = true;
         try {
-          if (act === 'merge') { await api(`/item/${btn.dataset.loser}/merge`, postBody({ intoId: Number(btn.dataset.winner) })); toast('Merged'); await loadQueue(); }
+          if (act === 'review') {
+            const data = await api(`/review/${btn.dataset.target}/${btn.dataset.id}`);
+            const row = btn.closest('.qrow'), details = row.querySelector('.review-details');
+            details.innerHTML = reviewContent(data); details.hidden = false;
+            row.querySelectorAll('[data-act="publish"], [data-act="retain"]').forEach(button => { button.disabled = false; });
+            btn.textContent = 'Reload saved details';
+          } else if (act === 'publish' || act === 'retain') {
+            const row = btn.closest('.qrow');
+            row.querySelectorAll('button').forEach(button => { button.disabled = true; });
+            try {
+              await api(`/review/${btn.dataset.target}/${btn.dataset.id}`, postBody({ publish: act === 'publish' }));
+              toast(act === 'publish' ? 'Published' : 'Kept held; record preserved');
+              await Promise.all([loadQueue(), loadSummary(), loadDigest(false)]);
+            } catch (error) {
+              row.querySelectorAll('button').forEach(button => { button.disabled = false; }); throw error;
+            }
+          } else if (act === 'merge') { await api(`/item/${btn.dataset.loser}/merge`, postBody({ intoId: Number(btn.dataset.winner) })); toast('Merged'); await loadQueue(); }
           else if (act === 'dismiss') { btn.closest('.qrow').style.opacity = 0.4; btn.closest('.qrow').querySelectorAll('button').forEach((x) => x.disabled = true); }
           else if (act === 'unhide') { await api(`/item/${btn.dataset.id}/hide`, postBody({ hidden: false })); toast('Approved'); await loadQueue(); }
           else if (act === 'remove') { await api(`/item/${btn.dataset.id}/remove`, postBody({})); toast('Removed'); await loadQueue(); }
           else if (act === 'ban') { if (confirm('Ban ' + btn.dataset.sub + '?')) { await api(`/user/${encodeURIComponent(btn.dataset.sub)}/ban`, postBody({})); toast('Banned'); await loadQueue(); } }
           else if (act === 'brief') { composeBrief([Number(btn.dataset.id)]); }
         } catch (e) { toast(e.message); }
+        finally { if (act !== 'dismiss') btn.disabled = false; }
       });
     });
     $('queue-body').querySelectorAll('.status-sel').forEach((sel) => sel.addEventListener('change', async () => {
@@ -300,9 +340,14 @@
 
   // ---- tabs ------------------------------------------------------------
   function switchTab(name) {
-    document.querySelectorAll('.desk-tab').forEach((t) => t.classList.toggle('is-active', t.dataset.tab === name));
+    document.querySelectorAll('.desk-tab').forEach(t => {
+      const selected = t.dataset.tab === name;
+      t.classList.toggle('is-active', selected);
+      t.setAttribute('aria-selected', String(selected));
+      t.setAttribute('tabindex', selected ? '0' : '-1');
+    });
     document.querySelectorAll('.desk-panel').forEach((p) => (p.hidden = p.id !== 'tab-' + name));
-    if (name === 'queue' && !queue) loadQueue();
+    if (name === 'queue' && !queue) loadQueue().catch(error => { $('queue-body').innerHTML = '<p class="desk-empty" role="alert">' + C.esc(error.message) + '</p>'; toast(error.message); });
     rebuildNav();
   }
 
@@ -316,11 +361,25 @@
   // ---- init ------------------------------------------------------------
   async function init() {
     window._tax = await fetch('/data/taxonomy.json').then((r) => r.json()).catch(() => null);
-    document.querySelectorAll('.desk-tab').forEach((t) => t.addEventListener('click', () => switchTab(t.dataset.tab)));
-    $('refresh-digest').addEventListener('click', async () => { $('refresh-digest').disabled = true; await loadDigest(true); $('refresh-digest').disabled = false; toast('Digest refreshed'); });
+    const tabs = [...document.querySelectorAll('.desk-tab')];
+    tabs.forEach(t => t.addEventListener('click', () => switchTab(t.dataset.tab)));
+    tabs.forEach(t => t.addEventListener('keydown', event => {
+      if (!['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
+      event.preventDefault();
+      let index = tabs.indexOf(t);
+      index = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length-1 :
+        (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+      switchTab(tabs[index].dataset.tab); tabs[index].focus();
+    }));
+    $('refresh-digest').addEventListener('click', async () => {
+      $('refresh-digest').disabled = true;
+      try { await loadDigest(true); toast('Digest refreshed'); }
+      catch (error) { toast(error.message); }
+      finally { $('refresh-digest').disabled = false; }
+    });
     $('brief-go').addEventListener('click', () => composeBrief(parseIds($('brief-ids').value)));
     $('brief-copy').addEventListener('click', () => {
-      navigator.clipboard.writeText($('brief-out').textContent).then(() => toast('Copied — paste it to your build AI'));
+      navigator.clipboard.writeText($('brief-out').textContent).then(() => toast('Copied — paste it to your build AI')).catch(() => toast('Copy was blocked; select and copy the brief manually.'));
     });
     try {
       await Promise.all([loadSummary(), loadDigest(false)]);

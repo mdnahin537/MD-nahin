@@ -14,7 +14,7 @@ function detectGaps(payload) {
   const part = payload.part;
   const vaguePart = !part || part === 'not-sure' || part === 'other';
 
-  if (area === 'exports-data' && vaguePart) {
+  if (payload.type === 'bug' && area === 'exports-data' && vaguePart) {
     gaps.push({
       q: 'which_export',
       prompt: 'Which export was it?',
@@ -28,7 +28,7 @@ function detectGaps(payload) {
     });
   }
 
-  if (area === 'ai' && (payload.part === 'generator' || vaguePart)) {
+  if (payload.type === 'bug' && area === 'ai' && (payload.part === 'generator' || vaguePart)) {
     gaps.push({
       q: 'which_generator',
       prompt: 'Which generator was involved?',
@@ -43,7 +43,7 @@ function detectGaps(payload) {
     });
   }
 
-  if (area === 'license-setup' && payload.symptom === 'license_wont_activate') {
+  if (payload.type === 'bug' && area === 'license-setup' && payload.symptom === 'license_wont_activate') {
     gaps.push({
       q: 'license_step',
       prompt: 'Where did activation stop?',

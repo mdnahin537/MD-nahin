@@ -1,0 +1,87 @@
+/* A material language for the Care lantern and its quiet motion wall. */
+:root { --care-rim: #806a50; --care-glow: #cf9d62; }
+@media (prefers-color-scheme: light) { :root { --care-rim: #b9a68c; --care-glow: #ac7140; } }
+.care-hero {
+  position: relative; isolation: isolate; overflow: hidden; border: 1px solid var(--care-rim);
+  border-radius: 24px; min-height: 26rem; margin: 0 0 2rem; padding: clamp(1.5rem, 4vw, 2.5rem);
+  grid-template-columns: minmax(0, 1.13fr) minmax(0, 1fr); gap: .7rem;
+  background: var(--surface-raised); box-shadow: inset 0 1px 0 #ffffff15, 0 20px 60px #00000014;
+}
+.care-hero::before {
+  content: ''; position: absolute; inset: 0; z-index: -1;
+  background: radial-gradient(ellipse at 83% 50%, color-mix(in srgb, var(--care-glow) 13%, transparent), transparent 70%),
+    linear-gradient(125deg, var(--surface-raised) 18%, var(--surface) 100%);
+}
+.care-hero__copy { position: relative; z-index: 2; padding: 1.4rem 0; }
+.care-hero h1 { font-size: clamp(2.3rem, 5.5vw, 3.6rem); max-width: 16ch; line-height: 1.06; letter-spacing: -.035em; text-wrap: balance; }
+.care-hero .board-intro__eyebrow { font-size: .7rem; margin-bottom: 1.1rem; line-height: 1.6; }
+.care-hero .board-intro__copy { font-size: 1rem; line-height: 1.7; max-width: 36ch; margin: 1.2rem 0 1.4rem; }
+.care-hero__actions { gap: .7rem; align-items: center; }
+.care-hero__actions .btn { text-decoration: none; gap: .8rem; padding: .75rem 1rem; }
+.care-hero__note { font-size: .76rem; color: var(--ink-faint); line-height: 1.6; margin: 1rem 0 0; }
+.care-hero__art { position: relative; min-width: 0; z-index: 1; }
+.care-scene { position: relative; width: 100%; aspect-ratio: 520 / 430; min-height: 200px; }
+.care-scene img, .care-scene canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: contain; }
+.care-scene canvas { opacity: 0; pointer-events: none; }
+.care-scene.is-rendered canvas { opacity: 1; }
+.care-scene.is-rendered img { visibility: hidden; }
+.care-hero__caption { display: flex; align-items: center; justify-content: center; gap: .8rem; color: var(--ink-faint); font: 500 .66rem var(--mono); letter-spacing: .1em; text-transform: uppercase; margin: .1rem 0 .8rem; }
+.care-hero__caption-line { width: 2rem; height: 1px; background: var(--care-rim); }
+.care-motion-toggle {
+  position: absolute; z-index: 3; right: 1rem; top: .6rem; display: inline-flex; align-items: center; gap: .45rem;
+  min-height: 44px; padding: .4rem .6rem; font-size: .72rem; color: var(--ink-dim);
+  border: 1px solid transparent; border-radius: 999px; background: var(--surface-raised); cursor: pointer;
+}
+.care-motion-toggle:hover { border-color: var(--care-rim); color: var(--ink); }
+.care-motion-toggle__icon { font-size: 1.4rem; line-height: 1; color: var(--accent-strong); }
+.care-hero__wall { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; opacity: .2; }
+.care-hero__wall span {
+  position: absolute; right: -10%; top: -30%; width: 68%; height: 160%; border-radius: 45%; transform: rotate(-24deg);
+  border: 1px solid var(--care-glow);
+  background: repeating-radial-gradient(ellipse at center, transparent 0 23px, color-mix(in srgb, var(--care-glow) 24%, transparent) 24px 25px, transparent 26px 46px);
+  animation: care-wall 26s ease-in-out infinite alternate; animation-play-state: paused;
+}
+.care-hero__wall span:nth-child(2) { right: -32%; top: -11%; opacity: .6; animation-duration: 35s; animation-delay: -9s; transform: rotate(30deg); }
+.care-hero__wall span:nth-child(3) { right: 3%; top: -53%; opacity: .4; animation-duration: 42s; animation-delay: -19s; transform: rotate(-52deg); }
+[data-care-motion="running"] .care-hero__wall span { animation-play-state: running; }
+@keyframes care-wall { from { translate: 0 -2%; rotate: -4deg; } to { translate: 7% 8%; rotate: 9deg; } }
+.masthead__mark { border-color: var(--care-rim); }
+.controls { box-shadow: inset 0 1px 0 #ffffff0a, 0 12px 36px #00000008; }
+.feed__list { border-top-color: var(--care-rim); }
+.wizard-body { background-image: var(--care-paper-texture), radial-gradient(ellipse at 50% -10%, color-mix(in srgb, var(--care-glow) 9%, transparent), transparent 34rem); }
+.wiz__mark { border-color: var(--care-rim); box-shadow: inset 0 1px 0 #ffffff20, 0 6px 24px #00000014; }
+.thread__title { font-size: clamp(1.8rem, 4vw, 2.5rem); text-wrap: balance; }
+.rep, .commentbox, .ownernote { border-color: var(--care-rim); }
+@media (max-width: 720px) {
+  .care-hero { grid-template-columns: minmax(0, 1fr); padding: 1.5rem; gap: 0; }
+  .care-hero__copy { padding: .5rem 0 0; }
+  .care-hero h1 { font-size: clamp(2.2rem, 8vw, 3rem); }
+  .care-hero__art { width: min(100%, 22rem); justify-self: center; margin-top: .1rem; padding-bottom: 2rem; }
+  .care-scene { min-height: 0; max-height: 15rem; }
+  .care-hero__caption { margin-top: -.3rem; }
+  .care-motion-toggle { top: auto; bottom: .4rem; right: .4rem; font-size: .66rem; }
+  .care-hero__wall span { width: 120%; right: -32%; opacity: .5; }
+}
+@media (max-width: 380px) {
+  .care-hero { border-radius: 18px; padding: 1.2rem; }
+  .care-hero__actions .btn { font-size: .85rem; padding-inline: .8rem; }
+  .care-hero__caption { justify-content: flex-start; font-size: .58rem; margin-bottom: 1.5rem; }
+}
+@media (prefers-reduced-motion: reduce) { .care-hero__wall span { animation: none !important; } }
+
+/* Copper chrome shares the sculpture's material; text stays dark and crisp. */
+.masthead, .wiz__bar {
+  --ink: #301b10; --ink-dim: #301b10; --ink-faint: #301b10;
+  --accent: #563019; --accent-strong: #301b10; --accent-ink: #fff4e6;
+  --line: #563019; --control-line: #684022;
+  --surface: #b97b4d; --surface-raised: #c58b5c; --surface-overlay: #e4b081;
+  background: linear-gradient(110deg, #c58b5c, #b97b4d);
+  color: var(--ink); border-bottom-color: #8b5633;
+}
+.masthead__mark { background: #fff4e626; box-shadow: inset 0 1px 0 #ffe0b847; }
+.masthead .btn { border-color: #563019; }
+.masthead .btn-primary { background: #563019; border-color: #563019; color: #fff4e6; }
+.masthead .btn-primary:hover { background: #301b10; }
+.wiz__bar { border-bottom: 1px solid #8b5633; }
+
+.masthead :focus-visible, .wiz__bar :focus-visible { outline-color: #301b10; }

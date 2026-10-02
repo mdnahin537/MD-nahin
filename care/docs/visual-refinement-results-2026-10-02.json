@@ -1,0 +1,43 @@
+{
+  "scope": "Ancient bronze visual refinement",
+  "reviewBranch": "codex/care-audit-recovery",
+  "baseCommit": "6d7cb8df15a0baab86f4f814daa64c841b7c9b04",
+  "vertices": 13020,
+  "gpuVertexBytes": 468720,
+  "drawMeshes": 3,
+  "maxRadius": 1.9530000536246106,
+  "maxNormalError": 3.016465610627961e-8,
+  "materialColourRange": [
+    0.09279999881982803,
+    0.49044835567474365
+  ],
+  "stableObjectSpaceTexture": true,
+  "shaderSourceUnchanged": true,
+  "pauseControl": "passed",
+  "reducedMotion": "passed",
+  "productionWrites": false,
+  "browserAppearanceVerified": false,
+  "hiddenAndOffscreen": "passed",
+  "resumeSingleLoop": "passed",
+  "fallbackCasesPassed": 6,
+  "contextLoss": "passed",
+  "svgReferencesAndNesting": "passed",
+  "automatedVerification": {
+    "testedCommit": "103d021cb40d5fa8dad569da21b7efda52892a8e",
+    "runURL": "https://github.com/mdnahin537/MD-nahin/actions/runs/36994206769",
+    "conclusion": "success",
+    "nodeTestsPassed": 46,
+    "preservationTestsPassed": 9,
+    "localWorkerD1ChecksPassed": 8,
+    "isolatedRecoveryChecksPassed": 21,
+    "readOnlyLiveChecksPassed": 11,
+    "nativeGLESCompilationAndLinking": "passed",
+    "stylesheetsParsed": 6,
+    "clientScriptsParsed": 6,
+    "dependencyAdvisories": 0,
+    "workerBuild": "dry-run passed",
+    "productionDeployment": false,
+    "freshEmailDeliveryVerified": false,
+    "browserRenderedAppearanceVerified": false
+  }
+}

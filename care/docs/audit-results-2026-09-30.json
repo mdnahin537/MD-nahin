@@ -1,0 +1,188 @@
+{
+  "checked_at_utc": "2026-09-30T13:43:35Z",
+  "source_commit": "e1836027c1c6632bc0a4e198a50e22c84c253e72",
+  "base_commit": "31c95564f529860a777b2dd7243bfb0ed5515d65",
+  "branch": "codex/care-audit-recovery",
+  "workflow_url": "https://github.com/mdnahin537/MD-nahin/actions/runs/36723670648",
+  "artifact_url": "https://github.com/mdnahin537/MD-nahin/actions/runs/36723670648/artifacts/11101012491",
+  "conclusion": "success",
+  "groups": {
+    "backend": {
+      "passed": 26,
+      "failed": 0,
+      "scope": "Bundled Worker and isolated SQLite D1 adapter including trigger change accounting"
+    },
+    "client": {
+      "passed": 13,
+      "failed": 0,
+      "scope": "Actual production JavaScript with small DOM fixture"
+    },
+    "preservation": {
+      "passed": 9,
+      "failed": 0,
+      "scope": "Isolated SQLite migrations and original fixture boundaries"
+    },
+    "native_runtime": {
+      "passed": 8,
+      "failed": 0,
+      "scope": "Local Cloudflare Worker and temporary D1; no remote accounts or mail"
+    },
+    "archive": {
+      "passed": 21,
+      "failed": 0,
+      "scope": "Recovery source tested separately"
+    },
+    "public_live": {
+      "passed": 11,
+      "failed": 0,
+      "scope": "Read-only HTTP without credentials"
+    }
+  },
+  "build": {
+    "worker_dry_run": "passed",
+    "wrangler": "4.144.0",
+    "node": "22",
+    "stylesheets_parsed": 5,
+    "client_scripts_parsed": 5
+  },
+  "dependency_advisories": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0,
+    "total": 0
+  },
+  "live_checks": [
+    {
+      "path": "/api/health",
+      "status": 200,
+      "expected_status": 200,
+      "public_metadata": {
+        "ok": true,
+        "release": "2026-09-29-care-repair"
+      },
+      "passed": true
+    },
+    {
+      "path": "/report/",
+      "status": 200,
+      "expected_status": 200,
+      "passed": true
+    },
+    {
+      "path": "/api/feed",
+      "status": 200,
+      "expected_status": 200,
+      "passed": true
+    },
+    {
+      "path": "/api/desk/summary",
+      "status": 404,
+      "expected_status": 404,
+      "passed": true
+    },
+    {
+      "path": "/api/desk/notifications",
+      "status": 404,
+      "expected_status": 404,
+      "passed": true
+    },
+    {
+      "path": "/desk/",
+      "status": 404,
+      "expected_status": 404,
+      "passed": true
+    },
+    {
+      "path": "/desk/desk.js",
+      "status": 404,
+      "expected_status": 404,
+      "passed": true
+    },
+    {
+      "path": "/js/wizard.js",
+      "status": 200,
+      "expected_status": 200,
+      "sha256": "9d55cdc64b4357e9a082e4f77de890d4de70c113da08ea9392bf1b10481ec8fe",
+      "expected_sha256": "9d55cdc64b4357e9a082e4f77de890d4de70c113da08ea9392bf1b10481ec8fe",
+      "source_match": true,
+      "passed": true
+    },
+    {
+      "path": "/js/board.js",
+      "status": 200,
+      "expected_status": 200,
+      "sha256": "c993ee75813b2dfc09725f6ff2169d252c2328ac7996a9a92ad302b474fe3582",
+      "expected_sha256": "c993ee75813b2dfc09725f6ff2169d252c2328ac7996a9a92ad302b474fe3582",
+      "source_match": true,
+      "passed": true
+    },
+    {
+      "path": "/js/item.js",
+      "status": 200,
+      "expected_status": 200,
+      "sha256": "03a25d651f00a329f1879587882ab1d47f1d914557566910c2603f31a67b178c",
+      "expected_sha256": "03a25d651f00a329f1879587882ab1d47f1d914557566910c2603f31a67b178c",
+      "source_match": true,
+      "passed": true
+    },
+    {
+      "path": "/privacy/",
+      "status": 200,
+      "expected_status": 200,
+      "passed": true
+    }
+  ],
+  "contrast_pairs": [
+    {
+      "label": "dark muted text",
+      "foreground": "#ada28f",
+      "background": "#1c2029",
+      "ratio": 6.48
+    },
+    {
+      "label": "light muted text",
+      "foreground": "#766b5c",
+      "background": "#fffdf8",
+      "ratio": 5.13
+    },
+    {
+      "label": "dark accent",
+      "foreground": "#efb16d",
+      "background": "#12151b",
+      "ratio": 9.73
+    },
+    {
+      "label": "light accent",
+      "foreground": "#773513",
+      "background": "#faf5eb",
+      "ratio": 8.39
+    },
+    {
+      "label": "dark button label",
+      "foreground": "#241505",
+      "background": "#f5ce9e",
+      "ratio": 11.99
+    },
+    {
+      "label": "light button label",
+      "foreground": "#fff6ec",
+      "background": "#93471f",
+      "ratio": 6.21
+    }
+  ],
+  "production_writes_performed": false,
+  "production_deployed": false,
+  "fresh_mail_sent": false,
+  "regression_reproduction": {
+    "workflow_url": "https://github.com/mdnahin537/MD-nahin/actions/runs/36723041979",
+    "issue": "Merge or hold between public validation and write accepts content against an outdated board entry",
+    "fixed_in": "e1836027c1c6632bc0a4e198a50e22c84c253e72"
+  },
+  "limits": [
+    "Private current Cloudflare configuration and uploaded Worker were not read.",
+    "Historical Gmail Inbox receipt checked; fresh email acceptance/inbox delivery not rerun.",
+    "No browser rendering, screenshots, computer automation, mobile-device, or assistive-technology verification."
+  ]
+}

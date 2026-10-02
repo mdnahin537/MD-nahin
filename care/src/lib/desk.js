@@ -85,20 +85,21 @@ async function versionSpreadFor(env, itemIds) {
 // ---- §7.1 Header strip summary (deterministic) ----------------------------
 export async function deskSummary(env, sinceEpoch) {
   const since = sinceEpoch || 0;
-  const [newReports, joins, comments, holds, heldComments, movers] = await Promise.all([
+  const [newReports, joins, comments, holds, heldReports, heldComments, movers] = await Promise.all([
     env.DB.prepare('SELECT COUNT(*) AS n FROM reports WHERE created_at >= ?1').bind(since).first(),
     // joins = reports on items that already existed before the report (rough: reports beyond the first per item in window)
     env.DB.prepare('SELECT COUNT(*) AS n FROM reports r WHERE r.created_at >= ?1 AND r.item_id IN (SELECT item_id FROM reports GROUP BY item_id HAVING COUNT(*) > 1)').bind(since).first(),
     env.DB.prepare('SELECT COUNT(*) AS n FROM comments WHERE created_at >= ?1 AND deleted = 0').bind(since).first(),
-    env.DB.prepare('SELECT COUNT(*) AS n FROM items WHERE held = 1').first(),
-    env.DB.prepare('SELECT COUNT(*) AS n FROM comments WHERE held = 1 AND deleted = 0').first(),
+    env.DB.prepare('SELECT COUNT(*) AS n FROM items WHERE held = 1 AND moderation_reviewed_at IS NULL').first(),
+    env.DB.prepare('SELECT COUNT(*) AS n FROM reports WHERE held = 1 AND moderation_reviewed_at IS NULL').first(),
+    env.DB.prepare('SELECT COUNT(*) AS n FROM comments WHERE held = 1 AND deleted = 0 AND moderation_reviewed_at IS NULL').first(),
     env.DB.prepare(`SELECT COUNT(*) AS n FROM items WHERE held = 0 AND merged_into IS NULL AND status IN ${LIVE} AND net >= 4`).first(),
   ]);
   return {
     newReports: newReports.n,
     joins: joins.n,
     comments: comments.n,
-    holds: holds.n + heldComments.n,
+    holds: holds.n + heldReports.n + heldComments.n,
     movers: movers.n,
   };
 }
@@ -110,13 +111,13 @@ export async function decisionQueue(env, velByItem) {
   // 1. Merge suspects — same (area, part), similar titles. Compare within
   //    each (area, part) bucket so this stays cheap.
   const { results: liveItems } = await env.DB.prepare(
-    `SELECT id, area, part, title, net, reports_count
+    `SELECT id, type, area, part, title, net, reports_count
      FROM items WHERE held = 0 AND merged_into IS NULL AND status != 'declined'
      ORDER BY area, part, id`
   ).all();
   const buckets = new Map();
   for (const it of liveItems) {
-    const key = it.area + '|' + (it.part || '');
+    const key = it.type + '|' + it.area + '|' + (it.part || '');
     if (!buckets.has(key)) buckets.set(key, []);
     buckets.get(key).push(it);
   }
@@ -159,11 +160,16 @@ export async function decisionQueue(env, velByItem) {
 
   // 3. Holds — blocklist-flagged items and comments.
   const { results: heldItems } = await env.DB.prepare(
-    `SELECT id, title, created_by FROM items WHERE held = 1 ORDER BY id DESC LIMIT 5`
+    `SELECT id, title, created_by FROM items WHERE held = 1 AND merged_into IS NULL AND moderation_reviewed_at IS NULL ORDER BY id ASC LIMIT 20`
   ).all();
   for (const h of heldItems) queue.push({ kind: 'hold', target: 'item', id: h.id, title: h.title });
+  const { results: heldReports } = await env.DB.prepare(
+    `SELECT r.id, r.item_id, i.title FROM reports r JOIN items i ON i.id=r.item_id
+      WHERE r.held=1 AND r.moderation_reviewed_at IS NULL ORDER BY r.id ASC LIMIT 20`
+  ).all();
+  for (const h of heldReports) queue.push({ kind: 'hold', target: 'report', id: h.id, itemId: h.item_id, title: h.title });
   const { results: heldComments } = await env.DB.prepare(
-    `SELECT c.id, c.item_id, c.body FROM comments c WHERE c.held = 1 AND c.deleted = 0 ORDER BY c.id DESC LIMIT 5`
+    `SELECT c.id, c.item_id, c.body FROM comments c WHERE c.held = 1 AND c.deleted = 0 AND c.moderation_reviewed_at IS NULL ORDER BY c.id ASC LIMIT 20`
   ).all();
   for (const h of heldComments) queue.push({ kind: 'hold', target: 'comment', id: h.id, itemId: h.item_id, body: h.body.slice(0, 120) });
 
@@ -214,6 +220,7 @@ export async function buildBriefData(env, itemId) {
   const browserTally = {};
   const builds = {};
   const expectedActual = [];
+  const ideaRequests = [];
   const quotes = [];
   const followupTally = {};
 
@@ -230,6 +237,7 @@ export async function buildBriefData(env, itemId) {
     if (p.expected || p.actual) expectedActual.push({ expected: p.expected || '', actual: p.actual || '' });
     if (p.freetext) quotes.push(p.freetext);
     if (p.ask) quotes.push(p.ask);
+    if (p.type === 'idea') ideaRequests.push({ ask: p.ask || '', why: p.why || '', doneLooksLike: p.doneLooksLike || '' });
     for (const f of p.followups || []) {
       const k = f.q + '=' + f.a;
       followupTally[k] = (followupTally[k] || 0) + 1;
@@ -242,6 +250,7 @@ export async function buildBriefData(env, itemId) {
     reportCount: parsed.length,
     symptomTally, freqTally, detailTally, importanceTally,
     versions, osTally, browserTally, builds,
+    ideaRequests,
     expectedActual: expectedActual.slice(0, 8),
     quotes: quotes.slice(0, 6),
     followupTally,
@@ -260,9 +269,17 @@ export function renderBriefText(d, mergedIds) {
   };
   L.push(`BUILD BRIEF — #${d.id} ${areaTitle(d.area)}: ${d.title}`);
   const impStr = tally(d.importanceTally);
-  L.push(`Demand: ${d.reportsCount} GMs · ${d.net >= 0 ? '+' : ''}${d.net} net${Object.keys(d.importanceTally).length ? ' · importance: ' + impStr : ''}`);
+  L.push(`Demand: ${d.reportsCount} reports · ${d.net >= 0 ? '+' : ''}${d.net} net${Object.keys(d.importanceTally).length ? ' · importance: ' + impStr : ''}`);
   if (d.type === 'bug') {
     L.push(`Symptom matrix: ${tally(d.symptomTally)}; ${tally(d.freqTally)}${Object.keys(d.detailTally).length ? '; detail: ' + tally(d.detailTally) : ''}.`);
+  }
+  if (d.type === 'idea' && d.ideaRequests?.length) {
+    L.push('Idea requests (verbatim):');
+    for (const request of d.ideaRequests) {
+      L.push('Request: ' + (request.ask || 'Not supplied'));
+      L.push('Why it matters: ' + (request.why || 'Not supplied'));
+      L.push('What success looks like: ' + (request.doneLooksLike || 'Not supplied'));
+    }
   }
   const envBits = [];
   if (Object.keys(d.versions).length) envBits.push(tally(d.versions, 'v'));

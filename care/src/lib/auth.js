@@ -1,3 +1,4 @@
+import { readCareJson } from './http.js';
 // Local Care identity auth â€” no OAuth, no external identity provider.
 //
 // A browser gets an opaque, random HttpOnly session cookie. The server stores
@@ -130,15 +131,12 @@ async function checkAuthRateLimit(request, env, kind) {
   const bucket = Math.floor(now / cfg.windowSeconds);
   const fingerprint = await hmacHex(env.SESSION_SECRET, clientFingerprint(request));
   const row = await env.DB.prepare(
-    'SELECT count FROM care_auth_attempts WHERE kind = ?1 AND fingerprint = ?2 AND bucket = ?3'
-  ).bind(kind, fingerprint, bucket).first();
-  if ((row?.count || 0) >= cfg.max) return false;
-  await env.DB.prepare(
     `INSERT INTO care_auth_attempts (kind, fingerprint, bucket, count)
      VALUES (?1, ?2, ?3, 1)
-     ON CONFLICT(kind, fingerprint, bucket) DO UPDATE SET count = count + 1`
-  ).bind(kind, fingerprint, bucket).run();
-  return true;
+     ON CONFLICT(kind, fingerprint, bucket) DO UPDATE SET count = count + 1
+     WHERE count < ?4 RETURNING count`
+  ).bind(kind, fingerprint, bucket, cfg.max).first();
+  return !!row;
 }
 
 function setSessionCookie(headers, token, env) {
@@ -153,27 +151,31 @@ function setSessionCookie(headers, token, env) {
   );
 }
 
-async function createLocalUser(env, { name = 'A GM', isOwner = false } = {}) {
-  const sub = randomLocalSub();
+async function prepareSession(env, sub) {
+  const token = randomToken();
+  const hash = await hmacHex(env.SESSION_SECRET, token);
   const now = Math.floor(Date.now() / 1000);
-  await env.DB.prepare(
-    `INSERT INTO users
-      (sub, name, avatar_url, email, created_at, last_seen, auth_provider, is_owner)
-     VALUES (?1, ?2, NULL, NULL, ?3, ?3, 'local', ?4)`
-  ).bind(sub, name, now, isOwner ? 1 : 0).run();
-  return { sub, name, avatar: null, isOwner };
+  return {
+    token,
+    statement: env.DB.prepare(`INSERT INTO care_sessions
+      (token_hash, user_sub, created_at, last_seen, expires_at, revoked_at)
+      VALUES (?1, ?2, ?3, ?3, ?4, NULL)`)
+      .bind(hash, sub, now, now + SESSION_TTL_SECONDS),
+  };
 }
 
-async function createSession(env, sub) {
-  const token = randomToken();
-  const tokenHash = await hmacHex(env.SESSION_SECRET, token);
+async function createLocalIdentity(env, { name = 'A GM', isOwner = false } = {}) {
+  const sub = randomLocalSub();
   const now = Math.floor(Date.now() / 1000);
-  await env.DB.prepare(
-    `INSERT INTO care_sessions
-      (token_hash, user_sub, created_at, last_seen, expires_at, revoked_at)
-     VALUES (?1, ?2, ?3, ?3, ?4, NULL)`
-  ).bind(tokenHash, sub, now, now + SESSION_TTL_SECONDS).run();
-  return token;
+  const session = await prepareSession(env, sub);
+  await env.DB.batch([
+    env.DB.prepare(`INSERT INTO users
+      (sub, name, avatar_url, email, created_at, last_seen, auth_provider, is_owner)
+      VALUES (?1, ?2, NULL, NULL, ?3, ?3, 'local', ?4)`)
+      .bind(sub, name, now, isOwner ? 1 : 0),
+    session.statement,
+  ]);
+  return { token: session.token };
 }
 
 /** POST /auth/bootstrap â€” create one local identity for this browser. */
@@ -185,8 +187,7 @@ export async function handleBootstrap(request, env) {
   }
 
   try {
-    const user = await createLocalUser(env);
-    const token = await createSession(env, user.sub);
+    const { token } = await createLocalIdentity(env);
     const headers = new Headers();
     setSessionCookie(headers, token, env);
     return jsonBody({ ok: true, created: true }, 200, headers);
@@ -218,7 +219,7 @@ export async function handleRecover(request, env) {
   }
 
   let body;
-  try { body = await request.json(); } catch { return jsonError(400, 'Malformed recovery request.'); }
+  try { body = await readCareJson(request); } catch { return jsonError(400, 'Malformed recovery request.'); }
   const code = normalizeRecoveryCode(body?.code);
   if (code.length !== RECOVERY_CODE_LENGTH || !/^[0-9A-HJKMNP-TV-Z]+$/.test(code)) {
     return jsonError(400, 'Enter the recovery code exactly as shown.');
@@ -231,22 +232,27 @@ export async function handleRecover(request, env) {
   ).bind(hash).first();
   if (!user) return jsonError(401, 'That recovery code is invalid or already used.');
 
-  // Compare-and-clear makes the code one-use even if two requests race.
-  const cleared = await env.DB.prepare(
-    `UPDATE users SET recovery_hash = NULL, recovery_issued_at = NULL
-     WHERE sub = ?1 AND recovery_hash = ?2`
-  ).bind(user.sub, hash).run();
-  if (!cleared.meta || cleared.meta.changes !== 1) {
-    return jsonError(401, 'That recovery code is invalid or already used.');
-  }
-
   try {
-    const token = await createSession(env, user.sub);
+    const token = randomToken();
+    const tokenHash = await hmacHex(env.SESSION_SECRET, token);
+    const now = Math.floor(Date.now() / 1000);
+    const [saved] = await env.DB.batch([
+      env.DB.prepare(`INSERT INTO care_sessions
+        (token_hash, user_sub, created_at, last_seen, expires_at, revoked_at)
+        SELECT ?1, ?2, ?3, ?3, ?4, NULL
+        WHERE EXISTS (SELECT 1 FROM users WHERE sub=?2 AND recovery_hash=?5 AND auth_provider='local')`)
+        .bind(tokenHash, user.sub, now, now + SESSION_TTL_SECONDS, hash),
+      env.DB.prepare(`UPDATE users SET recovery_hash=NULL, recovery_issued_at=NULL
+        WHERE sub=?1 AND recovery_hash=?2`).bind(user.sub, hash),
+    ]);
+    if (saved.meta?.changes !== 1) {
+      return jsonError(401, 'That recovery code is invalid or already used.');
+    }
     const headers = new Headers();
     setSessionCookie(headers, token, env);
     return jsonBody({ ok: true, name: user.name, isOwner: user.is_owner === 1 }, 200, headers);
   } catch {
-    return jsonError(500, 'Could not complete recovery. Try again shortly.');
+    return jsonError(500, 'Could not complete recovery. Your code is still valid; try again shortly.');
   }
 }
 
@@ -260,7 +266,7 @@ export async function handleOwnerClaim(request, env) {
   if (!setupToken) return jsonError(503, 'Owner setup is not configured.');
 
   let body;
-  try { body = await request.json(); } catch { return jsonError(400, 'Malformed owner setup request.'); }
+  try { body = await readCareJson(request); } catch { return jsonError(400, 'Malformed owner setup request.'); }
   const provided = typeof body?.token === 'string' ? body.token : '';
   if (!provided || provided !== setupToken) return jsonError(401, 'Owner setup token was not accepted.');
 
@@ -269,15 +275,15 @@ export async function handleOwnerClaim(request, env) {
   }
 
   try {
-    const user = await createLocalUser(env, { name: 'Owner', isOwner: true });
-    const token = await createSession(env, user.sub);
+    const { token } = await createLocalIdentity(env, { name: 'Owner', isOwner: true });
     const headers = new Headers();
     setSessionCookie(headers, token, env);
     return jsonBody({ ok: true, owner: true }, 200, headers);
   } catch {
-    // The partial unique owner index turns simultaneous claims into a safe
-    // failure; never issue a session unless the owner row was committed.
-    return jsonError(409, 'Owner setup has already been completed.');
+    if (await env.DB.prepare('SELECT sub FROM users WHERE is_owner=1 LIMIT 1').first()) {
+      return jsonError(409, 'Owner setup has already been completed.');
+    }
+    return jsonError(500, 'Could not complete owner setup. Try again shortly.');
   }
 }
 
@@ -311,14 +317,23 @@ export function ownerSetupPage() {
 }
 
 /** GET /auth/logout â€” clear the browser session. */
-export function handleLogout(request, env, url) {
-  const returnPath = sanitizeReturnPath(url.searchParams.get('return') || '/');
-  const headers = new Headers({ Location: returnPath });
-  headers.append('Set-Cookie', clearCookie(sessionCookieName(env), { secure: isSecureEnv(env) }));
-  return new Response(null, { status: 302, headers });
+export async function handleLogout(request, env, url) {
+  const token = parseCookies(request)[sessionCookieName(env)];
+  if (token) {
+    const hash = await hmacHex(env.SESSION_SECRET, token);
+    await env.DB.prepare("UPDATE care_sessions SET revoked_at = ?1 WHERE token_hash = ?2 AND revoked_at IS NULL")
+      .bind(Math.floor(Date.now()/1000), hash).run();
+  }
+  const headers = new Headers({Location: sanitizeReturnPath(url.searchParams.get("return") || "/"), "Cache-Control":"no-store"});
+  headers.append("Set-Cookie", clearCookie(sessionCookieName(env), {secure:isSecureEnv(env)}));
+  return new Response(null,{status:302,headers});
 }
 
-/** Read and verify the opaque session cookie. */
+export class CareSessionUnavailable extends Error {
+  constructor() { super('Care identity verification is temporarily unavailable.'); }
+}
+
+/** Read and verify the opaque session cookie. Operational failures must never create a new identity. */
 export async function getSession(request, env) {
   try {
     const cookies = parseCookies(request);
@@ -340,7 +355,7 @@ export async function getSession(request, env) {
       authProvider: row.auth_provider || 'legacy-google',
     };
   } catch {
-    return null;
+    throw new CareSessionUnavailable();
   }
 }
 

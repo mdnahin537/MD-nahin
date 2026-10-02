@@ -72,7 +72,7 @@ async function computeFeed(env, url) {
     // "50% of my map" against a title containing exactly that text returned
     // zero results before this fix).
     where.push(`title LIKE ?${binds.length + 1} ESCAPE '\\'`);
-    binds.push(`%${q.replace(/[%_]/g, (m) => '\\' + m)}%`);
+    binds.push(`%${q.replace(/[\\%_]/g, (m) => '\\' + m)}%`);
   }
 
   // Two-phase fetch so the feed stays fast at 10,000 items (design Â§6.4

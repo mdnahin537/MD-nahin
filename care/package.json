@@ -9,9 +9,12 @@
     "migrate:local": "wrangler d1 migrations apply realmwright-care --local",
     "migrate:remote": "wrangler d1 migrations apply realmwright-care --remote",
     "seed:local": "node scripts/seed.mjs",
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler deploy",
+    "check": "wrangler deploy --dry-run --outdir=test-results/bundle",
+    "test": "npm run check && node --test tests/*.test.mjs && python3 -m unittest discover -s tests -p 'test_*.py'",
+    "test:runtime": "node tests/runtime-smoke.mjs"
   },
   "devDependencies": {
-    "wrangler": "^4.110.0"
+    "wrangler": "4.144.0"
   }
 }

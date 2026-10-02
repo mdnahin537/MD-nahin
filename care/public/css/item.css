@@ -82,3 +82,11 @@
   .thread__title { font-size: 1.5rem; }
   .votebar__hint { margin-left: 0; flex-basis: 100%; }
 }
+
+.commentbox__label { display: flex; flex-direction: column; gap: .5rem; color: var(--ink-dim); }
+.commentbox__input { border-color: var(--control-line); }
+.thread-status { padding: .8rem 1rem; margin: .7rem 0; border: 1px solid var(--line); border-left: 3px solid var(--accent-strong); border-radius: 10px; background: var(--surface-raised); overflow-wrap: anywhere; }
+.thread-status[role="alert"] { border-left-color: var(--bad); }
+.rep__field, .rep__free, .ownernote p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.votebar__btn, .cmt__reply-btn { min-height: 44px; }
+.rep { box-shadow: inset 0 1px 0 #ffffff09; }

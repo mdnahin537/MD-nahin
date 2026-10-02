@@ -170,3 +170,29 @@
   .wiz__screen, .micro { animation: none; }
   * { transition: none !important; }
 }
+
+/* Focused choices, visible control edges, and restrained tactile depth. */
+.wiz { max-width: 38rem; }
+.wiz__bar { background: var(--surface); }
+.wiz__back, .wiz__close { min-width: 44px; min-height: 44px; }
+.wiz__h { font-size: clamp(1.65rem, 5vw, 2rem); }
+.wiz__sub { line-height: 1.6; }
+.tile, .choicechip, .priorart__row { border-color: var(--control-line); box-shadow: inset 0 1px 0 #ffffff0b, 0 3px 9px #0000000d; }
+.tile { min-height: 6rem; }
+.tile__label, .priorart__title { overflow-wrap: anywhere; }
+.tile:disabled, .choicechip:disabled, .priorart__row:disabled { opacity: .6; }
+.wfield__input, .titleprev__input { border-color: var(--control-line); }
+.ctxpill__x { display: inline-grid; place-items: center; min-width: 24px; min-height: 24px; }
+.ctxpill { overflow-wrap: anywhere; }
+.wiz__mark { background: linear-gradient(145deg, var(--surface-overlay), var(--surface-raised)); box-shadow: inset 0 1px 0 #ffffff1a, 0 6px 12px #00000018; }
+@media (hover: hover) and (pointer: fine) {
+  .tile:hover { transform: translateY(-2px); box-shadow: inset 0 1px 0 #ffffff15, 0 7px 16px #00000018; }
+}
+@media (max-width: 380px) {
+  .wiz { padding: 0 1rem; }
+  .tilegrid { gap: .5rem; }
+  .tile { padding: .75rem; }
+  .priorart__row { flex-wrap: wrap; }
+  .priorart__join { margin-left: auto; }
+}
+@media (prefers-reduced-motion: reduce) { .tile:hover, .tile:active, .choicechip:active { transform: none; } }

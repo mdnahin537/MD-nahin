@@ -1,3 +1,4 @@
+import { readCareJson } from '../lib/http.js';
 import { getSession } from '../lib/auth.js';
 import { json, jsonError, notFound } from '../lib/http.js';
 import { deterministicDigest, deskSummary, decisionQueue, buildBriefData, renderBriefText } from '../lib/desk.js';
@@ -42,6 +43,19 @@ export async function routeDeskApi(request, env, url) {
   if (!gate.ok) return gate.response;
   const { pathname } = url;
   const method = request.method;
+
+  const reviewMatch = pathname.match(/^\/api\/desk\/review\/(item|report|comment)\/(\d+)$/);
+  if (reviewMatch && ['GET', 'POST'].includes(method)) {
+    return deskReview(request, env, reviewMatch[1], Number(reviewMatch[2]));
+  }
+
+  if (pathname === '/api/desk/notifications' && ['GET', 'POST'].includes(method)) {
+    if (method === 'POST') {
+      await env.DB.prepare("UPDATE care_mail_outbox SET state='pending',next_attempt_at=0 WHERE state='failed'").run();
+    }
+    const rows = await env.DB.prepare("SELECT state,COUNT(*) AS count FROM care_mail_outbox GROUP BY state").all();
+    return deskJson({ enabled: env.CARE_MAIL_ENABLED === 'true', counts: rows.results });
+  }
 
   if (method === 'GET' && pathname === '/api/desk/summary') {
     const lastVisit = Number(url.searchParams.get('since')) || Math.floor(Date.now() / 1000) - 7 * 86400;
@@ -131,7 +145,7 @@ async function synthesizeThread(env, thread) {
   const { results } = await env.DB.prepare(
     'SELECT payload FROM reports WHERE item_id = ?1 AND held = 0 LIMIT 30'
   ).bind(thread.id).all();
-  const facts = results.map((r) => { try { const p = JSON.parse(r.payload); return { symptom: p.symptom, frequency: p.frequency, detail: p.symptom_detail, expected: p.expected, actual: p.actual }; } catch { return {}; } });
+  const facts = results.map((r) => { try { const p = JSON.parse(r.payload); return { type: p.type, symptom: p.symptom, frequency: p.frequency, detail: p.symptom_detail, expected: p.expected, actual: p.actual, freetext: p.freetext, ideaKind: p.ideaKind, ask: p.ask, why: p.why, doneLooksLike: p.doneLooksLike, importance: p.importance, followups: p.followups }; } catch { return {}; } });
   const prompt =
     `You are summarizing ${facts.length} bug/feature reports for one thread. Write ONE sentence, max 30 words, ` +
     `quantified ("N of ${facts.length} say…"), grounded ONLY in this data, no invention:\n` +
@@ -150,8 +164,12 @@ async function deskItemDetail(env, id) {
     `SELECT r.id, r.payload, r.created_at, r.held, u.name, u.email
      FROM reports r JOIN users u ON u.sub = r.user_sub WHERE r.item_id = ?1 ORDER BY r.created_at ASC`
   ).bind(id).all();
+  const { results: comments } = await env.DB.prepare(
+    `SELECT c.*,u.name,u.email FROM comments c LEFT JOIN users u ON u.sub=c.user_sub
+      WHERE c.item_id=?1 ORDER BY c.id`).bind(id).all();
   return {
     item,
+    comments,
     reports: reports.map((r) => ({
       id: r.id, name: r.name, email: r.email, held: r.held, createdAt: r.created_at,
       payload: safeParse(r.payload),
@@ -162,7 +180,7 @@ async function deskItemDetail(env, id) {
 // ---- actions --------------------------------------------------------------
 async function deskAction(request, env, itemId, action) {
   let body = {};
-  try { body = await request.json(); } catch {}
+  try { body = await readCareJson(request); } catch { return jsonError(400, 'Malformed request body.'); }
 
   const item = await env.DB.prepare('SELECT id, status, merged_into FROM items WHERE id = ?1').bind(itemId).first();
   if (!item) return jsonError(404, 'Item not found.');
@@ -187,20 +205,22 @@ async function deskAction(request, env, itemId, action) {
   }
 
   if (action === 'pin') {
+    if (typeof body.pinned !== 'boolean') return jsonError(400, 'Choose pin or unpin.');
     await env.DB.prepare('UPDATE items SET pinned = ?1 WHERE id = ?2').bind(body.pinned ? 1 : 0, itemId).run();
     await logAction(env, body.pinned ? 'pin' : 'unpin', itemId, null);
     return deskJson({ ok: true });
   }
 
   if (action === 'hide') {
-    await env.DB.prepare('UPDATE items SET held = ?1 WHERE id = ?2').bind(body.hidden ? 1 : 0, itemId).run();
+    if (typeof body.hidden !== 'boolean') return jsonError(400, 'Choose hide or publish.');
+    await env.DB.prepare('UPDATE items SET held = ?1, moderation_reviewed_at = NULL WHERE id = ?2').bind(body.hidden ? 1 : 0, itemId).run();
     await logAction(env, body.hidden ? 'hide' : 'unhide', itemId, null);
     return deskJson({ ok: true });
   }
 
   if (action === 'remove') {
     // soft-remove: hold it out of public view (kept for audit).
-    await env.DB.prepare('UPDATE items SET held = 1 WHERE id = ?1').bind(itemId).run();
+    await env.DB.prepare(`UPDATE items SET held = 1, moderation_reviewed_at = CAST(strftime('%s','now') AS INTEGER) WHERE id = ?1`).bind(itemId).run();
     await logAction(env, 'remove', itemId, null);
     return deskJson({ ok: true });
   }
@@ -219,54 +239,55 @@ async function deskAction(request, env, itemId, action) {
 // PK one-vote rule), re-point reports, then RECOMPUTE the winner's denormalized
 // counts from the now-merged raw rows so counters and rows can't drift.
 async function deskMerge(env, loserId, winnerId) {
-  if (!Number.isInteger(winnerId) || winnerId === loserId) return jsonError(400, 'Bad merge target.');
-  const winner = await env.DB.prepare('SELECT id FROM items WHERE id = ?1').bind(winnerId).first();
-  const loser = await env.DB.prepare('SELECT id, merged_into FROM items WHERE id = ?1').bind(loserId).first();
+  if (!Number.isSafeInteger(winnerId) || winnerId <= 0 || winnerId === loserId) return jsonError(400, 'Bad merge target.');
+  const winner = await env.DB.prepare('SELECT id, type, merged_into FROM items WHERE id = ?1').bind(winnerId).first();
+  const loser = await env.DB.prepare('SELECT id, type, merged_into FROM items WHERE id = ?1').bind(loserId).first();
   if (!winner || !loser) return jsonError(404, 'Item not found.');
-  if (loser.merged_into) return jsonError(409, 'Already merged.');
+  if (winner.merged_into || loser.merged_into) return jsonError(409, 'Choose two unmerged items.');
+  if (winner.type !== loser.type) return jsonError(400, 'Merge bug reports with bugs, and ideas with ideas.');
 
-  // Move votes: insert loser's votes onto the winner, skipping any voter who
-  // already voted on the winner (their existing stance wins — one vote per
-  // identity). Keep created_at so velocity stays truthful.
-  await env.DB.prepare(
-    `INSERT OR IGNORE INTO votes (item_id, user_sub, value, created_at)
-     SELECT ?1, user_sub, value, created_at FROM votes WHERE item_id = ?2`
-  ).bind(winnerId, loserId).run();
-  // Remove the loser's now-duplicated vote rows.
-  await env.DB.prepare('DELETE FROM votes WHERE item_id = ?1').bind(loserId).run();
-  // Re-point reports and comments to the winner.
-  await env.DB.prepare('UPDATE reports SET item_id = ?1 WHERE item_id = ?2').bind(winnerId, loserId).run();
-  await env.DB.prepare('UPDATE comments SET item_id = ?1 WHERE item_id = ?2').bind(winnerId, loserId).run();
-
-  // Recompute the winner's denormalized counters from raw rows (no drift).
-  await recomputeCounts(env, winnerId);
-  // Mark the loser merged (its page 301s to the winner).
-  await env.DB.prepare('UPDATE items SET merged_into = ?1, held = 0 WHERE id = ?2').bind(winnerId, loserId).run();
-  await logAction(env, 'merge', loserId, 'into ' + winnerId);
+  // Each write checks the pair inside one D1 transaction. A concurrent merge
+  // that wins before this batch makes every statement a no-op.
+  const guard = `EXISTS (SELECT 1 FROM items src JOIN items dst ON dst.id = ?1
+    WHERE src.id = ?2 AND src.merged_into IS NULL AND dst.merged_into IS NULL AND src.type = dst.type)`;
+  const statement = sql => env.DB.prepare(sql).bind(winnerId, loserId);
+  const results = await env.DB.batch([
+    statement(`INSERT OR IGNORE INTO votes (item_id, user_sub, value, created_at)
+      SELECT ?1, user_sub, value, created_at FROM votes WHERE item_id = ?2 AND ${guard}`),
+    statement(`DELETE FROM votes WHERE item_id = ?2 AND ${guard}`),
+    statement(`UPDATE reports SET item_id = ?1,
+      held = CASE WHEN (SELECT held FROM items WHERE id = ?2) = 1 THEN 1 ELSE held END
+      WHERE item_id = ?2 AND ${guard}`),
+    statement(`UPDATE comments SET item_id = ?1,
+      held = CASE WHEN (SELECT held FROM items WHERE id = ?2) = 1 THEN 1 ELSE held END
+      WHERE item_id = ?2 AND ${guard}`),
+    statement(`UPDATE items SET
+      agree_count = (SELECT COUNT(*) FROM votes WHERE item_id = ?1 AND value = 1),
+      disagree_count = (SELECT COUNT(*) FROM votes WHERE item_id = ?1 AND value = -1),
+      reports_count = (SELECT COUNT(*) FROM reports WHERE item_id = ?1 AND held = 0),
+      comments_count = (SELECT COUNT(*) FROM comments WHERE item_id = ?1 AND held = 0 AND deleted = 0)
+      WHERE id = ?1 AND ${guard}`),
+    statement(`INSERT INTO owner_log (at, action, item_id, detail)
+      SELECT CAST(strftime('%s','now') AS INTEGER), 'merge', ?2, 'into ' || ?1 WHERE ${guard}`),
+    statement(`UPDATE items SET merged_into = ?1, held = 0, agree_count = 0, disagree_count = 0,
+      reports_count = 0, comments_count = 0 WHERE id = ?2 AND ${guard} RETURNING id`),
+  ]);
+  if (!results.at(-1).results.length) return jsonError(409, 'These items changed. Reload before merging.');
   return deskJson({ ok: true, winnerId });
 }
 
-async function recomputeCounts(env, itemId) {
-  const agree = await env.DB.prepare('SELECT COUNT(*) AS n FROM votes WHERE item_id = ?1 AND value = 1').bind(itemId).first();
-  const disagree = await env.DB.prepare('SELECT COUNT(*) AS n FROM votes WHERE item_id = ?1 AND value = -1').bind(itemId).first();
-  // Held reports are hidden from the public rollup and are not counted toward
-  // reports_count at write time (routes/report.js) — exclude them here too, or
-  // a merge would silently resurrect a held join's inflation of the count.
-  const reports = await env.DB.prepare('SELECT COUNT(*) AS n FROM reports WHERE item_id = ?1 AND held = 0').bind(itemId).first();
-  const comments = await env.DB.prepare('SELECT COUNT(*) AS n FROM comments WHERE item_id = ?1 AND deleted = 0').bind(itemId).first();
-  await env.DB.prepare('UPDATE items SET agree_count = ?1, disagree_count = ?2, reports_count = ?3, comments_count = ?4 WHERE id = ?5')
-    .bind(agree.n, disagree.n, reports.n, comments.n, itemId).run();
-}
-
 async function deskBan(env, sub) {
-  await env.DB.prepare('UPDATE users SET banned = 1 WHERE sub = ?1').bind(sub).run();
+  const user = await env.DB.prepare('SELECT is_owner FROM users WHERE sub=?1').bind(sub).first();
+  if (!user) return jsonError(404, 'Contributor not found.');
+  if (user.is_owner) return jsonError(403, 'The owner identity is protected.');
+  await env.DB.prepare('UPDATE users SET banned = 1 WHERE sub = ?1 AND is_owner=0').bind(sub).run();
   await logAction(env, 'ban', null, sub);
   return deskJson({ ok: true });
 }
 
 async function deskBrief(request, env) {
   let body = {};
-  try { body = await request.json(); } catch {}
+  try { body = await readCareJson(request); } catch {}
   const ids = Array.isArray(body.items) ? body.items.map(Number).filter(Number.isInteger) : [];
   if (ids.length === 0) return jsonError(400, 'Provide items:[...].');
 
@@ -280,6 +301,46 @@ async function deskBrief(request, env) {
   }
   const text = briefs.join('\n\n———\n\n');
   return deskJson({ text });
+}
+
+
+async function deskReview(request, env, target, id) {
+  const table = { item: 'items', report: 'reports', comment: 'comments' }[target];
+  const row = await env.DB.prepare(`SELECT * FROM ${table} WHERE id=?1`).bind(id).first();
+  if (!row || (target === 'comment' && row.deleted)) return jsonError(404, 'Saved content not found.');
+  const itemId = target === 'item' ? row.id : row.item_id;
+  const item = await env.DB.prepare('SELECT id,title,held,merged_into FROM items WHERE id=?1').bind(itemId).first();
+  if (request.method === 'GET') {
+    const details = target === 'item' ? await deskItemDetail(env, id)
+      : { record: { ...row, ...(target === 'report' ? { payload: safeParse(row.payload) } : {}) }, item };
+    return deskJson({ target, ...details });
+  }
+  let body;
+  try { body = await readCareJson(request); } catch { return jsonError(400, 'Malformed review request.'); }
+  if (typeof body.publish !== 'boolean') return jsonError(400, 'Choose publish or keep held.');
+  if (item?.merged_into) return jsonError(409, 'Review the destination after this merge.');
+  if (body.publish && target !== 'item' && item?.held) return jsonError(409, 'Publish the parent item before publishing its details.');
+  const now = Math.floor(Date.now()/1000);
+  const held = body.publish ? 0 : 1;
+  const publishGuard = !body.publish ? '' : target === 'item' ? ' AND merged_into IS NULL'
+    : ` AND EXISTS(SELECT 1 FROM items i WHERE i.id=${table}.item_id AND i.held=0 AND i.merged_into IS NULL)` +
+      (target === 'comment' ? ` AND NOT EXISTS(SELECT 1 FROM comments parent WHERE parent.id=comments.parent_id AND (parent.held=1 OR parent.deleted=1))` : '');
+  const update = env.DB.prepare(`UPDATE ${table} SET held=?2,moderation_reviewed_at=?3
+    WHERE id=?1 AND held=?4 AND moderation_reviewed_at IS ?5${publishGuard}` +
+    (target === 'item' ? '' : ' AND item_id=?6') + ' RETURNING id')
+    .bind(...[id,held,now,row.held,row.moderation_reviewed_at,...(target === 'item' ? [] : [itemId])]);
+  const [saved] = await env.DB.batch([
+    update,
+    env.DB.prepare(`INSERT INTO owner_log(at,action,item_id,detail)
+      SELECT ?1,?2,?3,?4 WHERE changes()=1`)
+      .bind(now,body.publish?'publish:'+target:'retain:'+target,itemId,String(id)),
+    env.DB.prepare(`UPDATE items SET
+      reports_count=(SELECT COUNT(*) FROM reports WHERE item_id=?1 AND held=0),
+      comments_count=(SELECT COUNT(*) FROM comments WHERE item_id=?1 AND held=0 AND deleted=0)
+      WHERE id=?1`).bind(itemId),
+  ]);
+  if (saved.results.length !== 1) return jsonError(409, 'This content changed or its parent is held. Reload before reviewing.');
+  return deskJson({ ok: true, published: body.publish, itemId });
 }
 
 // ---- usage counters (free-tier gauge, §7.1) -------------------------------

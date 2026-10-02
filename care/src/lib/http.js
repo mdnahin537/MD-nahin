@@ -39,3 +39,23 @@ export function isSameOrigin(request, url) {
     return false;
   }
 }
+
+export async function readCareJson(request) {
+  const reader=request.body?.getReader();
+  if (!reader) throw new Error('Empty body');
+  const chunks=[];let total=0;
+  try {
+    while(true){const {value,done}=await reader.read();if(done)break;total+=value.byteLength;
+      if(total>65536){await reader.cancel();throw new Error('Body too large');}chunks.push(value);}
+  } finally {reader.releaseLock();}
+  const bytes=new Uint8Array(total);let offset=0;for(const part of chunks){bytes.set(part,offset);offset+=part.length;}
+  const value=JSON.parse(new TextDecoder().decode(bytes));
+  if (!value || typeof value!=='object' || Array.isArray(value)) throw new Error('Expected object');
+  return value;
+}
+
+export async function careRequestHash(value) {
+  const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(value)));
+  return Array.from(new Uint8Array(bytes), byte => byte.toString(16).padStart(2, '0')).join('');
+}
+

@@ -1,0 +1,86 @@
+name: Customer Care audit
+on:
+  push:
+    branches: [codex/care-audit-recovery]
+    paths: ['care/**', '.github/workflows/care-audit.yml']
+  pull_request:
+    branches: [codex/care-local-identity-auth]
+    paths: ['care/**', '.github/workflows/care-audit.yml']
+permissions:
+  contents: read
+concurrency:
+  group: care-audit-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CARE_VALIDATE_NATIVE_SHADERS: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Compare recovery source with repository and live public endpoints
+        run: python3 care/tests/preflight.py
+      - name: Build the Worker without deploying
+        working-directory: care
+        run: |
+          npm ci
+          npx wrangler deploy --dry-run --outdir=test-results/bundle
+      - name: Prepare the native shader compiler
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends libegl1 libegl-mesa0 libgles2 libgl1-mesa-dri
+      - name: Check confirmed workflow regressions
+        run: |
+          set -o pipefail
+          node --test care/tests/*.test.mjs | tee care/test-results/workflow-tests.tap
+          python3 -m unittest discover -s care/tests -p 'test_*.py' -v
+      - name: Run an isolated local Workers and D1 runtime check
+        working-directory: care
+        run: node tests/runtime-smoke.mjs
+      - name: Parse public stylesheets and client scripts
+        working-directory: care
+        run: |
+          node --input-type=module <<'JS'
+          import {transform} from 'esbuild';
+          import {readFileSync,readdirSync} from 'node:fs';
+          import {spawnSync} from 'node:child_process';
+          const styles = readdirSync('public/css').filter(name=>name.endsWith('.css')).map(name=>'public/css/'+name).concat('public/desk/desk.css');
+          for (const path of styles) {
+            const parsed = await transform(readFileSync(path,'utf8'), {loader:'css'});
+            if (parsed.warnings.length) throw new Error('Stylesheet parser warning in '+path);
+          }
+          const scripts = readdirSync('public/js').filter(name=>name.endsWith('.js')).map(name=>'public/js/'+name).concat('public/desk/desk.js');
+          for (const path of scripts) {
+            const result = spawnSync('node',['--check',path],{encoding:'utf8'});
+            if (result.status!==0) throw new Error(path+': '+result.stderr);
+          }
+          console.log(JSON.stringify({stylesheetsParsed:styles.length,clientScriptsParsed:scripts.length}));
+          JS
+      - name: Inspect dependency advisories
+        working-directory: care
+        run: |
+          node --input-type=module <<'JS'
+          import {spawnSync} from 'node:child_process';
+          import {writeFileSync} from 'node:fs';
+          const result = spawnSync('npm', ['audit', '--json'], {encoding: 'utf8'});
+          if (!result.stdout) throw new Error('Dependency audit did not return a report');
+          const report = JSON.parse(result.stdout);
+          writeFileSync('test-results/dependencies.json', JSON.stringify(report, null, 2));
+          console.log(JSON.stringify({counts: report.metadata?.vulnerabilities,
+            packages: Object.values(report.vulnerabilities || {}).map(v => ({name:v.name,
+              severity:v.severity, range:v.range, fixAvailable:v.fixAvailable,
+              advisories:v.via.filter(x=>typeof x==='object').map(x=>({title:x.title,url:x.url,range:x.range}))}))}, null, 2));
+          JS
+      - name: Save public check results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: care-audit-results
+          path: care/test-results/
+          if-no-files-found: warn
