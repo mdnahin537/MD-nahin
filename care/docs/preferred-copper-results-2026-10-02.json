@@ -1,0 +1,22 @@
+{
+  "localChecks": {
+    "restoredFrom": "Saved earlier copper preview",
+    "previewCodeCommit": "2bfe2c9a1db16501517f3899fd34532b392807cc",
+    "geometryMatchesPreview": "byte-for-byte",
+    "lightingMatchesPreview": "byte-for-byte",
+    "fallbackMatchesPreview": "byte-for-byte",
+    "drawMeshes": 3,
+    "vertices": 9240,
+    "gpuVertexBytes": 332640,
+    "maxRadius": 1.9530000536246106,
+    "maxNormalError": 3.016465610627961e-8,
+    "pauseAndSavedPreference": "passed",
+    "reducedMotion": "passed",
+    "visibilitySuspensionAndResume": "passed",
+    "initializationFallbackCasesPassed": 6,
+    "customerServiceCodeChanged": false,
+    "secretsChanged": false,
+    "productionDeployment": false,
+    "browserAppearanceVerified": false
+  }
+}
