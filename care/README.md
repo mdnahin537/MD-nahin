@@ -22,17 +22,22 @@ The Worker uses Cloudflare D1 for the board and a browser-local Care identity fo
 
 ## Product-to-Care URL contract
 
-The RealmWright product must not implement Google login or product authentication for Customer Care. Its three community entry points open the Care Worker directly:
+Preserve RealmWright's existing **Settings → Community** section and its two buttons. The product already connects to the live Care address on `agent/realmwright-recovery-2026-07-24`; the Care branch does not contain the product HTML.
 
-    CARE_BASE_URL = https://<your-care-worker>.workers.dev
+    CARE_BASE_URL = https://realmwright-care.mdnahin537.workers.dev
 
-| Product entry point | Destination |
+| Existing product button | Destination |
 |---|---|
-| Report a problem | CARE_BASE_URL + /report/?type=bug |
-| Suggest an idea | CARE_BASE_URL + /report/?type=idea |
-| Community | CARE_BASE_URL + / |
+| Find a problem or new idea | CARE_BASE_URL + /report/ |
+| See what people are saying | CARE_BASE_URL + / |
 
-The report wizard asks the user to continue with a local Care identity. The product source is intentionally not changed in this branch; after the Care Worker is deployed, replace the placeholder base URL in the product integration wherever those links are wired.
+The report entry deliberately has no `?type=` parameter. After the existing local-identity step, it retains the **Something’s broken / I have an idea** choice panel, then the existing questions, attached context, review and saved confirmation. A valid same-tab draft or saved receipt still resumes according to the wizard's existing behavior.
+
+The product's existing `Community` module appends `#ctx=<base64url JSON>` with only `v`, `schema`, `build`, `theme`, `mode` and `ai`. Care also collects coarse browser/device details and lets the customer remove attached fields before submission. Keep that handoff; do not attach product keys, provider keys, customer world content or private purchase URLs.
+
+The product opens Care in a new browser tab with `noopener`, and shows its existing offline message when offline. Updating the existing Care Worker keeps the same destination address and requires no redesign of the product settings or additional product button. The existing `/report/?type=bug` and `/report/?type=idea` deep links remain supported for other uses.
+
+Customer Care retains its separate local identity. Product Google login and product authentication are not part of this connection. Keep existing records, owner protection, identity secrets and Brevo settings when deploying Care. See [the verified connection notes](docs/realmwright-connection-2026-10-02.md).
 
 ---
 

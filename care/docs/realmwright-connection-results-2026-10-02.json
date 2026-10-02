@@ -1,0 +1,30 @@
+{
+  "checkedAt": "2026-10-02",
+  "productCommit": "d910b859da71e443530b33427a6038a56f565b9c",
+  "careCommit": "117ad17757f580589f9f42da348ed605c9de9870",
+  "execution": "Existing product Community module and Care wizard run with synthetic state, the existing client DOM fixture, and simulated browser APIs. No real browser or production writes.",
+  "checks": {
+    "settingsButtonCount": 2,
+    "reportTarget": "/report/",
+    "boardTarget": "/",
+    "newTabNoopener": true,
+    "contextKeys": [
+      "ai",
+      "build",
+      "mode",
+      "schema",
+      "theme",
+      "v"
+    ],
+    "privateDataExcluded": true,
+    "offlineGuard": true,
+    "reportChoicePanel": true,
+    "bugQuestions": true,
+    "ideaQuestions": true,
+    "contextRetainedThroughChoices": true,
+    "contextShownAndRemovable": true
+  },
+  "productChanged": false,
+  "runtimeFilesChanged": false,
+  "productionDeployment": false
+}
