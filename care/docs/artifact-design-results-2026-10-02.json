@@ -1,0 +1,36 @@
+{
+  "scope": "Artifact-informed celestial sculpture revision",
+  "localChecks": {
+    "meshVertices": [
+      3702,
+      5076,
+      5076
+    ],
+    "totalVertices": 13854,
+    "gpuBytes": 498744,
+    "maxNormalError": 4.1187468435843755e-8,
+    "maxRadius": 2.0068221125001267,
+    "degenerate": 0,
+    "shaderMatchesCopper": false,
+    "stableGeometry": true,
+    "shaderChanged": "Stable object-space surface normals and softer metal highlights",
+    "extraRuntimeDependencies": 0,
+    "sceneInitialization": "passed",
+    "pauseAndSavedPreference": "passed",
+    "reducedMotion": "passed",
+    "hiddenAndOffscreenSuspension": "passed",
+    "singleLoopResume": "passed",
+    "initializationFallbackCasesPassed": 6,
+    "contextLoss": "passed",
+    "previewSourceMatches": "byte-for-byte",
+    "previewIsolation": "passed",
+    "fallbackReferencesAndNesting": "passed",
+    "technicalMeshRenderInspected": true,
+    "browserScreenshotTaken": false,
+    "browserRenderedAppearanceVerified": false,
+    "nativeShaderCompilation": "pending GitHub Actions",
+    "productionWrites": false
+  },
+  "externalShaderVerification": "GitHub Actions audit; public results available in workflow artifacts",
+  "existingFunctionalCodeChanged": false
+}
