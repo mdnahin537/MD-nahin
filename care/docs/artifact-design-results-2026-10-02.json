@@ -28,9 +28,25 @@
     "technicalMeshRenderInspected": true,
     "browserScreenshotTaken": false,
     "browserRenderedAppearanceVerified": false,
-    "nativeShaderCompilation": "pending GitHub Actions",
+    "nativeShaderCompilation": "not executed by the local fixture; see automatedVerification",
     "productionWrites": false
   },
   "externalShaderVerification": "GitHub Actions audit; public results available in workflow artifacts",
-  "existingFunctionalCodeChanged": false
+  "existingFunctionalCodeChanged": false,
+  "automatedVerification": {
+    "testedCommit": "2bfe2c9a1db16501517f3899fd34532b392807cc",
+    "runURL": "https://github.com/mdnahin537/MD-nahin/actions/runs/36997964840",
+    "conclusion": "success",
+    "nodeTestsPassed": 46,
+    "preservationTestsPassed": 9,
+    "localWorkerD1ChecksPassed": 8,
+    "isolatedRecoveryChecksPassed": 21,
+    "readOnlyLiveChecksPassed": 11,
+    "stylesheetsParsed": 6,
+    "clientScriptsParsed": 6,
+    "nativeShaderCompilationAndLinking": "passed",
+    "dependencyAdvisories": 0,
+    "productionDeployment": false,
+    "browserAppearanceVerified": false
+  }
 }

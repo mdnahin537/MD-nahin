@@ -27,3 +27,7 @@ Mesh and lighting diagnostic images were inspected using a software renderer der
 The isolated browser preview embeds the actual candidate scene and SVG byte-for-byte, serves sample entries, blocks votes/submissions, omits credentials from public asset requests, and disables API connections. A separate earlier-copper preview provides a direct comparison.
 
 Only decorative public graphics, preview files and these notes/results change. Customer data, authentication, owner protection, database schema, secrets and email delivery code are untouched. No production deployment or customer-record write was performed.
+
+## Automated verification after push
+
+[GitHub Actions](https://github.com/mdnahin537/MD-nahin/actions/runs/36997964840) passed for code commit `2bfe2c9a1db16501517f3899fd34532b392807cc`: 46 Node tests, 9 preservation tests, 8 isolated Worker/D1 checks, 21 recovery checks and 11 read-only live checks. The actual revised vertex and fragment shaders compiled and linked in native GLES. The Worker dry-run build and six stylesheet/six client-script parses passed; dependency advisories were zero. Public workflow artifacts retain the full results. Browser appearance and mobile frame rate remain unverified.
