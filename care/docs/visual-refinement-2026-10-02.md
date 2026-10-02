@@ -10,7 +10,7 @@ This change uses existing native WebGL and static SVG assets. It adds no runtime
 
 ## Checks before repository publication
 
-The actual scene module was executed with the existing graphics DOM/WebGL fixture. It uploads three meshes with 13,020 vertices and 468,720 bytes of vertex data, below the 500 KB budget. Coordinates and colours are finite, normals remain normalized, and the sculpture stays within its existing envelope. Repeated initialization produces identical surface data. Vertex and fragment shader sources are byte-for-byte unchanged from the previously validated native GLES program; native compilation was not rerun for this pass.
+The actual scene module was executed with the existing graphics DOM/WebGL fixture. It uploads three meshes with 13,020 vertices and 468,720 bytes of vertex data, below the 500 KB budget. Coordinates and colours are finite, normals remain normalized, and the sculpture stays within its existing envelope. Repeated initialization produces identical surface data. Vertex and fragment shader sources are byte-for-byte unchanged from the previously validated native GLES program; native compilation was not rerun in the local fixture pass.
 
 Pause, reduced motion, hidden/offscreen suspension, single-loop resume, six initialization/fallback failure cases, and context loss passed. Static SVG references and tag nesting passed. A geometry regression check covers finite values, unit normals, the envelope and the mobile budget.
 
@@ -19,3 +19,7 @@ Selected colour checks from the brown-header pass: dark text against the header 
 Browser-rendered appearance remains for the customer to assess in the separate design preview. No screenshot or browser automation was used in this pass. The preview uses sample entries, blocks submissions and votes, omits credentials on public asset requests, and cannot connect to the live API.
 
 Submission, authentication, owner protection, customer records, database schema, secrets and email code are untouched. No production deployment or customer-record write was performed.
+
+## Automated verification after push
+
+[GitHub Actions](https://github.com/mdnahin537/MD-nahin/actions/runs/36994206769) passed for code commit `103d021cb40d5fa8dad569da21b7efda52892a8e`. The audit ran 46 Node tests, 9 preservation tests, 8 isolated Worker/D1 checks, 21 recovery checks and 11 read-only live checks. It compiled and linked the actual graphics shaders in native GLES, built the Worker without deploying, parsed six stylesheets and six client scripts, and reported zero dependency advisories. The workflow's public result artifact is available from the linked run. These checks do not establish browser-rendered appearance or fresh inbox delivery.
