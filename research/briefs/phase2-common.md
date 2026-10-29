@@ -36,11 +36,11 @@ Why, in one line: the CEO needs real roads, not destinations; your files feed th
 - Zero clients and zero track record.
 - Cash budget is about $0 beyond AI subscriptions (Claude Pro, ChatGPT Plus, Gemini Pro). Any spend must be named and justified (P3 plane).
 
-**Answers still pending from the CEO** (use these defaults until updated):
-- Can they visit offices or factories around Dhaka? Default: no regular visits; desk work first.
-- Languages: default good Bangla, English; no Hindi/Urdu/Arabic.
-- Real faces and names publicly: default yes.
-- Live calls in US/UK hours: default rarely; paths must work mostly asynchronously.
+**CEO answers (confirmed 2026-10-29):**
+- Can they visit offices or factories around Dhaka? No regular visits; desk work first.
+- Languages: good Bangla and English; no Hindi/Urdu/Arabic.
+- Real faces and names publicly: yes.
+- Live calls in US/UK hours: rarely; paths must work mostly asynchronously.
 
 **Channels:** WhatsApp, Facebook (the CEO's personal account), email, new LinkedIn and Upwork accounts with no history. Any realistic route is allowed.
 
