@@ -86,6 +86,7 @@ EXPECTED: ≤3% positive (ESTIMATE: vendors recruit individuals directly at scal
 | undated (live) | Wing Data, "Language Data Contributor – Bengali" (voice) | $2–4/h | SEARCH-SUMMARY |
 | ~Dec 2024 | Outlier, Bengali writers | up to $5.50/h, paid by PayPal or Airtm | SEARCH-SUMMARY |
 | live | Mercor referral share | 20% of the referral's earnings, capped at 4× the first accepted hourly rate; paid Wed/Fri, bank transfer 2–3 business days | VERIFIED (talent.docs.mercor.com/how-to/referrals) |
+| live | micro1 referral programme (micro1 posted "Bengali Transcription Expert", 2026-10-02) | flat payout per role, "up to $3,000", after the candidate works 10 hours; one payout per candidate; payout method NOT FOUND | VERIFIED (micro1.ai/referral-program). The referral route is developed in `M2-dhaka-verified-bench.md`. |
 
 ---
 

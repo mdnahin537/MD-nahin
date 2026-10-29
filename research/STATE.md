@@ -4,8 +4,8 @@ Last updated: 2026-10-29
 
 ## RUN STATUS  (read first — the hourly auto-resume task acts on this block)
 RUN_STATUS: RUNNING            # RUNNING | WAITING_FOR_CEO | DONE
-CURRENT_STEP: Phase 2 — M2 Replacement Desk companion (2nd of 8; order M4✔, M2, M6, M8, M7, M5, M3, M1)
-CURRENT_AGENT: phase2-M2 (opus, xhigh, can launch own helpers) — brief research/briefs/phase2-common.md — outputs research/opportunities/M2-*.md
+CURRENT_STEP: Phase 2 — M6 Dhaka Ground Desk companion (3rd of 8; order M4✔, M2✔, M6, M8, M7, M5, M3, M1)
+CURRENT_AGENT: phase2-M6 (opus, xhigh, can launch own helpers) — brief research/briefs/phase2-common.md — outputs research/opportunities/M6-*.md
 RESUME_INSTRUCTIONS: FIRST check with ListAgents that no agent of this session is running; if one is, do NOTHING. If the companion ended with "NEEDS_HELP: <path>", launch that helper (model/effort from the file's first line) and SendMessage the result path back to the same companion. If it stopped mid-work, SendMessage it "continue from your checkpoint"; if it no longer answers, relaunch a new opus xhigh companion for the same model telling it to resume from the existing M#-*.md files (STATUS lines). When a model's M#-summary.md is FINAL, the manager reviews it, logs it, commits, then launches the next model in the order.
 
 ## How the team runs (CEO decisions 2026-10-29)
@@ -59,6 +59,7 @@ RESUME_INSTRUCTIONS: FIRST check with ListAgents that no agent of this session i
 6. Phase 5: decision report (top 5 + new ideas); after CEO picks, build test kit.
 
 ## Agent log
+- 2026-10-29 Phase 2 M2 companion (Opus xhigh) — DONE (hit 5-hour limit at ~10:00Z, resumed 10:21Z via SendMessage, no work lost). Top: Release QA desk (answer posted manual-QA roles with real bugs found on buyer's live app; signed release sign-off; scale via in-person-verified Dhaka testers) chain 1 (Reply, crowded), two-key 3/3, 22 named buyers. #2 Dhaka verified bench via platform referral programmes (micro1 up to $3,000/role; Mercor 20% capped) chain 1 (Pay, soft), 27 intermediaries. #3 Bengali eval pod and #4 direct verified hire: weak by design. Licence: Overseas Employment Act 2013 covers only employment outside BD (VERIFIED by companion). Manager spot-check: Checkr 2026 Hiring Hoax 40% vs 31% VERIFIED. ~505k tokens incl. 1 helper.
 - 2026-10-29 Phase 2 M4 companion (Opus xhigh) — DONE. Verdict: original product (human QA of AI voice/chat agents for small agencies) FAILS AI-substitution gate (Retell built-in testing 2025-03-14, Vapi Simulations 2026-08-18, Coval free audit; 6 forum QA offers got no buyer replies). Survivor: Bangla/Sylheti native-speaker test panel for UK AI phone receptionists (NHS GP vendors) — chain 1 (Repeat), two-key PASS, pool ~40 buyers, ceiling $300–2,500/mo; needs Sylheti panel recruit. Others: agency QA (weak), Meta AI creative watch (weak). Manager spot-check: Softomate Bengali packs £800–1,500 VERIFIED (page re-opened). ~322k tokens, 78 tool calls, 26 min, 0 helpers.
 - 2026-10-29 Haiku nesting test (after settings change) — DONE: new agent HAD the Agent tool; its sub-agent returned "pong" (verified in transcript). Nested helpers work for agents launched after the change. Quirk: Haiku agent refused to use SubagentHandback; verified via transcript instead.
 - 2026-10-29 Payments check (Sonnet xhigh) — DONE. PayPal not usable; Payoneer request-a-payment (ACH 1%, card ≤3.99%), Upwork, SWIFT are the routes. nsave USD 'rewards' flagged as possible interest (halal). ~214k tokens, 73 tool calls. Manager spot-check passed.

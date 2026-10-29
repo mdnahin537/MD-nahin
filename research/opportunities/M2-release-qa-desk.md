@@ -1,4 +1,4 @@
-STATUS: IN PROGRESS — next: add the named-buyer table from helper 2, then final check
+STATUS: FINAL
 
 # M2 — Release QA desk: a named human tests and signs off each release for small software teams that post QA-tester roles
 **Model:** M2 Replacement Desk (Mode A first, Mode B to scale) · **Companion:** Phase 2 Opus, 2026-10-29
@@ -34,7 +34,7 @@ SOFT-0 TESTS TO RUN (≤2h, $0): bugs-per-hour test on 3 public apps from live p
 | # | Step | Score | Basis / evidence | Plane check | Route |
 |---|---|---|---|---|---|
 | 1 | Home | **2** | M / E1. A 45-minute exploratory pass on their live app or site, as any user would (a free sign-up at most), gives 2–3 bugs with videos. No login to their systems, $0. | P2 pass (public app); P3 pass | Rc |
-| 2 | Road | **2** | Off-Upwork: named live posts (table below, E3). Upwork: post volume NOT countable by me (Upwork blocks automated reading) → PARTNER CHECK (f). Upwork's 2026 report lists manual testing as a top-10 skill by spend (VERIFIED), so volume exists (E1). | — | Rb |
+| 2 | Road | **2** | Off-Upwork: 22 named companies with 28 live posts (table below, E3). Upwork: post volume NOT countable by me (Upwork blocks automated reading) → PARTNER CHECK (f). Upwork's 2026 report lists manual testing as a top-10 skill by spend (VERIFIED), so volume exists (E1). | — | Rb |
 | 3 | Letter | **2** | M / E1. Line one is their own bug: "On your sign-up page, 'Continue' stays grey after a valid email in Safari — 20-second video." | — | Rc |
 | 4 | Read | **2** | M / E1. Upwork: the poster reviews the proposal list (platform mechanism). Off-platform: 1 (founder email). | P6: Connects (10 free/month; $0.15 each after; each proposal costs several) | Rb |
 | 5 | Impressed | **2** | M / E1. They open their own app and repeat the steps in 30 seconds. | — | Rc |
@@ -75,7 +75,8 @@ EXPECTED: ≥15% replies (ESTIMATE: proof on their own app; GigRadar's best wind
 |---|---|---|
 | Upwork "Hire QA manual testing freelancers" US page (undated, live) | typical $18–28/h | SEARCH-SUMMARY |
 | PayScale, US manual QA tester (live) | employee median $23.50/h; P25–P75 $12.77–40.52 | SEARCH-SUMMARY |
-| Vantum, "QA Tester" open to Bangladesh (2026-10-08) | $500–1,000/month full-time | VERIFIED (Himalayas API) |
+| Vantum (5-person startup), "QA Tester" open to Bangladesh (2026-10-08) | $500–1,000/month full-time; "use the live product the way a customer would" | VERIFIED (Himalayas API) |
+| Resilio Partners, "Remote UI/UX Reviewer & QA" part-time (2026-10-19) | $35–40/h | VERIFIED (Himalayas API) |
 | Pontoonglobal, "Tester" (2026-10-29) | INR 700,000–1,000,000/yr (≈ $8–12k) | VERIFIED (Himalayas API) |
 | TechBiz Global, "UAT Tester (10 months project)" (2026-10-02) | 10-month contract, rate not shown | VERIFIED (Himalayas API) |
 **Our price (ESTIMATE):** first pass $40–80 fixed; release pass $150–300; retainer $600–1,200/month for weekly releases; Mode B testers billed $10–15/h with a 25% desk margin.
@@ -116,4 +117,37 @@ The formula gives this 3 of 3 because Upwork carries Read, Trust and Pay. The re
 
 ---
 
-## Named buyers (≥20, live posts) — pending helper 2
+## Named buyers: 22 companies, 28 live posts (built by me from the Himalayas jobs API, country=Bangladesh, fetched 2026-10-29)
+**How to read it:** every row is a role the buyer *posted* and that carries no location restriction (it is open to Bangladesh-based applicants by the board's metadata). The post URL is the public contact point, where you apply or propose. Himalayas blocks automated page reads, so the posts were read through the API (VERIFIED as listing data); a human can open them normally. Helper 2 was not needed. **Excluded on halal grounds (9 posts):** Sporty Group ×2 and Opinov8 (betting), Banco Plata (interest banking), Tether (stablecoin issuer), CoverGo (conventional insurance software), Halborn ×2 (crypto, check), Novacard (card fintech, check).
+**Fit for Mode A (the founders as contractors, manual only):** rows 8, 9, 10, 14, 22, 23, 26 (contract or part-time manual/UAT). **Fit for Mode B (placing a verified Bangladeshi QA engineer):** the full-time and "manual + automation" rows, where the client judges skill in its own interview. Upwork posts are not listed because Upwork blocks automated reading; see the PARTNER CHECK in (f).
+
+| # | Company | Role (type) | Posted | Fit | Pay shown | Post URL (= posted need; apply/propose here) | Company page | Buyer type |
+|---|---|---|---|---|---|---|---|---|
+| 1 | Aubrant Digital | QA Automation Lead (Contractor) | 2026-10-02 | manual + automation | — | https://himalayas.app/companies/aubrant-digital/jobs/qa-automation-lead | himalayas.app/companies/aubrant-digital | direct |
+| 2 | BCD Travel | Senior General QA (Python) (Full Time) | 2026-10-05 | manual + automation | — | https://himalayas.app/companies/bcd-travel/jobs/senior-general-qa-python | himalayas.app/companies/bcd-travel | direct |
+| 3 | Codest Ltd. | Senior QA Automation Engineer (Full Time) | 2026-10-24 | manual + automation | 18,000–23,000 PLN/monthly | https://himalayas.app/companies/codest-ltd-company-no-12590542-vat-number-gb363431020/jobs/senior-qa-automation-engineer-9564863176 | himalayas.app/companies/codest-ltd-company-no-12590542-vat-number-gb363431020 | direct |
+| 4 | Deed | QA Engineer (Full Time) | 2026-10-29 | manual + automation | — | https://himalayas.app/companies/deed/jobs/qa-engineer | himalayas.app/companies/deed | direct |
+| 5 | Digital Forms | Quality Assurance Engineer Lead/Senior (Contractor) | 2026-10-02 | manual + automation | — | https://himalayas.app/companies/digitalforms/jobs/quality-assurance-engineer-lead-senior-340567802 | himalayas.app/companies/digitalforms | direct |
+| 6 | Digital Forms | Quality Assurance Engineer Regular (Contractor) | 2026-10-02 | manual + automation | — | https://himalayas.app/companies/digitalforms/jobs/quality-assurance-engineer-regular-5311650567 | himalayas.app/companies/digitalforms | direct |
+| 7 | FundCount | Manual QA Engineer (Full Time) | 2026-10-17 | manual | — | https://himalayas.app/companies/fundcount/jobs/manual-qa-engineer | himalayas.app/companies/fundcount | direct |
+| 8 | High Tech Genesis | Testing Analyst (Contractor) | 2026-09-03 | manual | — | https://himalayas.app/companies/high-tech-genesis/jobs/testing-analyst | himalayas.app/companies/high-tech-genesis | direct |
+| 9 | Infomediji | QA Engineer (Unity Team) (Contractor) | 2026-10-29 | manual | — | https://himalayas.app/companies/infomediji/jobs/qa-engineer-unity-team | himalayas.app/companies/infomediji | direct |
+| 10 | Resilio Partners | Remote UI/UX Reviewer & Quality Assurance (QA) (Part Time) | 2026-10-19 | manual | 35–40 USD/hourly | https://himalayas.app/companies/resilio-partners/jobs/remote-ui-ux-reviewer-quality-assurance-qa | himalayas.app/companies/resilio-partners | direct |
+| 11 | Spotter Labs | Quality Assurance Engineer -- Junior Product Manager /  (Full Time) | 2026-10-15 | manual | — | https://himalayas.app/companies/spotter-labs/jobs/quality-assurance-engineer-junior-product-manager-ai-trucking-1802467549 | himalayas.app/companies/spotter-labs | direct |
+| 12 | Spotter Labs | Quality Assurance Engineer -- Junior Product Manager /  (Full Time) | 2026-10-15 | manual | — | https://himalayas.app/companies/spotter-labs/jobs/quality-assurance-engineer-junior-product-manager-ai-trucking-8479776582 | himalayas.app/companies/spotter-labs | direct |
+| 13 | Utility | QA Analyst (Contractor) | 2026-10-18 | manual + automation | — | https://himalayas.app/companies/utility/jobs/qa-analyst | himalayas.app/companies/utility | direct |
+| 14 | Vantum | QA Tester (Full Time) | 2026-10-08 | manual (implied) | 500–1,000 USD/monthly | https://himalayas.app/companies/vantum/jobs/qa-tester | himalayas.app/companies/vantum | direct |
+| 15 | Xogene Services LLC | QA Tech Lead (Full Time) | 2026-10-16 | manual + automation | — | https://himalayas.app/companies/xogene-services-llc/jobs/qa-tech-lead | himalayas.app/companies/xogene-services-llc | direct |
+| 16 | Zoftify — Travel Software Development | Quality Assurance Engineer (Full Time) | 2026-10-25 | manual | — | https://himalayas.app/companies/zoftify-travel-software-development/jobs/quality-assurance-engineer | himalayas.app/companies/zoftify-travel-software-development | direct |
+| 17 | Zoftify — Travel Software Development | QA Team Lead (Full Time) | 2026-10-25 | manual | — | https://himalayas.app/companies/zoftify-travel-software-development/jobs/qa-team-lead | himalayas.app/companies/zoftify-travel-software-development | direct |
+| 18 | zvoove | QA Automation Engineer (m/f/d) - AI-First Quality Engin (Full Time) | 2026-09-27 | manual | — | https://himalayas.app/companies/zvoove/jobs/qa-automation-engineer-m-f-d-ai-first-quality-engineering | himalayas.app/companies/zvoove | direct |
+| 19 | Invisible Technologies | AI QA Trainer – LLM Evaluation (Contractor) | 2026-10-13 | manual + automation | — | https://himalayas.app/companies/inv/jobs/ai-qa-trainer-llm-evaluation | himalayas.app/companies/inv | intermediary |
+| 20 | Pontoonglobal | Tester (Full Time) | 2026-10-29 | manual + automation | 700,000–1,000,000 INR/annual | https://himalayas.app/companies/pontoonglobal/jobs/tester | himalayas.app/companies/pontoonglobal | intermediary |
+| 21 | Pontoonglobal | Quality Manager & Automation Tester (Full Time) | 2026-10-29 | manual + automation | 700,000–1,500,000 INR/annual | https://himalayas.app/companies/pontoonglobal/jobs/quality-manager-automation-tester | himalayas.app/companies/pontoonglobal | intermediary |
+| 22 | TechBiz Global | Senior UAT Tester (10 months project) (Contractor) | 2026-10-02 | manual | — | https://himalayas.app/companies/techbiz-global/jobs/senior-uat-tester-10-months-project-4167536890 | himalayas.app/companies/techbiz-global | intermediary |
+| 23 | TechBiz Global | UAT Tester (10 months project) (Contractor) | 2026-10-02 | manual | — | https://himalayas.app/companies/techbiz-global/jobs/uat-tester-10-months-project-6970196857 | himalayas.app/companies/techbiz-global | intermediary |
+| 24 | TestYantra Software Solutions | Automation Tester -  Pega test automation (Contractor) | 2026-10-15 | manual + automation | — | https://himalayas.app/companies/testyantra-software-solutions/jobs/automation-tester-pega-test-automation | himalayas.app/companies/testyantra-software-solutions | intermediary |
+| 25 | XKTalent Inc. - Rimutee | QA MANUAL LEAD (Contractor) | 2026-10-06 | manual + automation | — | https://himalayas.app/companies/rekluti/jobs/qa-manual-lead | himalayas.app/companies/rekluti | intermediary |
+| 26 | Xperteez Technology | QA Engineer – 2D & Creative Applications / Remote - Con (Contractor) | 2026-10-12 | manual | — | https://himalayas.app/companies/xperteez-technology/jobs/qa-engineer-2d-creative-applications-remote-contract | himalayas.app/companies/xperteez-technology | intermediary |
+| 27 | Xperteez Technology | QA Engineer / Remote - Contract (Contractor) | 2026-10-02 | manual + automation | — | https://himalayas.app/companies/xperteez-technology/jobs/qa-engineer-remote-contract | himalayas.app/companies/xperteez-technology | intermediary |
+| 28 | micro1 | QA & Source Inspection (Contractor) | 2026-09-29 | manual | — | https://himalayas.app/companies/micro1/jobs/qa-source-inspection | himalayas.app/companies/micro1 | intermediary |
