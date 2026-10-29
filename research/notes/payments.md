@@ -29,7 +29,7 @@ Researched 2026-10-29. Brief: `research/briefs/payments-check.md`. No sign-ups, 
 | One industry voice (the CEO of bdjobs.com) said PayPal has "moved forward with at least one or two banks". This is a single unnamed-bank claim and I found nothing to back it. | PRESS, single insider claim, UNCONFIRMED | Same TBS article |
 | On 9 Sep 2026, PayPal's country list still omitted Bangladesh. | VENDOR CLAIM (Elevate Pay sells a competing product) | `elevatepay.co/blog/is-paypal-available-in-bangladesh`. My own check today agrees. |
 | No report of any bank launching a DVA, or signing with PayPal or Payoneer, after 29 Jul 2026. | NOT FOUND. Tried: 5 searches (English and Bangla), TBS PayPal tag page (latest item is the 23 Aug piece), Daily Star and Financial Express coverage. | Absence of evidence, not proof. Check TBS and Daily Star again before relying on it. |
-| A bdnews24 page dated "October 19, 2026" about a PayPal/Xoom rollout is a 2017 article with a wrong date header. | SEARCH-SUMMARY | The October 19 date is the 2017 Xoom launch (Prothom Alo, Daily Star, Dhaka Tribune headlines). |
+| A bdnews24 page dated "October 19, 2026" about a PayPal/Xoom rollout is a 2017 article with a wrong date header. | VERIFIED by manager 2026-10-29 15:26Z: page metadata datePublished 2017-10-19T12:02:23Z, updated 2022-10-19; "October 29, 2026" on the page is the site header showing today's date. Payoneer help a_id 12280 re-opened the same minute: Bangladesh still listed as unable to receive payments from payers via PayPal. | The October 19 date is the 2017 Xoom launch (Prothom Alo, Daily Star, Dhaka Tribune headlines). |
 
 ### 2. What the 29 Jul 2026 circular allows, and has any bank launched under it?
 
