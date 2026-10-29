@@ -4,9 +4,9 @@ Last updated: 2026-10-29
 
 ## RUN STATUS  (read first — the hourly auto-resume task acts on this block)
 RUN_STATUS: RUNNING            # RUNNING | WAITING_FOR_CEO | DONE
-CURRENT_STEP: Phase 1 — manager researching + drafting business models (research/models.md)
-CURRENT_AGENT: none
-RESUME_INSTRUCTIONS: If research/models.md is missing or marked DRAFT-INCOMPLETE, the manager continues drafting it from the notes in research/notes/phase1-research.md, then runs the Phase 1 Opus companion (brief: research/briefs/phase1-companion.md).
+CURRENT_STEP: Phase 1 — Opus companion attacking/finalising models (brief: research/briefs/phase1-companion.md)
+CURRENT_AGENT: phase1-companion (opus, xhigh) — launched 2026-10-29, foreground
+RESUME_INSTRUCTIONS: If research/models.md top line is not "STATUS: FINAL" or research/method.md is missing/not FINAL, the companion did not finish. First try SendMessage to the companion's agent id (see Agent log) saying "continue from your checkpoint". If it no longer answers, relaunch a new opus companion (effort xhigh) with: "Read research/briefs/phase1-companion.md and follow it. You are RESUMING: read research/models.md and research/method.md as they stand and continue from their STATUS line." If the companion ended with NEEDS_HELP: <path>, launch that helper (model/effort from the brief's first line), then SendMessage the result path to the companion.
 
 ## How the team runs (CEO decisions 2026-10-29)
 - Manager (main session, Opus) plans, judges, relays, writes the final answer.
@@ -54,5 +54,6 @@ RESUME_INSTRUCTIONS: If research/models.md is missing or marked DRAFT-INCOMPLETE
 6. Phase 5: decision report (top 5 + new ideas); after CEO picks, build test kit.
 
 ## Agent log
+- 2026-10-29 Manager Phase 1 research + draft v1 of 13 models — done (research/models.md DRAFT, research/notes/phase1-research.md).
 - 2026-10-29 Haiku tool test — done (no nested agents; fetch blocked; search OK).
 - 2026-10-29 Haiku fetch test — done (4/4 fetches failed, DNS).
