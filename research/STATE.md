@@ -59,6 +59,7 @@ RESUME_INSTRUCTIONS: FIRST check with ListAgents that no agent of this session i
 6. Phase 5: decision report (top 5 + new ideas); after CEO picks, build test kit.
 
 ## Agent log
+- 2026-10-29 Haiku nesting test (after settings change) — DONE: new agent HAD the Agent tool; its sub-agent returned "pong" (verified in transcript). Nested helpers work for agents launched after the change. Quirk: Haiku agent refused to use SubagentHandback; verified via transcript instead.
 - 2026-10-29 Payments check (Sonnet xhigh) — DONE. PayPal not usable; Payoneer request-a-payment (ACH 1%, card ≤3.99%), Upwork, SWIFT are the routes. nsave USD 'rewards' flagged as possible interest (halal). ~214k tokens, 73 tool calls. Manager spot-check passed.
 - 2026-10-29 Phase 1 Opus companion — DONE. 8 final models (research/models.md FINAL) + Path Test v2 & Reply Playbook (research/method.md FINAL). Manager review: accepted; note 'VERIFIED' there often = two search summaries; Phase 2 must open primary pages. ~267k tokens, 58 tool calls, 23 min.
 - 2026-10-29 Manager Phase 1 research + draft v1 of 13 models — done (research/models.md DRAFT, research/notes/phase1-research.md).
