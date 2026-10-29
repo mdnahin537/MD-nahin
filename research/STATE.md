@@ -31,10 +31,13 @@ RESUME_INSTRUCTIONS: FIRST check the agent is really stopped: call ListAgents; i
 - Shothik kit files: not available; use brief summary.
 - Usage plan: Claude Pro. Expect several 5-hour windows; hourly auto-resume task restarts unfinished work after limits reset.
 
-## Environment limits found 2026-10-29
-- Web SEARCH works. Web page FETCH is blocked for all normal sites (Upwork, Wikipedia, YouTube, news) — network policy "limited".
-- youtube-transcript.ai blocked too. Fix = CEO changes the environment's Network access to Full (asked 2026-10-29).
-- Until fixed: research uses search results only; every claim from a search summary is marked SEARCH-SUMMARY (not opened).
+## Environment facts (checked 2026-10-29, from code.claude.com docs + tests)
+- Network: CEO set Network access = Full. Page fetch WORKS from Bash/curl (tested 200 on docs + Wikipedia).
+- YouTube: youtube-transcript.ai needs a free API key (10 requests/day). Python youtube-transcript-api is blocked by YouTube from cloud IPs. Asked CEO to add key as env var YT_TRANSCRIPT_KEY (applies to a NEW session). Until then: no transcripts; use search.
+- Nested agents: Claude Code default allows 3 layers (docs: sub-agents "Let subagents spawn their own subagents"), BUT this cloud environment sets CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH=1 (nesting off). Fix = add "CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH": "3" to .claude/settings.json env (settings env overrides the process env in cloud sessions; reapplied when the file changes). Manager's edit was BLOCKED by the auto-mode safety classifier → waiting for CEO's explicit OK or his own edit. Until then: relay pattern (manager launches helpers).
+- WebSearch cap: 200 searches per session by default (CLAUDE_CODE_MAX_WEB_SEARCHES_PER_SESSION). Same settings edit should raise it to 1000. Until then: agents prefer curl/WebFetch on known URLs over extra searches.
+- Model check: explicit model "opus" on an Agent call overrides the repo's CLAUDE_CODE_SUBAGENT_MODEL=sonnet (docs, v2.1.251+; we run v2.1.312). Companions really run on Opus.
+- Built-in auto-continue after usage limit EXISTS: on by default in interactive CLI sessions (v2.1.234+; re-arms max 2 times in a row) and as an "Auto-continue when limits reset" checkbox in the Desktop app (session limit only, not weekly). NOT documented for cloud (web/mobile) sessions → keep our hourly scheduled task as the safety net. Scheduled runs during a limit are rejected until the window resets.
 
 ## Auto-resume
 - Hourly scheduled task fires into this session, reads RUN STATUS, resumes unfinished work. Manager sets WAITING_FOR_CEO before ending any turn that waits on the CEO, and switches the task off during long waits.
