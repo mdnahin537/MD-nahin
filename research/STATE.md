@@ -4,9 +4,9 @@ Last updated: 2026-10-29
 
 ## RUN STATUS  (read first — the hourly auto-resume task acts on this block)
 RUN_STATUS: RUNNING            # RUNNING | WAITING_FOR_CEO | DONE
-CURRENT_STEP: Payments check (Sonnet) running; then Phase 2 per-model companions in this order: M4, M2, M6, M8, M7, M5, M3, M1
-CURRENT_AGENT: payments-check (sonnet, xhigh) — brief research/briefs/payments-check.md — output research/notes/payments.md
-RESUME_INSTRUCTIONS: FIRST check with ListAgents that no agent of this session is running; if one is, do NOTHING. If research/notes/payments.md is missing/incomplete, relaunch the payments-check agent from its brief. Then start Phase 2 with the next model in the order whose file research/opportunities/M#-*.md is missing or not marked STATUS: FINAL (brief: research/briefs/phase2-common.md + the model's section). One companion at a time.
+CURRENT_STEP: Phase 2 — M4 New-Category Bench companion (1st of 8; order M4, M2, M6, M8, M7, M5, M3, M1)
+CURRENT_AGENT: phase2-M4 (opus, xhigh) — brief research/briefs/phase2-common.md — outputs research/opportunities/M4-*.md
+RESUME_INSTRUCTIONS: FIRST check with ListAgents that no agent of this session is running; if one is, do NOTHING. If the companion ended with "NEEDS_HELP: <path>", launch that helper (model/effort from the file's first line) and SendMessage the result path back to the same companion. If it stopped mid-work, SendMessage it "continue from your checkpoint"; if it no longer answers, relaunch a new opus xhigh companion for the same model telling it to resume from the existing M#-*.md files (STATUS lines). When a model's M#-summary.md is FINAL, the manager reviews it, logs it, commits, then launches the next model in the order.
 
 ## How the team runs (CEO decisions 2026-10-29)
 - Manager (main session, Opus) plans, judges, relays, writes the final answer.
@@ -26,7 +26,7 @@ RESUME_INSTRUCTIONS: FIRST check with ListAgents that no agent of this session i
 - Cash budget: AI subscriptions only — Claude Pro $20; ChatGPT Plus $20 if needed; Gemini Pro via family plan (~700 BDT). Test kit must cost ~$0 extra cash.
 - Hours: 8–35 h/week, varies. Design for the low end (8 h each).
 - Coding OK if AI writes it. Rank down offers where a bug costs the client money and the team can't debug it.
-- Payments: Payoneer works. PayPal: CEO heard Bangladesh allowed PayPal via bank link in 2026 — UNVERIFIED, Sonnet check queued.
+- Payments: Payoneer works. PayPal NOT usable (VERIFIED 2026-10-29; manager re-opened Payoneer help a_id 12280: Bangladesh listed as unable to receive PayPal-funded payments). Payoneer minimum $20–50 per request, so a $1–10 test is impossible; first real test ≥ $20 from a genuine buyer. Annual fee $29.95 if under $6,000/yr. Details research/notes/payments.md.
 - Warm contacts abroad: none.
 - Shothik kit files: not available; use brief summary.
 - Usage plan: Claude Pro. Expect several 5-hour windows; hourly auto-resume task restarts unfinished work after limits reset.
@@ -57,6 +57,7 @@ RESUME_INSTRUCTIONS: FIRST check with ListAgents that no agent of this session i
 6. Phase 5: decision report (top 5 + new ideas); after CEO picks, build test kit.
 
 ## Agent log
+- 2026-10-29 Payments check (Sonnet xhigh) — DONE. PayPal not usable; Payoneer request-a-payment (ACH 1%, card ≤3.99%), Upwork, SWIFT are the routes. nsave USD 'rewards' flagged as possible interest (halal). ~214k tokens, 73 tool calls. Manager spot-check passed.
 - 2026-10-29 Phase 1 Opus companion — DONE. 8 final models (research/models.md FINAL) + Path Test v2 & Reply Playbook (research/method.md FINAL). Manager review: accepted; note 'VERIFIED' there often = two search summaries; Phase 2 must open primary pages. ~267k tokens, 58 tool calls, 23 min.
 - 2026-10-29 Manager Phase 1 research + draft v1 of 13 models — done (research/models.md DRAFT, research/notes/phase1-research.md).
 - 2026-10-29 Haiku tool test — done (no nested agents; fetch blocked; search OK).
