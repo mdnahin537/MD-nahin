@@ -5,8 +5,8 @@ Last updated: 2026-10-29
 ## RUN STATUS  (read first — the hourly auto-resume task acts on this block)
 RUN_STATUS: RUNNING            # RUNNING | WAITING_FOR_CEO | DONE
 CURRENT_STEP: Phase 1 — Opus companion attacking/finalising models (brief: research/briefs/phase1-companion.md)
-CURRENT_AGENT: phase1-companion (opus, xhigh) — launched 2026-10-29, foreground
-RESUME_INSTRUCTIONS: If research/models.md top line is not "STATUS: FINAL" or research/method.md is missing/not FINAL, the companion did not finish. First try SendMessage to the companion's agent id (see Agent log) saying "continue from your checkpoint". If it no longer answers, relaunch a new opus companion (effort xhigh) with: "Read research/briefs/phase1-companion.md and follow it. You are RESUMING: read research/models.md and research/method.md as they stand and continue from their STATUS line." If the companion ended with NEEDS_HELP: <path>, launch that helper (model/effort from the brief's first line), then SendMessage the result path to the companion.
+CURRENT_AGENT: phase1-companion (opus, xhigh) — launched 2026-10-29 ~08:45Z, runs in background (agent id kept in session scratchpad agents.txt)
+RESUME_INSTRUCTIONS: FIRST check the agent is really stopped: call ListAgents; if the companion (or any agent of this session) is listed as running/busy, do NOTHING. Only if it is not running: if research/models.md top line is not "STATUS: FINAL" or research/method.md is missing/not FINAL, the companion did not finish. First try SendMessage to the companion's agent id (see Agent log) saying "continue from your checkpoint". If it no longer answers, relaunch a new opus companion (effort xhigh) with: "Read research/briefs/phase1-companion.md and follow it. You are RESUMING: read research/models.md and research/method.md as they stand and continue from their STATUS line." If the companion ended with NEEDS_HELP: <path>, launch that helper (model/effort from the brief's first line), then SendMessage the result path to the companion.
 
 ## How the team runs (CEO decisions 2026-10-29)
 - Manager (main session, Opus) plans, judges, relays, writes the final answer.
