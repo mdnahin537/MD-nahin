@@ -208,3 +208,31 @@ Vendor (opened, discounted):
 - Elevate Pay, Upwork fees: https://www.elevatepay.co/blog/upwork-fees-bangladesh
 - nsave, 28 Apr 2026: https://www.nsave.com/bangladesh/paypal
 - nsave, Upwork: https://nsave.com/bangladesh/upwork
+
+## Update 2026-10-29 16:00Z (manager): the bank route the CEO described
+**What is true (VERIFIED: Prothom Alo English 2026-07-29, TBS 2026-07-29, Daily Star 2026-07-30, pages opened):**
+- Bangladesh Bank's Foreign Exchange Policy Department circular of **29 July 2026** lets authorised dealer (AD) banks partner with foreign "Cross-Border Digital Payment Service Providers" (CDPSPs), naming PayPal, Payoneer and Stripe as examples.
+- The customer opens a **Digital Value Account (DVA)** in their own name *through the bank*. It sits under the bank's Master DVA, so the customer can't run it independently. This matches the CEO's description: the bank is the handler, and you can't open PayPal on your own.
+- Permitted uses as listed: travel quota forex, membership fees, IT expenses, visa fees, hotel bookings, small online payments (one report gives a $300-per-transaction cap). Usable against ERQ and RFCD accounts.
+- Inward use is mixed in the reporting. TBS says the framework covers "both inward and outward" and is "expected" to help freelancers receive earnings; the Daily Star describes it as **outward** remittances.
+- Before launching, each bank needs Bangladesh Bank acknowledgement, a signed partner agreement and a technical integration.
+
+**What is NOT found (as of 2026-10-29):**
+- Any bank announcing a launched PayPal DVA service.
+- Any signed PayPal agreement with a Bangladeshi bank.
+
+  Searched in English and Bangla, including by bank name (City, BRAC, EBL, DBBL, Prime).
+- A TBS report of 2026-08-23 that "PayPal is reviewing its policies" (seen only via a third-party blog).
+- PayPal's own country list still omits Bangladesh, and Payoneer a_id 12280 still excludes Bangladesh (both re-checked today).
+
+**Verdict:** the framework is real and the CEO's memory is right about *how* it will work. A live, usable PayPal receiving service is **not yet verified**.
+- Plan Pay on Payoneer and Upwork.
+- Treat PayPal as an upside to re-check monthly.
+
+**$0 real-world check (PARTNER CHECK, ~30 min):** call or visit 3 large AD banks (e.g. City Bank, BRAC Bank, Eastern Bank) and ask:
+1. "Do you offer a Digital Value Account linked to PayPal now?"
+2. "Can I *receive* payment from a foreign client into it, or only pay out?"
+3. "What are the limits, fees and documents?"
+4. "Since what date?"
+
+Record the answers with the date and the staff member's role.
