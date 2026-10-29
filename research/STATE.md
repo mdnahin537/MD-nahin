@@ -1,35 +1,58 @@
 # Research STATE — Service Agency Models & Opportunities
 
-Last updated: 2026-10-28 (Phase 0)
+Last updated: 2026-10-29
 
-## Current phase
-Phase 0 — plan sent to CEO, waiting for his OK plus answers on budget, weekly hours, PayPal route, parallel agents.
+## RUN STATUS  (read first — the hourly auto-resume task acts on this block)
+RUN_STATUS: RUNNING            # RUNNING | WAITING_FOR_CEO | DONE
+CURRENT_STEP: Phase 1 — manager researching + drafting business models (research/models.md)
+CURRENT_AGENT: none
+RESUME_INSTRUCTIONS: If research/models.md is missing or marked DRAFT-INCOMPLETE, the manager continues drafting it from the notes in research/notes/phase1-research.md, then runs the Phase 1 Opus companion (brief: research/briefs/phase1-companion.md).
 
-## Team setup (from CEO, 2026-10-28)
-- Companion = Opus (peer thinking: model sparring, ranking, independent critic). Effort: xhigh.
-- Agent = Sonnet (opportunity search, test-kit build). Effort: xhigh (CEO override of brief's "high").
-- Sub-agent = Haiku (narrow fact checks, counts, prices). Effort: xhigh. ("Hyperco 5.5" in CEO message read as Haiku.)
-- CEO says: use agents as needed; usage cap of ~10 Opus/Sonnet agents relaxed. One-at-a-time rule: pending CEO answer.
-- Nested agents (can an agent launch agents?): NOT YET CHECKED — check with a tiny Haiku test after approval.
+## How the team runs (CEO decisions 2026-10-29)
+- Manager (main session, Opus) plans, judges, relays, writes the final answer.
+- Companion = Opus, effort xhigh. Leads the real work. Phase 2: ONE companion per business model, run one at a time.
+- Agent = Sonnet. Helper to the companion. The companion picks its effort level.
+- Sub-agent = Haiku. Narrow exact jobs. The companion picks its effort level.
+- TESTED 2026-10-29: launched agents CANNOT launch agents (no Agent tool inside them).
+  So the manager is the switchboard: companion writes a helper brief to research/handoffs/, pauses and reports NEEDS_HELP;
+  manager launches the helper; manager sends the result path back to the same companion (SendMessage keeps its memory).
+- One at a time: one companion + at most one helper running. A paused companion may keep working while its helper runs if it asks.
+- Path test (9 steps, 0/1/2) is a thinking tool, not a calculator. Companions must apply judgment overrides
+  ("false 0" = looks impossible but has a clever route; "false 2" = looks easy but hides a plane), with written reasons.
+- Reply engineering is mandatory: every opportunity needs the best channel, contact point, timing trigger and approach to get Read + Reply + Trust, with evidence.
+- Final report: top 5 + a list of new ideas.
 
-## Decisions / assumptions so far
-- Budget: ASSUMED under ~$200 until CEO confirms.
-- Hours: ASSUMED limited (~8–10 h/week each) until CEO confirms.
-- Coding: CEO now OK with offers that need code, as long as AI writes it. Ranking rule I set: rank down any offer where a code bug costs the client money and the team can't debug it.
-- Payments: CEO says PayPal + Payoneer. Research (2026-10-28) says full PayPal accounts are still unavailable to Bangladesh residents; reported route is PayPal -> Payoneer integration (VENDOR CLAIM from nsave.com, not confirmed with Payoneer). Asked CEO how he receives PayPal. A PayPal account registered abroad / in someone else's name = treated as NOT usable (terms risk + "hiding Dhaka" breaks the honesty limit).
-- Shothik test kit files: NOT in this repo. Using the brief's summary as the baseline.
+## CEO constraints (2026-10-29)
+- Cash budget: AI subscriptions only — Claude Pro $20; ChatGPT Plus $20 if needed; Gemini Pro via family plan (~700 BDT). Test kit must cost ~$0 extra cash.
+- Hours: 8–35 h/week, varies. Design for the low end (8 h each).
+- Coding OK if AI writes it. Rank down offers where a bug costs the client money and the team can't debug it.
+- Payments: Payoneer works. PayPal: CEO heard Bangladesh allowed PayPal via bank link in 2026 — UNVERIFIED, Sonnet check queued.
+- Warm contacts abroad: none.
+- Shothik kit files: not available; use brief summary.
+- Usage plan: Claude Pro. Expect several 5-hour windows; hourly auto-resume task restarts unfinished work after limits reset.
+
+## Environment limits found 2026-10-29
+- Web SEARCH works. Web page FETCH is blocked for all normal sites (Upwork, Wikipedia, YouTube, news) — network policy "limited".
+- youtube-transcript.ai blocked too. Fix = CEO changes the environment's Network access to Full (asked 2026-10-29).
+- Until fixed: research uses search results only; every claim from a search summary is marked SEARCH-SUMMARY (not opened).
+
+## Auto-resume
+- Hourly scheduled task fires into this session, reads RUN STATUS, resumes unfinished work. Manager sets WAITING_FOR_CEO before ending any turn that waits on the CEO, and switches the task off during long waits.
 
 ## Done
-- [x] Repo checked: no earlier research files here.
-- [x] PayPal-in-Bangladesh fact check (see above).
+- [x] Repo checked: no earlier research files.
+- [x] PayPal-in-Bangladesh first check (2026-10-28): full PayPal accounts unavailable to BD residents per nsave.com (VENDOR CLAIM); PayPal->Payoneer route reported.
+- [x] Nested-agent test (Haiku, 2026-10-29): NO Agent tool inside agents.
+- [x] Fetch test (2026-10-29): all page fetches fail (DNS blocked).
 
 ## Next
-1. Get CEO OK + answers.
-2. Phase 1: I draft 8+ business models; one Opus companion attacks and extends them; write research/models.md; brief CEO.
-3. Phase 2: Sonnet agents search opportunities per model (3–5 each, 9-step scored, dated evidence) -> research/opportunities/
-4. Phase 3: ranking (4+ methods) with Opus companion -> research/ranking.md
+1. Phase 1: manager research + draft models -> research/models.md; Opus companion attacks/extends; report to CEO.
+2. Payments desk (Sonnet): verify PayPal-Bangladesh 2026 status, rules, risks — after network fix.
+3. Phase 2: one Opus companion per model (with Sonnet/Haiku helpers via relay) -> research/opportunities/
+4. Phase 3: ranking (4+ methods) with an Opus companion -> research/ranking.md
 5. Phase 4: fresh Opus critic on top 3 + Shothik -> research/critic.md
-6. Phase 5: decision report; after CEO picks, build test kit.
+6. Phase 5: decision report (top 5 + new ideas); after CEO picks, build test kit.
 
 ## Agent log
-(none yet)
+- 2026-10-29 Haiku tool test — done (no nested agents; fetch blocked; search OK).
+- 2026-10-29 Haiku fetch test — done (4/4 fetches failed, DNS).
