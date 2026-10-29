@@ -4,9 +4,9 @@ Last updated: 2026-10-29
 
 ## RUN STATUS  (read first — the hourly auto-resume task acts on this block)
 RUN_STATUS: RUNNING            # RUNNING | WAITING_FOR_CEO | DONE
-CURRENT_STEP: Phase 1 — Opus companion attacking/finalising models (brief: research/briefs/phase1-companion.md)
-CURRENT_AGENT: phase1-companion (opus, xhigh) — launched 2026-10-29 ~08:45Z, runs in background (agent id kept in session scratchpad agents.txt)
-RESUME_INSTRUCTIONS: FIRST check the agent is really stopped: call ListAgents; if the companion (or any agent of this session) is listed as running/busy, do NOTHING. Only if it is not running: if research/models.md top line is not "STATUS: FINAL" or research/method.md is missing/not FINAL, the companion did not finish. First try SendMessage to the companion's agent id (see Agent log) saying "continue from your checkpoint". If it no longer answers, relaunch a new opus companion (effort xhigh) with: "Read research/briefs/phase1-companion.md and follow it. You are RESUMING: read research/models.md and research/method.md as they stand and continue from their STATUS line." If the companion ended with NEEDS_HELP: <path>, launch that helper (model/effort from the brief's first line), then SendMessage the result path to the companion.
+CURRENT_STEP: Payments check (Sonnet) running; then Phase 2 per-model companions in this order: M4, M2, M6, M8, M7, M5, M3, M1
+CURRENT_AGENT: payments-check (sonnet, xhigh) — brief research/briefs/payments-check.md — output research/notes/payments.md
+RESUME_INSTRUCTIONS: FIRST check with ListAgents that no agent of this session is running; if one is, do NOTHING. If research/notes/payments.md is missing/incomplete, relaunch the payments-check agent from its brief. Then start Phase 2 with the next model in the order whose file research/opportunities/M#-*.md is missing or not marked STATUS: FINAL (brief: research/briefs/phase2-common.md + the model's section). One companion at a time.
 
 ## How the team runs (CEO decisions 2026-10-29)
 - Manager (main session, Opus) plans, judges, relays, writes the final answer.
@@ -57,6 +57,7 @@ RESUME_INSTRUCTIONS: FIRST check the agent is really stopped: call ListAgents; i
 6. Phase 5: decision report (top 5 + new ideas); after CEO picks, build test kit.
 
 ## Agent log
+- 2026-10-29 Phase 1 Opus companion — DONE. 8 final models (research/models.md FINAL) + Path Test v2 & Reply Playbook (research/method.md FINAL). Manager review: accepted; note 'VERIFIED' there often = two search summaries; Phase 2 must open primary pages. ~267k tokens, 58 tool calls, 23 min.
 - 2026-10-29 Manager Phase 1 research + draft v1 of 13 models — done (research/models.md DRAFT, research/notes/phase1-research.md).
 - 2026-10-29 Haiku tool test — done (no nested agents; fetch blocked; search OK).
 - 2026-10-29 Haiku fetch test — done (4/4 fetches failed, DNS).
