@@ -1,4 +1,4 @@
-STATUS: IN PROGRESS — next: shared buyer list (k) from helper-2; final check
+STATUS: FINAL
 
 # M1 — Restaurant Hard-Review Desk (the CEO's reputation desk, reshaped)
 **Model:** M1 Proof-First Fixer · **Companion:** Phase 2 Opus (M1 owner), 2026-10-30
@@ -32,6 +32,7 @@ STATUS: IN PROGRESS — next: shared buyer list (k) from helper-2; final check
 |---|---|---|---|
 | Marqii Managed Review Response (restaurants; "AI + HI (Human Intelligence)") | $100/month for 50 reviews ($2.00 each) → $375 for 500 ($0.75 each), per brand; + $100 platform fee if standalone | AI drafts, humans check | VERIFIED price (helper-1, re-opened); human share VENDOR CLAIM |
 | The Social Station (hotels; same offer for F&B outlets) | **$49/month per outlet** after 3 free months | "A real person… writes a thoughtful, property-specific response"; client approves | VERIFIED (helper-1, re-opened) |
+| **Restaurant Genie (UK restaurant agency)** | **£400/month add-on** per restaurant: monitor Google and TripAdvisor daily, "reply to every new review within 24 hours, in your voice"; negatives go to the owner first | agency staff | VERIFIED (restaurant-genie.co.uk/restaurant-review-management, opened by me) |
 | The HOTH (white-label to agencies) | **from $275/location/month wholesale** incl. managed responses, review generation, listings, weekly GBP posts; agencies resell at $500–900 | provider-written replies | VENDOR CLAIM (own blog, 2026-08-18; I opened it) |
 | Widewail (car dealers) | $500–750/month per rooftop ("our specialists answering every review") | specialists | VERIFIED (helper-1); other industry |
 | Wishup (VA firm) | $3–8 per drafted+published response; $150–400/location/month multi-location | VA | VENDOR CLAIM |
@@ -144,7 +145,7 @@ EXPECTED: baseline 3–5% → target ≥ 8% positive (ESTIMATE; NOT FOUND: any a
 - **Halal:** licensed venues excluded; no incentives for reviews; honest identity.
 
 ## (d) Price evidence
-See the evidence table above (Marqii $0.75–2/review; Social Station $49/outlet; HOTH $275 wholesale; Reputation.com $80 with AI; Widewail $500–750; freelancers $55–95/month; VA $3–8/response). Our proposed prices (ESTIMATE): **$35–50/location/month wholesale** for the hard-review desk + memo; **$60–90** bundled with listings kept-fixed; retail by the agency at $150–300.
+See the evidence table above (Restaurant Genie £400/month retail, UK; Marqii $0.75–2/review; Social Station $49/outlet; HOTH $275 wholesale; Reputation.com $80 with AI; Widewail $500–750; freelancers $55–95/month; VA $3–8/response). Our proposed prices (ESTIMATE): **$35–50/location/month wholesale** for the hard-review desk + memo; **$60–90** bundled with listings kept-fixed; retail by the agency at $150–300.
 
 ## (e) Money path and scenarios (route c)
 **Path:** free proof (their clients' unanswered October reviews) → 3 free drafts → **$150–300 first job**: clear the 1–3 star backlog of the last 90 days for 10 clients + one memo each → **$40/location/month** desk → bundle with listings at **$75/location** → an agency with 15 eligible locations = **$1,125/month**.
@@ -189,3 +190,36 @@ All ESTIMATE. Mid is at the team's capacity ceiling (36 locations ≈ 70–90 h/
 
 ## (j) Intelligence verdict
 The reshaped desk is better than the CEO's original (speed + discounts), which was both illegal in part and already free. Repeat is the only step clearly stronger than listings, because reviews keep coming. But the formula's PASS for route (c) hides a pricing truth: the market already values human-touched replies at $0.75–8 each, and the "hard review" slice is too small to carry a business on its own. **What I believe:** the desk is the *retention engine* of a bundle, and listings are its *opener*. Sold together, white-label, to UK-first restaurant agencies with mostly unlicensed portfolios, at $60–90 a location, it is a plausible $1–2k/month line inside 6 months. Sold alone to owners, it is the killed "reply writing" idea in new clothes.
+
+---
+
+## (k) Named buyers (route c): the same 23 maintainers, ranked for the hard-review desk
+Full rows (portfolio URLs, client names, client mix): `M1-shothik-open.md` (k) and `research/handoffs/M1-helper-2-maintainers.md` (all opened 2026-10-30; I re-opened Restaurant Genie's review page: "reply to every new review within 24 hours, in your voice", **£400/month add-on**). Not contacted. Two kinds of buyer: **fulfilment buyers** (already sell review replies; we'd do the work under their brand) and **upsell buyers** (build sites for restaurants but sell no review product; the bundle gives them a new line).
+
+| # | Firm (country) | Public contact point | Review signal | Priority |
+|---|---|---|---|---|
+| 1 | The Digital Restaurant (US) | Contact/callback form https://thedigitalrestaurant.com/contact/ (tel (877) 461-0422) | Y — https://thedigitalrestaurant.com/restaurant-reputation-management/ | B: US, sells reputation management |
+| 2 | Primi Digital (US (New York)) | hello@primidigital.com (contact form https://primidigital.com/contact-us/) | Y — "review response" in Covers Boost programme https://primidigital.com/ | B: US, review response in programme (mixed clients) |
+| 3 | Diner Designer (division of Web Welder) (US (Colorado/Florid…) | info@dinerdesigner.com | Y — https://dinerdesigner.com/review-marketing/ | A: US, sells review marketing, ~25 food logos |
+| 4 | Webdiner (US) | info@webdiner.com; sales@webdiner.com | Listed as "reviews" under marketing consulting, https://webdiner.com/ (weak) | C: many bars; large |
+| 5 | Restaurant Web.design (a division of Spiderjig … (US (FL, CT)) | info@restaurantweb.design | N seen (services list: social, email, menu design; no review responses) https://www.resta… | C: mixed incl. bars |
+| 6 | rankONE (Australia (Melbourn…) | melbourne@rankone.com.au (also sydney@/brisbane@/adelaide@rankone.com.au); form https://www.rankone.com.au/contact-us/ | N seen — "review" only means influencer reviews https://www.rankone.com.au/ | B: AU, no review product → upsell |
+| 7 | Webby Web Design (Australia (Bayside …) | Online enquiry form https://www.webbywebdesign.com.au/contact (no email shown; mobile 0412 048 246) | N seen — only shows its own client reviews | B: AU, no review product → upsell |
+| 8 | Eunorial Consulting (Canada (Toronto)) | info@eunorialconsulting.ca; form https://eunorialconsulting.ca/contact-us/ | N seen | B: CA, GBP product, no replies |
+| 9 | Paige Madden Design (US (Chico, CA)) | hello@paigemaddendesign.com; form https://www.paigemaddendesign.com/contact | N seen | C: mixed |
+| 10 | Restaurant Genie (UK (Bedford / Norfo…) | reach@restaurant-genie.co.uk; form https://www.restaurant-genie.co.uk/contact | Y — Review management add-on £400/mo https://www.restaurant-genie.co.uk/restaurant-review… | A: sells replies at £400/month retail → fulfilment-buyer test |
+| 11 | Takeaway Growth Agency (trading name of Dept of… (UK (Stockport)) | info@takeawaygrowthagency.com; form https://takeawaygrowthagency.com/contact | Partial — Google review collection only; no response service seen https://takeawaygrowtha… | B: UK Ltd, collects reviews but no replies → upsell |
+| 12 | Order Directly (Order Directly Ltd) (UK (Cardiff / Londo…) | info@orderdirectly.com; form on https://www.orderdirectly.com/#contact | N seen | B: UK Ltd takeaways, no review product → upsell |
+| 13 | Eat Marketing (UK (Coventry)) | hello@eat-marketing.co.uk; form https://eat-marketing.co.uk/contact/ | Y — will "help you respond professionally to all feedback" (FAQ) https://eat-marketing.co… | A: UK, sells "respond professionally" → fulfilment test |
+| 14 | Toronto Restaurant Growth (TRG) (Canada (Toronto/GTA)) | Contact form https://torontorestaurantgrowth.ca/contact/ (email is obfuscated on page) | Y — https://torontorestaurantgrowth.ca/services/restaurant-review-management/ | A: CA, sells review management; halal-leaning |
+| 15 | Online Order Go (OOGO Digital Limited) (UK) | support@oogodigital.co.uk (footer; also callback form on https://www.onlineordergo.co.uk/) | N seen | B: UK Ltd takeaways, no review product → upsell |
+| 16 | Restaurant Marketing, Inc. (US (Orange, CA)) | workwithus@restaurantmarketing.com; tel 949-439-1652 | N seen | C: testimonials only |
+| 17 | Foodie Agency (a DisArt Media company) (US (Florida)) | Contact form https://foodie.agency/contact/ | Partial — "Reputation" named among services on the our-work page, no detail | C: "Reputation" named only |
+| 18 | BiteCraft Web Design (US (Clayton, NC)) | info@bitecraftwebdesign.com | N seen | C: thin portfolio |
+| 19 | Vigor Branding (US (multi-office; b…) | Project inquiry form https://vigorbranding.com/connect/project-inquiry/ | N seen | C: branding-led |
+| 20 | The Order Guys (Canada (Edmonton)) | info@theorderguys.com; form https://theorderguys.com/contact/ | N seen | C: CA, no review product |
+| 21 | Mealzo for Business (Mealzo, B Corp) (UK (Scotland-based …) | Contact page https://mealzoforbusiness.co.uk/contact-us ; tel +44 78 6820 0572 (home page) | N seen (only its own Trustpilot/Google scores) | C: UK platform, size unknown |
+| 22 | Cholo Digital Limited (UK (Oldham)) | hello@cholo.co.uk (header) and info@cholo.co.uk (contact page); tel 0161 768 1566; https://www.cholo.co.uk/contact/ | N seen | A: UK Ltd, no review product → upsell (bundle opener) |
+| 23 | PGWD (hospitality web design & SEO) (UK (London)) | Tel 020 7370 3021; "Get in Touch" form on https://pgwd.uk/portfolio/all-projects/ (no email shown) | N seen | D: licensed/upmarket (halal filter fails) |
+
+**First sends:** Restaurant Genie, Eat Marketing (UK; fulfilment test) and Cholo Digital, Online Order Go, Order Directly (UK Ltd; upsell test). Restaurant Genie's £400/month retail price is the strongest evidence in this file that a UK restaurant will pay for done-for-you replies, and it leaves room for a $40–60 wholesale desk.
