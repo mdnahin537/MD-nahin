@@ -72,3 +72,5 @@ RESUME_INSTRUCTIONS: FIRST check with ListAgents that no agent of this session i
 - 2026-10-29 Manager Phase 1 research + draft v1 of 13 models — done (research/models.md DRAFT, research/notes/phase1-research.md).
 - 2026-10-29 Haiku tool test — done (no nested agents; fetch blocked; search OK).
 - 2026-10-29 Haiku fetch test — done (4/4 fetches failed, DNS).
+- 2026-10-30 CEO approved (explicit: replace with date, delete old) → CLAUDE.md payout line replaced: "CURRENT AS OF 2026-10-30 … Usable: Payoneer, Upwork, platforms paying out to BD banks (Gumroad BDT). Not viable: anything needing our own Stripe or PayPal account." Old line deleted. Stripe Connect platforms that pay BD banks are now in scope → re-check M7 red-team ladder two-key at ranking.
+- 2026-10-30 07:30Z Hourly auto-resume task found paused since 2026-10-29 16:49Z (not by the manager) → re-enabled; ListAgents confirmed it sees running subagents.

@@ -20,7 +20,10 @@ High-quality thinking + AI execution = maximum leverage with minimum time.
 HARD CONSTRAINTS — non-negotiable on every task:
 - Halal only: no gambling, interest-based finance, adult content, haram verticals
   → Flag any haram adjacency proactively before building anything
-- Payouts: Gumroad + Payoneer only. Stripe-dependent platforms are non-viable.
+- Payouts — CURRENT AS OF 2026-10-30 (CEO approved). Payment rules, bank launches and platform policies change;
+  re-check at source before relying on this after that date.
+  Usable: Payoneer, Upwork, and platforms that pay out to Bangladeshi banks (e.g. Gumroad pays BDT to a local bank).
+  Not viable: anything needing our own Stripe or PayPal account.
   [REJECTED] PayPal for receiving: VERIFIED 2026-10-29. Bangladesh is absent from PayPal's country list, and Payoneer's
   help page (a_id 12280) bars Bangladesh-registered accounts from receiving PayPal-funded payments. Re-check only if
   a Bangladeshi bank launches a PayPal link under the Bangladesh Bank 2026-07-29 framework. Details: research/notes/payments.md
