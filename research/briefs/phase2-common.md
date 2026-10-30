@@ -42,6 +42,8 @@ Why, in one line: the CEO needs real roads, not destinations; your files feed th
 - Real faces and names publicly: yes.
 - Live calls in US/UK hours: rarely; paths must work mostly asynchronously.
 
+**Market scope (CEO rule, 2026-10-30):** never limit buyers to Bangladeshi, diaspora or Bangla-speaking owners. Any country and any language we can work in (English, Bangla) is in scope: the US, UK, Canada, Australia, Ireland, New Zealand, the Gulf and so on. Use an affinity angle (Bangla, Muslim audience) only where it is a real mechanism that raises Read or Trust. Whenever you use one, also score the open-market version side by side.
+
 **Channels:** WhatsApp, Facebook (the CEO's personal account), email, new LinkedIn and Upwork accounts with no history. Any realistic route is allowed.
 
 **Payment:** read `research/notes/payments.md` if it exists. Otherwise: Payoneer works; PayPal is not usable for Bangladesh residents as of Sept 2026; Wise and Stripe are unavailable.
