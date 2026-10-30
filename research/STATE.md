@@ -1,6 +1,6 @@
 # Research STATE — Service Agency Models & Opportunities
 
-Last updated: 2026-10-29
+Last updated: 2026-10-30 (07:30Z: M5 companion resumed after the usage-limit stop)
 
 ## RUN STATUS  (read first — the hourly auto-resume task acts on this block)
 RUN_STATUS: RUNNING            # RUNNING | WAITING_FOR_CEO | DONE
