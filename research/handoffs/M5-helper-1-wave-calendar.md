@@ -1,4 +1,4 @@
-STATUS: IN PROGRESS — rows done: 14
+STATUS: FINAL — 14 of 22 rows (helper stopped by usage limit; accepted by the M5 companion 2026-10-30; rows 15–22 not done)
 
 # M5 wave calendar (compiled 2026-10-29)
 
