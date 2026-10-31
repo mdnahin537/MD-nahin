@@ -5,7 +5,7 @@ Last updated: 2026-10-31 (Round 2 started)
 ## RUN STATUS  (read first — the hourly auto-resume task acts on this block)
 RUN_STATUS: RUNNING            # RUNNING | WAITING_FOR_CEO | DONE
 CURRENT_STEP: ROUND 2 — R2-1 demand map (manager, inline) → R2-2 bold candidates with named routes (manager) → R2-3 one Opus companion tests top 6–8 (NO sub-agents) → R2-4 manager ranks + report. Files: research/round2/
-CURRENT_AGENT: round2-companion (opus, xhigh, NO sub-agents) — brief research/briefs/round2-companion.md — outputs research/round2/tests/C#-*.md + research/round2/companion-report.md. If stopped by a usage limit: SendMessage it 'continue from your checkpoint'; if it no longer answers, relaunch from the brief + existing files.
+CURRENT_AGENT: round2-companion id a21f45f784bf330fe (opus, xhigh, NO sub-agents) — brief research/briefs/round2-companion.md — outputs research/round2/tests/C#-*.md + research/round2/companion-report.md. If stopped by a usage limit: SendMessage it 'continue from your checkpoint'; if it no longer answers, relaunch from the brief + existing files.
 RESUME_INSTRUCTIONS: FIRST check with ListAgents that no agent of this session is running; if one is, do NOTHING. If the companion ended with "NEEDS_HELP: <path>", launch that helper (model/effort from the file's first line) and SendMessage the result path back to the same companion. If it stopped mid-work, SendMessage it "continue from your checkpoint"; if it no longer answers, relaunch a new opus xhigh companion for the same model telling it to resume from the existing M#-*.md files (STATUS lines). When a model's M#-summary.md is FINAL, the manager reviews it, logs it, commits, then launches the next model in the order.
 
 ## How the team runs (CEO decisions 2026-10-29)
