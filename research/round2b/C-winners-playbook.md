@@ -1,4 +1,4 @@
-STATUS: IN PROGRESS — next: §7 pay rail re-verify, then §3 ranking mechanics, then §1 emerging-market winners
+STATUS: IN PROGRESS — next: §1 emerging-market winners (partner pages), then §2 AI-era breakouts/failures, §4–6
 
 # Part C — How small and emerging-market teams win on the Shopify App Store (the playbook)
 Written 2026-10-31 by Companion C (Round 2B). No sub-agents used. Raw downloads in /tmp/partC/ (not in repo).
@@ -6,3 +6,20 @@ Labels: VERIFIED (primary page opened) · VENDOR CLAIM · SEARCH-SUMMARY (search
 
 ## Work log
 - 2026-10-31: brief read; R1 evidence read.
+
+## RAW NOTES (being turned into sections; all fetched 2026-10-31 unless dated)
+
+### N7 Pay rail (re-verified)
+- Revenue share: "You keep 100% of your first $1,000,000 USD in lifetime gross app revenue, and 85% of earnings above that"; only revenue from 2025-01-01 counts; 2.9% processing fee on all billing; $19 one-time registration; Associated Developer Accounts pooled toward the $1M. Developers with ≥$20M App Store revenue in the prior year or ≥$100M company revenue pay 15% on everything. Some merchant countries add a "Regulatory Operating Fee". VERIFIED (shopify.dev/docs/apps/launch/distribution/revenue-share, curl).
+- Partner Program Agreement, "Last updated February 27, 2026": developers who charge merchants "must use the Shopify Billing Resource" unless Shopify agrees in writing; Shopify pays out "twice per calendar month". Also prohibits "Create multiple Applications that offer substantially the same services" (matters for a portfolio: no clone-spam). VERIFIED (shopify.com/partners/terms, curl).
+- Hyperwallet blog (Paul Gray, 2021-11-17): new methods "now including countries such as Ukraine, Turkey, Bangladesh, Nigeria, and Pakistan". VERIFIED (shopify.com/partners/blog/payout-methods, curl).
+- Help-centre payout page (help.shopify.com/en/partners/getting-started/getting-paid): **blocked by a Cloudflare JS challenge from this session (HTTP 403, cf-mitigated)** — NOT VERIFIED. Search snippets say: $25 minimum, twice monthly, PayPal / bank account / wire via Hyperwallet, "availability depends on your region & payout amount", USD issued, non-USD conversion fee kept by Hyperwallet; country check is in Partner Dashboard → Settings → Payouts → Manage payout method → choose Country/Region. SEARCH-SUMMARY.
+- Net: the rail is intact on primary documents as of Feb–Oct 2026; Bangladesh coverage rests on the 2021 blog + day-1 dashboard check (unchanged from R1).
+
+### N3 Ranking mechanics (Shopify's own docs)
+- BFS benefits: badge on app cards in search/category pages; BFS search filter; "Built for Shopify apps appear higher in Shopify App Store search rankings" (boost "isn't exclusive" to BFS); eligible for homepage/category first collection and admin "Picked for you" (not exclusive); priority review queue for future apps; ad targeting by merchant plan. VERIFIED (shopify.dev/docs/apps/launch/built-for-shopify).
+- BFS prerequisites: ≥50 net installs from active shops on paid plans; ≥5 reviews; a minimum *recent* rating (threshold not published); admin Web Vitals at p75: LCP ≤2.5 s, CLS ≤0.1, INP ≤200 ms (≥100 calls in 28 days to be assessed); storefront Lighthouse drop ≤10 points; checkout-affecting requests p95 ≤500 ms, 0.1% failure; embedded with latest App Bridge; no forced external sign-up; no review-for-reward prompts; fail the same criterion 3× → 3-month suspension; annual re-review, 60 days to fix. VERIFIED (shopify.dev …/built-for-shopify/achievement-criteria).
+- Listing rules: choose accurate categories (up to 25 structured features per category); mark a Free plan to show "Free plan available" in search; avoid keyword stuffing; 14-day free trial recommended; set install-eligibility (country, channel) to cut bad reviews; auto-translation covers listing incl. search terms. VERIFIED (shopify.dev …/shopify-app-store/best-practices).
+- Search algorithm: Shopify Partner blog "search improvements" says ranking folds in "how merchants interact with results after they search" and has "a built-in mechanism for helping smaller trending apps show up higher"; later changelog adds "even more" behavioural data; expect day-to-day variability. SEARCH-SUMMARY (blog returned HTTP 429 to curl; changelog .md 404; WebFetch blocked for shopify hosts). Formula unpublished.
+- Ads: all CPC; first-price auction ("you pay … the same as the bid amount"); relevance lowers cost and lifts rank; 3 types (search, category/subcategory, homepage); search shows top 3 ad slots; doc's worked example shows a $0.50 click. VERIFIED (shopify.dev …/marketing/advertising). Real average CPC: NOT FOUND on primary pages.
+- Review timeline: Shopify staff, 2026-02-26: "We're seeing more of your submissions than ever … review times are longer than usual"; resubmitting sends you to the back of the queue. VERIFIED (community.shopify.dev/t/31728). Developers report Jan 2026 submissions waiting 1 month+ ; a posted 8–10 day SLA (SEARCH-SUMMARY / forum). Staff, 2026-04-20: "Submission volume had grown significantly, and our process wasn't keeping up"; launched an AI self-review command (via Shopify AI Toolkit) + a review dashboard where resubmission opens only after all flagged issues are fixed; AI pass ≠ approval, human review stays. VERIFIED (community.shopify.dev/t/33472).
