@@ -1,5 +1,5 @@
 # Brief — Round 2B: which company, which niche, which product
-Written 2026-10-31 by the manager. Four Opus companions run in parallel (A, B, C, D). Each does **one part only**. A fifth (E, the critic) runs later from its own brief.
+Written 2026-10-31 by the manager. Opus companions run **one at a time** (CEO rule), parts A, B, C, D. Each does **one part only**. A fifth (E, the critic) runs later from its own brief.
 
 ## COMMON (every companion reads this first)
 
