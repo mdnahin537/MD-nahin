@@ -1,6 +1,61 @@
-STATUS: DRAFT FOR CRITIC (manager, 2026-10-31). The critic (E) attacks this next; the final answer goes to the CEO after that.
+STATUS: FINAL (manager, 2026-10-31, after critic E). §0 is the answer. §1–§8 are the draft the critic attacked; where they differ from §0, §0 wins.
 
 # Round 2B decision: which company, which niche, which product
+
+## 0. FINAL ANSWER (after the critic)
+**Critic E verdict: FIX, not replace (confidence 70%).**
+
+**Manager re-checked at source, 2026-10-31:**
+- the back-in-stock category lists **323 apps**;
+- XFlow (Hanoi, launched 2025-12-01) already sells "restock priorities & suggested quantities".
+
+| Question | Final answer | What changed after the critic |
+|---|---|---|
+| **Company** | A Dhaka Shopify app company. The promise: **it doesn't silently break, a human sets it up within hours, and the price is honest.** | Unchanged |
+| **Niche** | **Back-in-stock alerts.** Treated as a **race to the "Built for Shopify" badge (BFS)**: 50 net installs on paid-plan shops + 5 reviews. | Re-framed. Page 1 is 24 of 24 BFS apps; 182 of 323 apps (56%) have 0 reviews; 9 leaders have ≥ 1,000 reviews (E, VERIFIED). Pre-orders come later; deposits only after a scholar's ruling |
+| **Product v1** | **Alerts only:**<br>- a capture form built as a theme app extension;<br>- a status check that the button actually renders (we fix it before the merchant notices);<br>- a free tier that matches the free leaders;<br>- concierge styling within hours;<br>- a neutral review ask.<br>New name needed ("Restock Radar" is taken). | **Dropped the "AI restock plan"**: XFlow, REZ, Notify! and Shopify's Sidekick already sell it. The real product edge is ~1.2× (E), not 10× |
+| **The real edge** | **The install engine, not a feature.** An AI-agent system finds Shopify stores with a visible, checkable problem and sends each one an honest, specific note with a free fix. The problems: sold-out products with no way to capture demand; a legacy alert app still on script tags. | New. It attacks the critic's #1 flaw (silence) and the CEO's #1 past failure (distribution) with his #1 skill (AI agents), and it is reusable for every future app |
+| **First money** | **Upwork merchant offer:**<br>- app-embed set-up;<br>- moving custom script-tag code;<br>- abandoned-app swaps;<br>- store set-up.<br>The developer desk is a **7-day side test**: 3 developers agree to a paid pilot, or stop. | Downgraded. The official thread has 20 posts and 620 views, and no developer asks for outside help (E). The developer desk is now ESTIMATE $0–1.5k |
+| **Shothik** | The restaurant version is killed; dental/med-spa is parked | Unchanged (E: fairly parked) |
+
+**Gates (E's fix, adopted):**
+| When | Gate |
+|---|---|
+| Day 1 | Partner dashboard shows a Bangladesh bank/wire payout option, or the Shopify road stops |
+| Week 1 | Kill signal: 30 honest outreach notes get 0 replies |
+| Day 30 | App submitted (alerts only), after Shopify's AI self-review |
+| Day 60 | ≥ 150 named merchants contacted (honest, compliant, disclosed as us) |
+| Day 120 | ≥ 25 net installs + ≥ 3 reviews |
+| Day 180 | BFS applied, OR stop the niche |
+| Paying | Not a gate before day 180 |
+
+**Outreach law (to verify before the first send):**
+- start with US/CA/AU:
+  - US CAN-SPAM: opt-out link and a real postal address;
+  - Canada CASL and the Australian Spam Act: a conspicuously published business address, and the note must be relevant to the recipient's role;
+- UK PECR allows corporate addresses but not sole traders;
+- most of the EU is stricter (e.g. Germany requires consent).
+
+Labels: SEARCH-SUMMARY/manager knowledge, to be checked at source before any send.
+
+**Money, honestly (ESTIMATE):**
+- the app at month 12: **~$110–360 MRR** for a good 2026 newcomer (E's recompute), up to ~$1,000 if it does as well as REZ;
+- Upwork cash in months 1–3: $0 to a few thousand.
+
+This road compounds slowly. The first 6 months buy:
+- the BFS badge;
+- a working distribution engine;
+- a team rhythm.
+
+Not income.
+
+**Halal guards (E):**
+- terms of service exclude haram verticals;
+- a scholar's ruling before deposits;
+- every contact says who we are and where we are;
+- the scanner says "legacy tag found", never "will break".
+
+---
 **Inputs:**
 - `A-store-demand-map.md`: 833 store pages, 92 categories, 348 apps;
 - `B-demand-waves.md`;
