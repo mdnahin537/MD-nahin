@@ -1,0 +1,150 @@
+# M3 E3 evidence, 2026-10-30. Source: Apple Podcasts Search API (terms muslim/islam/islamic/quran/ummah/deen; stores US/GB/CA/AU; 9 of 24 queries rate-limited), shows with releaseDate >= 2026-06, RSS last 30 items scanned for sponsor and donation phrases. sponsor_items counts phrase matches incl. self-promo; see M3 file for the hand-checked commercial count.
+apple_id	show	publisher	store	items_scanned	sponsor_items	donation_items	feed_url
+1071230854	The Deen Show	Muslim Central	AUS	30	0	0	https://rss.muslimcentral.com/the-deen-show.rss
+1078202567	Superelektrik | Alle Podcasts	Superelektrik	GBR	30	0	0	https://feeds.superelektrik.de/superelektrik
+1196668158	AbdelRahman Murphy	Muslim Central	AUS	30	0	0	https://rss.muslimcentral.com/abdelrahman-murphy.rss
+1200889228	Doha Islamic Events	Doha Islamic Events	USA	30	0	0	https://feeds.soundcloud.com/users/soundcloud:users:282734746/sounds.rss
+1204792336	Freshly Grounded	Faisal & Sam	GBR	30	0	10	https://rss.libsyn.com/shows/86983/destinations/422768.xml
+1211894042	Yaqeen Podcast	Yaqeen Institute	AUS	30	0	0	https://rss.buzzsprout.com/1014445.rss
+1401109092	Islamic Preaching	Abdul Hakeem Fazil	CAN	30	0	0	https://www.spreaker.com/show/5782400/episodes/feed
+1447775029	IslamicFinanceGuru Podcasts	Islamic Finance Guru	GBR	30	0	0	https://anchor.fm/s/8139018/podcast/rss
+1447820372	Mindful Muslimah Speaks	Mindful Muslimah Speaks	AUS	30	0	0	https://anchor.fm/s/84b2ec4/podcast/rss
+1448173277	تلاوات من الجنة	Quran - القران الكريم	GBR	30	0	0	https://feeds.soundcloud.com/users/soundcloud:users:543645243/sounds.rss
+1448513177	IlmFeed Podcast	IlmFeed	GBR	30	0	4	https://feed.podbean.com/ilmfeed/feed.xml
+1448930725	DeenStrong	Bilal Elsakka	GBR	30	0	0	https://feeds.soundcloud.com/users/soundcloud:users:248014515/sounds.rss
+1463273791	Delving Into Islam	Wa2el	USA	30	0	0	https://anchor.fm/s/b46fd88/podcast/rss
+1471798762	The Thinking Muslim	Muhammad Jalal	AUS	30	4	30	https://feeds.acast.com/public/shows/64fc8470defa1f0011d1a4d6
+1480385872	The Authentic Ummah	Rafik	GBR	30	0	0	https://anchor.fm/s/40b1cb24/podcast/rss
+1486060403	Understanding Islam	Understanding Islam	USA	30	0	0	https://feeds.soundcloud.com/users/soundcloud:users:720133738/sounds.rss
+1491867562	MuslimMatters	MuslimMatters	AUS	30	0	0	https://feeds.simplecast.com/z7e3tP1H
+1500439919	Voice of Islam	Voice of Islam	GBR	30	0	0	https://feeds.soundcloud.com/users/soundcloud:users:182328357/sounds.rss
+1505436317	OnePath Podcast	Onepath Network	USA	30	0	30	https://rss.buzzsprout.com/2042303.rss
+1505738007	Islamic Art - The Barakat Trust	The Barakat Trust	GBR	30	0	0	https://rss.buzzsprout.com/944704.rss
+1510223375	04 Saturdays: Tafsir As-Sa’dī	Islamic Center of Palm Beach	USA	30	0	0	https://www.spreaker.com/show/3293600/episodes/feed
+1513377739	Main Bhi Muslim	Main Bhi Muslim™	AUS	30	0	1	https://api.substack.com/feed/podcast/270087.rss
+1522154152	The Firsts with Dr. Omar Suleiman	Yaqeen Institute	GBR	30	0	0	https://rss.buzzsprout.com/1194665.rss
+1522412155	Once Upon A Crescent: Muslim Kids Podcast	Mrs. Hashimi	AUS	30	19	20	https://anchor.fm/s/f17cf3ac/podcast/rss
+1524526782	Al Madrasatu Al Umariyyah	Islamic Podcast	GBR	30	0	30	https://rss.libsyn.com/shows/285659/destinations/2197070.xml
+1526025373	Read Alfurqan | Islamic Duaa & Spiritual Reflection	هاشم نبيل, Hashem Nabil	GBR	30	0	0	https://feeds.simplecast.com/HL9g21kR
+1528964972	Life Uncensored: The Sam Deen Podcast	Sam Deen	GBR	30	17	3	https://feed.podbean.com/vanzandtcoffee/feed.xml
+1535674488	Harvard Islamica Podcast	Harvard Islamic Studies	GBR	21	0	0	https://media.rss.com/harvardislamicstudies/feed.xml
+1535886654	IFN OnAir	IFN Islamic Finance news	USA	30	0	0	https://rss.buzzsprout.com/1398361.rss
+1536805217	WULFF DEN Podcast - Weekly Gaming Recap	WULFF DEN	CAN	30	0	29	https://anchor.fm/s/3c6f99b0/podcast/rss
+1540251892	I’m Not a Monster Presents… Where is Austin Tice?	BBC Sounds	CAN	30	0	0	https://podcasts.files.bbci.co.uk/p08yblkf.rss
+1541063564	The Authentic Ummah	Rafik	GBR	30	0	0	https://anchor.fm/s/40b1cb24/podcast/rss
+1543297049	تلاوات نادرة	Qur’an	GBR	30	0	0	https://anchor.fm/s/42d73d58/podcast/rss
+1545182091	ISLAMIC HUB	ISLAMIC HUB	GBR	30	0	0	https://anchor.fm/s/445ece5c/podcast/rss
+1547118855	Islamic Life Coach School Podcast	Kanwal Akhtar	GBR	30	0	0	https://rss.buzzsprout.com/1441894.rss
+1592399637	Voicemails: To My Younger Self	Jordan Deen	GBR	16	0	0	https://rss.buzzsprout.com/1878474.rss
+1603471810	The Muslim Sex Podcast	Dr. Sadaf Lodhi	AUS	30	0	0	https://feeds.captivate.fm/muslim-sex-podcast/
+1618587308	Islamic Talks	Islamic Talks	GBR	30	0	30	https://anchor.fm/s/751a070/podcast/rss
+1628014504	Learn About Islam	LK	USA	30	0	0	https://feeds.redcircle.com/f28a4c34-5b86-4dba-9a36-d710831ef68a
+1629775848	GCIL PODCAST - Javed Ahmed Ghamidi	Ghamidi Center Of Islamic Learning	GBR	30	0	29	https://feed.podbean.com/ghamidicil/feed.xml
+1633070078	Islamic Feelings ♡	Islamic Feelings	CAN	30	1	0	https://anchor.fm/s/646124c0/podcast/rss
+1646727259	Your Muslim Girl Podcast	Fatima Sabir	AUS	30	0	1	https://anchor.fm/s/bb0cf27c/podcast/rss
+1651242501	e-Muslimah	e-Muslimah	USA	30	0	0	https://anchor.fm/s/bba18540/podcast/rss
+1657745574	فاهم	هلال السيد	USA	30	0	0	https://feeds.simplecast.com/flyig0Ev
+1662382460	Short Bayan | Islamic Lecture	Galaxy Of Islam - M H Shaikh	GBR	30	0	0	https://anchor.fm/s/2b84481c/podcast/rss
+1670180005	قناة الدعوة الإسلامية Islamic Teachings Gh	HAKEEM FAZIL	AUS	30	0	0	https://anchor.fm/s/dc25ce0c/podcast/rss
+1675090032	Die Dunkelkammer – Der Investigativ-Podcast	DasKollektiv Medien	AUS	30	0	0	https://feeds.simplecast.com/dDSfdhWE
+1701379748	Islamic Knowledge Hub	Musa Khattab	GBR	30	0	0	https://media.rss.com/quranrecitations/feed.xml
+1703436641	Belal Assaad	Belal Assaad	GBR	30	0	0	https://media.rss.com/belalassaad/feed.xml
+1708713696	Glow Up avec ton Deen Podcast	Meriam	GBR	30	0	0	https://feeds.acast.com/public/shows/650ea214708b6800117b66bb
+1711498597	Women of Qur'an Now	Sister Binta Umm Yahya	AUS	30	0	0	https://feed.ausha.co/dzkzLfaqm1LJ
+1719183665	The Deen Corner	Salma Babayo	GBR	30	0	0	https://anchor.fm/s/ee4bf674/podcast/rss
+1721301419	Between Classes by QIA	Qurtuba Islamic Academy	AUS	30	30	0	https://rss.buzzsprout.com/2229955.rss
+1730249954	Women of Qurān	Rettilee Al-Quraan	GBR	15	0	9	https://feeds.acast.com/public/shows/65f5effd47dadf0017a69403
+1733092718	Islamic Manners	Islamic Manners | Qalam Institute	GBR	24	0	7	https://feeds.feedburner.com/qalaminstitute/islamic-manners
+1735009187	The ICOI Podcast	Islamic Center of Irvine	USA	30	0	0	https://feeds.acast.com/public/shows/65ea837ab922a800162d543f
+1738047248	Ishâra	Daώгul ▷ Ummah	GBR	3	0	0	https://anchor.fm/s/f3d2c320/podcast/rss
+1739937026	Quran Recited	Quran Recited	GBR	30	0	0	https://anchor.fm/s/f44becb4/podcast/rss
+1742368724	Mind and Deen	Hana and Ayeesha	GBR	16	0	0	https://anchor.fm/s/f4d2ecdc/podcast/rss
+1747222904	BnB Edition	Bieki  & Binta	USA	30	0	5	https://media.rss.com/bnbedition/feed.xml
+1747586511	Thirty & Up: Spiritual Development for Adults | Ustadh AbdelRahman Murphy	Roots Community	USA	30	0	0	https://feed.podbean.com/thirtyup/feed.xml
+1747587639	Exploring the Quran for Women | Ustadha Fatima Lette	exploringthequran	USA	30	0	0	https://feed.podbean.com/exploringthequran/feed.xml
+1747587869	Heartwork | Ustadh AbdelRahman Murphy	Roots Community	USA	30	0	0	https://feed.podbean.com/heartwork/feed.xml
+1749483622	Islamic stories for Kids and family.	PropheticPulse_official	GBR	30	0	0	https://anchor.fm/s/f7054cd4/podcast/rss
+1751858926	Quran Conversations	Quran Conversations	GBR	30	30	0	https://anchor.fm/s/f733c938/podcast/rss
+1752941245	The Islamic Mary	Younus Y. Mirza	USA	30	0	0	https://rss.buzzsprout.com/2368819.rss
+1758098313	Mikaeel Smith	Muslim Central	AUS	30	0	0	https://rss.muslimcentral.com/mikaeel-smith.rss
+1758098337	Akhi Ayman	Muslim Central	GBR	16	0	0	https://rss.muslimcentral.com/akhi-ayman.rss
+1758508148	Hosai Mojaddidi	Muslim Central	AUS	30	0	0	https://rss.muslimcentral.com/hosai-mojaddidi.rss
+1758620039	Ali Ataie	Muslim Central	AUS	30	0	0	https://rss.muslimcentral.com/ali-ataie.rss
+1760947626	Selselet Altareeq - Mustafa Hosny - سلسلة الطريق - مصطفى حسني	Mustafa Hosny	AUS	30	0	0	https://anchor.fm/s/f9879e08/podcast/rss
+1761103891	Mustafa Abu Rayyan	Muslim Central	AUS	30	0	0	https://rss.muslimcentral.com/mustafa-abu-rayyan.rss
+1764544244	Hisham Abu Yusuf	Muslim Central	AUS	30	0	0	https://rss.muslimcentral.com/hisham-abu-yusuf.rss
+1789912509	Raising Righteous Muslims through Arabic By Arabic Nest	Hanae Elena Chelly	AUS	30	0	0	https://anchor.fm/s/519548d0/podcast/rss
+1796731585	Adventures of Muslim Kids	Adventures of Muslim Kids	AUS	30	5	2	https://anchor.fm/s/1003dfb34/podcast/rss
+1797632896	Ustadh Abdulrahman Hassan	UnknownSeekerOfKnowledge	GBR	30	0	10	https://www.spreaker.com/show/6059227/episodes/feed
+1809723915	The Secret Sex Lives of Muslim Women	Salma Hindy	AUS	28	0	11	https://rss.buzzsprout.com/2470463.rss
+1810714716	Let's Explore Our Deen	Manan Ayoub	GBR	30	0	0	https://anchor.fm/s/eb496fc4/podcast/rss
+1813243317	Refuting "Islamic" Sects	Faris Al Hammadi	USA	30	0	0	https://www.spreaker.com/show/6531818/episodes/feed
+1814810169	Deenful Talks	Deenful Mind	GBR	21	0	0	https://anchor.fm/s/102474e94/podcast/rss
+1815938542	OnGuard - For the Ummah, For the Truth	Islam21c	GBR	18	0	18	https://rss.buzzsprout.com/2503427.rss
+1826084077	دروس الشيخ النابلسي	Islamic Lectures by Al Nabulsi - دروس دينية	GBR	30	0	0	https://anchor.fm/s/1072ae7f4/podcast/rss
+1826231477	الشيخ أمجد سمير	أمجد سمير	GBR	30	0	0	https://anchor.fm/s/105b13b94/podcast/rss
+1832444220	Ahmad Hraichie	Muslim Central	AUS	13	0	0	https://rss.muslimcentral.com/ahmad-hraichie.rss
+1832444737	Francesca Bocca-Aldaqre	Muslim Central	AUS	30	0	0	https://rss.muslimcentral.com/francesca-bocca-aldaqre.rss
+1836199739	Stop Rewind: The Lost Boy	Blanchard House / Curiouscast	GBR	12	0	0	https://feeds.megaphone.fm/stoprewind-thelostboy
+1836691096	Quran in a Year+ (with Imam Saif Morad)	Islamic Association of Raleigh	GBR	30	0	0	https://anchor.fm/s/10804d43c/podcast/rss
+1837170929	Muslim Recharge	Next Gen Muslim Network	AUS	27	0	27	https://rss.buzzsprout.com/2533922.rss
+1838407575	UsmanGee Islamic Universe | Quran: Tilawat & Tarjuma	usmangee-productions	GBR	15	0	0	https://app.talkshoe.com/rss-usmangee-islamic-universe-quran-tilawat-tarjuma.xml
+1842692124	Way2Quran - الطريق إلي القرآن	Way2quran.com	GBR	30	0	0	https://feeds.soundcloud.com/users/soundcloud:users:57928707/sounds.rss
+1843759106	Little Muslims Storytime	Little Muslims Storytime	AUS	28	0	0	https://anchor.fm/s/109d29d08/podcast/rss
+1847344968	Deen & Deals	Deen & Deals	GBR	30	0	0	https://anchor.fm/s/10a2d822c/podcast/rss
+1850440308	UsmanGee Islamic Universe	usmangee-productions	GBR	30	0	0	https://app.talkshoe.com/rss-usmangee-islamic-universe.xml
+1858316746	Deen chats with Husna	husna jolay	GBR	14	0	0	https://anchor.fm/s/10c5ac974/podcast/rss
+1860383027	Islamic Learning Malayalam	Al-Islah	AUS	30	0	0	https://anchor.fm/s/10c815378/podcast/rss
+1861129828	HerDeenDiary	Khadijah Ahmed	GBR	21	0	0	https://anchor.fm/s/10c3a3e98/podcast/rss
+1861861862	Wereldupdate	Bob Deen, Koen Aartsma, Lauren Fabels / Corti Media	GBR	30	0	0	https://www.omnycontent.com/d/playlist/8257a063-6be9-42fa-b892-acd4013b1255/05b3a517-00e9-4d04-9a1c-b4db01091b24/9e6879f0-ad79-419c-980a-b4db01091d07/podcast.rss
+1862510472	Quran	Quran	GBR	30	0	0	https://feeds.megaphone.fm/RSAEE4833253240
+1867684310	Connected Ummah: Faith, Life & the Muslim Journey	Connected Ummah	GBR	30	0	0	https://anchor.fm/s/10d9e6dcc/podcast/rss
+1868231334	The BCLionsDen Pawdcast	BCLionsDen - Brian Wawryshyn and Cole McGarvey	CAN	30	0	0	https://anchor.fm/s/1082e6b80/podcast/rss
+1872019004	More Muslim	More Muslim	AUS	12	0	0	https://feeds.captivate.fm/more-muslim/
+1874135044	Motivational Ummah®	Ash	GBR	9	0	0	https://media.rss.com/motivationalummah/feed.xml
+1877580474	DeenCast	DeenCast	GBR	23	0	0	https://anchor.fm/s/10eca8668/podcast/rss
+1880599044	Soninke Islamic Voice	Wiz Kebbeh	GBR	30	0	0	https://anchor.fm/s/10f903570/podcast/rss
+1881103747	Epic Fury: The US-Iran War Podcast	The Briefing Network	CAN	30	0	0	https://anchor.fm/s/10f9d50e8/podcast/rss
+1883999576	Archives Islamic History	Archives	GBR	30	0	0	https://rss.buzzsprout.com/2602130.rss
+1884134295	Archives Islamic History	Archives	GBR	30	0	0	https://rss.buzzsprout.com/2602130.rss
+1894731709	Joyful Muslims — Preserving the Classical Islamic Canon	Joyful Muslims	USA	30	0	0	https://joyfulmuslims.com/podcast/feed.xml
+1895431056	The Islamic Golden Age: Science, Philosophy, and Global Influence — Fexingo History	Fexingo	CAN	30	0	30	https://feeds.fexingo.com/history/the-islamic-golden-age.xml
+1895431151	The Umayyad Caliphate: Rapid Expansion of Islamic Power — Fexingo History	Fexingo	GBR	30	0	30	https://feeds.fexingo.com/history/the-umayyad-caliphate.xml
+1895431244	The Fatimid Caliphate: Wealth and Power in the Islamic World — Fexingo History	Fexingo	USA	30	0	30	https://feeds.fexingo.com/history/the-fatimid-caliphate.xml
+1895431330	The Delhi Sultanate and the Rise of Islamic Rule in India — Fexingo History	Fexingo	USA	30	0	30	https://feeds.fexingo.com/history/the-delhi-sultanate-and-the-rise-of-islamic-rule-in-india.xml
+1896345256	Islamic Audiobook Library	Sadaqat Academy	GBR	30	0	0	https://media.rss.com/sadaqat-academy/feed.xml
+1896731861	The Deen Whispers	Asiya Muhammad	GBR	14	0	0	https://anchor.fm/s/112b43ddc/podcast/rss
+1896888476	المصحف المرتل الثاني - فضيلة الشيخ محمد صديق المنشاوي	Omar	AUS	30	0	0	https://anchor.fm/s/1136b79ac/podcast/rss
+1896892737	Islamic Benefits | Ustadh Abdulaziz al-Haqqan	Ustadh Abdulaziz al-Haqqan	CAN	30	0	0	https://www.spreaker.com/show/7089048/episodes/feed
+1896892974	Discovering Beauty with Orbit Deen	A Journey of Self-Discovery and Celebration	GBR	25	0	0	https://api.substack.com/feed/podcast/6020176.rss
+424693902	New Books in Islamic Studies	Marshall Poe	GBR	30	0	0	https://feeds.simplecast.com/uCC8sCI3
+491945086	Islamic History Podcast	Islamic History Podcast	GBR	30	0	2	https://feed.podbean.com/islamichistorypodcast/feed.xml
+592746186	Mufti Menk	Muslim Central	AUS	30	0	2	https://rss.muslimcentral.com/mufti-menk.rss
+604880888	Yasir Qadhi	Muslim Central	AUS	30	0	1	https://rss.muslimcentral.com/yasir-qadhi.rss
+6784083323	The Deen’s	The Deen's	GBR	6	0	0	https://anchor.fm/s/11431b61c/podcast/rss
+6784948690	Hunter Islamic Community Radio (HICR)	Hunter Islamic Community Radio (HICR)	AUS	30	0	0	https://anchor.fm/s/113c79e58/podcast/rss
+6785401034	Muhammad Ibrahim Kali	Quran Central	AUS	11	0	0	https://rss.qurancentral.com/muhammad-ibrahim-kali.rss
+6788763296	Muslim Lantern - Official	The Muslim Lantern	AUS	30	0	0	https://feeds.transistor.fm/muslim-lantern
+6790968009	The Muslim Marriage Clinic|Islamic marriage advice, tips, Muslim wife	Insiya Abdur Raheem	AUS	16	0	0	https://api.riverside.com/hosting/d3lUf9KT.rss
+6795202952	Love, Deen & Real Life	Zayd & Fatimah	GBR	2	0	0	https://rss.buzzsprout.com/2632931.rss
+6796205558	Islamic Knowledge Hub	Musa Khattab	GBR	30	0	0	https://media.rss.com/quranrecitations/feed.xml
+6797778026	Abdullah Al Qarafi	Quran Central	AUS	30	0	0	https://rss.qurancentral.com/abdullah-al-qarafi.rss
+6797779338	Hamed Shakernejad - Mujawwad	Quran Central	GBR	6	0	0	https://rss.qurancentral.com/hamed-shakernejad-mujawwad.rss
+6797779933	Muhammad Ibrahim Kali	Quran Central	AUS	11	0	0	https://rss.qurancentral.com/muhammad-ibrahim-kali.rss
+6797780417	Walid Mehsas	Quran Central	AUS	30	0	0	https://rss.qurancentral.com/walid-mehsas.rss
+6797792843	The Islamic Studio	alihasnain077	AUS	26	0	0	https://app.talkshoe.com/rss-the-islamic-s.xml
+6797952502	Salawat and Dhikr	Muslim Central	AUS	22	0	0	https://rss.muslimcentral.com/salawat-dhikr.rss
+6797952558	Shadee Elmasry	Muslim Central	AUS	30	0	0	https://rss.muslimcentral.com/shadee-elmasry.rss
+6800758318	Makkah Daily Quran	honoredquran	AUS	11	0	0	https://feed.podbean.com/honoredquran/feed.xml
+6806900305	Journey of Deen & Dunya	Maiyyummm87	GBR	1	0	0	https://anchor.fm/s/117237068/podcast/rss
+6808045196	خِزانة د. نايف بن نهار	الخِزانة الإسلامية	GBR	25	0	0	https://anchor.fm/s/116c918ac/podcast/rss
+6809220551	Deen Reflections	Omar Rahman	GBR	30	0	0	https://feed.podbean.com/webdivinersltd/feed.xml
+6812646486	Muntasir Zaman	Muslim Central	AUS	2	0	0	https://rss.muslimcentral.com/muntasir-zaman.rss
+6814232313	Deen & Dunya	Amira Khan	GBR	2	0	0	https://anchor.fm/s/116c9d490/podcast/rss
+6814636763	Barzakh FM	Jason Idriss Sparkes	AUS	4	0	0	https://api.substack.com/feed/podcast/8785938.rss
+6814725719	Ahmed Abdelrazek Nasr	Quran Central	GBR	30	0	0	https://rss.qurancentral.com/ahmed-abdelrazek-nasr.rss
+6819295416	سلسلة قُدوَتُكِ، لِكُلِّ فَتاة | الشيخ أمجد سمير	يُمنىٰ	USA	6	0	0	https://anchor.fm/s/1181c8928/podcast/rss
+6823373238	Stories from Islamic History	@The Muslim Podcaster	GBR	6	0	0	https://anchor.fm/s/1189b0c44/podcast/rss
+6824128831	Islamic Bedtime Stories for Kids - Zaytoon Club | Muslim Kids Stories	Zaytoon Club	GBR	11	0	0	https://anchor.fm/s/11547cde8/podcast/rss
+823604747	Yasser Al Dossari	Muslim Central	GBR	30	0	0	https://rss.qurancentral.com/yasser-al-dossari.rss
+920807796	VOMRadio	The Voice of the Martyrs	AUS	30	0	0	https://rss.libsyn.com/shows/122588/destinations/721194.xml
