@@ -236,3 +236,9 @@ Vendor (opened, discounted):
 4. "Since what date?"
 
 Record the answers with the date and the staff member's role.
+
+## 2026-10-31 — Round 2 addition: rails for selling software subscriptions (manager)
+- **Lemon Squeezy** (merchant of record): the official supported-countries page lists **Bangladesh under bank payouts** (VERIFIED, docs.lemonsqueezy.com/help/getting-started/supported-countries, opened 2026-10-31). Risk: since Stripe acquired it, development is shifting to Stripe Managed Payments. No shutdown announced as of Oct 2026 (SEARCH-SUMMARY).
+- **Paddle** (merchant of record): pays by wire or Payoneer. Bangladesh eligibility was not confirmed on an official page (SEARCH-SUMMARY).
+- **Gumroad**: pays BDT to a local bank (VERIFIED, round 1) and supports memberships.
+- **Effect:** a Bangladeshi team can bill US/UK/EU/AU businesses for software subscriptions without its own Stripe account. This reopens product/SaaS ideas.
